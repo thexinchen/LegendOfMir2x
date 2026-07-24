@@ -99,12 +99,6 @@ else()
         string(APPEND MIR2X_LOG_FILELIST "R\"DELIM(${LOG_SRC_BODY})DELIM\",\n")
     endforeach()
 
-    file(GLOB MIR2X_LOG_FL_FILELIST ${CMAKE_SOURCE_DIR}/server/src/*.[fF][lL])
-    foreach(LOG_FL_SRC ${MIR2X_LOG_FL_FILELIST})
-        get_filename_component(FL_SRC_BASENAME ${LOG_FL_SRC} NAME_WE)
-        string(APPEND MIR2X_LOG_FILELIST "R\"DELIM(server/src/${FL_SRC_BASENAME}.hpp)DELIM\",\n")
-        string(APPEND MIR2X_LOG_FILELIST "R\"DELIM(server/src/${FL_SRC_BASENAME}.cpp)DELIM\",\n")
-    endforeach()
 endif()
 
 if(WIN32 AND MSVC)
@@ -137,30 +131,6 @@ function(mir2x_list_source_recursive ARG_LIST)
     set(${ARG_LIST} ${T_ALL_SRCS} PARENT_SCOPE)
 endfunction()
 
-function(fltk_parse_fl_file ARG_HPP ARG_CPP)
-    file(GLOB T_ALL_FL "*.[fF][lL]")
-
-    set(RES_HPP "")
-    set(RES_CPP "")
-
-    foreach(T_FL ${T_ALL_FL})
-        get_filename_component(T_BASE ${T_FL} NAME_WE)
-
-        set(T_OUT_HPP ${T_BASE}.hpp)
-        set(T_OUT_CPP ${T_BASE}.cpp)
-
-        set(RES_HPP ${RES_HPP} ${T_OUT_HPP})
-        set(RES_CPP ${RES_CPP} ${T_OUT_CPP})
-
-        add_custom_command(OUTPUT ${T_OUT_HPP} ${T_OUT_CPP}
-            DEPENDS ${T_FL}
-            COMMAND ${FLTK_FLUID_EXECUTABLE} -c -o ${CMAKE_CURRENT_BINARY_DIR}/${T_OUT_CPP} -h ${CMAKE_CURRENT_BINARY_DIR}/${T_OUT_HPP} ${T_FL}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    endforeach()
-
-    set(${ARG_HPP} "${RES_HPP}" PARENT_SCOPE)
-    set(${ARG_CPP} "${RES_CPP}" PARENT_SCOPE)
-endfunction()
 
 include("${CMAKE_SOURCE_DIR}/cmake/Mir2xResPath.cmake")
 include("${CMAKE_SOURCE_DIR}/cmake/Mir2xDependencies.cmake")

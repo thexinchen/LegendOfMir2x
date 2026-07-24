@@ -1,5 +1,5 @@
-add_subdirectory(mapeditor)
-add_subdirectory(pkgviewer)
+# add_subdirectory(mapeditor)  # FLTK GUI tool, disabled pending ImGui port
+# add_subdirectory(pkgviewer)  # FLTK GUI tool, disabled pending ImGui port
 add_subdirectory(mapinfo)
 add_subdirectory(mapdbmaker)
 add_subdirectory(mapconverter)
@@ -17,7 +17,7 @@ add_subdirectory(monsterwil2png)
 add_subdirectory(npcgen)
 add_subdirectory(zsdbmaker)
 add_subdirectory(rawbufmaker)
-add_subdirectory(followuidmagiceditor)
+# add_subdirectory(followuidmagiceditor)  # FLTK GUI tool, disabled pending ImGui port
 
 add_subdirectory(wtldecoder)
 add_subdirectory(bgmlistdecoder)

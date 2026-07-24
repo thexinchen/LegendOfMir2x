@@ -5,7 +5,6 @@
     "argh",
     "asio",
     "cereal",
-    "fltk",
     "g3log",
     "glfw3",
     {
@@ -25,21 +24,6 @@
     "lz4",
     "miniaudio",
     "parallel-hashmap",
-    "sdl3",
-    "sdl3-gfx",
-    {
-      "name": "sdl3-image",
-      "features": [
-        "png"
-      ]
-    },
-    {
-      "name": "sdl3-mixer",
-      "features": [
-        "mpg123"
-      ]
-    },
-    "sdl3-ttf",
     "sol2",
     "sqlitecpp",
     "stb",
