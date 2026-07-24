@@ -24,8 +24,14 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <functional>
 
 #include "serverconfig.hpp"
+#include "guimodalwindows.hpp"
+#include "guimonitorwindow.hpp"
+#include "guiprofilerwindow.hpp"
+#include "guicommandwindow.hpp"
+#include "guiscriptwindow.hpp"
 
 struct GLFWwindow;
 class GUIMainWindow;
@@ -60,6 +66,28 @@ class GUICore
 
     private:
         std::unique_ptr<GUIMainWindow> m_mainWindow;
+
+    private:
+        bool m_showActorMonitor = false;
+        bool m_showPodMonitor   = false;
+        bool m_showProfiler     = false;
+        bool m_showConfigure    = false;
+        bool m_showScript       = false;
+        GUIMonitorWindow   m_monitorWindow  {this};
+        GUIProfilerWindow  m_profilerWindow {this};
+        GUIConfigureWindow m_configureWindow {this};
+        GUICommandWindow   m_commandWindow  {this};
+        GUIScriptWindow    m_scriptWindow   {this};
+
+    private:
+        // password modal (replaces ServerPasswordWindow)
+        std::function<void(const std::string &)> m_passwordCb;
+        char m_passwordInput[128] {};
+        bool m_passwordPopupOpen = false;
+
+    private:
+        // deferred until the top of the frame loop (outside drawing)
+        bool m_pendingLaunch = false;
 
     public:
         GUICore();
@@ -99,12 +127,42 @@ class GUICore
         void setLaunched(bool launched = true) { m_launched = launched; }
 
     public:
-        // Stage 1a stubs, replaced when the command windows land in Stage 2
-        std::vector<std::string> getCWHistory(uint32_t cwID) const;
+        bool isActorMonitorOpen() const { return m_showActorMonitor; }
+        bool isPodMonitorOpen  () const { return m_showPodMonitor;   }
+        bool isProfilerOpen    () const { return m_showProfiler;     }
+        bool isConfigureOpen   () const { return m_showConfigure;    }
+        bool isScriptOpen      () const { return m_showScript;       }
+
+        void setActorMonitorOpen(bool open) { m_showActorMonitor = open; }
+        void setPodMonitorOpen  (bool open) { m_showPodMonitor   = open; }
+        void setProfilerOpen    (bool open) { m_showProfiler     = open; }
+        void setConfigureOpen   (bool open) { m_showConfigure    = open; }
+        void setScriptOpen      (bool open) { m_showScript       = open; }
+
+    public:
+        int  createCommandWindow() { return m_commandWindow.createCommandWindow(); }
+        bool isCommandWindowOpen(int cwid);
+        void setCommandWindowOpen(int cwid, bool open);
+        void execScriptInCommandWindow(const std::string &code);
+
+    public:
+        // password modal with callback (legacy ServerPasswordWindow contract);
+        // also stores the password for the NPC dialogue AES key
+        void requestPassword(std::function<void(const std::string &)>);
+
+    public:
+        // recreate + launch the server at the top of the next frame
+        void queueLaunch() { m_pendingLaunch = true; }
+
+    public:
+        std::vector<std::string> getCWHistory(uint32_t cwID);
         void                     deleteCommandWindow(int cwID);
+        void                     appendCWLogToWindow(uint32_t cwID, int type, const char *prompt, const char *log);
 
     private:
         void setupFonts();
         void drawFrame();
         void drawFatalModal();
+        void runPendingActions();
+        void drawPasswordModal();
 };

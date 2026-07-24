@@ -55,6 +55,15 @@ int main(int argc, char *argv[])
         if(!g_serverArgParser->slave){
             g_guiCore = new GUICore();
 
+            // command-line ports feed the config store (the configure window
+            // used to do this in its constructor via applyConfig())
+            {
+                auto config = g_guiCore->getConfig();
+                config.clientPort = g_serverArgParser->masterConfig().clientPort.first;
+                config.slavePort  = g_serverArgParser->peerPort.first;
+                g_guiCore->setConfig(config);
+            }
+
             if(g_serverArgParser->masterConfig().autoLaunch){
                 g_server->launch();
                 g_guiCore->setLaunched(true);
