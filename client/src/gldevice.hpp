@@ -25,9 +25,9 @@
 #include <unordered_set>
 
 #include <SDL3/SDL.h> // event/POD types only (bridge), removed later
-#include <SDL3_ttf/SDL_ttf.h> // FontexDB rasterization bridge, removed later
 
 #include "gltex.hpp"
+#include "glfont.hpp"
 #include "totype.hpp"
 #include "protocoldef.hpp"
 #include "fflerror.hpp"
@@ -128,9 +128,6 @@ class GLDevice final
 
     private:
         std::unordered_map<int, GLTexID> m_cover;
-
-    private:
-        std::unordered_map<uint8_t, TTF_Font *> m_fontList;
 
     private:
         std::unordered_set<uint64_t> m_imeEnableList;
@@ -242,7 +239,7 @@ class GLDevice final
         void drawBoxFading(uint32_t, uint32_t, int, int, int, int, int, int);
 
     public:
-        GLTexID createTextureFromSurface(SDL_Surface *);
+        GLTexID createTextureFromSurface(const GLSurface &);
 
         std::tuple<int, int> getWindowSize();
         int getWindowWidth();
@@ -251,9 +248,6 @@ class GLDevice final
         std::pair<int, int> getRendererSize();
         int getRendererWidth();
         int getRendererHeight();
-
-    public:
-        TTF_Font *createTTF(const void *, size_t, uint8_t); // SDL_ttf bridge, removed later
 
     public:
         void createMainWindow();
@@ -266,9 +260,6 @@ class GLDevice final
     public:
         GLTexID createRGBATexture(const uint32_t *, size_t, size_t);
         void    destroyTexture(GLTexID);
-
-    public:
-        TTF_Font *defaultTTF(uint8_t);
 
     public:
         void   updateFPS();

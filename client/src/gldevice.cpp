@@ -9,7 +9,9 @@
 #include <imgui_impl_opengl3.h>
 
 #include <SDL3/SDL.h>
-#include <SDL3_image/SDL_image.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 #include "log.hpp"
 #include "colorf.hpp"
@@ -241,16 +243,6 @@ bool GLDevice::pollEvent(SDL_Event *event)
 GLDevice::GLDevice()
 {
     g_glDeviceSelf = this;
-
-    // minimal SDL3 init for the bridge layer only (SDL_ttf font rasterization,
-    // SDL_GetTicks/Delay); no video/audio subsystems -- GLFW owns the window,
-    // miniaudio owns audio. Removed entirely in the dependency-removal stage.
-    if(!SDL_Init(0)){
-        throw fflpanic("failed to initialize SDL base: {}", SDL_GetError());
-    }
-    if(!TTF_Init()){
-        throw fflpanic("failed to initialize SDL_ttf: {}", SDL_GetError());
-    }
 
     glfwSetErrorCallback(fnGLFWErrorCallback);
     if(!glfwInit()){
@@ -760,18 +752,20 @@ GLTexID GLDevice::createRGBATexture(const uint32_t *data, size_t w, size_t h)
     return GLTexID {texName, to_d(w), to_d(h)};
 }
 
-GLTexID GLDevice::createTextureFromSurface(SDL_Surface *surfPtr)
+GLTexID GLDevice::createTextureFromSurface(const GLSurface &surf)
 {
-    if(!surfPtr){
+    if(!(surf.w > 0 && surf.h > 0)){
         return {};
     }
 
-    GLTexID result {};
-    if(SDL_Surface *rgbaSurf = SDL_ConvertSurface(surfPtr, SDL_PIXELFORMAT_RGBA32)){
-        result = createRGBATexture(static_cast<const uint32_t *>(rgbaSurf->pixels), rgbaSurf->w, rgbaSurf->h);
-        SDL_DestroySurface(rgbaSurf);
+    // GLSurface holds ARGB8888 (0xAARRGGBB); createRGBATexture expects the
+    // colorf RGBA layout (0xAABBGGRR) -- swap the R and B channels
+    std::vector<uint32_t> buf(surf.pixels.size());
+    for(size_t i = 0; i < surf.pixels.size(); ++i){
+        const auto px = surf.pixels[i];
+        buf[i] = (px & 0XFF00FF00) | ((px & 0X000000FF) << 16) | ((px & 0X00FF0000) >> 16);
     }
-    return result;
+    return createRGBATexture(buf.data(), to_uz(surf.w), to_uz(surf.h));
 }
 
 GLTexID GLDevice::loadPNGTexture(const void *data, size_t size)
@@ -780,12 +774,11 @@ GLTexID GLDevice::loadPNGTexture(const void *data, size_t size)
         return {};
     }
 
+    int w = 0, h = 0, comp = 0;
     GLTexID result {};
-    if(SDL_IOStream *io = SDL_IOFromConstMem(data, size)){
-        if(SDL_Surface *surfPtr = IMG_Load_IO(io, true)){
-            result = createTextureFromSurface(surfPtr);
-            SDL_DestroySurface(surfPtr);
-        }
+    if(uint8_t *pixBuf = stbi_load_from_memory(static_cast<const stbi_uc *>(data), to_d(size), &w, &h, &comp, 4)){
+        result = createRGBATexture(reinterpret_cast<const uint32_t *>(pixBuf), to_uz(w), to_uz(h));
+        stbi_image_free(pixBuf);
     }
     return result;
 }
@@ -852,37 +845,6 @@ GLTexID GLDevice::getCover(int r, int angle)
 
 // ---------------------------------------------------------------------------
 // fonts (SDL_ttf bridge, kept until FontexDB moves to FreeType)
-// ---------------------------------------------------------------------------
-
-TTF_Font *GLDevice::createTTF(const void *data, size_t size, uint8_t fontPtSize)
-{
-    fflassert(data);
-    fflassert(size > 0);
-    fflassert(fontPtSize > 0);
-
-    if(auto ioStream = SDL_IOFromConstMem(data, size)){
-        return TTF_OpenFontIO(ioStream, true, to_f(fontPtSize));
-    }
-    return nullptr;
-}
-
-TTF_Font *GLDevice::defaultTTF(uint8_t fontSize)
-{
-    if(auto p = m_fontList.find(fontSize); p != m_fontList.end()){
-        return p->second;
-    }
-
-    constexpr static uint8_t ttfData[]
-    {
-        #embed "monaco.ttf"
-    };
-
-    if(auto ttfPtr = createTTF(std::data(ttfData), std::size(ttfData), fontSize); ttfPtr){
-        return m_fontList[fontSize] = ttfPtr;
-    }
-    throw fflpanic("can't build default ttf with point: {}", fontSize);
-}
-
 // ---------------------------------------------------------------------------
 // draw primitives (all through the background draw list)
 // ---------------------------------------------------------------------------

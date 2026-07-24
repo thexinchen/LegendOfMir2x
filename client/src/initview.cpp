@@ -2,7 +2,7 @@
 #include <memory>
 #include <chrono>
 #include <SDL3/SDL.h>
-#include <SDL3_ttf/SDL_ttf.h>
+#include "glfont.hpp"
 
 #include "log.hpp"
 #include "strf.hpp"
@@ -126,7 +126,7 @@ InitView::~InitView()
 void InitView::processEvent()
 {
     SDL_Event event;
-    while(SDL_PollEvent(&event)){
+    while(g_glDevice->pollEvent(&event)){
         switch(event.type){
             case SDL_EVENT_MOUSE_BUTTON_UP:
                 {
@@ -223,19 +223,23 @@ void InitView::draw()
 
     const auto fnBuildLogTexture = [this](int logType, const std::string &log) -> GLTexID 
     {
-        const auto color = [logType]() -> SDL_Color
+        const auto [cr, cg, cb] = [logType]() -> std::tuple<uint8_t, uint8_t, uint8_t>
         {
             switch(logType){
-                case LOGIV_INFO   : return {0XFF, 0XFF, 0XFF, 0XFF};
-                case LOGIV_WARNING: return {0XFF, 0XFF, 0X00, 0XFF};
-                default           : return {0XFF, 0X00, 0X00, 0XFF};
+                case LOGIV_INFO   : return {0XFF, 0XFF, 0XFF};
+                case LOGIV_WARNING: return {0XFF, 0XFF, 0X00};
+                default           : return {0XFF, 0X00, 0X00};
             }
         }();
 
         GLTexID texPtr = nullptr;
-        if(auto surfPtr = TTF_RenderText_Blended(g_glDevice->defaultTTF(m_fontSize), log.c_str(), 0, color)){
-            texPtr = g_glDevice->createTextureFromSurface(surfPtr);
-            SDL_DestroySurface(surfPtr);
+        if(auto surfPtr = glfont::renderText(glfont::defaultFont(m_fontSize), log.c_str(), 0, GLFONT_BLENDED)){
+            // BLENDED surfaces carry white texels with coverage in alpha;
+            // bake the log-type color into RGB (SDL_ttf used to do this)
+            for(auto &pix: surfPtr->pixels){
+                pix = (pix & 0XFF000000) | ((uint32_t)(cr) << 16) | ((uint32_t)(cg) << 8) | (uint32_t)(cb);
+            }
+            texPtr = g_glDevice->createTextureFromSurface(*surfPtr);
         }
         return texPtr;
     };

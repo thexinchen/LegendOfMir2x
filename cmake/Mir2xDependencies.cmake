@@ -37,6 +37,7 @@ find_library(LIBDB_LIBRARY REQUIRED
 
 find_path(LIBPOPCNT_INCLUDE_DIR REQUIRED NAMES libpopcnt.h)
 find_path(PHMAP_INCLUDE_DIR REQUIRED NAMES parallel_hashmap/phmap.h)
+find_path(STB_INCLUDE_DIR REQUIRED NAMES stb_image.h)
 
 if(NOT FLTK_FLUID_EXECUTABLE)
     find_program(FLTK_FLUID_EXECUTABLE
@@ -141,7 +142,8 @@ add_library(mir2x_header_deps INTERFACE)
 add_library(mir2x::header_deps ALIAS mir2x_header_deps)
 target_include_directories(mir2x_header_deps SYSTEM INTERFACE
     ${LIBPOPCNT_INCLUDE_DIR}
-    ${PHMAP_INCLUDE_DIR})
+    ${PHMAP_INCLUDE_DIR}
+    ${STB_INCLUDE_DIR})
 target_link_libraries(mir2x_header_deps INTERFACE
     argh
     asio::asio
