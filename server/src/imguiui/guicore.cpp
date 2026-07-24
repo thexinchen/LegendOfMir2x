@@ -114,6 +114,8 @@ void GUICore::run()
         // event including the empty events posted by wake()
         glfwWaitEventsTimeout(0.100);
 
+        runPendingActions();
+
         // old Fl::thread_message() case 1: drain the GUI request queue
         g_server->parseNotifyGUIQ();
 
@@ -141,6 +143,26 @@ void GUICore::drawFrame()
 
     m_mainWindow->drawMenuBar();
     m_mainWindow->drawConsole();
+
+    if(m_showActorMonitor){
+        m_monitorWindow.drawActorMonitor();
+    }
+    if(m_showPodMonitor){
+        m_monitorWindow.drawPodMonitor();
+    }
+    if(m_showProfiler){
+        m_profilerWindow.draw();
+    }
+    if(m_showConfigure){
+        m_configureWindow.draw();
+    }
+    if(m_showScript){
+        m_scriptWindow.draw();
+    }
+
+    m_commandWindow.drawAllWindows();
+
+    drawPasswordModal();
     drawFatalModal();
 
     ImGui::Render();
@@ -153,6 +175,69 @@ void GUICore::drawFrame()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     glfwSwapBuffers(m_window);
+}
+
+void GUICore::requestPassword(std::function<void(const std::string &)> cb)
+{
+    m_passwordCb = std::move(cb);
+    m_passwordInput[0] = '\0';
+    m_passwordPopupOpen = false; // OpenPopup issued on the next frame
+}
+
+void GUICore::drawPasswordModal()
+{
+    if(m_passwordCb && !m_passwordPopupOpen){
+        ImGui::OpenPopup("Server Password");
+        m_passwordPopupOpen = true;
+    }
+
+    if(ImGui::BeginPopupModal("Server Password", nullptr, ImGuiWindowFlags_AlwaysAutoResize)){
+        ImGui::TextUnformatted("Please set server password:");
+        const bool enterPressed = ImGui::InputText("Password", m_passwordInput, sizeof(m_passwordInput),
+                ImGuiInputTextFlags_Password | ImGuiInputTextFlags_EnterReturnsTrue);
+
+        if(ImGui::Button("OK", ImVec2(120, 0)) || enterPressed){
+            m_password = m_passwordInput;
+            auto cb = std::move(m_passwordCb);
+            m_passwordCb = nullptr;
+            m_passwordPopupOpen = false;
+            ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+            if(cb){
+                cb(m_password);
+            }
+            return;
+        }
+
+        ImGui::SameLine();
+        if(ImGui::Button("Cancel", ImVec2(120, 0))){
+            m_passwordCb = nullptr;
+            m_passwordPopupOpen = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+
+void GUICore::runPendingActions()
+{
+    if(!m_pendingLaunch){
+        return;
+    }
+    m_pendingLaunch = false;
+
+    // legacy Launch behavior: recreate the server object, then launch
+    try{
+        delete g_server;
+        g_server = new Server();
+        g_server->launch();
+        setLaunched(true);
+    }
+    catch(const std::exception &e){
+        std::string firstExceptStr;
+        g_server->logException(e, &firstExceptStr);
+        fatalAlert(firstExceptStr.empty() ? "Server launch failed" : firstExceptStr);
+    }
 }
 
 void GUICore::appendLog(int type, const char *line)
@@ -174,8 +259,9 @@ void GUICore::appendLog(int type, const char *line)
 
 void GUICore::appendCWLog(uint32_t cwID, int type, const char *prompt, const char *log)
 {
-    // Stage 1a has no command windows yet; surface CW output in the main
-    // console instead (types offset by 100 so the console can color them)
+    // route into the owning command window's log pane, and mirror into the
+    // main console (types offset by 100 so the console can color them)
+    m_commandWindow.appendCWLog(cwID, type, prompt, log);
     appendLog(100 + type, (std::string("[CW#") + std::to_string(cwID) + "] " + (prompt ? prompt : "") + (log ? log : "")).c_str());
 }
 
@@ -211,14 +297,44 @@ void GUICore::drawFatalModal()
     }
 }
 
-std::vector<std::string> GUICore::getCWHistory(uint32_t) const
+std::vector<std::string> GUICore::getCWHistory(uint32_t cwID)
 {
-    // Stage 1a stub, command windows land in Stage 2
-    return {};
+    return m_commandWindow.getHistory(to_d(cwID));
 }
 
 void GUICore::deleteCommandWindow(int cwID)
 {
-    // Stage 1a stub, command windows land in Stage 2
-    appendLog(Log::LOGTYPEV_INFO, (std::string("DeleteCommandWindow(") + std::to_string(cwID) + ") ignored, command windows not available yet").c_str());
+    m_commandWindow.deleteCommandWindow(cwID);
+}
+
+void GUICore::appendCWLogToWindow(uint32_t cwID, int type, const char *prompt, const char *log)
+{
+    m_commandWindow.appendCWLog(cwID, type, prompt, log);
+}
+
+bool GUICore::isCommandWindowOpen(int cwID)
+{
+    if(auto *slot = m_commandWindow.getSlot(cwID)){
+        return slot->open;
+    }
+    return false;
+}
+
+void GUICore::setCommandWindowOpen(int cwID, bool open)
+{
+    if(auto *slot = m_commandWindow.getSlot(cwID)){
+        slot->open = open;
+    }
+}
+
+void GUICore::execScriptInCommandWindow(const std::string &code)
+{
+    // legacy behavior: scripts run through command window #1
+    if(!m_commandWindow.getSlot(1)){
+        if(createCommandWindow() != 1){
+            appendLog(Log::LOGTYPEV_WARNING, "no free command window for script execution");
+            return;
+        }
+    }
+    m_commandWindow.execString(1, code);
 }

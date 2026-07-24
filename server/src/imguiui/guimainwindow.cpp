@@ -30,13 +30,11 @@ void GUIMainWindow::drawMenuBar()
 
     if(ImGui::BeginMenu("Server")){
         if(ImGui::MenuItem("Launch", nullptr, false, !m_core->hasLaunched())){
-            try{
-                g_server->launch();
-                m_core->setLaunched(true);
-            }
-            catch(const std::exception &e){
-                g_server->logException(e);
-            }
+            // legacy flow: password dialog first, then recreate + launch
+            m_core->requestPassword([core = m_core](const std::string &)
+            {
+                core->queueLaunch();
+            });
         }
         ImGui::Separator();
         if(ImGui::MenuItem("Quit")){
@@ -46,24 +44,49 @@ void GUIMainWindow::drawMenuBar()
     }
 
     if(ImGui::BeginMenu("Configure")){
-        ImGui::MenuItem("Server...", nullptr, false, false); // Stage 2
+        bool showConfigure = m_core->isConfigureOpen();
+        if(ImGui::MenuItem("Server...", nullptr, &showConfigure)){
+            m_core->setConfigureOpen(showConfigure);
+        }
         ImGui::EndMenu();
     }
 
     if(ImGui::BeginMenu("Command")){
-        ImGui::MenuItem("Run...", nullptr, false, false);    // Stage 2
+        if(ImGui::MenuItem("Run...")){
+            m_core->createCommandWindow();
+        }
+        ImGui::Separator();
+        for(int cwid = 1; cwid <= 16; ++cwid){
+            bool open = m_core->isCommandWindowOpen(cwid);
+            if(ImGui::MenuItem(str_printf("Window %d", cwid).c_str(), nullptr, &open)){
+                m_core->setCommandWindowOpen(cwid, open);
+            }
+        }
         ImGui::EndMenu();
     }
 
     if(ImGui::BeginMenu("Script")){
-        ImGui::MenuItem("Load...", nullptr, false, false);   // Stage 2
+        bool showScript = m_core->isScriptOpen();
+        if(ImGui::MenuItem("Load...", nullptr, &showScript)){
+            m_core->setScriptOpen(showScript);
+        }
         ImGui::EndMenu();
     }
 
     if(ImGui::BeginMenu("Monitor")){
-        ImGui::MenuItem("Actor",      nullptr, false, false); // Stage 2
-        ImGui::MenuItem("Actor Pod",  nullptr, false, false);
-        ImGui::MenuItem("Profiler",   nullptr, false, false);
+        bool showActorMonitor = m_core->isActorMonitorOpen();
+        bool showPodMonitor   = m_core->isPodMonitorOpen();
+        bool showProfiler     = m_core->isProfilerOpen();
+
+        if(ImGui::MenuItem("Actor", nullptr, &showActorMonitor)){
+            m_core->setActorMonitorOpen(showActorMonitor);
+        }
+        if(ImGui::MenuItem("Actor Pod", nullptr, &showPodMonitor)){
+            m_core->setPodMonitorOpen(showPodMonitor);
+        }
+        if(ImGui::MenuItem("Profiler", nullptr, &showProfiler)){
+            m_core->setProfilerOpen(showProfiler);
+        }
         ImGui::EndMenu();
     }
 
