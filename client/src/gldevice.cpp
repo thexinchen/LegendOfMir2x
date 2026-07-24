@@ -216,6 +216,8 @@ void GLDevice::fnScrollEvent(GLFWwindow *window, double, double yoffset)
 
 bool GLDevice::pollEvent(MirEvent *event)
 {
+    glfwPollEvents();
+
     std::lock_guard<std::mutex> lockGuard(m_eventLock);
     if(m_eventQ.empty()){
         return false;
