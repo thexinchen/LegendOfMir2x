@@ -8,11 +8,11 @@
 #include "peerconfig.hpp"
 #include "dropitemconfig.hpp"
 #include "serverargparser.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 
 extern PeerConfig *g_peerConfig;
 extern ServerArgParser *g_serverArgParser;
-extern ServerConfigureWindow *g_serverConfigureWindow;
+extern GUICore *g_guiCore;
 
 struct InnDropItemConfig final
 {
@@ -101,7 +101,7 @@ std::vector<SDItem> getMonsterDropItemList(uint32_t monsterID)
             };
         }
         else{
-            const auto confg = g_serverConfigureWindow->getConfig();
+            const auto confg = g_guiCore->getConfig();
             return
             {
                 confg.dropRate,

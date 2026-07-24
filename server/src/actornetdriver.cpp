@@ -5,14 +5,14 @@
 #include "server.hpp"
 #include "actornetdriver.hpp"
 #include "serverargparser.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 #include "serverpeer.hpp"
 #include "asiof.hpp"
 
 extern ActorPool *g_actorPool;
 extern Server *g_server;
 extern ServerArgParser *g_serverArgParser;
-extern ServerConfigureWindow *g_serverConfigureWindow;
+extern GUICore *g_guiCore;
 static thread_local bool t_actorNetThreadFlag = false; // use bool since only has 1 net thread
 
 ActorNetDriver::ActorNetDriver()

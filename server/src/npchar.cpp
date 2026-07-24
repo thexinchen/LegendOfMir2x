@@ -16,16 +16,14 @@
 #include "serdesmsg.hpp"
 #include "friendtype.hpp"
 #include "server.hpp"
-#include "serverpasswordwindow.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 
 extern DBPod *g_dbPod;
 extern Server *g_server;
-extern ServerPasswordWindow *g_serverPasswordWindow;
-extern ServerConfigureWindow *g_serverConfigureWindow;
+extern GUICore *g_guiCore;
 
 NPChar::AESHelper::AESHelper(const NPChar *npc, uint64_t uid)
-    : aesf::AES(g_serverPasswordWindow->getPassword(), reinterpret_cast<uintptr_t>(to_cvptr(npc)) ^ ~uid, npc->getXMLSeqID(uid).value())
+    : aesf::AES(g_guiCore->getServerPassword().c_str(), reinterpret_cast<uintptr_t>(to_cvptr(npc)) ^ ~uid, npc->getXMLSeqID(uid).value())
 {}
 
 std::string NPChar::AESHelper::encode(const char *s)

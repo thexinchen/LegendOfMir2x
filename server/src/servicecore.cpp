@@ -12,12 +12,12 @@
 #include "server.hpp"
 #include "servicecore.hpp"
 #include "serverargparser.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 
 extern MapBinDB *g_mapBinDB;
 extern Server *g_server;
 extern ServerArgParser *g_serverArgParser;
-extern ServerConfigureWindow *g_serverConfigureWindow;
+extern GUICore *g_guiCore;
 
 ServiceCore::ServiceCore()
     : PeerCore()
@@ -148,7 +148,7 @@ corof::awaitable<> ServiceCore::onActivate()
     }
 
     if(!g_serverArgParser->masterConfig().disableQuestScript){
-        const auto cfgScriptPath = g_serverConfigureWindow->getConfig().scriptPath;
+        const auto cfgScriptPath = g_guiCore->getConfig().scriptPath;
         const auto scriptPath = cfgScriptPath.empty() ? std::string("script/quest") : (cfgScriptPath + "/quest");
         const auto questFileNameRegex = []() -> std::string
         {
