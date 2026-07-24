@@ -7,11 +7,23 @@
     "cereal",
     "fltk",
     "g3log",
+    "glfw3",
+    {
+      "name": "imgui",
+      "features": [
+        "glfw-binding",
+        "opengl3-binding",
+        "docking-experimental",
+        "freetype",
+        "wchar32"
+      ]
+    },
     "libpinyin",
     "libpng",
     "libpopcnt",
     "lua",
     "lz4",
+    "miniaudio",
     "parallel-hashmap",
     "sdl3",
     "sdl3-gfx",
@@ -31,6 +43,7 @@
     "sol2",
     "sqlitecpp",
     "tiny-aes-c",
+    "tinyfiledialogs",
     "tinyxml2",
     "utfcpp",
     "zlib",
