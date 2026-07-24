@@ -23,6 +23,9 @@ find_package(unofficial-sqlite3 CONFIG REQUIRED)
 find_package(SQLiteCpp CONFIG REQUIRED)
 find_package(unofficial-tiny-aes-c CONFIG REQUIRED)
 find_package(argh CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
+find_package(tinyfiledialogs CONFIG REQUIRED)
 
 set(PKG_CONFIG_USE_CMAKE_PREFIX_PATH ON)
 pkg_check_modules(LIBPINYIN REQUIRED IMPORTED_TARGET libpinyin)
@@ -122,6 +125,18 @@ foreach(MIR2X_FLTK_TARGET IN ITEMS fltk_images fltk_gl fltk)
 endforeach()
 target_link_libraries(mir2x_fltk INTERFACE OpenGL::GL)
 
+# Dear ImGui + GLFW + OpenGL3: the unified UI stack replacing FLTK (server/tools)
+# and the custom SDL3 widget framework (client). miniaudio (header-only, no
+# CMake target) replaces SDL3_mixer; include <miniaudio.h> with
+# MINIAUDIO_IMPLEMENTATION in exactly one translation unit.
+add_library(mir2x_imgui_glfw_gl INTERFACE)
+add_library(mir2x::imgui_glfw_gl ALIAS mir2x_imgui_glfw_gl)
+target_link_libraries(mir2x_imgui_glfw_gl INTERFACE
+    imgui::imgui
+    glfw
+    OpenGL::GL
+    tinyfiledialogs::tinyfiledialogs)
+
 add_library(mir2x_header_deps INTERFACE)
 add_library(mir2x::header_deps ALIAS mir2x_header_deps)
 target_include_directories(mir2x_header_deps SYSTEM INTERFACE
@@ -145,6 +160,7 @@ target_link_libraries(mir2x_common_deps INTERFACE
     mir2x::project_options
     mir2x::sdl3
     mir2x::fltk
+    mir2x::imgui_glfw_gl
     mir2x::lua
     mir2x::header_deps
     Threads::Threads
