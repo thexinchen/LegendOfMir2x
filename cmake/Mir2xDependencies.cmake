@@ -9,7 +9,6 @@ find_package(lz4 CONFIG REQUIRED)
 find_package(zstd CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
 find_package(g3log CONFIG REQUIRED)
-find_package(FLTK CONFIG REQUIRED)
 find_package(asio CONFIG REQUIRED)
 find_package(cereal CONFIG REQUIRED)
 find_package(sol2 CONFIG REQUIRED)
@@ -34,15 +33,6 @@ find_path(LIBPOPCNT_INCLUDE_DIR REQUIRED NAMES libpopcnt.h)
 find_path(PHMAP_INCLUDE_DIR REQUIRED NAMES parallel_hashmap/phmap.h)
 find_path(STB_INCLUDE_DIR REQUIRED NAMES stb_image.h)
 
-if(NOT FLTK_FLUID_EXECUTABLE)
-    find_program(FLTK_FLUID_EXECUTABLE
-        NAMES fluid
-        PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools/fltk"
-        NO_DEFAULT_PATH)
-endif()
-if(NOT FLTK_FLUID_EXECUTABLE)
-    message(FATAL_ERROR "Failed to find FLTK fluid executable")
-endif()
 
 add_library(mir2x_project_options INTERFACE)
 add_library(mir2x::project_options ALIAS mir2x_project_options)
@@ -97,15 +87,6 @@ else()
     target_link_libraries(mir2x_lua INTERFACE ${LUA_LIBRARIES})
 endif()
 
-add_library(mir2x_fltk INTERFACE)
-add_library(mir2x::fltk ALIAS mir2x_fltk)
-target_include_directories(mir2x_fltk SYSTEM INTERFACE ${FLTK_INCLUDE_DIRS})
-foreach(MIR2X_FLTK_TARGET IN ITEMS fltk_images fltk_gl fltk)
-    if(TARGET ${MIR2X_FLTK_TARGET})
-        target_link_libraries(mir2x_fltk INTERFACE ${MIR2X_FLTK_TARGET})
-    endif()
-endforeach()
-target_link_libraries(mir2x_fltk INTERFACE OpenGL::GL)
 
 # Dear ImGui + GLFW + OpenGL3: the unified UI stack for client, server, and tools.
 # miniaudio (header-only, no CMake target) handles audio; include <miniaudio.h>
@@ -140,7 +121,6 @@ add_library(mir2x_common_deps INTERFACE)
 add_library(mir2x::common_deps ALIAS mir2x_common_deps)
 target_link_libraries(mir2x_common_deps INTERFACE
     mir2x::project_options
-    mir2x::fltk
     mir2x::imgui_glfw_gl
     mir2x::lua
     mir2x::header_deps

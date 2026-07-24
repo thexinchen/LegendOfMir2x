@@ -1,7 +1,3 @@
-set(FLTK_HPP_SRC "")
-set(FLTK_CPP_SRC "")
-fltk_parse_fl_file(FLTK_HPP_SRC FLTK_CPP_SRC)
-
 aux_source_directory(. SHADOWMAKER_SRC)
 add_executable(weaponwil2png ${SHADOWMAKER_SRC} ${FLTK_CPP_SRC})
 
