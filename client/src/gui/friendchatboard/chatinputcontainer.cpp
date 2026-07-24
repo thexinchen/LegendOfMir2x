@@ -1,6 +1,6 @@
 #include "client.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "chatpage.hpp"
 #include "chatinputcontainer.hpp"
@@ -9,7 +9,7 @@
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ChatInputContainer::ChatInputContainer(
         Widget::VarDir  argDir,

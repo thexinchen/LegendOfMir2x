@@ -3,15 +3,15 @@
 #include "acutionboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 AcutionBoard::AcutionBoard(ProcessRun *argProc, Widget *argParent, bool argAutoDelete)
     : Widget
       {{
           .dir = DIR_NONE,
 
-          .x = [](const Widget *){ return g_sdlDevice->getRendererWidth () / 2; },
-          .y = [](const Widget *){ return g_sdlDevice->getRendererHeight() / 2; },
+          .x = [](const Widget *){ return g_glDevice->getRendererWidth () / 2; },
+          .y = [](const Widget *){ return g_glDevice->getRendererHeight() / 2; },
 
           .parent
           {
@@ -23,7 +23,7 @@ AcutionBoard::AcutionBoard(ProcessRun *argProc, Widget *argParent, bool argAutoD
     , m_runProc(argProc)
     , m_background
       {{
-          .texLoadFunc = [](const Widget *) -> SDL_Texture *
+          .texLoadFunc = [](const Widget *) -> GLTexID 
           {
               return g_progUseDB->retrieve(0X00001400);
           },

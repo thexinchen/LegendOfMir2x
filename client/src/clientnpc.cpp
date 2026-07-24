@@ -1,11 +1,11 @@
 #include "uidf.hpp"
 #include "mathf.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "clientnpc.hpp"
 #include "pngtexoffdb.hpp"
 #include "clientargparser.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern PNGTexOffDB *g_standNPCDB;
 extern ClientArgParser *g_clientArgParser;
 
@@ -124,7 +124,7 @@ void ClientNPC::drawFrame(int viewX, int viewY, int focusMask, int frame, bool)
     const auto [  bodyFrame,   bodyDX,   bodyDY] = g_standNPCDB->retrieve((bodyKey.value()                    ));
     const auto [shadowFrame, shadowDX, shadowDY] = g_standNPCDB->retrieve((bodyKey.value() | (to_u32(1) << 23)));
 
-    auto fnBlendFrame = [](SDL_Texture *texture, int focusChan, int x, int y, uint8_t alpha)
+    auto fnBlendFrame = [](GLTexID texture, int focusChan, int x, int y, uint8_t alpha)
     {
         if(!texture){
             return;
@@ -134,8 +134,8 @@ void ClientNPC::drawFrame(int viewX, int viewY, int focusMask, int frame, bool)
             return;
         }
 
-        const SDLDeviceHelper::EnableTextureModColor modColor(texture, colorf::SDLColor2RGBA(focusColor(focusChan, alpha)));
-        g_sdlDevice->drawTexture(texture, x, y);
+        const GLDeviceHelper::EnableTextureModColor modColor(texture, colorf::SDLColor2RGBA(focusColor(focusChan, alpha)));
+        g_glDevice->drawTexture(texture, x, y);
     };
 
     const int   bodyDrawX = x() * SYS_MAPGRIDXP +   bodyDX - viewX;
@@ -153,16 +153,16 @@ void ClientNPC::drawFrame(int viewX, int viewY, int focusMask, int frame, bool)
     }
 
     if(g_clientArgParser->drawTextureAlignLine){
-        g_sdlDevice->drawLine (colorf::RED  + colorf::A_SHF(128), bodyDrawX - bodyDX, bodyDrawY - bodyDY, bodyDrawX, bodyDrawY);
-        g_sdlDevice->drawCross(colorf::BLUE + colorf::A_SHF(128), bodyDrawX - bodyDX, bodyDrawY - bodyDY, 5);
+        g_glDevice->drawLine (colorf::RED  + colorf::A_SHF(128), bodyDrawX - bodyDX, bodyDrawY - bodyDY, bodyDrawX, bodyDrawY);
+        g_glDevice->drawCross(colorf::BLUE + colorf::A_SHF(128), bodyDrawX - bodyDX, bodyDrawY - bodyDY, 5);
 
-        const auto [texW, texH] = SDLDeviceHelper::getTextureSize(bodyFrame);
-        g_sdlDevice->drawRectangle(colorf::RED + colorf::A_SHF(128), bodyDrawX, bodyDrawY, texW, texH);
+        const auto [texW, texH] = GLDeviceHelper::getTextureSize(bodyFrame);
+        g_glDevice->drawRectangle(colorf::RED + colorf::A_SHF(128), bodyDrawX, bodyDrawY, texW, texH);
     }
 
     if(g_clientArgParser->drawTargetBox){
         if(const auto box = getTargetBox()){
-            g_sdlDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(128), box.x - viewX, box.y - viewY, box.w, box.h);
+            g_glDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(128), box.x - viewX, box.y - viewY, box.w, box.h);
         }
     }
 
@@ -262,7 +262,7 @@ ClientCreature::TargetBox ClientNPC::getTargetBox() const
         return {};
     }
 
-    const auto [bodyFrameW, bodyFrameH] = SDLDeviceHelper::getTextureSize(bodyFrameTexPtr);
+    const auto [bodyFrameW, bodyFrameH] = GLDeviceHelper::getTextureSize(bodyFrameTexPtr);
 
     const int startX = x() * SYS_MAPGRIDXP + dx;
     const int startY = y() * SYS_MAPGRIDYP + dy;

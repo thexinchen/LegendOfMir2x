@@ -1,7 +1,5 @@
 #pragma once
 #include <cstring>
-#include <SDL3/SDL.h>
-#include <SDL3_mixer/SDL_mixer.h>
 
 #include "zsdb.hpp"
 #include "inndb.hpp"
@@ -9,8 +7,8 @@
 
 struct SoundEffectElement
 {
-    // SDL_mixer accesses data during playing
-    // internal database needs to keep both chunk pointer and file data in shared_ptr
+    // miniaudio decodes from the clip's bytes during playing
+    // the database keeps the handle (and its bytes) alive in a shared_ptr
     std::shared_ptr<SoundEffectHandle> handle = nullptr;
 };
 

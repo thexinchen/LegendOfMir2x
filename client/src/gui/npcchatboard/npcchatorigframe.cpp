@@ -1,9 +1,9 @@
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "npcchatorigframe.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 NPCChatOrigFrame::NPCChatOrigFrame(
         Widget::VarDir argDir,

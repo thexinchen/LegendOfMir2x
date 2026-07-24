@@ -2,7 +2,7 @@
 #include "checkbox.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 bool CheckBox::evalBoolGetter(const CheckBox::BoolGetter &getter, const Widget *widget)
 {
@@ -116,12 +116,12 @@ CheckBox::CheckBox(CheckBox::InitArgs args)
               const auto  solidColor = Widget::evalU32(m_color, this);
               const auto shadowColor = colorf::maskRGB(solidColor) + colorf::A_SHF(colorf::A(solidColor) / 2);
 
-              g_sdlDevice->drawLine( solidColor, drawDstX +       0, drawDstY +       0, drawDstX + w() - 1, drawDstY +       0); // 1
-              g_sdlDevice->drawLine( solidColor, drawDstX + w() - 1, drawDstY +       0, drawDstX + w() - 1, drawDstY + h() - 1); // 2
-              g_sdlDevice->drawLine( solidColor, drawDstX +       0, drawDstY + h() - 1, drawDstX + w() - 1, drawDstY + h() - 1); // 3
-              g_sdlDevice->drawLine( solidColor, drawDstX +       0, drawDstY +       0, drawDstX +       0, drawDstY + h() - 1); // 4
-              g_sdlDevice->drawLine(shadowColor, drawDstX + w() - 2, drawDstY +       0, drawDstX + w() - 2, drawDstY + h() - 2); // 5
-              g_sdlDevice->drawLine(shadowColor, drawDstX +       0, drawDstY + h() - 2, drawDstX + w() - 2, drawDstY + h() - 2); // 6
+              g_glDevice->drawLine( solidColor, drawDstX +       0, drawDstY +       0, drawDstX + w() - 1, drawDstY +       0); // 1
+              g_glDevice->drawLine( solidColor, drawDstX + w() - 1, drawDstY +       0, drawDstX + w() - 1, drawDstY + h() - 1); // 2
+              g_glDevice->drawLine( solidColor, drawDstX +       0, drawDstY + h() - 1, drawDstX + w() - 1, drawDstY + h() - 1); // 3
+              g_glDevice->drawLine( solidColor, drawDstX +       0, drawDstY +       0, drawDstX +       0, drawDstY + h() - 1); // 4
+              g_glDevice->drawLine(shadowColor, drawDstX + w() - 2, drawDstY +       0, drawDstX + w() - 2, drawDstY + h() - 2); // 5
+              g_glDevice->drawLine(shadowColor, drawDstX +       0, drawDstY + h() - 2, drawDstX + w() - 2, drawDstY + h() - 2); // 6
           },
 
           .parent{this},

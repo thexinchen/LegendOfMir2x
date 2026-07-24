@@ -1,7 +1,7 @@
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "menuitem.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 MenuItem::MenuItem(MenuItem::InitArgs args)
     : Widget
       {{
@@ -119,7 +119,7 @@ MenuItem::MenuItem(MenuItem::InitArgs args)
                const int x3 = dstDrawX + MenuItem::INDICATOR_W - 1;
                const int y3 = dstDrawY + MenuItem::INDICATOR_H / 2;
 
-               g_sdlDevice->fillTriangle(colorf::BLUE_A255, x1, y1, x2, y2, x3, y3);
+               g_glDevice->fillTriangle(colorf::BLUE_A255, x1, y1, x2, y2, x3, y3);
            },
       }}
 
@@ -146,7 +146,7 @@ MenuItem::MenuItem(MenuItem::InitArgs args)
               if(m_gfxButton->getState() != BEVENT_OFF){
                   wopt = w();
                   hopt = h();
-                  g_sdlDevice->fillRectangle(Widget::evalU32(bgColor, this), dstDrawX, dstDrawY, wopt.value(), hopt.value());
+                  g_glDevice->fillRectangle(Widget::evalU32(bgColor, this), dstDrawX, dstDrawY, wopt.value(), hopt.value());
               }
 
               if(Widget::evalBool(showSep, this)){
@@ -157,7 +157,7 @@ MenuItem::MenuItem(MenuItem::InitArgs args)
                   const int lineX2 = dstDrawX + width - 1 - dwidth;
 
                   const int lineY = dstDrawY + hopt.value_or(h()) - 1;
-                  g_sdlDevice->drawLine(colorf::GREY + colorf::A_SHF(128), lineX1, lineY, lineX2, lineY);
+                  g_glDevice->drawLine(colorf::GREY + colorf::A_SHF(128), lineX1, lineY, lineX2, lineY);
               }
           },
       }}

@@ -19,7 +19,7 @@
 #include <SDL3/SDL.h>
 #include <functional>
 #include "bevent.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 
 class InitView final
 {
@@ -35,7 +35,7 @@ class InitView final
         {
             int type = 0;
             std::string log;
-            SDL_Texture *texture = nullptr;
+            GLTexID texture = nullptr;
         };
 
     private:
@@ -61,8 +61,8 @@ class InitView final
         std::vector<LogEntry> m_logSink;
 
     private:
-        SDL_Texture *m_boardTexture  = nullptr;
-        SDL_Texture *m_buttonTexture = nullptr;
+        GLTexID m_boardTexture  = nullptr;
+        GLTexID m_buttonTexture = nullptr;
 
     public:
         InitView(uint8_t);

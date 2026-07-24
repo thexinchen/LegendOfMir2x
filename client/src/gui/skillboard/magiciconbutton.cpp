@@ -88,7 +88,7 @@ bool MagicIconButton::processEventDefault(const SDL_Event &event, bool valid, Wi
 
     const auto result = m_icon.processEventParent(event, valid, m);
     if(event.type == SDL_EVENT_KEY_DOWN && cursorOn()){
-        if(const auto key = SDLDeviceHelper::getKeyChar(event, false); (key >= '0' && key <= '9') || (key >= 'a' && key <= 'z')){
+        if(const auto key = GLDeviceHelper::getKeyChar(event, false); (key >= '0' && key <= '9') || (key >= 'a' && key <= 'z')){
             if(m_config->hasMagicID(magicID())){
                 if(SkillBoard::getMagicIconGfx(magicID())->passive){
                     m_processRun->addCBLog(CBLOG_SYS, u8"无法为被动技能设置快捷键：%s", to_cstr(DBCOM_MAGICRECORD(magicID()).name));

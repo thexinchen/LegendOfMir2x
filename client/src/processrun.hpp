@@ -1,4 +1,5 @@
 #pragma once
+#include "audiodevice.hpp"
 #include <set>
 #include <map>
 #include <list>
@@ -195,7 +196,7 @@ class ProcessRun: public Process
 
         std::tuple<int, int> getMouseGLoc() const
         {
-            const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+            const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
             return fromPLoc2Grid(mousePX, mousePY);
         }
 
@@ -489,7 +490,7 @@ class ProcessRun: public Process
         }
 
     public:
-        std::shared_ptr<SDLSoundEffectChannel> playSoundEffectAt(uint32_t, int, int, size_t repeats = 1) const;
+        std::shared_ptr<SoundEffectChannel> playSoundEffectAt(uint32_t, int, int, size_t repeats = 1) const;
 
     public:
         void setCursor(int);

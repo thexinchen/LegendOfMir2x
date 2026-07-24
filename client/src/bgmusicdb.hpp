@@ -1,15 +1,15 @@
 #pragma once
 #include <cstring>
-#include <SDL3/SDL.h>
-#include <SDL3_mixer/SDL_mixer.h>
+#include <memory>
 
 #include "zsdb.hpp"
 #include "inndb.hpp"
+#include "audioclip.hpp"
 
 struct BGMusicElement
 {
-    MIX_Audio *music = nullptr;
-    std::vector<uint8_t> musicFileData; // SDL_mixer streams from this buffer
+    std::shared_ptr<AudioClip> music = nullptr; // miniaudio decodes at play time
+    std::vector<uint8_t> musicFileData;
 };
 
 class BGMusicDB: public innDB<uint32_t, BGMusicElement>
@@ -32,7 +32,7 @@ class BGMusicDB: public innDB<uint32_t, BGMusicElement>
         }
 
     public:
-        MIX_Audio *retrieve(uint32_t key)
+        std::shared_ptr<AudioClip> retrieve(uint32_t key)
         {
             if(auto p = innLoad(key)){
                 return p->music;

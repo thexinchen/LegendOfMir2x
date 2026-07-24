@@ -6,11 +6,11 @@
 #include "zsdb.hpp"
 #include "inndb.hpp"
 #include "hexstr.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 
 struct PNGTexElement
 {
-    SDL_Texture *texture = nullptr;
+    GLTexID texture = nullptr;
 };
 
 class PNGTexDB: public innDB<uint32_t, PNGTexElement>
@@ -30,7 +30,7 @@ class PNGTexDB: public innDB<uint32_t, PNGTexElement>
         }
 
     public:
-        SDL_Texture *retrieve(uint32_t key)
+        GLTexID retrieve(uint32_t key)
         {
             if(auto p = innLoad(key)){
                 return p->texture;
@@ -38,7 +38,7 @@ class PNGTexDB: public innDB<uint32_t, PNGTexElement>
             return nullptr;
         }
 
-        SDL_Texture *retrieve(uint8_t fileIndex, uint16_t imageIndex)
+        GLTexID retrieve(uint8_t fileIndex, uint16_t imageIndex)
         {
             return retrieve(to_u32((to_u32(fileIndex) << 16) + imageIndex));
         }

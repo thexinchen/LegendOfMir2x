@@ -1,5 +1,5 @@
 #include "widget.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "checklabel.hpp"
 
 CheckLabel::CheckLabel(CheckLabel::InitArgs args)
@@ -124,7 +124,7 @@ bool CheckLabel::processEventDefault(const SDL_Event &event, bool valid, Widget:
         case SDL_EVENT_MOUSE_BUTTON_UP:
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             {
-                m_hoverColor = m.in(SDLDeviceHelper::getEventPLoc(event).value());
+                m_hoverColor = m.in(GLDeviceHelper::getEventPLoc(event).value());
                 break;
             }
         default:

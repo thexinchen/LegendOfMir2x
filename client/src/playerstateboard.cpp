@@ -2,7 +2,7 @@
 #include "strf.hpp"
 #include "uidf.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "combatnode.hpp"
 #include "processrun.hpp"
 #include "pngtexoffdb.hpp"
@@ -14,7 +14,7 @@ extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;
 extern PNGTexOffDB *g_equipDB;
 extern SoundEffectDB *g_seffDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
 PlayerStateBoard::PlayerStateBoard(int argX, int argY, ProcessRun *runPtr, Widget *argParent, bool argAutoDelete)
@@ -102,8 +102,8 @@ PlayerStateBoard::PlayerStateBoard(int argX, int argY, ProcessRun *runPtr, Widge
 {
     setShow(false);
     if(auto texPtr = g_progUseDB->retrieve(0X06000000)){
-        setW(SDLDeviceHelper::getTextureWidth (texPtr));
-        setH(SDLDeviceHelper::getTextureHeight(texPtr));
+        setW(GLDeviceHelper::getTextureWidth (texPtr));
+        setH(GLDeviceHelper::getTextureHeight(texPtr));
     }
     else{
         throw fflpanic("no valid player status board frame texture");
@@ -121,7 +121,7 @@ void PlayerStateBoard::drawDefault(Widget::ROIMap m) const
     }
 
     if(auto texPtr = g_progUseDB->retrieve(0X06000000)){
-        g_sdlDevice->drawTexture(texPtr, m.x, m.y);
+        g_glDevice->drawTexture(texPtr, m.x, m.y);
     }
 
     const auto fnDrawLabel = [m, this](int labelX, int labelY, const std::u8string &s, uint32_t color = colorf::WHITE)
@@ -217,29 +217,29 @@ void PlayerStateBoard::drawDefault(Widget::ROIMap m) const
         };
 
         if(dcElem > 0){
-            g_sdlDevice->drawTexture(g_progUseDB->retrieve(0X06000010 + to_u32(i - MET_BEGIN)), elemGridX, elemGridY[0]);
+            g_glDevice->drawTexture(g_progUseDB->retrieve(0X06000010 + to_u32(i - MET_BEGIN)), elemGridX, elemGridY[0]);
             LabelBoard{{.label = str_printf(u8"%+d", dcElem).c_str(), .font{.color = colorf::GREEN_A255}}}.draw({.x=elemGridX + 20, .y=elemGridY[0] + 1});
         }
 
         if(acElem > 0){
-            g_sdlDevice->drawTexture(g_progUseDB->retrieve(0X06000010 + to_u32(i - MET_BEGIN)), elemGridX, elemGridY[1]);
+            g_glDevice->drawTexture(g_progUseDB->retrieve(0X06000010 + to_u32(i - MET_BEGIN)), elemGridX, elemGridY[1]);
             LabelBoard{{.label = str_printf(u8"%+d", acElem).c_str(), .font{.color = colorf::GREEN_A255}}}.draw({.x=elemGridX + 20, .y=elemGridY[1] + 1});
         }
         else if(acElem < 0){
-            g_sdlDevice->drawTexture(g_progUseDB->retrieve(0X06000020 + to_u32(i - MET_BEGIN)), elemGridX, elemGridY[2]);
+            g_glDevice->drawTexture(g_progUseDB->retrieve(0X06000020 + to_u32(i - MET_BEGIN)), elemGridX, elemGridY[2]);
             LabelBoard{{.label = str_printf(u8"%+d", acElem).c_str(), .font{.color = colorf::RED_A255}}}.draw({.x=elemGridX + 20, .y=elemGridY[2] + 1});
         }
     }
 
     if(auto [texPtr, dx, dy] = g_equipDB->retrieve(myHeroPtr->gender() ? 0X00000000 : 0X00000001); texPtr){
-        g_sdlDevice->drawTexture(texPtr, m.x + m_equipCharX + dx, m.y + m_equipCharY + dy);
+        g_glDevice->drawTexture(texPtr, m.x + m_equipCharX + dx, m.y + m_equipCharY + dy);
     }
 
     LabelBoard{{.label = to_u8rawstr(myHeroPtr->getName()).c_str(), .font{.color = myHeroPtr->getNameColor() | 0XFF}}}.draw({.dir=DIR_NONE, .x=m.x + 164, .y=m.y + 38});
     if(const auto dressItemID = myHeroPtr->getWLItem(WLG_DRESS).itemID){
         if(const auto dressGfxID = DBCOM_ITEMRECORD(dressItemID).pkgGfxID; dressGfxID >= 0){
             if(auto [texPtr, dx, dy] = g_equipDB->retrieve(to_u32(dressGfxID) | 0X01000000); texPtr){
-                g_sdlDevice->drawTexture(texPtr, m.x + m_equipCharX + dx, m.y + m_equipCharY + dy);
+                g_glDevice->drawTexture(texPtr, m.x + m_equipCharX + dx, m.y + m_equipCharY + dy);
             }
         }
     }
@@ -247,7 +247,7 @@ void PlayerStateBoard::drawDefault(Widget::ROIMap m) const
     if(const auto weaponItemID = myHeroPtr->getWLItem(WLG_WEAPON).itemID){
         if(const auto useGfxIndex = DBCOM_ITEMRECORD(weaponItemID).shape; useGfxIndex > 0){
             if(auto [texPtr, dx, dy] = g_equipDB->retrieve(0X01000000 + DBCOM_ITEMRECORD(weaponItemID).pkgGfxID); texPtr){
-                g_sdlDevice->drawTexture(texPtr, m.x + m_equipCharX + dx, m.y + m_equipCharY + dy);
+                g_glDevice->drawTexture(texPtr, m.x + m_equipCharX + dx, m.y + m_equipCharY + dy);
             }
         }
     }
@@ -255,15 +255,15 @@ void PlayerStateBoard::drawDefault(Widget::ROIMap m) const
     if(const auto helmetItemID = myHeroPtr->getWLItem(WLG_HELMET).itemID){
         if(const auto useGfxIndex = DBCOM_ITEMRECORD(helmetItemID).shape; useGfxIndex > 0){
             if(auto [texPtr, dx, dy] = g_equipDB->retrieve(0X01000000 + DBCOM_ITEMRECORD(helmetItemID).pkgGfxID); texPtr){
-                g_sdlDevice->drawTexture(texPtr, m.x + m_equipCharX + dx, m.y + m_equipCharY + dy);
+                g_glDevice->drawTexture(texPtr, m.x + m_equipCharX + dx, m.y + m_equipCharY + dy);
             }
         }
     }
     else{
         if(myHeroPtr->getWLDesp().hair >= HAIR_BEGIN){
             if(auto [texPtr, dx, dy] = g_equipDB->retrieve((myHeroPtr->gender() ? 0X0000003C : 0X00000046) + myHeroPtr->getWLDesp().hair - HAIR_BEGIN); texPtr){
-                SDLDeviceHelper::EnableTextureModColor enableColor(texPtr, myHeroPtr->getWLDesp().hairColor);
-                g_sdlDevice->drawTexture(texPtr, m.x + m_equipCharX + dx, m.y + m_equipCharY + dy);
+                GLDeviceHelper::EnableTextureModColor enableColor(texPtr, myHeroPtr->getWLDesp().hairColor);
+                g_glDevice->drawTexture(texPtr, m.x + m_equipCharX + dx, m.y + m_equipCharY + dy);
             }
         }
     }
@@ -271,15 +271,15 @@ void PlayerStateBoard::drawDefault(Widget::ROIMap m) const
     for(size_t i = WLG_W_BEGIN; i < WLG_W_END; ++i){
         if(const auto &item = m_processRun->getMyHero()->getWLItem(i)){
             if(auto texPtr = g_itemDB->retrieve(DBCOM_ITEMRECORD(item.itemID).pkgGfxID | 0X01000000)){
-                const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+                const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
                 const int dstX = m.x + m_gridList[i].x + (m_gridList[i].w - texW) / 2;
                 const int dstY = m.y + m_gridList[i].y + (m_gridList[i].h - texH) / (i == WLG_SHOES ? 1 : 2);
-                g_sdlDevice->drawTexture(texPtr, dstX, dstY);
+                g_glDevice->drawTexture(texPtr, dstX, dstY);
             }
         }
     }
 
-    const auto [mouseX, mouseY] = SDLDeviceHelper::getMousePLoc();
+    const auto [mouseX, mouseY] = GLDeviceHelper::getMousePLoc();
     for(size_t i = WLG_BEGIN; i < WLG_END; ++i){
         if(mathf::pointInRectangle(mouseX, mouseY, m.x + m_gridList[i].x, m.y + m_gridList[i].y, m_gridList[i].w, m_gridList[i].h)){
             if(i >= WLG_W_BEGIN && i < WLG_W_END){
@@ -294,8 +294,8 @@ void PlayerStateBoard::drawDefault(Widget::ROIMap m) const
                 }();
 
                 if(auto texPtr = g_progUseDB->retrieve(texID)){
-                    SDLDeviceHelper::EnableTextureModColor enableColor(texPtr, colorf::WHITE + colorf::A_SHF(128));
-                    g_sdlDevice->drawTexture(texPtr, m.x + m_gridList[i].x + dx, m.y + m_gridList[i].y + dy);
+                    GLDeviceHelper::EnableTextureModColor enableColor(texPtr, colorf::WHITE + colorf::A_SHF(128));
+                    g_glDevice->drawTexture(texPtr, m.x + m_gridList[i].x + dx, m.y + m_gridList[i].y + dy);
                 }
             }
             drawItemHoverText(i);
@@ -323,16 +323,16 @@ void PlayerStateBoard::drawDefault(Widget::ROIMap m) const
 
     for(int i = 0; i < 9; ++i){
         if(mathf::pointInRectangle(mouseX, mouseY, m.x + labelGridX, m.y + labelGridY + labelGridD * i, labelGridW, labelGridH)){
-            g_sdlDevice->fillRectangle(colorf::RGBA(0, 100, 0, 100), m.x + labelGridX, m.y + labelGridY + labelGridD * i, labelGridW, labelGridH);
+            g_glDevice->fillRectangle(colorf::RGBA(0, 100, 0, 100), m.x + labelGridX, m.y + labelGridY + labelGridD * i, labelGridW, labelGridH);
             const LabelBoard labelNameBoard{{.label = labelName[i]}};
-            g_sdlDevice->fillRectangle(colorf::RGBA(0, 100, 0, 200), mouseX - labelNameBoard.w(), mouseY - labelNameBoard.h(), labelNameBoard.w(), labelNameBoard.h());
+            g_glDevice->fillRectangle(colorf::RGBA(0, 100, 0, 200), mouseX - labelNameBoard.w(), mouseY - labelNameBoard.h(), labelNameBoard.w(), labelNameBoard.h());
             labelNameBoard.draw({.dir=DIR_DOWNRIGHT, .x=mouseX, .y=mouseY});
         }
     }
 
     if(g_clientArgParser->debugPlayerStateBoard){
         for(size_t i = WLG_BEGIN; i < WLG_END; ++i){
-            g_sdlDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(255), m.x + m_gridList[i].x, m.y + m_gridList[i].y, m_gridList[i].w, m_gridList[i].h);
+            g_glDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(255), m.x + m_gridList[i].x, m.y + m_gridList[i].y, m_gridList[i].w, m_gridList[i].h);
         }
     }
 
@@ -361,7 +361,7 @@ bool PlayerStateBoard::processEventDefault(const SDL_Event &event, bool valid, W
                         moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), par->roi());
                     }
                     else{
-                        moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_sdlDevice->getRendererSize()));
+                        moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_glDevice->getRendererSize()));
                     }
                     return consumeFocus(true);
                 }
@@ -424,11 +424,11 @@ void PlayerStateBoard::drawItemHoverText(int wltype) const
         .lineAlign = LALIGN_JUSTIFY,
     }};
 
-    const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+    const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
     const auto textBoxW = std::max<int>(hoverTextBoard.w(), 200) + 20;
     const auto textBoxH = hoverTextBoard.h() + 20;
 
-    g_sdlDevice->fillRectangle(colorf::RGBA(  0,   0,   0, 200), mousePX, mousePY, textBoxW, textBoxH, 5);
-    g_sdlDevice->drawRectangle(colorf::RGBA(231, 231, 189, 200), mousePX, mousePY, textBoxW, textBoxH, 5);
+    g_glDevice->fillRectangle(colorf::RGBA(  0,   0,   0, 200), mousePX, mousePY, textBoxW, textBoxH, 5);
+    g_glDevice->drawRectangle(colorf::RGBA(231, 231, 189, 200), mousePX, mousePY, textBoxW, textBoxH, 5);
     hoverTextBoard.draw({.x=mousePX + 10, .y=mousePY + 10});
 }

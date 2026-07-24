@@ -1,7 +1,7 @@
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "pngtexoffdb.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 std::optional<std::tuple<PNGTexOffElement, size_t>> PNGTexOffDB::loadResource(uint32_t key)
 {
     char keyString[16];
@@ -19,7 +19,7 @@ std::optional<std::tuple<PNGTexOffElement, size_t>> PNGTexOffDB::loadResource(ui
         //   +DX: abs(DX) take 4 chars, 2 bytes
         //   +DY: abs(DY) take 4 chars, 2 bytes
 
-        if(auto texPtr = g_sdlDevice->loadPNGTexture(dataBuf.data(), dataBuf.size())){
+        if(auto texPtr = g_glDevice->loadPNGTexture(dataBuf.data(), dataBuf.size())){
             return std::make_tuple(PNGTexOffElement
             {
                 .dx = to_d((fontFileName[8] != '0') ? 1 : (-1)) * to_d(hexstr::to_hex<uint32_t, 2>(fontFileName + 10)),
@@ -35,7 +35,7 @@ std::optional<std::tuple<PNGTexOffElement, size_t>> PNGTexOffDB::loadResource(ui
 void PNGTexOffDB::freeResource(PNGTexOffElement &element)
 {
     if(element.texture){
-        SDL_DestroyTexture(element.texture);
+        g_glDevice->destroyTexture(element.texture);
         element.texture = nullptr;
     }
 }

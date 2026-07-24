@@ -7,13 +7,13 @@
 #include "utf8f.hpp"
 #include "mathf.hpp"
 #include "fontexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "emojidb.hpp"
 #include "clientargparser.hpp"
 
 extern Log *g_mir2xLog;
 extern FontexDB *g_fontexDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern EmojiDB *g_emojiDB;
 extern ClientArgParser *g_clientArgParser;
 
@@ -650,7 +650,7 @@ TOKEN XMLTypeset::buildUTF8Token(int leafIndex, uint8_t font, uint8_t fontSize, 
 
     token.leaf = leafIndex;
     if(auto texPtr = g_fontexDB->retrieve(u64Key, &left, &right, &ascent)){
-        const auto [boxW, boxH] = SDLDeviceHelper::getTextureSize(texPtr);
+        const auto [boxW, boxH] = GLDeviceHelper::getTextureSize(texPtr);
         token.box.info.w   = boxW;
         token.box.info.h   = boxH;
         token.box.state.w1 = left;
@@ -677,7 +677,7 @@ TOKEN XMLTypeset::buildUTF8Token(int leafIndex, uint8_t font, uint8_t fontSize, 
     u64Key = utf8f::buildU64Key(m_font, m_fontSize, fontStyle, codePoint);
     if(auto texPtr = g_fontexDB->retrieve(u64Key)){
         g_mir2xLog->addLog(LOGTYPE_WARNING, "Fallback to default font: font: %d -> %d, fontsize: %d -> %d", font, m_font, fontSize, m_fontSize);
-        const auto [boxW, boxH] = SDLDeviceHelper::getTextureSize(texPtr);
+        const auto [boxW, boxH] = GLDeviceHelper::getTextureSize(texPtr);
         token.box.info.w   = boxW;
         token.box.info.h   = boxH;
         token.box.state.h1 = token.box.info.h;
@@ -1337,7 +1337,7 @@ void XMLTypeset::draw(Widget::ROIMap m) const
                 int bgBoxH = leafInfo.maxH1 + leafInfo.maxH2;
 
                 if(mathf::rectangleOverlapRegion(srcX, srcY, srcW, srcH, bgBoxX, bgBoxY, bgBoxW, bgBoxH)){
-                    g_sdlDevice->fillRectangle(bgColorVal, bgBoxX + dstDX, bgBoxY + dstDY, bgBoxW, bgBoxH);
+                    g_glDevice->fillRectangle(bgColorVal, bgBoxX + dstDX, bgBoxY + dstDY, bgBoxW, bgBoxH);
                 }
             }
 
@@ -1360,15 +1360,15 @@ void XMLTypeset::draw(Widget::ROIMap m) const
                 case LEAF_UTF8STR:
                     {
                         if(auto texPtr = g_fontexDB->retrieve(tokenPtr->utf8char.key)){
-                            SDLDeviceHelper::EnableTextureModColor enableMod(texPtr, fgColorVal);
-                            g_sdlDevice->drawTexture(texPtr, drawDstX, drawDstY, dx, dy, boxW, boxH);
+                            GLDeviceHelper::EnableTextureModColor enableMod(texPtr, fgColorVal);
+                            g_glDevice->drawTexture(texPtr, drawDstX, drawDstY, dx, dy, boxW, boxH);
                         }
                         else{
-                            g_sdlDevice->drawRectangle(colorf::compColor(bgColorVal), drawDstX, drawDstY, boxW, boxH);
+                            g_glDevice->drawRectangle(colorf::compColor(bgColorVal), drawDstX, drawDstY, boxW, boxH);
                         }
 
                         if(g_clientArgParser->drawTokenFrame){
-                            g_sdlDevice->drawRectangle(colorf::MAGENTA + colorf::A_SHF(255), drawDstX, drawDstY, boxW, boxH);
+                            g_glDevice->drawRectangle(colorf::MAGENTA + colorf::A_SHF(255), drawDstX, drawDstY, boxW, boxH);
                         }
                         break;
                     }
@@ -1390,11 +1390,11 @@ void XMLTypeset::draw(Widget::ROIMap m) const
                         int yOnTex = 0;
 
                         if(auto texPtr = g_emojiDB->retrieve(emojiKey, &xOnTex, &yOnTex, 0, 0, 0, 0, 0)){
-                            SDLDeviceHelper::EnableTextureModColor enableMod(texPtr, Widget::evalU32(m_imageMaskColor, nullptr, this));
-                            g_sdlDevice->drawTexture(texPtr, drawDstX, drawDstY, xOnTex + dx, yOnTex + dy, boxW, boxH);
+                            GLDeviceHelper::EnableTextureModColor enableMod(texPtr, Widget::evalU32(m_imageMaskColor, nullptr, this));
+                            g_glDevice->drawTexture(texPtr, drawDstX, drawDstY, xOnTex + dx, yOnTex + dy, boxW, boxH);
                         }
                         else{
-                            g_sdlDevice->drawRectangle(colorf::compColor(bgColorVal), drawDstX, drawDstY, boxW, boxH);
+                            g_glDevice->drawRectangle(colorf::compColor(bgColorVal), drawDstX, drawDstY, boxW, boxH);
                         }
                         break;
                     }
@@ -1404,7 +1404,7 @@ void XMLTypeset::draw(Widget::ROIMap m) const
     }
 
     if(g_clientArgParser->drawBoardFrame){
-        g_sdlDevice->drawRectangle(colorf::YELLOW + colorf::A_SHF(255), dstX, dstY, srcW, srcH);
+        g_glDevice->drawRectangle(colorf::YELLOW + colorf::A_SHF(255), dstX, dstY, srcW, srcH);
     }
 }
 

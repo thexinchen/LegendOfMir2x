@@ -50,7 +50,7 @@
 
 extern Log *g_mir2xLog;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern PNGTexOffDB *g_monsterDB;
 extern ClientArgParser *g_clientArgParser;
 
@@ -275,7 +275,7 @@ void ClientMonster::drawFrame(int viewX, int viewY, int focusMask, int frame, bo
         return {255, 128};
     }();
 
-    const auto fnBlendFrame = [](SDL_Texture *pTexture, int nFocusChan, uint8_t alpha, int nX, int nY)
+    const auto fnBlendFrame = [](GLTexID pTexture, int nFocusChan, uint8_t alpha, int nX, int nY)
     {
         if(true
                 && pTexture
@@ -285,8 +285,8 @@ void ClientMonster::drawFrame(int viewX, int viewY, int focusMask, int frame, bo
             // if provided channel as 0
             // just blend it using the original color
 
-            const SDLDeviceHelper::EnableTextureModColor modColor(pTexture, colorf::SDLColor2RGBA(focusColor(nFocusChan, alpha)));
-            g_sdlDevice->drawTexture(pTexture, nX, nY);
+            const GLDeviceHelper::EnableTextureModColor modColor(pTexture, colorf::SDLColor2RGBA(focusColor(nFocusChan, alpha)));
+            g_glDevice->drawTexture(pTexture, nX, nY);
         }
     };
 
@@ -300,16 +300,16 @@ void ClientMonster::drawFrame(int viewX, int viewY, int focusMask, int frame, bo
 
     if(!frameOnly){
         if(g_clientArgParser->drawTextureAlignLine){
-            g_sdlDevice->drawLine (colorf::RED  + colorf::A_SHF(128), startX, startY, startX + bodyDX, startY + bodyDY);
-            g_sdlDevice->drawCross(colorf::BLUE + colorf::A_SHF(128), startX, startY, 5);
+            g_glDevice->drawLine (colorf::RED  + colorf::A_SHF(128), startX, startY, startX + bodyDX, startY + bodyDY);
+            g_glDevice->drawCross(colorf::BLUE + colorf::A_SHF(128), startX, startY, 5);
 
-            const auto [texW, texH] = SDLDeviceHelper::getTextureSize(bodyFrame);
-            g_sdlDevice->drawRectangle(colorf::RED + colorf::A_SHF(128), startX + bodyDX, startY + bodyDY, texW, texH);
+            const auto [texW, texH] = GLDeviceHelper::getTextureSize(bodyFrame);
+            g_glDevice->drawRectangle(colorf::RED + colorf::A_SHF(128), startX + bodyDX, startY + bodyDY, texW, texH);
         }
 
         if(g_clientArgParser->drawTargetBox){
             if(const auto box = getTargetBox()){
-                g_sdlDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(128), box.x - viewX, box.y - viewY, box.w, box.h);
+                g_glDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(128), box.x - viewX, box.y - viewY, box.w, box.h);
             }
         }
     }
@@ -333,13 +333,13 @@ void ClientMonster::drawFrame(int viewX, int viewY, int focusMask, int frame, bo
             auto pBar0 = g_progUseDB->retrieve(0X00000014);
             auto pBar1 = g_progUseDB->retrieve(0X00000015);
 
-            const auto [nBarW, nBarH] = SDLDeviceHelper::getTextureSize(pBar1);
+            const auto [nBarW, nBarH] = GLDeviceHelper::getTextureSize(pBar1);
             const int drawBarXP = startX +  7;
             const int drawBarYP = startY - 53;
             const int drawBarWidth = to_d(std::lround(nBarW * getHealthRatio().at(0)));
 
-            g_sdlDevice->drawTexture(pBar1, drawBarXP, drawBarYP, 0, 0, drawBarWidth, nBarH);
-            g_sdlDevice->drawTexture(pBar0, drawBarXP, drawBarYP);
+            g_glDevice->drawTexture(pBar1, drawBarXP, drawBarYP, 0, 0, drawBarWidth, nBarH);
+            g_glDevice->drawTexture(pBar0, drawBarXP, drawBarYP);
 
             constexpr int buffIconDrawW = 10;
             constexpr int buffIconDrawH = 10;
@@ -357,8 +357,8 @@ void ClientMonster::drawFrame(int viewX, int viewY, int focusMask, int frame, bo
                             const int buffIconOffX = buffIconStartX + (drawIconCount % 3) * buffIconDrawW;
                             const int buffIconOffY = buffIconStartY - (drawIconCount / 3) * buffIconDrawH;
 
-                            const auto [texW, texH] = SDLDeviceHelper::getTextureSize(iconTexPtr);
-                            g_sdlDevice->drawTexture(iconTexPtr, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, 0, 0, texW, texH);
+                            const auto [texW, texH] = GLDeviceHelper::getTextureSize(iconTexPtr);
+                            g_glDevice->drawTexture(iconTexPtr, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, 0, 0, texW, texH);
 
                             const auto baseColor = [&br]() -> uint32_t
                             {
@@ -379,7 +379,7 @@ void ClientMonster::drawFrame(int viewX, int viewY, int focusMask, int frame, bo
                             const auto edgeGridCount = (buffIconDrawW + buffIconDrawH) * 2 - 4;
                             const auto startLoc = std::lround(edgeGridCount * std::fmod(m_accuUpdateTime, 1500.0) / 1500.0);
 
-                            g_sdlDevice->drawBoxFading(startColor, endColor, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, startLoc, buffIconDrawW + buffIconDrawH);
+                            g_glDevice->drawBoxFading(startColor, endColor, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, startLoc, buffIconDrawW + buffIconDrawH);
                             drawIconCount++;
                         }
                     }
@@ -759,7 +759,7 @@ ClientCreature::TargetBox ClientMonster::getTargetBox() const
         return {};
     }
 
-    const auto [bodyFrameW, bodyFrameH] = SDLDeviceHelper::getTextureSize(bodyFrameTexPtr);
+    const auto [bodyFrameW, bodyFrameH] = GLDeviceHelper::getTextureSize(bodyFrameTexPtr);
 
     const auto [shiftX, shiftY] = getShift(m_currMotion->frame);
     const int startX = m_currMotion->x * SYS_MAPGRIDXP + shiftX + dx;

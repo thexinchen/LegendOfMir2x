@@ -1,10 +1,10 @@
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "controlboard.hpp"
 #include "cbmiddleexpand.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 CBMiddleExpand::CBMiddleExpand(
         Widget::VarDir argDir,
@@ -67,7 +67,7 @@ CBMiddleExpand::CBMiddleExpand(
 
           .drawFunc = [this](const Widget *self, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(colorf::A_SHF(0XF0), drawDstX, drawDstY, self->w(), self->h());
+              g_glDevice->fillRectangle(colorf::A_SHF(0XF0), drawDstX, drawDstY, self->w(), self->h());
           },
 
           .parent{this},
@@ -199,10 +199,10 @@ CBMiddleExpand::CBMiddleExpand(
     {
         if(const auto cb = hasParent<ControlBoard>(); !cb->m_minimize && cb->m_expand){
             if(cb->m_maximize){
-                return g_sdlDevice->getRendererHeight();
+                return g_glDevice->getRendererHeight();
             }
             else{
-                return std::min<int>(400, g_sdlDevice->getRendererHeight());
+                return std::min<int>(400, g_glDevice->getRendererHeight());
             }
         }
         return 0;

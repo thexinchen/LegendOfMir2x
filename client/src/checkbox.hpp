@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "widget.hpp"
 #include "imageboard.hpp"
 #include "gfxshapeboard.hpp"

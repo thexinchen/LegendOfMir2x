@@ -1,12 +1,12 @@
 #include "widget.hpp"
 #include "colorf.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "gui/controlboard/controlboard.hpp"
 #include "inputstringboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 InputStringBoard::InputStringBoard(
         Widget::VarDir argDir,
@@ -72,7 +72,7 @@ InputStringBoard::InputStringBoard(
 
           .drawFunc = [](const Widget *self, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(32), drawDstX, drawDstY, self->w(), self->h());
+              g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(32), drawDstX, drawDstY, self->w(), self->h());
           },
 
           .parent{this},

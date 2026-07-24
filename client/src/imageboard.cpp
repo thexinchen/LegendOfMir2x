@@ -1,9 +1,9 @@
 #include "colorf.hpp"
 #include "totype.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "imageboard.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ImageBoard::ImageBoard(ImageBoard::InitArgs args)
     : Widget
@@ -22,8 +22,8 @@ ImageBoard::ImageBoard(ImageBoard::InitArgs args)
     , m_loadFunc(std::move(args.texLoadFunc))
     , m_xformPair(getHFlipRotatePair(args.hflip, args.vflip, args.rotate))
 {
-    const auto varTexW = args.w.value_or([this]{ return SDLDeviceHelper::getTextureWidth (getTexture(), 0); });
-    const auto varTexH = args.h.value_or([this]{ return SDLDeviceHelper::getTextureHeight(getTexture(), 0); });
+    const auto varTexW = args.w.value_or([this]{ return GLDeviceHelper::getTextureWidth (getTexture(), 0); });
+    const auto varTexH = args.h.value_or([this]{ return GLDeviceHelper::getTextureHeight(getTexture(), 0); });
 
     setSize((m_rotate % 2 == 0) ? varTexW : varTexH,
             (m_rotate % 2 == 0) ? varTexH : varTexW);
@@ -198,7 +198,7 @@ void ImageBoard::drawDefault(Widget::ROIMap m) const
         return;
     }
 
-    const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+    const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
 
     const auto  widthRatio = to_df(texW) / ((m_rotate % 2 == 0) ? w() : h());
     const auto heightRatio = to_df(texH) / ((m_rotate % 2 == 0) ? h() : w());
@@ -215,10 +215,10 @@ void ImageBoard::drawDefault(Widget::ROIMap m) const
         imgSrcX = texW - imgSrcX - imgSrcW;
     }
 
-    const SDLDeviceHelper::EnableTextureModColor enableColor(texPtr, Widget::evalU32(m_varColor, this));
-    const SDLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, Widget::evalBlendMode(m_varBlendMode, this));
+    const GLDeviceHelper::EnableTextureModColor enableColor(texPtr, Widget::evalU32(m_varColor, this));
+    const GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, Widget::evalBlendMode(m_varBlendMode, this));
 
-    g_sdlDevice->drawTextureEx(
+    g_glDevice->drawTextureEx(
             texPtr,
 
             imgSrcX, imgSrcY,

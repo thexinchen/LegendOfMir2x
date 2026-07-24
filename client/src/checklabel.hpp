@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "widget.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "checkbox.hpp"
 #include "labelboard.hpp"
 

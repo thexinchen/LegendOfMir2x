@@ -1,13 +1,13 @@
 #include <type_traits>
 #include "strf.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "gui/controlboard/controlboard.hpp"
 #include "queststateboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 QuestStateBoard::QuestStateBoard(
         dir8_t argDir,
@@ -177,7 +177,7 @@ bool QuestStateBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
                     const auto remapXDiff = m.x - m.ro->x;
                     const auto remapYDiff = m.y - m.ro->y;
 
-                    const auto [rendererW, rendererH] = g_sdlDevice->getRendererSize();
+                    const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
                     const int maxX = rendererW - w();
                     const int maxY = rendererH - h();
 

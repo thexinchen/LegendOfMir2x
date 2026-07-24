@@ -148,5 +148,5 @@ class PurchaseBoard: public Widget
         void drawItemInGrid(const char8_t *, uint32_t, int, int, Widget::ROIMap) const;
 
     private:
-        static SDL_Texture *getItemTexture(const char8_t *, uint32_t);
+        static GLTexID getItemTexture(const char8_t *, uint32_t);
 };

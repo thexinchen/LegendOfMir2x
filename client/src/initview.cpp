@@ -21,7 +21,7 @@
 #include "clientargparser.hpp"
 
 extern Log *g_mir2xLog;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
 extern EmojiDB       *g_emojiDB;
@@ -77,10 +77,10 @@ InitView::InitView(uint8_t fontSize)
         #embed "ivbutton.png"
     };
 
-    g_sdlDevice->createInitViewWindow();
+    g_glDevice->createInitViewWindow();
 
-    m_boardTexture  = g_sdlDevice->loadPNGTexture(std::data( boardData), std::size( boardData));
-    m_buttonTexture = g_sdlDevice->loadPNGTexture(std::data(buttonData), std::size(buttonData));
+    m_boardTexture  = g_glDevice->loadPNGTexture(std::data( boardData), std::size( boardData));
+    m_buttonTexture = g_glDevice->loadPNGTexture(std::data(buttonData), std::size(buttonData));
 
     fflassert(m_boardTexture);
     fflassert(m_buttonTexture);
@@ -110,16 +110,16 @@ InitView::~InitView()
 {
     for(auto &entry: m_logSink){
         if(entry.texture){
-            SDL_DestroyTexture(entry.texture);
+            g_glDevice->destroyTexture(entry.texture);
         }
     }
 
     if(m_boardTexture){
-        SDL_DestroyTexture(m_boardTexture);
+        g_glDevice->destroyTexture(m_boardTexture);
     }
 
     if(m_buttonTexture){
-        SDL_DestroyTexture(m_buttonTexture);
+        g_glDevice->destroyTexture(m_buttonTexture);
     }
 }
 
@@ -201,18 +201,18 @@ void InitView::addIVLog(int logType, const char *format, ...)
 
 void InitView::draw()
 {
-    SDLDeviceHelper::RenderNewFrame newFrame;
-    g_sdlDevice->drawTexture(m_boardTexture, 0, 0);
+    GLDeviceHelper::RenderNewFrame newFrame;
+    g_glDevice->drawTexture(m_boardTexture, 0, 0);
 
     switch(m_buttonState){
         case BEVENT_ON:
             {
-                g_sdlDevice->drawTexture(m_buttonTexture, m_buttonX, m_buttonY,  0, 0, 32, 30);
+                g_glDevice->drawTexture(m_buttonTexture, m_buttonX, m_buttonY,  0, 0, 32, 30);
                 break;
             }
         case BEVENT_DOWN:
             {
-                g_sdlDevice->drawTexture(m_buttonTexture, m_buttonX, m_buttonY, 32, 0, 32, 30);
+                g_glDevice->drawTexture(m_buttonTexture, m_buttonX, m_buttonY, 32, 0, 32, 30);
                 break;
             }
         default:
@@ -221,7 +221,7 @@ void InitView::draw()
             }
     }
 
-    const auto fnBuildLogTexture = [this](int logType, const std::string &log) -> SDL_Texture *
+    const auto fnBuildLogTexture = [this](int logType, const std::string &log) -> GLTexID 
     {
         const auto color = [logType]() -> SDL_Color
         {
@@ -232,15 +232,15 @@ void InitView::draw()
             }
         }();
 
-        SDL_Texture *texPtr = nullptr;
-        if(auto surfPtr = TTF_RenderText_Blended(g_sdlDevice->defaultTTF(m_fontSize), log.c_str(), 0, color)){
-            texPtr = g_sdlDevice->createTextureFromSurface(surfPtr);
+        GLTexID texPtr = nullptr;
+        if(auto surfPtr = TTF_RenderText_Blended(g_glDevice->defaultTTF(m_fontSize), log.c_str(), 0, color)){
+            texPtr = g_glDevice->createTextureFromSurface(surfPtr);
             SDL_DestroySurface(surfPtr);
         }
         return texPtr;
     };
 
-    std::array<SDL_Texture *, 6> texList;
+    std::array<GLTexID , 6> texList;
     texList.fill(nullptr);
     {
         std::lock_guard<std::mutex> lockGuard(m_lock);
@@ -266,8 +266,8 @@ void InitView::draw()
 
     for(auto texPtr: texList){
         if(texPtr){
-            g_sdlDevice->drawTexture(texPtr, startX, startY);
-            startY += (SDLDeviceHelper::getTextureHeight(texPtr) + 5);
+            g_glDevice->drawTexture(texPtr, startX, startY);
+            startY += (GLDeviceHelper::getTextureHeight(texPtr) + 5);
         }
     }
 }

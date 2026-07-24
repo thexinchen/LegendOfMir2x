@@ -2,13 +2,13 @@
 #include "hero.hpp"
 #include "pathf.hpp"
 #include "colorf.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "pngtexoffdb.hpp"
 #include "motioneffect.hpp"
 #include "clientcreature.hpp"
 
 extern PNGTexOffDB *g_magicDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 MotionEffect::MotionEffect(const char8_t *magicName, const char8_t *stageName, MotionNode *motionPtr)
     : m_accuTime(0.0)
@@ -55,9 +55,9 @@ void MotionEffect::drawShift(int shiftX, int shiftY, uint32_t modColor)
     fflassert(!done());
     if(const auto texID = frameTexID(); texID != SYS_U32NIL){
         if(auto [texPtr, offX, offY] = g_magicDB->retrieve(texID); texPtr){
-            SDLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor, modColor));
-            SDLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
-            g_sdlDevice->drawTexture(texPtr, shiftX + offX, shiftY + offY);
+            GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor, modColor));
+            GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
+            g_glDevice->drawTexture(texPtr, shiftX + offX, shiftY + offY);
         }
     }
 }

@@ -1,10 +1,10 @@
 #include <algorithm>
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "pngtexdb.hpp"
 #include "imeboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 IMEBoard::IMEBoard(IMEBoard::InitArgs args)
     : Widget
@@ -71,7 +71,7 @@ IMEBoard::IMEBoard(IMEBoard::InitArgs args)
 
           .fgDrawFunc = [this](int drawDstX, int drawDstY)
           {
-              g_sdlDevice->drawLine(Widget::evalU32(m_separatorColor, this),
+              g_glDevice->drawLine(Widget::evalU32(m_separatorColor, this),
                       drawDstX          , drawDstY + m_startY + m_fontTokenHeight + m_separatorSpace / 2,
                       drawDstX + w() - 1, drawDstY + m_startY + m_fontTokenHeight + m_separatorSpace / 2);
           },
@@ -226,7 +226,7 @@ bool IMEBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                         }
                     default:
                         {
-                            if(const char keyChar = SDLDeviceHelper::getKeyChar(event, true); keyChar >= 'a' && keyChar <= 'z'){
+                            if(const char keyChar = GLDeviceHelper::getKeyChar(event, true); keyChar >= 'a' && keyChar <= 'z'){
                                 m_ime.feed(keyChar);
                             }
                             else if(keyChar >= '1' && keyChar <= '9'){
@@ -278,7 +278,7 @@ bool IMEBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                     const auto remapXDiff = m.x - m.ro->x;
                     const auto remapYDiff = m.y - m.ro->y;
 
-                    const auto [rendererW, rendererH] = g_sdlDevice->getRendererSize();
+                    const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
                     const int maxX = rendererW - w();
                     const int maxY = rendererH - h();
 

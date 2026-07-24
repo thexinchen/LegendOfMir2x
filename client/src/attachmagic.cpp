@@ -1,10 +1,10 @@
 #include "colorf.hpp"
 #include "dbcomid.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "attachmagic.hpp"
 #include "pngtexoffdb.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern PNGTexOffDB *g_magicDB;
 
 void AttachMagic::drawShift(int shiftX, int shiftY, uint32_t modColor) const
@@ -25,9 +25,9 @@ void AttachMagic::drawShift(int shiftX, int shiftY, uint32_t modColor) const
     }();
 
     if(auto [texPtr, offX, offY] = g_magicDB->retrieve(texID); texPtr){
-        SDLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor, modColor));
-        SDLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
-        g_sdlDevice->drawTexture(texPtr, shiftX + offX, shiftY + offY);
+        GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor, modColor));
+        GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
+        g_glDevice->drawTexture(texPtr, shiftX + offX, shiftY + offY);
     }
 }
 
@@ -49,15 +49,15 @@ void Thunderbolt::drawShift(int shiftX, int shiftY, uint32_t modColor) const
     }();
 
     if(auto [texPtr, offX, offY] = g_magicDB->retrieve(texID); texPtr){
-        const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
-        SDLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor, modColor));
-        SDLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
+        const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
+        GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor, modColor));
+        GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
 
         // thunder bolt has 5 frames
         // frame 0 ~ 3 are long, last frame is short
-        g_sdlDevice->drawTexture(texPtr, shiftX + offX, shiftY + offY);
+        g_glDevice->drawTexture(texPtr, shiftX + offX, shiftY + offY);
         if(frame() <= 3){
-            g_sdlDevice->drawTextureEx(texPtr, 0, 0, texW, texH, shiftX + offX, shiftY + offY - texH, texW, texH, 0, 0, 0, SDL_FLIP_VERTICAL);
+            g_glDevice->drawTextureEx(texPtr, 0, 0, texW, texH, shiftX + offX, shiftY + offY - texH, texW, texH, 0, 0, 0, SDL_FLIP_VERTICAL);
         }
     }
 }

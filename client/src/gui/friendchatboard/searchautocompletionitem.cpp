@@ -1,11 +1,11 @@
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "searchpage.hpp"
 #include "searchautocompletionitem.hpp"
 #include "friendchatboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 SearchAutoCompletionItem::SearchAutoCompletionItem(Widget::VarDir argDir,
 
@@ -47,13 +47,13 @@ SearchAutoCompletionItem::SearchAutoCompletionItem(Widget::VarDir argDir,
 
           .drawFunc = [this](const Widget *, int drawDstX, int drawDstY)
           {
-              if(Widget::ROIMap{.x=drawDstX, .y=drawDstY, .ro{roi()}}.in(SDLDeviceHelper::getMousePLoc())){
-                  g_sdlDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
-                  g_sdlDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
+              if(Widget::ROIMap{.x=drawDstX, .y=drawDstY, .ro{roi()}}.in(GLDeviceHelper::getMousePLoc())){
+                  g_glDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
+                  g_glDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
               }
               else{
-                  g_sdlDevice->fillRectangle(colorf::GREY               + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
-                  g_sdlDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(32), drawDstX, drawDstY, w(), h());
+                  g_glDevice->fillRectangle(colorf::GREY               + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
+                  g_glDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(32), drawDstX, drawDstY, w(), h());
               }
           },
 

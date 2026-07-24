@@ -1,12 +1,14 @@
+#include "audiodevice.hpp"
 #include "dbcomid.hpp"
 #include "invpack.hpp"
 #include "pngtexdb.hpp"
 #include "fflerror.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "soundeffectdb.hpp"
 
 extern PNGTexDB *g_itemDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
+extern AudioDevice *g_audioDevice;
 extern SoundEffectDB *g_seffDB;
 
 int InvPack::getWeight() const
@@ -133,7 +135,7 @@ size_t InvPack::remove(uint32_t itemID, uint32_t seqID, size_t count)
 std::tuple<int, int> InvPack::getPackBinSize(uint32_t itemID)
 {
     if(auto texPtr = g_itemDB->retrieve(DBCOM_ITEMRECORD(itemID).pkgGfxID | 0X01000000)){
-        const auto [itemPW, itemPH] = SDLDeviceHelper::getTextureSize(texPtr);
+        const auto [itemPW, itemPH] = GLDeviceHelper::getTextureSize(texPtr);
         return
         {
             (itemPW + (SYS_INVGRIDPW - 1)) / SYS_INVGRIDPW,
@@ -172,7 +174,7 @@ void InvPack::setGold(int gold)
 {
     fflassert(gold >= 0, gold);
     if(std::exchange(m_gold, gold) < to_uz(gold)){
-        g_sdlDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 106));
+        g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 106));
     }
 }
 
@@ -194,31 +196,31 @@ void InvPack::playItemSoundEffect(uint32_t itemID, bool consume)
                 || to_u8sv(ir.type) == u8"恢复药水"
                 || to_u8sv(ir.type) == u8"功能药水"
                 || to_u8sv(ir.type) == u8"强效药水"){
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + (consume ? 108 : 108)));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + (consume ? 108 : 108)));
         }
         else if(to_u8sv(ir.type) == u8"武器"){
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 111));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 111));
         }
         else if(to_u8sv(ir.type) == u8"衣服"){
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 112));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 112));
         }
         else if(to_u8sv(ir.type) == u8"戒指"){
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 113));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 113));
         }
         else if(to_u8sv(ir.type) == u8"手镯"){
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 114));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 114));
         }
         else if(to_u8sv(ir.type) == u8"项链"){
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 115));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 115));
         }
         else if(to_u8sv(ir.type) == u8"头盔"){
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 116));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 116));
         }
         else if(to_u8sv(ir.type) == u8"勋章"){
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 117));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 117));
         }
         else{
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 118));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 118));
         }
     }
 };

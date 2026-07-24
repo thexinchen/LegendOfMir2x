@@ -1,11 +1,11 @@
 #include "colorf.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "texslider.hpp"
 #include "clientargparser.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
 TexSlider::TexSlider(TexSlider::InitArgs args)
@@ -17,8 +17,8 @@ TexSlider::TexSlider(TexSlider::InitArgs args)
               .cx = [index = args.index, this]{ return TexSlider::getSliderTexInfo(index)->ox; },
               .cy = [index = args.index, this]{ return TexSlider::getSliderTexInfo(index)->oy; },
 
-              .w = [index = args.index, this]{ return SDLDeviceHelper::getTextureWidth (g_progUseDB->retrieve(TexSlider::getSliderTexInfo(index)->texID)); },
-              .h = [index = args.index, this]{ return SDLDeviceHelper::getTextureHeight(g_progUseDB->retrieve(TexSlider::getSliderTexInfo(index)->texID)); },
+              .w = [index = args.index, this]{ return GLDeviceHelper::getTextureWidth (g_progUseDB->retrieve(TexSlider::getSliderTexInfo(index)->texID)); },
+              .h = [index = args.index, this]{ return GLDeviceHelper::getTextureHeight(g_progUseDB->retrieve(TexSlider::getSliderTexInfo(index)->texID)); },
           },
 
           .value = args.value,
@@ -36,7 +36,7 @@ TexSlider::TexSlider(TexSlider::InitArgs args)
                   {
                       {new ImageBoard
                       {{
-                          .texLoadFunc = [index = args.index, this] -> SDL_Texture *
+                          .texLoadFunc = [index = args.index, this] -> GLTexID 
                           {
                               return g_progUseDB->retrieve(TexSlider::getSliderTexInfo(index)->texID);
                           },
@@ -51,7 +51,7 @@ TexSlider::TexSlider(TexSlider::InitArgs args)
 
                       {new ImageBoard
                       {{
-                          .texLoadFunc = [index = args.index, this] -> SDL_Texture *
+                          .texLoadFunc = [index = args.index, this] -> GLTexID 
                           {
                               // if ImageBoard::ctor() calls texLoadFunc when constructing, it can trigger UB
                               // because sliderState() requires *this* to be fully constructed
@@ -60,7 +60,7 @@ TexSlider::TexSlider(TexSlider::InitArgs args)
                                   case BEVENT_ON:
                                   case BEVENT_DOWN:
                                       {
-                                          return g_sdlDevice->getCover(TexSlider::getSliderTexInfo(index)->cover, 360);
+                                          return g_glDevice->getCover(TexSlider::getSliderTexInfo(index)->cover, 360);
                                       }
                                   default:
                                       {

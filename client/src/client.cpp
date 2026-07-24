@@ -10,7 +10,7 @@
 #include "sysconst.hpp"
 #include "pngtexdb.hpp"
 #include "fontexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "servermsg.hpp"
 #include "processrun.hpp"
 #include "processlogo.hpp"
@@ -26,7 +26,7 @@
 #include "clientargparser.hpp"
 
 extern Log *g_mir2xLog;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern MessageStackBoard *g_notifyBoard;
 extern ClientArgParser *g_clientArgParser;
 
@@ -36,7 +36,7 @@ Client::Client()
     , m_netPackTick(-1.00)
 {
     InitView(10);
-    g_sdlDevice->createMainWindow();
+    g_glDevice->createMainWindow();
 }
 
 Client::~Client()
@@ -46,7 +46,7 @@ void Client::processEvent()
 {
     if(m_currentProcess){
         SDL_Event stEvent;
-        while(SDL_PollEvent(&stEvent)){
+        while(g_glDevice->pollEvent(&stEvent)){
             m_currentProcess->processEvent(stEvent);
             switchProcess();
         }
@@ -290,7 +290,7 @@ void Client::switchProcess(int oldID, int newID)
                         {
                             // on initialization
                             m_currentProcess = std::make_unique<ProcessLogo>();
-                            SDL_HideCursor();
+                            g_glDevice->showCursor(false);
                             break;
                         }
                     case PROCESSID_EXIT:
@@ -313,7 +313,7 @@ void Client::switchProcess(int oldID, int newID)
                         {
                             // on initialization
                             m_currentProcess = std::make_unique<ProcessSync>();
-                            SDL_ShowCursor();
+                            g_glDevice->showCursor(true);
                             break;
                         }
                     case PROCESSID_EXIT:
@@ -335,7 +335,7 @@ void Client::switchProcess(int oldID, int newID)
                     case PROCESSID_LOGIN:
                         {
                             m_currentProcess = std::make_unique<ProcessLogin>();
-                            SDL_ShowCursor();
+                            g_glDevice->showCursor(true);
                             break;
                         }
                     default:

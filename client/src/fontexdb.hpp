@@ -10,7 +10,7 @@
 #include "utf8f.hpp"
 #include "fflerror.hpp"
 #include "hexstr.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "fontstyle.hpp"
 
 struct FontexElement
@@ -21,7 +21,7 @@ struct FontexElement
     int32_t right :  8 = 0;
     int32_t ascent: 16 = 0;
 
-    SDL_Texture *texture = nullptr;
+    GLTexID texture = nullptr;
 };
 
 // key & 0X00FF000000000000) >> 48: font index --+
@@ -120,7 +120,7 @@ class FontexDB: public innDB<uint64_t, FontexElement>
         }
 
     public:
-        SDL_Texture *retrieve(uint64_t key, int *left = nullptr, int *right = nullptr, int *ascent = nullptr)
+        GLTexID retrieve(uint64_t key, int *left = nullptr, int *right = nullptr, int *ascent = nullptr)
         {
             if(auto p = innLoad(key)){
                 if(left  ) *  left = p->  left;
@@ -131,7 +131,7 @@ class FontexDB: public innDB<uint64_t, FontexElement>
             return nullptr;
         }
 
-        SDL_Texture *retrieve(uint8_t fontIndex, uint8_t fontSize, uint8_t fontStyle, const char *utf8String, int *left = nullptr, int *right = nullptr, int *ascent = nullptr)
+        GLTexID retrieve(uint8_t fontIndex, uint8_t fontSize, uint8_t fontStyle, const char *utf8String, int *left = nullptr, int *right = nullptr, int *ascent = nullptr)
         {
             return retrieve(utf8f::buildU64Key(fontIndex, fontSize, fontStyle, encodeString(utf8String)), left, right, ascent);
         }

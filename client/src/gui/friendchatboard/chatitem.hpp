@@ -84,7 +84,7 @@ struct ChatItem: public Widget
         const char8_t *message    = nullptr;
         const char8_t *messageRef = nullptr;
 
-        Widget::VarTexLoadFunc texLoadFunc = nullptr;
+        Widget::VarTexLoadFunc texLoadFunc = GLTexID{};
         Widget::VarU32Opt      bgColor     = std::nullopt;
 
         bool showName   = true;

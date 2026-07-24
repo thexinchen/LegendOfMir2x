@@ -1,11 +1,13 @@
+#include "audiodevice.hpp"
 #include <functional>
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "buttonbase.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "soundeffectdb.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
+extern AudioDevice *g_audioDevice;
 extern SoundEffectDB *g_seffDB;
 
 ButtonBase::ButtonBase(ButtonBase::InitArgs args)
@@ -230,7 +232,7 @@ void ButtonBase::onOverIn()
 {
     Button::evalOverCBFunc(m_onOverIn, this);
     if(m_seff.onOverIn.has_value()){
-        g_sdlDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onOverIn.value())));
+        g_audioDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onOverIn.value())));
     }
 }
 
@@ -238,7 +240,7 @@ void ButtonBase::onOverOut()
 {
     Button::evalOverCBFunc(m_onOverOut, this);
     if(m_seff.onOverOut.has_value()){
-        g_sdlDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onOverOut.value())));
+        g_audioDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onOverOut.value())));
     }
 }
 
@@ -250,7 +252,7 @@ void ButtonBase::onClick(bool clickDone, int clickCount)
     }
     else{
         if(m_seff.onClick.has_value()){
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onClick.value())));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onClick.value())));
         }
     }
 }

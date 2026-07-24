@@ -8,7 +8,7 @@
 #include "sysconst.hpp"
 #include "soundeffectdb.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "motionnode.hpp"
 #include "attachmagic.hpp"
@@ -17,7 +17,7 @@
 
 extern Log *g_mir2xLog;
 extern Client *g_client;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern PNGTexDB *g_progUseDB;
 extern PNGTexOffDB *g_heroDB;
 extern PNGTexOffDB *g_hairDB;
@@ -78,8 +78,8 @@ void Hero::drawFrame(int viewX, int viewY, int, int frame, bool)
         const uint32_t weaponKey = ((to_u32(shadow ? 1 : 0)) << 23) + (to_u32(gender()) << 22) + ((nGfxWeaponID.value() & 0X01FFFF) << 5) + m_currMotion->gfxFrame(frame);
         const auto [weaponFrame, weaponDX, weaponDY] = g_weaponDB->retrieve(weaponKey);
 
-        const SDLDeviceHelper::EnableTextureModColor modColor(weaponFrame, colorf::WHITE | colorf::A_SHF((weaponFrame && shadow) ? 128 : 255));
-        g_sdlDevice->drawTexture(weaponFrame, startX + weaponDX, startY + weaponDY);
+        const GLDeviceHelper::EnableTextureModColor modColor(weaponFrame, colorf::WHITE | colorf::A_SHF((weaponFrame && shadow) ? 128 : 255));
+        g_glDevice->drawTexture(weaponFrame, startX + weaponDX, startY + weaponDY);
     };
 
     fnDrawWeapon(true);
@@ -116,8 +116,8 @@ void Hero::drawFrame(int viewX, int viewY, int, int frame, bool)
     const auto [ bodyLayer1,  body1DX,  body1DY] = g_heroDB->retrieve(bodyKey | (to_u32(1) << 24));
     const auto [shadowFrame, shadowDX, shadowDY] = g_heroDB->retrieve(shadowKey);
 
-    const SDLDeviceHelper::EnableTextureModColor modColor(shadowFrame, colorf::WHITE | colorf::A_SHF(128));
-    g_sdlDevice->drawTexture(shadowFrame, startX + shadowDX, startY + shadowDY);
+    const GLDeviceHelper::EnableTextureModColor modColor(shadowFrame, colorf::WHITE | colorf::A_SHF(128));
+    g_glDevice->drawTexture(shadowFrame, startX + shadowDX, startY + shadowDY);
 
     if(true
             && getWLItem(WLG_WEAPON)
@@ -140,17 +140,17 @@ void Hero::drawFrame(int viewX, int viewY, int, int frame, bool)
         }
     }
 
-    g_sdlDevice->drawTexture(bodyLayer0, startX + body0DX, startY + body0DY);
+    g_glDevice->drawTexture(bodyLayer0, startX + body0DX, startY + body0DY);
     if(bodyLayer1){
-        SDLDeviceHelper::EnableTextureModColor modColor(bodyLayer1, modDressColor);
-        g_sdlDevice->drawTexture(bodyLayer1, startX + body1DX, startY + body1DY);
+        GLDeviceHelper::EnableTextureModColor modColor(bodyLayer1, modDressColor);
+        g_glDevice->drawTexture(bodyLayer1, startX + body1DX, startY + body1DY);
     }
 
     if(getWLItem(WLG_HELMET)){
         if(const auto nHelmetGfxID = gfxHelmetID(DBCOM_ITEMRECORD(getWLItem(WLG_HELMET).itemID).shape, m_currMotion->gfxType(frame), m_currMotion->direction); nHelmetGfxID.has_value()){
             const uint32_t nHelmetKey = (to_u32(gender()) << 22) + ((to_u32(nHelmetGfxID.value() & 0X01FFFF)) << 5) + m_currMotion->gfxFrame(frame);
             if(auto [texPtr, dx, dy] = g_helmetDB->retrieve(nHelmetKey); texPtr){
-                g_sdlDevice->drawTexture(texPtr, startX + dx, startY + dy);
+                g_glDevice->drawTexture(texPtr, startX + dx, startY + dy);
             }
         }
     }
@@ -158,8 +158,8 @@ void Hero::drawFrame(int viewX, int viewY, int, int frame, bool)
         if(const auto nHairGfxID = gfxHairID(m_sdWLDesp.hair, m_currMotion->gfxType(frame), m_currMotion->direction); nHairGfxID.has_value()){
             const uint32_t nHairKey = (to_u32(gender()) << 22) + ((to_u32(nHairGfxID.value() & 0X01FFFF)) << 5) + m_currMotion->gfxFrame(frame);
             if(auto [texPtr, dx, dy] = g_hairDB->retrieve(nHairKey); texPtr){
-                SDLDeviceHelper::EnableTextureModColor enableColor(texPtr, m_sdWLDesp.hairColor);
-                g_sdlDevice->drawTexture(texPtr, startX + dx, startY + dy);
+                GLDeviceHelper::EnableTextureModColor enableColor(texPtr, m_sdWLDesp.hairColor);
+                g_glDevice->drawTexture(texPtr, startX + dx, startY + dy);
             }
         }
     }
@@ -171,16 +171,16 @@ void Hero::drawFrame(int viewX, int viewY, int, int frame, bool)
     }
 
     if(g_clientArgParser->drawTextureAlignLine){
-        g_sdlDevice->drawLine (colorf::RED  + colorf::A_SHF(128), startX, startY, startX + body0DX, startY + body0DY);
-        g_sdlDevice->drawCross(colorf::BLUE + colorf::A_SHF(128), startX, startY, 5);
+        g_glDevice->drawLine (colorf::RED  + colorf::A_SHF(128), startX, startY, startX + body0DX, startY + body0DY);
+        g_glDevice->drawCross(colorf::BLUE + colorf::A_SHF(128), startX, startY, 5);
 
-        const auto [texW, texH] = SDLDeviceHelper::getTextureSize(bodyLayer0);
-        g_sdlDevice->drawRectangle(colorf::RED + colorf::A_SHF(128), startX + body0DX, startY + body0DY, texW, texH);
+        const auto [texW, texH] = GLDeviceHelper::getTextureSize(bodyLayer0);
+        g_glDevice->drawRectangle(colorf::RED + colorf::A_SHF(128), startX + body0DX, startY + body0DY, texW, texH);
     }
 
     if(g_clientArgParser->drawTargetBox){
         if(const auto box = getTargetBox()){
-            g_sdlDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(128), box.x - viewX, box.y - viewY, box.w, box.h);
+            g_glDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(128), box.x - viewX, box.y - viewY, box.w, box.h);
         }
     }
 
@@ -225,13 +225,13 @@ void Hero::drawFrame(int viewX, int viewY, int, int frame, bool)
         auto bar0Ptr = g_progUseDB->retrieve(0X00000014);
         auto bar1Ptr = g_progUseDB->retrieve(0X00000015);
 
-        const auto [bar1TexW, bar1TexH] = SDLDeviceHelper::getTextureSize(bar1Ptr);
+        const auto [bar1TexW, bar1TexH] = GLDeviceHelper::getTextureSize(bar1Ptr);
         const int drawHPX = startX +  7;
         const int drawHPY = startY - 53;
         const int drawHPW = to_d(std::lround(bar1TexW * getHealthRatio().at(0)));
 
-        g_sdlDevice->drawTexture(bar1Ptr, drawHPX, drawHPY, 0, 0, drawHPW, bar1TexH);
-        g_sdlDevice->drawTexture(bar0Ptr, drawHPX, drawHPY);
+        g_glDevice->drawTexture(bar1Ptr, drawHPX, drawHPY, 0, 0, drawHPW, bar1TexH);
+        g_glDevice->drawTexture(bar0Ptr, drawHPX, drawHPY);
 
         constexpr int buffIconDrawW = 10;
         constexpr int buffIconDrawH = 10;
@@ -249,8 +249,8 @@ void Hero::drawFrame(int viewX, int viewY, int, int frame, bool)
                         const int buffIconOffX = buffIconStartX + (drawIconCount % 3) * buffIconDrawW;
                         const int buffIconOffY = buffIconStartY - (drawIconCount / 3) * buffIconDrawH;
 
-                        const auto [texW, texH] = SDLDeviceHelper::getTextureSize(iconTexPtr);
-                        g_sdlDevice->drawTexture(iconTexPtr, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, 0, 0, texW, texH);
+                        const auto [texW, texH] = GLDeviceHelper::getTextureSize(iconTexPtr);
+                        g_glDevice->drawTexture(iconTexPtr, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, 0, 0, texW, texH);
 
                         const auto baseColor = [&br]() -> uint32_t
                         {
@@ -271,7 +271,7 @@ void Hero::drawFrame(int viewX, int viewY, int, int frame, bool)
                         const auto edgeGridCount = (buffIconDrawW + buffIconDrawH) * 2 - 4;
                         const auto startLoc = std::lround(edgeGridCount * std::fmod(m_accuUpdateTime, 1500.0) / 1500.0);
 
-                        g_sdlDevice->drawBoxFading(startColor, endColor, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, startLoc, buffIconDrawW + buffIconDrawH);
+                        g_glDevice->drawBoxFading(startColor, endColor, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, startLoc, buffIconDrawW + buffIconDrawH);
                         drawIconCount++;
                     }
                 }
@@ -1549,7 +1549,7 @@ ClientCreature::TargetBox Hero::getTargetBox() const
         return {};
     }
 
-    const auto [bodyFrameW, bodyFrameH] = SDLDeviceHelper::getTextureSize(bodyFrameTexPtr);
+    const auto [bodyFrameW, bodyFrameH] = GLDeviceHelper::getTextureSize(bodyFrameTexPtr);
 
     const auto [shiftX, shiftY] = getShift(m_currMotion->frame);
     const int startX = m_currMotion->x * SYS_MAPGRIDXP + shiftX + dx;

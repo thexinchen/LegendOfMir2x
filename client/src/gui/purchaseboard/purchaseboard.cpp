@@ -1,7 +1,7 @@
 #include "totype.hpp"
 #include "client.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "textboard.hpp"
 #include "purchaseboard.hpp"
@@ -10,7 +10,7 @@
 extern Client *g_client;
 extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 PurchaseBoard::PurchaseBoard(ProcessRun *argProc, Widget *argParent, bool argAutoDelete)
     : Widget
@@ -277,7 +277,7 @@ void PurchaseBoard::drawDefault(Widget::ROIMap m) const
 
                     .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                     {
-                        g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(64), dstDrawX, dstDrawY, self->w(), self->h());
+                        g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(64), dstDrawX, dstDrawY, self->w(), self->h());
                     },
                 }};
                 drawAsChild(&mask, DIR_UPLEFT, m_startX, startY, m);
@@ -535,8 +535,8 @@ void PurchaseBoard::drawExt1GridHoverText(int itemIndex) const
         {SDItem::XML_PRICECOLOR, (goldPrice > 100) ? std::string("red") : std::string("green")},
     }).c_str()));
 
-    const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
-    g_sdlDevice->fillRectangle(colorf::RGBA(0, 0, 0, 200), mousePX, mousePY, std::max<int>(hoverTextBoard.w(), 200) + 20, hoverTextBoard.h() + 20);
+    const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
+    g_glDevice->fillRectangle(colorf::RGBA(0, 0, 0, 200), mousePX, mousePY, std::max<int>(hoverTextBoard.w(), 200) + 20, hoverTextBoard.h() + 20);
     hoverTextBoard.draw({.x=mousePX + 10, .y=mousePY + 10});
 }
 
@@ -595,7 +595,7 @@ void PurchaseBoard::drawExt1(Widget::ROIMap m) const
             }};
             drawAsChild(&price, DIR_UPLEFT, rightBoxX, rightBoxY, m);
 
-            const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+            const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
             const bool gridSelected = (m_ext1PageGridSelected >= 0) && ((size_t)(m_ext1PageGridSelected) == i);
             const bool cursorOn = [rightBoxX, rightBoxY, mousePX, mousePY, remapX, remapY, this]() -> bool
             {
@@ -604,7 +604,7 @@ void PurchaseBoard::drawExt1(Widget::ROIMap m) const
 
             if(gridSelected || cursorOn){
                 const uint32_t gridColor = gridSelected ? (colorf::BLUE + colorf::A_SHF(96)) : (colorf::WHITE + colorf::A_SHF(96));
-                g_sdlDevice->fillRectangle(gridColor, remapX + rightBoxX, remapY + rightBoxY, m_boxW, m_boxH);
+                g_glDevice->fillRectangle(gridColor, remapX + rightBoxX, remapY + rightBoxY, m_boxW, m_boxH);
             }
 
             if(cursorOn){
@@ -730,7 +730,7 @@ void PurchaseBoard::onBuySucceed(uint64_t npcUID, uint32_t itemID, uint32_t seqI
 void PurchaseBoard::drawItemInGrid(const char8_t *itemType, uint32_t pkgGfxID, int gridDX, int gridDY, Widget::ROIMap pm) const
 {
     if(auto texPtr = getItemTexture(itemType, pkgGfxID)){
-        const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+        const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
         const auto resizeRatio = std::max<double>({to_df(texW) / m_boxW, to_df(texH) / m_boxH, 1.0});
 
         const auto drawW = to_d(std::lround(texW / resizeRatio));
@@ -747,7 +747,7 @@ void PurchaseBoard::drawItemInGrid(const char8_t *itemType, uint32_t pkgGfxID, i
     }
 }
 
-SDL_Texture *PurchaseBoard::getItemTexture(const char8_t *itemType, uint32_t pkgGfxID)
+GLTexID PurchaseBoard::getItemTexture(const char8_t *itemType, uint32_t pkgGfxID)
 {
     // for some items the game originally doesn't support to buy/sell them so there is no buy/sell gfx
     // but there is gfx when they get weared, try to reuse

@@ -3,7 +3,7 @@
 #include "invpack.hpp"
 #include "pngtexdb.hpp"
 #include "sysconst.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "widget.hpp"
 #include "quickaccessgrid.hpp"
@@ -11,7 +11,7 @@
 
 extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 QuickAccessBoard::QuickAccessBoard(
         dir8_t argDir,
@@ -112,7 +112,7 @@ bool QuickAccessBoard::processEventDefault(const SDL_Event &event, bool valid, W
         case SDL_EVENT_MOUSE_MOTION:
             {
                 if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
-                    moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_sdlDevice->getRendererSize()));
+                    moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_glDevice->getRendererSize()));
                     return consumeFocus(true);
                 }
                 return consumeFocus(false);
@@ -175,7 +175,7 @@ bool QuickAccessBoard::processEventDefault(const SDL_Event &event, bool valid, W
         case SDL_EVENT_KEY_DOWN:
             {
                 if(focus()){
-                    if(const auto ch = SDLDeviceHelper::getKeyChar(event, false); ch >= '1' && ch <= '6'){
+                    if(const auto ch = GLDeviceHelper::getKeyChar(event, false); ch >= '1' && ch <= '6'){
                         gridConsume(ch - '1');
                     }
                     return consumeFocus(true);

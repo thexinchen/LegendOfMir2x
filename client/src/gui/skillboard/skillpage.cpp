@@ -1,11 +1,11 @@
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "pngtexdb.hpp"
 #include "skillpage.hpp"
 #include "skillboard.hpp"
 #include "magiciconbutton.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 SkillPage::SkillPage(SkillPage::InitArgs args)
     : Widget

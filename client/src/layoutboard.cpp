@@ -5,7 +5,7 @@
 #include "fontexdb.hpp"
 #include "layoutboard.hpp"
 #include "imeboard.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "log.hpp"
 #include "mathf.hpp"
 #include "strf.hpp"
@@ -16,7 +16,7 @@
 extern Log *g_mir2xLog;
 extern FontexDB *g_fontexDB;
 extern IMEBoard *g_imeBoard;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
 LayoutBoard::LayoutBoard(LayoutBoard::InitArgs args)
@@ -661,7 +661,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                     default:
                         {
                             const auto ime = Widget::evalInt(m_imeEnabled, this);
-                            const char keyChar = SDLDeviceHelper::getKeyChar(event, true);
+                            const char keyChar = GLDeviceHelper::getKeyChar(event, true);
                             const auto fnInsertString = [this](std::string s)
                             {
                                 const auto addedCount = ithParIterator(m_cursorLoc.par)->tpset->insertUTF8String(m_cursorLoc.x, m_cursorLoc.y, s.c_str());
@@ -704,7 +704,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                     else                              return (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)     ? BEVENT_DOWN : BEVENT_ON;
                 }();
 
-                const auto [eventPX, eventPY] = SDLDeviceHelper::getEventPLoc(event).value();
+                const auto [eventPX, eventPY] = GLDeviceHelper::getEventPLoc(event).value();
                 const auto fnHandleEvent = [&event, newEvent, eventPX, eventPY, m, this](ParNode *node, bool currValid) -> bool
                 {
                     if(!currValid){
@@ -780,10 +780,10 @@ void LayoutBoard::setFocus(bool argFocus)
 {
     Widget::setFocus(argFocus);
     if(focus() && (Widget::evalInt(m_imeEnabled, this) == IME_SYSTEM)){
-        g_sdlDevice->enableSystemIME(id());
+        g_glDevice->enableSystemIME(id());
     }
     else{
-        g_sdlDevice->disableSystemIME(id());
+        g_glDevice->disableSystemIME(id());
     }
     m_cursorBlink = 0.0;
 }
@@ -803,7 +803,7 @@ void LayoutBoard::drawCursorBlink(int drawDstX, int drawDstY) const
     }
 
     const auto [cursorPX, cursorPY, cursorPW, cursorPH] = getCursorPLoc();
-    g_sdlDevice->fillRectangle(colorf::RED + colorf::A_SHF(255), drawDstX + cursorPX, drawDstY + cursorPY, cursorPW, cursorPH);
+    g_glDevice->fillRectangle(colorf::RED + colorf::A_SHF(255), drawDstX + cursorPX, drawDstY + cursorPY, cursorPW, cursorPH);
 }
 
 std::string LayoutBoard::getXML() const
