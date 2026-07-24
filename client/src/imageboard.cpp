@@ -231,5 +231,5 @@ void ImageBoard::drawDefault(Widget::ROIMap m) const
             centerOffY,
 
             rotateDegree,
-            m_hflip ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+            m_hflip ? MIR_FLIP_HORIZONTAL : MIR_FLIP_NONE);
 }

@@ -154,7 +154,7 @@ size_t IMEBoard::totalLabelWidth() const
     return totalWidth;
 }
 
-bool IMEBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool IMEBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -172,12 +172,12 @@ bool IMEBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::R
     }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_UP:
-                    case SDLK_LEFT:
-                    case SDLK_PAGEUP:
+                    case MIRK_UP:
+                    case MIRK_LEFT:
+                    case MIRK_PAGEUP:
                         {
                             if(m_startIndex >= 9){
                                 m_startIndex -= 9;
@@ -189,9 +189,9 @@ bool IMEBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                             prepareLabelBoardList();
                             return true;
                         }
-                    case SDLK_DOWN:
-                    case SDLK_RIGHT:
-                    case SDLK_PAGEDOWN:
+                    case MIRK_DOWN:
+                    case MIRK_RIGHT:
+                    case MIRK_PAGEDOWN:
                         {
                             if(m_startIndex + 9 < m_candidateList.size()){
                                 m_startIndex += 9;
@@ -200,7 +200,7 @@ bool IMEBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                             prepareLabelBoardList();
                             return true;
                         }
-                    case SDLK_RETURN:
+                    case MIRK_RETURN:
                         {
                             if(m_onCommit){
                                 m_onCommit(m_ime.result());
@@ -209,17 +209,17 @@ bool IMEBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                             dropFocus();
                             return true;
                         }
-                    case SDLK_BACKSPACE:
+                    case MIRK_BACKSPACE:
                         {
                             m_ime.backspace();
                             return true;
                         }
-                    case SDLK_ESCAPE:
+                    case MIRK_ESCAPE:
                         {
                             dropFocus();
                             return true;
                         }
-                    case SDLK_SPACE:
+                    case MIRK_SPACE:
                         {
                             m_ime.select(m_startIndex);
                             return true;
@@ -243,9 +243,9 @@ bool IMEBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
             {
-                if(event.button.button == SDL_BUTTON_LEFT){
+                if(event.button.button == MIR_BUTTON_LEFT){
                     for(size_t i = m_startIndex; i < std::min<size_t>(m_startIndex + 9, m_candidateList.size()); ++i){
                         m_boardList[i]->setFontColor(Widget::evalU32(m_font.color, this));
                         if(m.create(m_boardList.at(i)->roi()).in(to_d(event.button.x), to_d(event.button.y))){
@@ -255,7 +255,7 @@ bool IMEBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                 }
                 return true;
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(!m.in(to_d(event.button.x), to_d(event.button.y))){
                     dropFocus();
@@ -272,9 +272,9 @@ bool IMEBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                 }
                 return true;
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if(event.motion.state & SDL_BUTTON_LMASK){
+                if(event.motion.state & MIR_BUTTON_LMASK){
                     const auto remapXDiff = m.x - m.ro->x;
                     const auto remapYDiff = m.y - m.ro->y;
 

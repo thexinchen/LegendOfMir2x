@@ -45,7 +45,7 @@ Client::~Client()
 void Client::processEvent()
 {
     if(m_currentProcess){
-        SDL_Event stEvent;
+        MirEvent stEvent;
         while(g_glDevice->pollEvent(&stEvent)){
             m_currentProcess->processEvent(stEvent);
             switchProcess();
@@ -62,9 +62,9 @@ void Client::mainLoop()
     const auto fDelayUpdate = (1000.0 / (1.0 * SYS_DEFFPS)) / 7.0;
     const auto fDelayLoop   = (1000.0 / (1.0 * SYS_DEFFPS)) / 8.0;
 
-    auto fLastDraw   = SDL_GetTicks() * 1.0;
-    auto fLastUpdate = SDL_GetTicks() * 1.0;
-    auto fLastLoop   = SDL_GetTicks() * 1.0;
+    auto fLastDraw   = mirGetTicks() * 1.0;
+    auto fLastUpdate = mirGetTicks() * 1.0;
+    auto fLastLoop   = mirGetTicks() * 1.0;
 
     while(true){
         if(g_clientArgParser->enableClientMonitor){
@@ -76,23 +76,23 @@ void Client::mainLoop()
         }
 
         if(m_netPackTick > 0.0){
-            if(SDL_GetTicks() * 1.0 - m_netPackTick > 15.0 * 1000){
+            if(mirGetTicks() * 1.0 - m_netPackTick > 15.0 * 1000){
                 // std::exit(0);
             }
         }
 
-        if(auto fCurrUpdate = 1.0 * SDL_GetTicks(); fCurrUpdate - fLastUpdate > fDelayUpdate){
+        if(auto fCurrUpdate = 1.0 * mirGetTicks(); fCurrUpdate - fLastUpdate > fDelayUpdate){
             auto fPastUpdate = fCurrUpdate - fLastUpdate;
             fLastUpdate = fCurrUpdate;
             update(fPastUpdate);
         }
 
-        if(auto fCurrDraw = 1.0 * SDL_GetTicks(); fCurrDraw - fLastDraw > fDelayDraw){
+        if(auto fCurrDraw = 1.0 * mirGetTicks(); fCurrDraw - fLastDraw > fDelayDraw){
             fLastDraw = fCurrDraw;
             draw();
         }
 
-        auto fCurrLoop = 1.0 * SDL_GetTicks();
+        auto fCurrLoop = 1.0 * mirGetTicks();
         auto fPastLoop = fCurrLoop - fLastLoop;
 
         fLastLoop = fCurrLoop;
@@ -102,12 +102,12 @@ void Client::mainLoop()
 
 void Client::eventDelay(double fDelayMS)
 {
-    const double fStartDelayMS = SDL_GetTicks() * 1.0;
+    const double fStartDelayMS = mirGetTicks() * 1.0;
     while(true){
         m_netIO.poll();
         processEvent();
 
-        double fCurrentMS = SDL_GetTicks() * 1.0;
+        double fCurrentMS = mirGetTicks() * 1.0;
         double fDelayDone = fCurrentMS - fStartDelayMS;
 
         if(fDelayDone >= fDelayMS){
@@ -115,14 +115,14 @@ void Client::eventDelay(double fDelayMS)
         }
 
         // here we check the delay time
-        // since SDL_Delay(0) may run into problem
+        // since mirDelay(0) may run into problem
 
-        const auto nDelayMSCount = (Uint32)(std::lround((fDelayMS - fDelayDone) * 0.80));
+        const auto nDelayMSCount = (uint32_t)(std::lround((fDelayMS - fDelayDone) * 0.80));
         if(nDelayMSCount <= 0){
             break;
         }
 
-        SDL_Delay(nDelayMSCount);
+        mirDelay(nDelayMSCount);
     }
 }
 
@@ -154,7 +154,7 @@ void Client::initASIO()
 
 void Client::onServerMessage(uint8_t headCode, const uint8_t *buf, size_t bufSize)
 {
-    m_netPackTick = SDL_GetTicks() * 1.0;
+    m_netPackTick = mirGetTicks() * 1.0;
     if(headCode != SM_PING){
         sendSMsgLog(headCode);
     }
@@ -446,12 +446,12 @@ void Client::switchProcess(int oldID, int newID)
 
 void Client::sendCMsgLog(uint8_t headCode)
 {
-    g_notifyBoard->addMessage(str_printf(u8"[%08.3f] ← %s", (float)(SDL_GetTicks()) / 1000.0f, ClientMsg(headCode).name().c_str()));
+    g_notifyBoard->addMessage(str_printf(u8"[%08.3f] ← %s", (float)(mirGetTicks()) / 1000.0f, ClientMsg(headCode).name().c_str()));
 }
 
 void Client::sendSMsgLog(uint8_t headCode)
 {
-    g_notifyBoard->addMessage(str_printf(u8"[%08.3f] → %s", (float)(SDL_GetTicks()) / 1000.0f, ServerMsg(headCode).name().c_str()));
+    g_notifyBoard->addMessage(str_printf(u8"[%08.3f] → %s", (float)(mirGetTicks()) / 1000.0f, ServerMsg(headCode).name().c_str()));
 }
 
 void Client::PrintMonitor() const

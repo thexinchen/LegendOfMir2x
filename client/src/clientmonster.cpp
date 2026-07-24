@@ -1,4 +1,4 @@
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 #include <algorithm>
 #include "log.hpp"
 #include "pathf.hpp"
@@ -285,7 +285,7 @@ void ClientMonster::drawFrame(int viewX, int viewY, int focusMask, int frame, bo
             // if provided channel as 0
             // just blend it using the original color
 
-            const GLDeviceHelper::EnableTextureModColor modColor(pTexture, colorf::SDLColor2RGBA(focusColor(nFocusChan, alpha)));
+            const GLDeviceHelper::EnableTextureModColor modColor(pTexture, colorf::MirColor2RGBA(focusColor(nFocusChan, alpha)));
             g_glDevice->drawTexture(pTexture, nX, nY);
         }
     };
@@ -431,7 +431,7 @@ uint32_t ClientMonster::getSeffID(int offset) const
 
 bool ClientMonster::parseAction(const ActionNode &action)
 {
-    m_lastActive = SDL_GetTicks();
+    m_lastActive = mirGetTicks();
     for(const auto &m: m_forcedMotionQueue){
         if(m->type == MOTION_MON_DIE){
             return true;

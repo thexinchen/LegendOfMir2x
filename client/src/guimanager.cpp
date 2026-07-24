@@ -185,15 +185,15 @@ void GUIManager::updateDefault(double fUpdateTime)
     g_imeBoard->update(fUpdateTime);
 }
 
-bool GUIManager::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
     }
 
     switch(event.type){
-        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-        case SDL_EVENT_WINDOW_RESIZED:
+        case MIR_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+        case MIR_EVENT_WINDOW_RESIZED:
             {
                 afterResize();
                 return true;

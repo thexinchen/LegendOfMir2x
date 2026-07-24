@@ -339,7 +339,7 @@ void PlayerStateBoard::drawDefault(Widget::ROIMap m) const
     drawChild(&m_closeButton, m);
 }
 
-bool PlayerStateBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool PlayerStateBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -354,9 +354,9 @@ bool PlayerStateBoard::processEventDefault(const SDL_Event &event, bool valid, W
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
+                if((event.motion.state & MIR_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
                     if(const auto par = parent()){
                         moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), par->roi());
                     }
@@ -367,10 +367,10 @@ bool PlayerStateBoard::processEventDefault(const SDL_Event &event, bool valid, W
                 }
                 return consumeFocus(false);
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 switch(event.button.button){
-                    case SDL_BUTTON_LEFT:
+                    case MIR_BUTTON_LEFT:
                         {
                             auto myHeroPtr = m_processRun->getMyHero();
                             auto &invPackRef = myHeroPtr->getInvPack();

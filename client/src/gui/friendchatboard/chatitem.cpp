@@ -225,7 +225,7 @@ void ChatItem::updateDefault(double fUpdateTime)
     accuTime += fUpdateTime;
 }
 
-bool ChatItem::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool ChatItem::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -236,8 +236,8 @@ bool ChatItem::processEventDefault(const SDL_Event &event, bool valid, Widget::R
     }
 
     if(true
-            && event.type == SDL_EVENT_MOUSE_BUTTON_UP
-            && event.button.button == SDL_BUTTON_RIGHT
+            && event.type == MIR_EVENT_MOUSE_BUTTON_UP
+            && event.button.button == MIR_BUTTON_RIGHT
             && m.create(background.roi()).in(to_d(event.button.x), to_d(event.button.y))){
 
         if(auto chatPage = hasParent<ChatPage>()){

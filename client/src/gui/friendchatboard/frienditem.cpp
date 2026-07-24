@@ -81,7 +81,7 @@ FriendItem::FriendItem(
 
           .texLoadFunc = std::move(argLoadImageFunc),
 
-          .blendMode = SDL_BLENDMODE_NONE,
+          .blendMode = MIR_BLENDMODE_NONE,
           .parent{this},
       }}
 
@@ -113,7 +113,7 @@ void FriendItem::setFuncWidget(Widget *argFuncWidget, bool argAutoDelete)
     addChild(argFuncWidget, argAutoDelete);
 }
 
-bool FriendItem::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool FriendItem::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -124,7 +124,7 @@ bool FriendItem::processEventDefault(const SDL_Event &event, bool valid, Widget:
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(Widget::processEventDefault(event, valid, m)){
                     return consumeFocus(true);

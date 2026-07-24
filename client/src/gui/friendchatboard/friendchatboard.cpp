@@ -834,7 +834,7 @@ void FriendChatBoard::drawDefault(Widget::ROIMap m) const
     }
 }
 
-bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool FriendChatBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -851,11 +851,11 @@ bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
     if(m_uiPageList[m_uiPage].control->processEventParent(event, valid, m)){ return true; }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 if(focus()){
                     switch(event.key.key){
-                        case SDLK_ESCAPE:
+                        case MIRK_ESCAPE:
                             {
                                 setShow(false);
                                 setFocus(false);
@@ -869,7 +869,7 @@ bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
                 }
                 return false;
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(m.create(m_uiPageList[m_uiPage].page->roi()).in(to_d(event.button.x), to_d(event.button.y))){
                     if(m_uiPageList[m_uiPage].page->processEventParent(event, true, m)){
@@ -883,14 +883,14 @@ bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
                 m_dragIndex = getEdgeDragIndex(to_d(event.button.x) - mapXDiff, to_d(event.button.y) - mapYDiff);
                 return consumeFocus(m.in(to_d(event.button.x), to_d(event.button.y)));
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
             {
                 m_dragIndex.reset();
                 return consumeFocus(m.in(to_d(event.button.x), to_d(event.button.y)));
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if(event.motion.state & SDL_BUTTON_LMASK){
+                if(event.motion.state & MIR_BUTTON_LMASK){
                     if(m_dragIndex.has_value()){
                         bool sizeChanged = false;
                         const auto fnAdjustW = [&sizeChanged, this](int dw, bool adjustOff)
@@ -952,7 +952,7 @@ bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
                 }
                 return false;
             }
-        case SDL_EVENT_MOUSE_WHEEL:
+        case MIR_EVENT_MOUSE_WHEEL:
             {
                 if(m_uiPageList[m_uiPage].page->focus()){
                     if(m_uiPageList[m_uiPage].page->processEvent(event, true, m)){

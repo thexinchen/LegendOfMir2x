@@ -77,7 +77,7 @@ class IMEBoard: public Widget
         void updateDefault(double) override;
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     public:
         void drawDefault(Widget::ROIMap) const override;

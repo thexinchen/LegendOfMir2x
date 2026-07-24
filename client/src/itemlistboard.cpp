@@ -110,7 +110,7 @@ ItemListBoard::ItemListBoard(int argX, int argY, Widget *argParent, bool argAuto
     }
 }
 
-bool ItemListBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool ItemListBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -126,14 +126,14 @@ bool ItemListBoard::processEventDefault(const SDL_Event &event, bool valid, Widg
     if(m_closeButton .processEventParent(event, valid, m)){ return true; }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(const auto gridIndex = getPageGrid(); gridIndex.has_value() && pageCount() > 0 && m_page * 3 * 4 + gridIndex.value() < itemCount()){
                     m_selectedPageGrid = m_page * 3 * 4 + gridIndex.value();
                 }
                 break;
             }
-        case SDL_EVENT_MOUSE_WHEEL:
+        case MIR_EVENT_MOUSE_WHEEL:
             {
                 if(getPageGrid().has_value()){
                     if(to_d(event.wheel.y) > 0){

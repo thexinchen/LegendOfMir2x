@@ -186,7 +186,7 @@ void MenuItem::drawDefault(Widget::ROIMap m) const
     }
 }
 
-bool MenuItem::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool MenuItem::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;

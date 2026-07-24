@@ -181,7 +181,7 @@ class ProcessRun: public Process
     public:
         virtual void draw() const override;
         virtual void update(double) override;
-        virtual void processEvent(const SDL_Event &) override;
+        virtual void processEvent(const MirEvent &) override;
 
     public:
         std::tuple<int, int> fromPLoc2Grid(int pixelX, int pixelY) const
@@ -409,7 +409,7 @@ class ProcessRun: public Process
         void drawObject(int, int, int, bool) const;
 
     private:
-        void checkMagicSpell(const SDL_Event &);
+        void checkMagicSpell(const MirEvent &);
 
     public:
         std::tuple<int, int> getACNum(const std::string &) const;

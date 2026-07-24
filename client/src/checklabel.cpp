@@ -107,7 +107,7 @@ CheckLabel::CheckLabel(CheckLabel::InitArgs args)
     }
 }
 
-bool CheckLabel::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool CheckLabel::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -120,9 +120,9 @@ bool CheckLabel::processEventDefault(const SDL_Event &event, bool valid, Widget:
 
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_MOTION:
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 m_hoverColor = m.in(GLDeviceHelper::getEventPLoc(event).value());
                 break;
@@ -138,7 +138,7 @@ bool CheckLabel::processEventDefault(const SDL_Event &event, bool valid, Widget:
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
             {
                 if(m.in(to_d(event.button.x), to_d(event.button.y))){
                     return consumeFocus(true, &m_box);
@@ -147,7 +147,7 @@ bool CheckLabel::processEventDefault(const SDL_Event &event, bool valid, Widget:
                     return consumeFocus(false);
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(m.in(to_d(event.button.x), to_d(event.button.y))){
                     m_box.toggle();
@@ -157,7 +157,7 @@ bool CheckLabel::processEventDefault(const SDL_Event &event, bool valid, Widget:
                     return consumeFocus(false);
                 }
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
                 if(m.in(to_d(event.motion.x), to_d(event.motion.y))){
                     return consumeFocus(true, &m_box);
@@ -166,16 +166,16 @@ bool CheckLabel::processEventDefault(const SDL_Event &event, bool valid, Widget:
                     return consumeFocus(false);
                 }
             }
-        case SDL_EVENT_KEY_UP:
+        case MIR_EVENT_KEY_UP:
             {
                 return consumeFocus(focus());
             }
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 if(focus()){
                     switch(event.key.key){
-                        case SDLK_SPACE:
-                        case SDLK_RETURN:
+                        case MIRK_SPACE:
+                        case MIRK_RETURN:
                             {
                                 m_box.toggle();
                                 return consumeFocus(true, &m_box);

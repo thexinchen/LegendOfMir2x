@@ -174,7 +174,7 @@ void ChatPage::afterResizeDefault()
     enableChatRef(chatref->refer(), chatref->getXML());
 }
 
-bool ChatPage::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool ChatPage::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -197,10 +197,10 @@ bool ChatPage::processEventDefault(const SDL_Event &event, bool valid, Widget::R
     }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_RETURN:
+                    case MIRK_RETURN:
                         {
                             if(input.focus()){
                                 return Widget::processEventDefault(event, valid, m);
@@ -216,7 +216,7 @@ bool ChatPage::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(m.create(input.roi()).in(to_d(event.button.x), to_d(event.button.y))){
                     setFocus(false);

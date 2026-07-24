@@ -62,7 +62,7 @@ class PasswordBox: public InputLine
         {}
 
     public:
-        bool processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m) override
+        bool processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m) override
         {
             const auto result = InputLine::processEventDefault(event, valid, m);
             if(security()){

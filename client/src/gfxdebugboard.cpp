@@ -70,14 +70,14 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
           .wrapped{&m_img},
           .attrs
           {
-              .processEvent = [this](Widget *self, const SDL_Event &event, bool valid, Widget::ROIMap m)
+              .processEvent = [this](Widget *self, const MirEvent &event, bool valid, Widget::ROIMap m)
               {
                   if(!m.calibrate(self)){
                       return false;
                   }
 
-                  if((event.type == SDL_EVENT_MOUSE_MOTION) && valid){
-                      if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || self->focus())){
+                  if((event.type == MIR_EVENT_MOUSE_MOTION) && valid){
+                      if((event.motion.state & MIR_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || self->focus())){
                           self->moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), m_imgCanvas.roi());
                           return true;
                       }

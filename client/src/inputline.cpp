@@ -50,24 +50,24 @@ InputLine::InputLine(InputLine::InitArgs args)
     , m_validate(std::move(args.validate))
 {}
 
-bool InputLine::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool InputLine::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
     }
 
     switch(event.type){
-        case SDL_EVENT_TEXT_INPUT:
+        case MIR_EVENT_TEXT_INPUT:
             {
                 // when system IME is activated
-                // no matter SDL_StopTextInput() is called or not
-                // IME still show the input candidates, SDL just doesn't dispatch SDL_EVENT_TEXT_INPUT anymore
+                // no matter (void)0 is called or not
+                // IME still show the input candidates, SDL just doesn't dispatch MIR_EVENT_TEXT_INPUT anymore
 
                 // so SDL_StopTextInput does nothing
-                // just filter the SDL_EVENT_TEXT_INPUT event
+                // just filter the MIR_EVENT_TEXT_INPUT event
 
                 if(const auto ime = Widget::evalInt(m_imeEnabled, this); (ime != IME_SYSTEM) && valid){
-                    throw fflpanic("received valid SDL_EVENT_TEXT_INPUT while system input is not enabled: IME {}", ime);
+                    throw fflpanic("received valid MIR_EVENT_TEXT_INPUT while system input is not enabled: IME {}", ime);
                 }
 
                 if(!valid || !focus()){
@@ -84,7 +84,7 @@ bool InputLine::processEventDefault(const SDL_Event &event, bool valid, Widget::
                 m_cursorBlink = 0.0;
                 return true;
             }
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 // another widget can consume the event
                 // and pass the focus to this widget, don't drop focus for keyboard events
@@ -98,27 +98,27 @@ bool InputLine::processEventDefault(const SDL_Event &event, bool valid, Widget::
                 }
 
                 switch(event.key.key){
-                    case SDLK_TAB:
+                    case MIRK_TAB:
                         {
                             if(m_onTab){
                                 m_onTab();
                             }
                             return true;
                         }
-                    case SDLK_RETURN:
+                    case MIRK_RETURN:
                         {
                             if(m_onCR){
                                 m_onCR();
                             }
                             return true;
                         }
-                    case SDLK_LEFT:
+                    case MIRK_LEFT:
                         {
                             m_cursor = std::max<int>(0, m_cursor - 1);
                             m_cursorBlink = 0.0;
                             return true;
                         }
-                    case SDLK_RIGHT:
+                    case MIRK_RIGHT:
                         {
                             if(m_tpset.empty()){
                                 m_cursor = 0;
@@ -129,7 +129,7 @@ bool InputLine::processEventDefault(const SDL_Event &event, bool valid, Widget::
                             m_cursorBlink = 0.0;
                             return true;
                         }
-                    case SDLK_BACKSPACE:
+                    case MIRK_BACKSPACE:
                         {
                             if(m_cursor > 0){
                                 m_tpset.deleteToken(m_cursor - 1, 0, 1);
@@ -142,7 +142,7 @@ bool InputLine::processEventDefault(const SDL_Event &event, bool valid, Widget::
                             m_cursorBlink = 0.0;
                             return true;
                         }
-                    case SDLK_ESCAPE:
+                    case MIRK_ESCAPE:
                         {
                             setFocus(false);
                             return true;
@@ -154,7 +154,7 @@ bool InputLine::processEventDefault(const SDL_Event &event, bool valid, Widget::
 
                             if(ime == IME_SYSTEM){
                                 // when System IME is enabled
-                                // SDL3 still dispatch SDL_EVENT_KEY_DOWN, need to ignore
+                                // SDL3 still dispatch MIR_EVENT_KEY_DOWN, need to ignore
                             }
 
                             else if((ime == IME_EMBEDED) && g_imeBoard->active() && (keyChar >= 'a' && keyChar <= 'z')){
@@ -179,8 +179,8 @@ bool InputLine::processEventDefault(const SDL_Event &event, bool valid, Widget::
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(!valid){
                     return consumeFocus(false);
@@ -190,7 +190,7 @@ bool InputLine::processEventDefault(const SDL_Event &event, bool valid, Widget::
                     return consumeFocus(false);
                 }
 
-                if(event.type == SDL_EVENT_MOUSE_BUTTON_DOWN){
+                if(event.type == MIR_EVENT_MOUSE_BUTTON_DOWN){
                     const int eventX = to_d(event.button.x) - m.x;
                     const int eventY = to_d(event.button.y) - m.y;
 

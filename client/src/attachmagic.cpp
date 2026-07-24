@@ -26,7 +26,7 @@ void AttachMagic::drawShift(int shiftX, int shiftY, uint32_t modColor) const
 
     if(auto [texPtr, offX, offY] = g_magicDB->retrieve(texID); texPtr){
         GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor, modColor));
-        GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
+        GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, MIR_BLENDMODE_BLEND);
         g_glDevice->drawTexture(texPtr, shiftX + offX, shiftY + offY);
     }
 }
@@ -51,13 +51,13 @@ void Thunderbolt::drawShift(int shiftX, int shiftY, uint32_t modColor) const
     if(auto [texPtr, offX, offY] = g_magicDB->retrieve(texID); texPtr){
         const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
         GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor, modColor));
-        GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
+        GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, MIR_BLENDMODE_BLEND);
 
         // thunder bolt has 5 frames
         // frame 0 ~ 3 are long, last frame is short
         g_glDevice->drawTexture(texPtr, shiftX + offX, shiftY + offY);
         if(frame() <= 3){
-            g_glDevice->drawTextureEx(texPtr, 0, 0, texW, texH, shiftX + offX, shiftY + offY - texH, texW, texH, 0, 0, 0, SDL_FLIP_VERTICAL);
+            g_glDevice->drawTextureEx(texPtr, 0, 0, texW, texH, shiftX + offX, shiftY + offY - texH, texW, texH, 0, 0, 0, MIR_FLIP_VERTICAL);
         }
     }
 }

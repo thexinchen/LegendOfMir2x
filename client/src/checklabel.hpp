@@ -66,7 +66,7 @@ class CheckLabel: public Widget
         CheckLabel(CheckLabel::InitArgs);
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     public:
         bool getter() const

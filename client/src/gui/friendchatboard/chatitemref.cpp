@@ -66,7 +66,7 @@ ChatItemRef::ChatItemRef(
           .drawFunc = [this](const Widget *, int drawDstX, int drawDstY)
           {
               if(auto texPtr = g_glDevice->getCover(ChatItemRef::BUTTON_R, 360)){
-                  const GLDeviceHelper::EnableRenderBlendMode enableBlendMode(SDL_BLENDMODE_BLEND);
+                  const GLDeviceHelper::EnableRenderBlendMode enableBlendMode(MIR_BLENDMODE_BLEND);
                   const GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, m_crossBgColor);
                   g_glDevice->drawTexture(texPtr, drawDstX, drawDstY);
               }

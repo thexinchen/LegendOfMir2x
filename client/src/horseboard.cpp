@@ -54,7 +54,7 @@ HorseBoard::HorseBoard(
               return g_progUseDB->retrieve(0X00000700);
           },
 
-          .blendMode = SDL_BLENDMODE_NONE,
+          .blendMode = MIR_BLENDMODE_NONE,
           .parent{this},
       }}
 
@@ -152,7 +152,7 @@ HorseBoard::HorseBoard(
     setShow(false);
 }
 
-bool HorseBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool HorseBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -169,10 +169,10 @@ bool HorseBoard::processEventDefault(const SDL_Event &event, bool valid, Widget:
     if(m_show .processEventParent(event, valid, m)){ return true; }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_ESCAPE:
+                    case MIRK_ESCAPE:
                         {
                             setShow(false);
                             setFocus(false);
@@ -184,9 +184,9 @@ bool HorseBoard::processEventDefault(const SDL_Event &event, bool valid, Widget:
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
+                if((event.motion.state & MIR_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
                     const auto remapXDiff = m.x - m.ro->x;
                     const auto remapYDiff = m.y - m.ro->y;
 
@@ -202,7 +202,7 @@ bool HorseBoard::processEventDefault(const SDL_Event &event, bool valid, Widget:
                 }
                 return consumeFocus(false);
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 return consumeFocus(true);
             }

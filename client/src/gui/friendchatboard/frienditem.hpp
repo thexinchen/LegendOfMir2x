@@ -56,5 +56,5 @@ struct FriendItem: public Widget
             bool     = false);
 
     void setFuncWidget(Widget *, bool);
-    bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+    bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 };

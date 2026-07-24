@@ -39,7 +39,7 @@ InputStringBoard::InputStringBoard(
               return g_progUseDB->retrieve(0X07000000);
           },
 
-          .blendMode = SDL_BLENDMODE_BLEND,
+          .blendMode = MIR_BLENDMODE_BLEND,
           .parent{this},
       }}
 

@@ -50,7 +50,7 @@ ButtonBase::ButtonBase(ButtonBase::InitArgs args)
     , m_onTrigger(std::move(args.onTrigger))
 {}
 
-bool ButtonBase::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool ButtonBase::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -87,7 +87,7 @@ bool ButtonBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
             {
                 if(m.in(to_d(event.button.x), to_d(event.button.y))){
                     switch(getState()){
@@ -133,7 +133,7 @@ bool ButtonBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
                     return consumeFocus(false);
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(m.in(to_d(event.button.x), to_d(event.button.y))){
                     switch(getState()){
@@ -174,7 +174,7 @@ bool ButtonBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
                     return consumeFocus(false);
                 }
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
                 if(m.in(to_d(event.motion.x), to_d(event.motion.y))){
                     switch(getState()){
@@ -186,7 +186,7 @@ bool ButtonBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
                             }
                         case BEVENT_DOWN:
                             {
-                                if(event.motion.state & SDL_BUTTON_LMASK){
+                                if(event.motion.state & MIR_BUTTON_LMASK){
                                     // hold the button and moving
                                     // don't trigger
                                 }

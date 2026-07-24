@@ -213,7 +213,7 @@ CBMiddleExpand::CBMiddleExpand(
     moveFront(&m_bg);
 }
 
-bool CBMiddleExpand::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool CBMiddleExpand::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -224,10 +224,10 @@ bool CBMiddleExpand::processEventDefault(const SDL_Event &event, bool valid, Wid
     }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_RETURN:
+                    case MIRK_RETURN:
                         {
                             return valid && hasParent<ControlBoard>()->m_cmdBoard.consumeFocus(true);
                         }
@@ -237,9 +237,9 @@ bool CBMiddleExpand::processEventDefault(const SDL_Event &event, bool valid, Wid
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_MOTION:
         default:
             {
                 return false;

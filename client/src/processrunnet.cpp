@@ -392,7 +392,7 @@ void ProcessRun::on_SM_PING(const uint8_t *bufPtr, size_t)
         throw fflpanic("received echo while no ping has been sent to server");
     }
 
-    const auto currTick = SDL_GetTicks();
+    const auto currTick = mirGetTicks();
     const auto smP = ServerMsg::conv<SMPing>(bufPtr);
 
     if(currTick < smP.Tick){

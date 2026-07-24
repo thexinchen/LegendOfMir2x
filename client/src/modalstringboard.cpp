@@ -165,8 +165,8 @@ void ModalStringBoard::loadXML(std::u8string s)
 void ModalStringBoard::drawScreen(bool drainEvents) const
 {
     if(drainEvents){
-        SDL_Event event;
-        while(SDL_PollEvent(&event)){
+        MirEvent event;
+        while(g_glDevice->pollEvent(&event)){
             continue;
         }
     }

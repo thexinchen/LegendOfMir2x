@@ -1,18 +1,18 @@
 #pragma once
 //
-// Stage 1b of the SDL3 -> GLFW/OpenGL/Dear ImGui migration.
+// GLDevice: GLFW window + OpenGL 3.3 core + Dear ImGui.
 //
-// GLDevice replaces the video half of SDLDevice: GLFW window + GL 3.3 core
-// context + Dear ImGui. ALL drawing (game world and, later, UI) goes through
-// a fullscreen ImGui "World" draw list; the SDLDevice drawing API names are
-// kept so world/UI code compiles unchanged with GLTexID handles instead of
-// SDL_Texture*.
+// GLFW window + GL 3.3 core
+// context + Dear ImGui. ALL drawing goes through
+// a fullscreen ImGui "World" draw list; the drawing API names are
+// kept so world/UI code compiles unchanged with GLTexID handles.
+
 //
-// Audio moved to AudioDevice (miniaudio). SDL3/SDL_ttf headers stay in this
-// file only as a temporary bridge: SDL_Event/SDL_Point/SDL_Rect POD types
-// keep the event plumbing intact until a native event struct replaces them,
-// and SDL_ttf rasterizes FontexDB glyphs until a FreeType port lands. Both
-// are removed in the dependency-removal stage.
+// Audio moved to AudioDevice (miniaudio).
+// Native event types (mirevent.hpp) replaced SDL3 event/POD types.
+
+// stb_truetype (glfont.hpp) rasterizes FontexDB glyphs.
+
 
 #include <array>
 #include <deque>
@@ -24,7 +24,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <SDL3/SDL.h> // event/POD types only (bridge), removed later
+#include "mirevent.hpp"
 
 #include "gltex.hpp"
 #include "glfont.hpp"
@@ -53,7 +53,7 @@ namespace GLDeviceHelper
     {
         public:
             // ImGui draw lists are alpha-blended; no per-primitive blend modes
-            /* ctor */  EnableRenderBlendMode(SDL_BlendMode, GLDevice * = nullptr) {}
+            /* ctor */  EnableRenderBlendMode(MirBlendMode, GLDevice * = nullptr) {}
             /* dtor */ ~EnableRenderBlendMode() {}
     };
 
@@ -80,7 +80,7 @@ namespace GLDeviceHelper
     class EnableTextureBlendMode final
     {
         public:
-            /* ctor */  EnableTextureBlendMode(GLTexID, SDL_BlendMode) {}
+            /* ctor */  EnableTextureBlendMode(GLTexID, MirBlendMode) {}
             /* dtor */ ~EnableTextureBlendMode() {}
     };
 
@@ -96,18 +96,18 @@ namespace GLDeviceHelper
             /* dtor */ ~EnableTextureModColor();
     };
 
-    struct SDLEventPLoc final
+    struct MirEventPLoc final
     {
         const int x = 0;
         const int y = 0;
     };
 
-    char getKeyChar(const SDL_Event &, bool);
+    char getKeyChar(const MirEvent &, bool);
 
-    SDLEventPLoc getMousePLoc();
-    std::tuple<int, int, Uint32> getMouseState();
+    MirEventPLoc getMousePLoc();
+    std::tuple<int, int, uint32_t> getMouseState();
 
-    std::optional<SDLEventPLoc> getEventPLoc(const SDL_Event &);
+    std::optional<MirEventPLoc> getEventPLoc(const MirEvent &);
 
     std::tuple<int, int> getTextureSize  (GLTexID);
     int                  getTextureWidth (GLTexID, std::optional<int> = std::nullopt);
@@ -138,12 +138,12 @@ class GLDevice final
         std::unordered_map<uint32_t, uint32_t> m_texModColor;   // GLTexID.id -> mod color
 
     private:
-        // GLFW callbacks enqueue synthesized SDL_Events; Client drains them.
+        // GLFW callbacks enqueue synthesized MirEvents; Client drains them.
         // TEXT_INPUT events carry their UTF-8 bytes in the pair's string;
         // pollEvent() copies them into m_textRing so the const char* handed
         // out via event.text.text stays valid across subsequent polls.
         std::mutex m_eventLock;
-        std::deque<std::pair<SDL_Event, std::string>> m_eventQ;
+        std::deque<std::pair<MirEvent, std::string>> m_eventQ;
         std::array<std::string, 256> m_textRing;
         size_t m_textRingIdx = 0;
 
@@ -159,8 +159,9 @@ class GLDevice final
         /* dtor */ ~GLDevice();
 
     public:
-        // event bridge, replaces SDL_PollEvent in Client::processEvent
-        bool pollEvent(SDL_Event *);
+        // event bridge, called by Client::processEvent
+        bool pollEvent(MirEvent *);
+        void flushEvent(MirEventType);
 
     public:
         GLTexID loadPNGTexture(const void *, size_t);
@@ -190,7 +191,7 @@ class GLDevice final
                 int, // center y on dst
 
                 int, // rotate in 360-degree on dst
-                SDL_FlipMode = SDL_FLIP_NONE);
+                MirFlipMode = MIR_FLIP_NONE);
 
     public:
         void present();      // no-op: presentation happens in RenderNewFrame dtor

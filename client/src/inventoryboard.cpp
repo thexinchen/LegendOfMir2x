@@ -290,7 +290,7 @@ void InventoryBoard::drawDefault(Widget::ROIMap m) const
     }
 }
 
-bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool InventoryBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -324,10 +324,10 @@ bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
     const auto startYOff = m.y - m.ro->y;
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_ESCAPE:
+                    case MIRK_ESCAPE:
                         {
                             setShow(false);
                             setFocus(false);
@@ -339,9 +339,9 @@ bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
+                if((event.motion.state & MIR_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
                     const auto remapXDiff = m.x - m.ro->x;
                     const auto remapYDiff = m.y - m.ro->y;
 
@@ -357,14 +357,14 @@ bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
                 }
                 return consumeFocus(false);
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 auto myHeroPtr = m_processRun->getMyHero();
                 auto &invPackRef = myHeroPtr->getInvPack();
                 auto lastGrabbedItem = invPackRef.getGrabbedItem();
 
                 switch(event.button.button){
-                    case SDL_BUTTON_LEFT:
+                    case MIR_BUTTON_LEFT:
                         {
                             if(m.in(to_d(event.button.x), to_d(event.button.y))){
                                 if(m_sdInvOp.invOp == INVOP_NONE){
@@ -410,7 +410,7 @@ bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
                             }
                             return consumeFocus(false);
                         }
-                    case SDL_BUTTON_RIGHT:
+                    case MIR_BUTTON_RIGHT:
                         {
                             if(m.in(to_d(event.button.x), to_d(event.button.y))){
                                 if(const int selectedPackIndex = getPackBinIndex(to_d(event.button.x) - startXOff, to_d(event.button.y) - startYOff); selectedPackIndex >= 0){
@@ -427,7 +427,7 @@ bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_WHEEL:
+        case MIR_EVENT_MOUSE_WHEEL:
             {
                 const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
                 if(mathf::pointInRectangle<int>(mousePX, mousePY, m.x + m_invGridX0, m.y + m_invGridY0, SYS_INVGRIDGW * SYS_INVGRIDPW, SYS_INVGRIDGH * SYS_INVGRIDPH)){

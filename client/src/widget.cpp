@@ -377,39 +377,39 @@ bool Widget::evalBool(const Widget::VarBool &varFlag, const Widget *widget, cons
     varFlag);
 }
 
-SDL_BlendMode Widget::evalBlendMode(const Widget::VarBlendMode &varBlendMode, const Widget *widget, const void *arg)
+MirBlendMode Widget::evalBlendMode(const Widget::VarBlendMode &varBlendMode, const Widget *widget, const void *arg)
 {
-    const auto fnValidMode = [](SDL_BlendMode argMode)
+    const auto fnValidMode = [](MirBlendMode argMode)
     {
         switch(argMode){
-            case SDL_BLENDMODE_ADD:
-            case SDL_BLENDMODE_MOD:
-            case SDL_BLENDMODE_MUL:
-            case SDL_BLENDMODE_BLEND: return argMode;
-            default                 : return SDL_BLENDMODE_NONE;
+            case MIR_BLENDMODE_ADD:
+            case MIR_BLENDMODE_MOD:
+            case MIR_BLENDMODE_MUL:
+            case MIR_BLENDMODE_BLEND: return argMode;
+            default                 : return MIR_BLENDMODE_NONE;
         }
     };
 
     return std::visit(VarDispatcher
     {
-        [&fnValidMode](SDL_BlendMode varg)
+        [&fnValidMode](MirBlendMode varg)
         {
             return fnValidMode(varg);
         },
 
-        [&fnValidMode](const std::function<SDL_BlendMode()> &varg)
+        [&fnValidMode](const std::function<MirBlendMode()> &varg)
         {
-            return varg ? fnValidMode(varg()) : SDL_BLENDMODE_NONE;
+            return varg ? fnValidMode(varg()) : MIR_BLENDMODE_NONE;
         },
 
-        [&fnValidMode, widget](const std::function<SDL_BlendMode(const Widget *)> &varg)
+        [&fnValidMode, widget](const std::function<MirBlendMode(const Widget *)> &varg)
         {
-            return varg ? fnValidMode(varg(widget)) : SDL_BLENDMODE_NONE;
+            return varg ? fnValidMode(varg(widget)) : MIR_BLENDMODE_NONE;
         },
 
-        [&fnValidMode, widget, arg](const std::function<SDL_BlendMode(const Widget *, const void *)> &varg)
+        [&fnValidMode, widget, arg](const std::function<MirBlendMode(const Widget *, const void *)> &varg)
         {
-            return varg ? fnValidMode(varg(widget, arg)) : SDL_BLENDMODE_NONE;
+            return varg ? fnValidMode(varg(widget, arg)) : MIR_BLENDMODE_NONE;
         },
     },
 
@@ -540,7 +540,7 @@ void Widget::updateDefault(double fUpdateTime)
     });
 }
 
-bool Widget::processEvent(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool Widget::processEvent(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(m_attrs.inst.processEvent){
         return m_attrs.inst.processEvent(this, event, valid && active(), m);
@@ -550,7 +550,7 @@ bool Widget::processEvent(const SDL_Event &event, bool valid, Widget::ROIMap m)
     }
 }
 
-bool Widget::processEventRoot(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool Widget::processEventRoot(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     fflassert(!parent());
 
@@ -560,7 +560,7 @@ bool Widget::processEventRoot(const SDL_Event &event, bool valid, Widget::ROIMap
     return processEvent(event, valid, m);
 }
 
-bool Widget::processEventParent(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool Widget::processEventParent(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     const auto par = parent();
     fflassert(par);
@@ -572,7 +572,7 @@ bool Widget::processEventParent(const SDL_Event &event, bool valid, Widget::ROIM
     return processEvent(event, valid, m.create(this->roi(par)));
 }
 
-bool Widget::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool Widget::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     bool took = false;
     uint64_t focusedWidgetID = 0;

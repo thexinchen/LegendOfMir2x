@@ -219,7 +219,7 @@ class LayoutBoard: public Widget
         void drawDefault(Widget::ROIMap) const override;
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     private:
         void addPar(int, const Widget::IntMargin &, const tinyxml2::XMLNode *);

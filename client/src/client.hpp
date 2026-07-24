@@ -2,7 +2,7 @@
 #include <atomic>
 #include <string>
 #include <type_traits>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 
 #include "conceptf.hpp"
 #include "netio.hpp"

@@ -235,7 +235,7 @@ class GfxResizeBoard: public Widget
             }
         }
 
-        bool processEventDefault(const SDL_Event &e, bool valid, Widget::ROIMap m) override
+        bool processEventDefault(const MirEvent &e, bool valid, Widget::ROIMap m) override
         {
             if(!m.calibrate(this)){
                 return false;
