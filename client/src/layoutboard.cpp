@@ -486,7 +486,7 @@ void LayoutBoard::setLineWidth(int argLineWidth)
     }
 }
 
-bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool LayoutBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -497,14 +497,14 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
     }
 
     switch(event.type){
-        case SDL_EVENT_TEXT_INPUT:
+        case MIR_EVENT_TEXT_INPUT:
             {
                 if(!valid || !focus() || !Widget::evalBool(m_canEdit, this)){
                     return false;
                 }
 
                 if(const auto ime = Widget::evalInt(m_imeEnabled, this); ime != IME_SYSTEM){
-                    throw fflpanic("received valid SDL_EVENT_TEXT_INPUT while system input is not enabled: IME {}", ime);
+                    throw fflpanic("received valid MIR_EVENT_TEXT_INPUT while system input is not enabled: IME {}", ime);
                 }
 
                 if(str_haschar(event.text.text)){
@@ -521,7 +521,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                 m_cursorBlink = 0.0;
                 return true;
             }
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 if(!focus()){
                     return false;
@@ -536,16 +536,16 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                 }
 
                 switch(event.key.key){
-                    case SDLK_TAB:
+                    case MIRK_TAB:
                         {
                             if(m_onTab){
                                 m_onTab();
                             }
                             return true;
                         }
-                    case SDLK_RETURN:
+                    case MIRK_RETURN:
                         {
-                            const bool shiftHold = (event.key.mod & SDL_KMOD_LSHIFT) || (event.key.mod & SDL_KMOD_RSHIFT);
+                            const bool shiftHold = (event.key.mod & MIRKMOD_LSHIFT) || (event.key.mod & MIRKMOD_RSHIFT);
                             const bool cbTriggered = m_onCR && m_onCR(shiftHold);
 
                             if(!cbTriggered){
@@ -567,7 +567,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                             m_cursorBlink = 0.0;
                             return true;
                         }
-                    case SDLK_LEFT:
+                    case MIRK_LEFT:
                         {
                             if(m_cursorLoc.x == 0 && m_cursorLoc.y == 0){
                                 if(m_cursorLoc.par == 0){
@@ -588,7 +588,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                             m_cursorBlink = 0.0;
                             return true;
                         }
-                    case SDLK_RIGHT:
+                    case MIRK_RIGHT:
                         {
                             if(auto par = ithParIterator(m_cursorLoc.par); std::tie(m_cursorLoc.x, m_cursorLoc.y) == par->tpset->lastCursorLoc()){
                                 if(m_cursorLoc.par + 1 >= parCount()){
@@ -609,7 +609,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                             m_cursorBlink = 0.0;
                             return true;
                         }
-                    case SDLK_BACKSPACE:
+                    case MIRK_BACKSPACE:
                         {
                             if(auto currPar = ithParIterator(m_cursorLoc.par); auto tokenLocOpt = currPar->tpset->tokenLocBeforeCursor(m_cursorLoc.x, m_cursorLoc.y)){
                                 const auto [tokenX, tokenY] = tokenLocOpt.value();
@@ -653,7 +653,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                             m_cursorBlink = 0.0;
                             return true;
                         }
-                    case SDLK_ESCAPE:
+                    case MIRK_ESCAPE:
                         {
                             setFocus(false);
                             return true;
@@ -676,7 +676,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
 
                             if(ime == IME_SYSTEM){
                                 // when System IME is enabled
-                                // SDL3 still dispatch SDL_EVENT_KEY_DOWN, need to ignore
+                                // SDL3 still dispatch MIR_EVENT_KEY_DOWN, need to ignore
                             }
 
                             else if((ime == IME_EMBEDED) && g_imeBoard->active() && (keyChar >= 'a' && keyChar <= 'z')){
@@ -694,14 +694,14 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_MOTION:
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 const auto newEvent = [&event]
                 {
-                    if(event.type == SDL_EVENT_MOUSE_MOTION) return (event.motion.state & SDL_BUTTON_LMASK) ? BEVENT_DOWN : BEVENT_ON;
-                    else                              return (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)     ? BEVENT_DOWN : BEVENT_ON;
+                    if(event.type == MIR_EVENT_MOUSE_MOTION) return (event.motion.state & MIR_BUTTON_LMASK) ? BEVENT_DOWN : BEVENT_ON;
+                    else                              return (event.type == MIR_EVENT_MOUSE_BUTTON_DOWN)     ? BEVENT_DOWN : BEVENT_ON;
                 }();
 
                 const auto [eventPX, eventPY] = GLDeviceHelper::getEventPLoc(event).value();
@@ -742,7 +742,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                     }
 
                     node->tpset->clearEvent(leafID);
-                    if(!attrListPtr && event.type == SDL_EVENT_MOUSE_MOTION){
+                    if(!attrListPtr && event.type == MIR_EVENT_MOUSE_MOTION){
                         // it's not an event text, and no click happens
                         // don't take the event
                         return false;
@@ -755,7 +755,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                     takeEvent |= fnHandleEvent(&node, valid && !takeEvent);
                 }
 
-                if(valid && !takeEvent && event.type != SDL_EVENT_MOUSE_MOTION){
+                if(valid && !takeEvent && event.type != MIR_EVENT_MOUSE_MOTION){
                     takeEvent = m.in(eventPX, eventPY);
                 }
 
@@ -769,7 +769,7 @@ bool LayoutBoard::processEventDefault(const SDL_Event &event, bool valid, Widget
                 // layout board only handle mouse motion/click events
                 // ignore any other unexcepted events
 
-                // for GNOME3 I found sometimes here comes SDL_KEYMAPCHANGED after SDL_EVENT_MOUSE_BUTTON_DOWN
+                // for GNOME3 I found sometimes here comes MIR_EVENT_KEYMAP_CHANGED after MIR_EVENT_MOUSE_BUTTON_DOWN
                 // need to ignore this event, don't call clearEvent()
                 return false;
             }

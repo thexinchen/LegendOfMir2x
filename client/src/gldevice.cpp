@@ -8,7 +8,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -38,57 +38,57 @@ static void fnGLFWErrorCallback(int error, const char *description)
 }
 
 // ---------------------------------------------------------------------------
-// event bridge: GLFW callbacks -> synthesized SDL_Events
+// event bridge: GLFW callbacks -> synthesized MirEvents
 // ---------------------------------------------------------------------------
 
-static SDL_Keycode fnGLFWKeyToSDL(int key)
+static MirKeycode fnGLFWKeyToMir(int key)
 {
     switch(key){
-        case GLFW_KEY_ESCAPE   : return SDLK_ESCAPE;
-        case GLFW_KEY_ENTER    : return SDLK_RETURN;
-        case GLFW_KEY_TAB      : return SDLK_TAB;
-        case GLFW_KEY_BACKSPACE: return SDLK_BACKSPACE;
-        case GLFW_KEY_SPACE    : return SDLK_SPACE;
-        case GLFW_KEY_UP       : return SDLK_UP;
-        case GLFW_KEY_DOWN     : return SDLK_DOWN;
-        case GLFW_KEY_LEFT     : return SDLK_LEFT;
-        case GLFW_KEY_RIGHT    : return SDLK_RIGHT;
-        case GLFW_KEY_HOME     : return SDLK_HOME;
-        case GLFW_KEY_END      : return SDLK_END;
-        case GLFW_KEY_DELETE   : return SDLK_DELETE;
-        case GLFW_KEY_LEFT_SHIFT: return SDLK_LSHIFT;
-        case GLFW_KEY_RIGHT_SHIFT: return SDLK_RSHIFT;
-        case GLFW_KEY_LEFT_CONTROL: return SDLK_LCTRL;
-        case GLFW_KEY_RIGHT_CONTROL: return SDLK_RCTRL;
+        case GLFW_KEY_ESCAPE   : return MIRK_ESCAPE;
+        case GLFW_KEY_ENTER    : return MIRK_RETURN;
+        case GLFW_KEY_TAB      : return MIRK_TAB;
+        case GLFW_KEY_BACKSPACE: return MIRK_BACKSPACE;
+        case GLFW_KEY_SPACE    : return MIRK_SPACE;
+        case GLFW_KEY_UP       : return MIRK_UP;
+        case GLFW_KEY_DOWN     : return MIRK_DOWN;
+        case GLFW_KEY_LEFT     : return MIRK_LEFT;
+        case GLFW_KEY_RIGHT    : return MIRK_RIGHT;
+        case GLFW_KEY_HOME     : return MIRK_HOME;
+        case GLFW_KEY_END      : return MIRK_END;
+        case GLFW_KEY_DELETE   : return MIRK_DELETE;
+        case GLFW_KEY_LEFT_SHIFT: return MIRK_LSHIFT;
+        case GLFW_KEY_RIGHT_SHIFT: return MIRK_RSHIFT;
+        case GLFW_KEY_LEFT_CONTROL: return MIRK_LCTRL;
+        case GLFW_KEY_RIGHT_CONTROL: return MIRK_RCTRL;
         case GLFW_KEY_F1: case GLFW_KEY_F2: case GLFW_KEY_F3: case GLFW_KEY_F4:
         case GLFW_KEY_F5: case GLFW_KEY_F6: case GLFW_KEY_F7: case GLFW_KEY_F8:
         case GLFW_KEY_F9: case GLFW_KEY_F10: case GLFW_KEY_F11: case GLFW_KEY_F12:
-            return (SDL_Keycode)(SDLK_F1 + (key - GLFW_KEY_F1));
+            return (MirKeycode)(MIRK_F1 + (key - GLFW_KEY_F1));
         default:
             if(key >= GLFW_KEY_A && key <= GLFW_KEY_Z){
-                return (SDL_Keycode)(SDLK_A + (key - GLFW_KEY_A));
+                return (MirKeycode)(MIRK_A + (key - GLFW_KEY_A));
             }
             if(key >= GLFW_KEY_0 && key <= GLFW_KEY_9){
-                return (SDL_Keycode)(SDLK_0 + (key - GLFW_KEY_0));
+                return (MirKeycode)(MIRK_0 + (key - GLFW_KEY_0));
             }
             if(key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_9){
-                return (SDL_Keycode)(SDLK_KP_0 + (key - GLFW_KEY_KP_0));
+                return (MirKeycode)(MIRK_KP_0 + (key - GLFW_KEY_KP_0));
             }
             if(key > 0 && key < 128){
-                return (SDL_Keycode)key; // punctuation etc. mostly ASCII-aligned
+                return (MirKeycode)key; // punctuation etc. mostly ASCII-aligned
             }
-            return SDLK_UNKNOWN;
+            return MIRK_UNKNOWN;
     }
 }
 
-static uint16_t fnGLFWModsToSDL(int mods)
+static uint16_t fnGLFWModsToMir(int mods)
 {
     uint16_t sdlMods = 0;
-    if(mods & GLFW_MOD_SHIFT) sdlMods |= SDL_KMOD_SHIFT;
-    if(mods & GLFW_MOD_CONTROL) sdlMods |= SDL_KMOD_CTRL;
-    if(mods & GLFW_MOD_ALT) sdlMods |= SDL_KMOD_ALT;
-    if(mods & GLFW_MOD_CAPS_LOCK) sdlMods |= SDL_KMOD_CAPS;
-    if(mods & GLFW_MOD_NUM_LOCK) sdlMods |= SDL_KMOD_NUM;
+    if(mods & GLFW_MOD_SHIFT) sdlMods |= MIRKMOD_SHIFT;
+    if(mods & GLFW_MOD_CONTROL) sdlMods |= MIRKMOD_CTRL;
+    if(mods & GLFW_MOD_ALT) sdlMods |= MIRKMOD_ALT;
+    if(mods & GLFW_MOD_CAPS_LOCK) sdlMods |= MIRKMOD_CAPS;
+    if(mods & GLFW_MOD_NUM_LOCK) sdlMods |= MIRKMOD_NUM;
     return sdlMods;
 }
 
@@ -98,10 +98,10 @@ void GLDevice::fnKeyEvent(GLFWwindow *window, int key, int, int action, int mods
         return; // ignore repeats for key events; text comes via char callback
     }
 
-    SDL_Event event {};
-    event.type = (action == GLFW_PRESS) ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP;
-    event.key.key = fnGLFWKeyToSDL(key);
-    event.key.mod = fnGLFWModsToSDL(mods);
+    MirEvent event {};
+    event.type = (action == GLFW_PRESS) ? MIR_EVENT_KEY_DOWN : MIR_EVENT_KEY_UP;
+    event.key.key = fnGLFWKeyToMir(key);
+    event.key.mod = fnGLFWModsToMir(mods);
     event.key.down = (action == GLFW_PRESS);
 
     auto *self = static_cast<GLDevice *>(glfwGetWindowUserPointer(window));
@@ -134,8 +134,8 @@ void GLDevice::fnCharEvent(GLFWwindow *window, unsigned int codepoint)
         text += (char)(0x80 | (codepoint & 0x3F));
     }
 
-    SDL_Event event {};
-    event.type = SDL_EVENT_TEXT_INPUT;
+    MirEvent event {};
+    event.type = MIR_EVENT_TEXT_INPUT;
 
     auto *self = static_cast<GLDevice *>(glfwGetWindowUserPointer(window));
     if(self){
@@ -150,14 +150,14 @@ void GLDevice::fnMouseButtonEvent(GLFWwindow *window, int button, int action, in
         return;
     }
 
-    SDL_Event event {};
-    event.type = (action == GLFW_PRESS) ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+    MirEvent event {};
+    event.type = (action == GLFW_PRESS) ? MIR_EVENT_MOUSE_BUTTON_DOWN : MIR_EVENT_MOUSE_BUTTON_UP;
     event.button.button = [button]() -> uint8_t
     {
         switch(button){
-            case GLFW_MOUSE_BUTTON_LEFT  : return SDL_BUTTON_LEFT;
-            case GLFW_MOUSE_BUTTON_RIGHT : return SDL_BUTTON_RIGHT;
-            case GLFW_MOUSE_BUTTON_MIDDLE: return SDL_BUTTON_MIDDLE;
+            case GLFW_MOUSE_BUTTON_LEFT  : return MIR_BUTTON_LEFT;
+            case GLFW_MOUSE_BUTTON_RIGHT : return MIR_BUTTON_RIGHT;
+            case GLFW_MOUSE_BUTTON_MIDDLE: return MIR_BUTTON_MIDDLE;
             default                      : return (uint8_t)(button + 1);
         }
     }();
@@ -177,8 +177,8 @@ void GLDevice::fnMouseButtonEvent(GLFWwindow *window, int button, int action, in
 
 void GLDevice::fnCursorPosEvent(GLFWwindow *window, double x, double y)
 {
-    SDL_Event event {};
-    event.type = SDL_EVENT_MOUSE_MOTION;
+    MirEvent event {};
+    event.type = MIR_EVENT_MOUSE_MOTION;
     event.motion.x = to_f(x);
     event.motion.y = to_f(y);
 
@@ -197,8 +197,8 @@ void GLDevice::fnCursorPosEvent(GLFWwindow *window, double x, double y)
 
 void GLDevice::fnScrollEvent(GLFWwindow *window, double, double yoffset)
 {
-    SDL_Event event {};
-    event.type = SDL_EVENT_MOUSE_WHEEL;
+    MirEvent event {};
+    event.type = MIR_EVENT_MOUSE_WHEEL;
     event.wheel.y = to_f(yoffset);
     event.wheel.x = 0.0f;
 
@@ -214,7 +214,7 @@ void GLDevice::fnScrollEvent(GLFWwindow *window, double, double yoffset)
     }
 }
 
-bool GLDevice::pollEvent(SDL_Event *event)
+bool GLDevice::pollEvent(MirEvent *event)
 {
     std::lock_guard<std::mutex> lockGuard(m_eventLock);
     if(m_eventQ.empty()){
@@ -224,8 +224,8 @@ bool GLDevice::pollEvent(SDL_Event *event)
     auto queued = std::move(m_eventQ.front());
     m_eventQ.pop_front();
 
-    if(queued.first.type == SDL_EVENT_TEXT_INPUT && !queued.second.empty()){
-        // SDL3 hands out const char*; keep the bytes in a ring so the pointer
+    if(queued.first.type == MIR_EVENT_TEXT_INPUT && !queued.second.empty()){
+        // keep the bytes in a ring so the pointer
         // stays valid across the next 256 polls
         m_textRing[m_textRingIdx] = std::move(queued.second);
         queued.first.text.text = m_textRing[m_textRingIdx].c_str();
@@ -235,6 +235,19 @@ bool GLDevice::pollEvent(SDL_Event *event)
     *event = queued.first;
     return true;
 }
+
+void GLDevice::flushEvent(MirEventType type)
+{
+    std::lock_guard<std::mutex> lock(m_eventLock);
+    m_eventQ.erase(
+        std::remove_if(m_eventQ.begin(), m_eventQ.end(),
+            [type](const std::pair<MirEvent, std::string> &p) {
+                return p.first.type == type;
+            }),
+        m_eventQ.end());
+}
+
+
 
 // ---------------------------------------------------------------------------
 // window / context / ImGui bootstrap
@@ -249,7 +262,7 @@ GLDevice::GLDevice()
         throw fflpanic("failed to initialize GLFW");
     }
     // window creation happens in createInitViewWindow()/createMainWindow(),
-    // mirroring the old SDLDevice lifecycle (InitView drives the former)
+    // mirroring the old lifecycle (InitView drives the former)
 }
 
 GLDevice::~GLDevice()
@@ -304,7 +317,7 @@ void GLDevice::createWindow(bool initViewWindow)
         const bool fullscreen = g_clientArgParser && (g_clientArgParser->screenMode == 1 || g_clientArgParser->screenMode == 2);
 
         if(m_window){
-            // recreate to switch title/flags, mirroring the SDL reset behavior
+            // recreate to switch title/flags, mirroring the reset behavior
             glfwDestroyWindow(m_window);
             m_window = nullptr;
         }
@@ -334,8 +347,8 @@ void GLDevice::createWindow(bool initViewWindow)
     glfwSetScrollCallback     (m_window, fnScrollEvent);
     glfwSetWindowCloseCallback(m_window, [](GLFWwindow *win)
     {
-        SDL_Event event {};
-        event.type = SDL_EVENT_QUIT;
+        MirEvent event {};
+        event.type = MIR_EVENT_QUIT;
         auto *self = static_cast<GLDevice *>(glfwGetWindowUserPointer(win));
         if(self){
             std::lock_guard<std::mutex> lockGuard(self->m_eventLock);
@@ -549,48 +562,48 @@ GLDeviceHelper::EnableTextureModColor::~EnableTextureModColor()
 // input helpers
 // ---------------------------------------------------------------------------
 
-char GLDeviceHelper::getKeyChar(const SDL_Event &event, bool checkShiftKey)
+char GLDeviceHelper::getKeyChar(const MirEvent &event, bool checkShiftKey)
 {
-    if(event.type != SDL_EVENT_KEY_DOWN){
+    if(event.type != MIR_EVENT_KEY_DOWN){
         return '\0';
     }
 
-    const bool shift = checkShiftKey && (event.key.mod & SDL_KMOD_SHIFT);
+    const bool shift = checkShiftKey && (event.key.mod & MIRKMOD_SHIFT);
     switch(event.key.key){
-        case SDLK_SPACE: return ' ';
-        case SDLK_0: return shift ? ')' : '0';
-        case SDLK_1: return shift ? '!' : '1';
-        case SDLK_2: return shift ? '@' : '2';
-        case SDLK_3: return shift ? '#' : '3';
-        case SDLK_4: return shift ? '$' : '4';
-        case SDLK_5: return shift ? '%' : '5';
-        case SDLK_6: return shift ? '^' : '6';
-        case SDLK_7: return shift ? '&' : '7';
-        case SDLK_8: return shift ? '*' : '8';
-        case SDLK_9: return shift ? '(' : '9';
+        case MIRK_SPACE: return ' ';
+        case MIRK_0: return shift ? ')' : '0';
+        case MIRK_1: return shift ? '!' : '1';
+        case MIRK_2: return shift ? '@' : '2';
+        case MIRK_3: return shift ? '#' : '3';
+        case MIRK_4: return shift ? '$' : '4';
+        case MIRK_5: return shift ? '%' : '5';
+        case MIRK_6: return shift ? '^' : '6';
+        case MIRK_7: return shift ? '&' : '7';
+        case MIRK_8: return shift ? '*' : '8';
+        case MIRK_9: return shift ? '(' : '9';
         default:
-            if(event.key.key >= SDLK_A && event.key.key <= SDLK_Z){
-                const auto ch = (char)('a' + (event.key.key - SDLK_A));
+            if(event.key.key >= MIRK_A && event.key.key <= MIRK_Z){
+                const auto ch = (char)('a' + (event.key.key - MIRK_A));
                 return shift ? (char)(ch - 'a' + 'A') : ch;
             }
             return '\0';
     }
 }
 
-GLDeviceHelper::SDLEventPLoc GLDeviceHelper::getMousePLoc()
+GLDeviceHelper::MirEventPLoc GLDeviceHelper::getMousePLoc()
 {
     double x = 0, y = 0;
     if(g_glDeviceSelf){
-        // window pointer accessed via device; cursor pos is in screen coords matching SDL behavior
+        // window pointer accessed via device; cursor pos is in screen coords
     }
     auto *window = glfwGetCurrentContext();
     if(window){
         glfwGetCursorPos(window, &x, &y);
     }
-    return SDLEventPLoc {to_d(x), to_d(y)};
+    return MirEventPLoc {to_d(x), to_d(y)};
 }
 
-std::tuple<int, int, Uint32> GLDeviceHelper::getMouseState()
+std::tuple<int, int, uint32_t> GLDeviceHelper::getMouseState()
 {
     auto *window = glfwGetCurrentContext();
     double x = 0, y = 0;
@@ -598,27 +611,27 @@ std::tuple<int, int, Uint32> GLDeviceHelper::getMouseState()
         glfwGetCursorPos(window, &x, &y);
     }
 
-    Uint32 state = 0;
+    uint32_t state = 0;
     if(window){
-        if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT  ) == GLFW_PRESS) state |= SDL_BUTTON_MASK(SDL_BUTTON_LEFT);
-        if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS) state |= SDL_BUTTON_MASK(SDL_BUTTON_MIDDLE);
-        if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT ) == GLFW_PRESS) state |= SDL_BUTTON_MASK(SDL_BUTTON_RIGHT);
+        if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT  ) == GLFW_PRESS) state |= MIR_BUTTON_MASK(MIR_BUTTON_LEFT);
+        if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS) state |= MIR_BUTTON_MASK(MIR_BUTTON_MIDDLE);
+        if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT ) == GLFW_PRESS) state |= MIR_BUTTON_MASK(MIR_BUTTON_RIGHT);
     }
     return {to_d(x), to_d(y), state};
 }
 
-std::optional<GLDeviceHelper::SDLEventPLoc> GLDeviceHelper::getEventPLoc(const SDL_Event &event)
+std::optional<GLDeviceHelper::MirEventPLoc> GLDeviceHelper::getEventPLoc(const MirEvent &event)
 {
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-            return SDLEventPLoc {to_d(event.button.x), to_d(event.button.y)};
-        case SDL_EVENT_MOUSE_MOTION:
-            return SDLEventPLoc {to_d(event.motion.x), to_d(event.motion.y)};
-        case SDL_EVENT_MOUSE_WHEEL:
-            return SDLEventPLoc {to_d(event.wheel.mouse_x), to_d(event.wheel.mouse_y)};
-        case SDL_EVENT_KEY_DOWN:
-        case SDL_EVENT_KEY_UP:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
+            return MirEventPLoc {to_d(event.button.x), to_d(event.button.y)};
+        case MIR_EVENT_MOUSE_MOTION:
+            return MirEventPLoc {to_d(event.motion.x), to_d(event.motion.y)};
+        case MIR_EVENT_MOUSE_WHEEL:
+            return MirEventPLoc {to_d(event.wheel.mouse_x), to_d(event.wheel.mouse_y)};
+        case MIR_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_UP:
             return getMousePLoc();
         default:
             return std::nullopt;
@@ -844,7 +857,7 @@ GLTexID GLDevice::getCover(int r, int angle)
 }
 
 // ---------------------------------------------------------------------------
-// fonts (SDL_ttf bridge, kept until FontexDB moves to FreeType)
+// fonts (stb_truetype bridge for FontexDB)
 // ---------------------------------------------------------------------------
 // draw primitives (all through the background draw list)
 // ---------------------------------------------------------------------------
@@ -907,13 +920,13 @@ void GLDevice::drawTextureEx(GLTexID tex,
         int srcX, int srcY, int srcW, int srcH,
         int dstX, int dstY, int dstW, int dstH,
         int centerDstOffX, int centerDstOffY,
-        int rotateDegree, SDL_FlipMode flip)
+        int rotateDegree, MirFlipMode flip)
 {
     if(!(tex && srcW > 0 && srcH > 0)){
         return;
     }
 
-    // mirror SDL_RenderTextureRotated: rotate the dst quad around
+    // rotate the dst quad around
     // (dstX + centerDstOffX, dstY + centerDstOffY), positive angle = CCW
     const double radian = -1.0 * (rotateDegree % 360) / 180.0 * std::numbers::pi;
     const auto fnRotatePoint = [x0 = dstX + centerDstOffX, y0 = dstY + centerDstOffY, radian](double x, double y) -> std::pair<double, double>
@@ -938,11 +951,11 @@ void GLDevice::drawTextureEx(GLTexID tex,
     auto uv2 = ImVec2(to_f(srcX + srcW) / tex.w, to_f(srcY + srcH) / tex.h);
     auto uv3 = ImVec2(to_f(srcX) / tex.w, to_f(srcY + srcH) / tex.h);
 
-    if(flip & SDL_FLIP_HORIZONTAL){
+    if(flip & MIR_FLIP_HORIZONTAL){
         std::swap(uv0.x, uv1.x);
         std::swap(uv3.x, uv2.x);
     }
-    if(flip & SDL_FLIP_VERTICAL){
+    if(flip & MIR_FLIP_VERTICAL){
         std::swap(uv0.y, uv3.y);
         std::swap(uv1.y, uv2.y);
     }
@@ -1116,7 +1129,7 @@ void GLDevice::drawVLineFading(uint32_t startColor, uint32_t endColor, int x, in
 
 void GLDevice::drawBoxFading(uint32_t startColor, uint32_t endColor, int x, int y, int w, int h, int fadeW, int fadeH)
 {
-    // approximation of the SDL per-pixel edge fade: solid center tinted by
+    // approximation of per-pixel edge fade: solid center tinted by
     // endColor plus gradient strips on the four edges
     if(!(w > 0 && h > 0)){
         return;
@@ -1143,6 +1156,6 @@ void GLDevice::drawBoxFading(uint32_t startColor, uint32_t endColor, int x, int 
 
 void GLDevice::drawString(uint32_t, int, int, const char *)
 {
-    // the 8x8 bitmap debug font had no callers outside SDLDevice; dropped in
+    // the 8x8 bitmap debug font had no callers; dropped in
     // the ImGui migration (ImGui text replaces it where needed)
 }

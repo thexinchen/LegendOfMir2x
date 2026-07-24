@@ -165,7 +165,7 @@ void ProcessRun::update(double fUpdateTime)
         const auto [locX, locY] = p->second->location();
         const auto locDistance2 = mathf::LDistance2(myHeroX, myHeroY, locX, locY);
         if(p->second->visible() && (locDistance2 < 1000)){
-            if(p->second->lastActive() + 5000 < SDL_GetTicks() && p->second->lastQuerySelf() + 5000 < SDL_GetTicks()){
+            if(p->second->lastActive() + 5000 < mirGetTicks() && p->second->lastQuerySelf() + 5000 < mirGetTicks()){
                 p->second->querySelf();
             }
             p->second->update(fUpdateTime);
@@ -211,7 +211,7 @@ void ProcessRun::update(double fUpdateTime)
     m_starRatio = std::fmod(m_starRatio + 0.05, 2.50);
     m_iconRatio = std::fmod(m_iconRatio + 0.05, 1.00);
 
-    if(const auto currTick = SDL_GetTicks(); m_lastPingDone && (m_lastPingTick + 10ULL * 1000 < currTick)){
+    if(const auto currTick = mirGetTicks(); m_lastPingDone && (m_lastPingTick + 10ULL * 1000 < currTick)){
         m_lastPingDone = false;
         m_lastPingTick = currTick;
 
@@ -401,7 +401,7 @@ void ProcessRun::draw() const
 
                 if(g_clientArgParser->drawCreatureCover){
                     GLDeviceHelper::EnableRenderColor enableColor(colorf::RGBA(0, 0, 255, 128));
-                    GLDeviceHelper::EnableRenderBlendMode enableBlendMode(SDL_BLENDMODE_BLEND);
+                    GLDeviceHelper::EnableRenderBlendMode enableBlendMode(MIR_BLENDMODE_BLEND);
                     g_glDevice->fillRectangle(x * SYS_MAPGRIDXP - m_viewX, y * SYS_MAPGRIDYP - m_viewY, SYS_MAPGRIDXP, SYS_MAPGRIDYP);
                 }
             }
@@ -566,7 +566,7 @@ void ProcessRun::draw() const
     }
 }
 
-void ProcessRun::processEvent(const SDL_Event &event)
+void ProcessRun::processEvent(const MirEvent &event)
 {
     const bool tookEvent = m_guiManager.processEventRoot(event, true, {});
     m_guiManager.purge();
@@ -580,11 +580,11 @@ void ProcessRun::processEvent(const SDL_Event &event)
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 const auto [mouseGridX, mouseGridY] = fromPLoc2Grid(to_d(event.button.x), to_d(event.button.y));
                 switch(event.button.button){
-                    case SDL_BUTTON_LEFT:
+                    case MIR_BUTTON_LEFT:
                         {
                             if(const auto uid = getFocusUID(FOCUS_MOUSE, true)){
                                 switch(m_cursorState){
@@ -647,7 +647,7 @@ void ProcessRun::processEvent(const SDL_Event &event)
                             }
                             break;
                         }
-                    case SDL_BUTTON_RIGHT:
+                    case MIR_BUTTON_RIGHT:
                         {
                             switch(m_cursorState){
                                 case CURSOR_NONE:
@@ -707,26 +707,26 @@ void ProcessRun::processEvent(const SDL_Event &event)
                 }
                 break;
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
                 break;
             }
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_ESCAPE:
+                    case MIRK_ESCAPE:
                         {
                             centerMyHero();
                             break;
                         }
-                    case SDLK_TAB:
+                    case MIRK_TAB:
                         {
                             requestPickUp();
                             break;
                         }
                     default:
                         {
-                            if(event.key.mod & (SDL_KMOD_LALT | SDL_KMOD_RALT)){
+                            if(event.key.mod & (MIRKMOD_LALT | MIRKMOD_RALT)){
                                 switch(GLDeviceHelper::getKeyChar(event, false)){
                                     case 'e':
                                         {
@@ -1979,7 +1979,7 @@ void ProcessRun::drawGroundItem(int x0, int y0, int x1, int y1) const
             const int mouseGridY = (mouseY + m_viewY) / SYS_MAPGRIDYP;
 
             const bool mouseOver = (mouseGridX == x && mouseGridY == y);
-            const GLDeviceHelper::EnableTextureBlendMode blendMode(texPtr, mouseOver ? SDL_BLENDMODE_ADD : SDL_BLENDMODE_BLEND);
+            const GLDeviceHelper::EnableTextureBlendMode blendMode(texPtr, mouseOver ? MIR_BLENDMODE_ADD : MIR_BLENDMODE_BLEND);
 
             // draw item shadow
             {
@@ -2153,7 +2153,7 @@ void ProcessRun::drawFPS() const
     fpsBoard.drawRoot({});
 }
 
-void ProcessRun::checkMagicSpell(const SDL_Event &event)
+void ProcessRun::checkMagicSpell(const MirEvent &event)
 {
     const char key = GLDeviceHelper::getKeyChar(event, false);
     if(key == '\0'){
@@ -2679,17 +2679,17 @@ void ProcessRun::setCursor(int cursorState)
     switch(m_cursorState = cursorState){
         case CURSOR_NONE:
             {
-                SDL_HideCursor();
+                g_glDevice->showCursor(false);
                 break;
             }
         case CURSOR_DEFAULT:
             {
-                SDL_ShowCursor();
+                g_glDevice->showCursor(true);
                 break;
             }
         case CURSOR_TEAMFLAG:
             {
-                SDL_HideCursor();
+                g_glDevice->showCursor(false);
                 break;
             }
         default:

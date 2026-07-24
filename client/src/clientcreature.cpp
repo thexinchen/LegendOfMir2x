@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <tinyxml2.h>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 
 #include "log.hpp"
 #include "mathf.hpp"
@@ -156,7 +156,7 @@ bool ClientCreature::checkUpdate(double ms)
 
 void ClientCreature::querySelf()
 {
-    m_lastQuerySelf = SDL_GetTicks();
+    m_lastQuerySelf = mirGetTicks();
     m_processRun->queryCORecord(UID());
 }
 

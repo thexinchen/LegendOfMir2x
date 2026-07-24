@@ -83,5 +83,5 @@ class MenuItem: public Widget
 
     public:
         void drawDefault(Widget::ROIMap m) const override;
-        bool processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m) override;
+        bool processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m) override;
 };

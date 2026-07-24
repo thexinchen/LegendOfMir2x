@@ -16,7 +16,7 @@
 #include <string>
 #include <cstdint>
 #include <cstddef>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 #include <functional>
 #include "bevent.hpp"
 #include "gldevice.hpp"

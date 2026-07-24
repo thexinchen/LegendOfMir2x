@@ -20,7 +20,7 @@ class TextShadowBoard: public Widget
             Widget::FontConfig font {};
 
             Widget::VarU32       shadowColor = colorf::BLACK + colorf::A_SHF(128);
-            Widget::VarBlendMode blendMode   = SDL_BLENDMODE_BLEND;
+            Widget::VarBlendMode blendMode   = MIR_BLENDMODE_BLEND;
 
             Widget::WADPair parent {};
         };

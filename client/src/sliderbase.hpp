@@ -11,7 +11,7 @@
 
 #pragma once
 #include <climits>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 #include <functional>
 #include "widget.hpp"
 #include "bevent.hpp"
@@ -106,7 +106,7 @@ class SliderBase: public Widget
         SliderBase(SliderBase::InitArgs);
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     public:
         int sliderState() const

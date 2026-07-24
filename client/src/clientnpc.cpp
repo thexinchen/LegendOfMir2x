@@ -134,7 +134,7 @@ void ClientNPC::drawFrame(int viewX, int viewY, int focusMask, int frame, bool)
             return;
         }
 
-        const GLDeviceHelper::EnableTextureModColor modColor(texture, colorf::SDLColor2RGBA(focusColor(focusChan, alpha)));
+        const GLDeviceHelper::EnableTextureModColor modColor(texture, colorf::MirColor2RGBA(focusColor(focusChan, alpha)));
         g_glDevice->drawTexture(texture, x, y);
     };
 
@@ -173,7 +173,7 @@ void ClientNPC::drawFrame(int viewX, int viewY, int focusMask, int frame, bool)
 
 bool ClientNPC::parseAction(const ActionNode &action)
 {
-    m_lastActive = SDL_GetTicks();
+    m_lastActive = mirGetTicks();
     const int motion = [&action]() -> int
     {
         switch(action.type){

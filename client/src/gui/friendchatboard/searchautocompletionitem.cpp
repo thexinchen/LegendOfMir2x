@@ -71,7 +71,7 @@ SearchAutoCompletionItem::SearchAutoCompletionItem(Widget::VarDir argDir,
 
           .texLoadFunc = [](const Widget *) { return g_progUseDB->retrieve(0X00001200); },
 
-          .blendMode = SDL_BLENDMODE_NONE,
+          .blendMode = MIR_BLENDMODE_NONE,
           .parent{this},
       }}
 
@@ -97,7 +97,7 @@ SearchAutoCompletionItem::SearchAutoCompletionItem(Widget::VarDir argDir,
     }
 }
 
-bool SearchAutoCompletionItem::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool SearchAutoCompletionItem::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -108,7 +108,7 @@ bool SearchAutoCompletionItem::processEventDefault(const SDL_Event &event, bool 
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(m.in(to_d(event.button.x), to_d(event.button.y))){
                     hasParent<SearchPage>()->candidates.setShow(true);

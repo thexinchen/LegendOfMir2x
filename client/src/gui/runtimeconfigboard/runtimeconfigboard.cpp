@@ -500,8 +500,8 @@ RuntimeConfigBoard::RuntimeConfigBoard(int argX, int argY, int argW, int argH, P
     updateWindowSize(g_glDevice->getRendererSize(), false);
     updateIME(IME_DISABLE, false);
 
-    // 1.0f -> SDL_MIX_MAXVOLUME
-    // SDL_mixer initial sound/music volume is SDL_MIX_MAXVOLUME
+    // 1.0f -> 128
+    // SDL_mixer initial sound/music volume is 128
 
     m_pageSystem_musicSlider      .getSlider()->setValue(0.0, false);
     m_pageSystem_soundEffectSlider.getSlider()->setValue(0.0, false);
@@ -530,7 +530,7 @@ void RuntimeConfigBoard::drawDefault(Widget::ROIMap m) const
     }
 }
 
-bool RuntimeConfigBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool RuntimeConfigBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -547,17 +547,17 @@ bool RuntimeConfigBoard::processEventDefault(const SDL_Event &event, bool valid,
     if(m_pageGameConfig.processEventParent(event, valid, m)){ return true; }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
-                if(event.key.key == SDLK_ESCAPE){
+                if(event.key.key == MIRK_ESCAPE){
                     setShow(false);
                     return consumeFocus(false);
                 }
                 return consumeFocus(true);
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
+                if((event.motion.state & MIR_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
                     if(const auto par = parent()){
                         moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), par->roi());
                     }
@@ -568,8 +568,8 @@ bool RuntimeConfigBoard::processEventDefault(const SDL_Event &event, bool valid,
                 }
                 return false;
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 return consumeFocus(m.in(to_d(event.button.x), to_d(event.button.y)));
             }

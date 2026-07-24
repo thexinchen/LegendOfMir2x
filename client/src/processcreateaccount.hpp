@@ -51,7 +51,7 @@ class ProcessCreateAccount: public Process
     public:
         void draw() const override;
         void update(double) override;
-        void processEvent(const SDL_Event &) override;
+        void processEvent(const MirEvent &) override;
 
     private:
         void doPostAccount();

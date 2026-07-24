@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <cstring>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 #include <unordered_map>
 
 #include "zsdb.hpp"

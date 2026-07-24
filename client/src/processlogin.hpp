@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 
 #include "strf.hpp"
 #include "totype.hpp"
@@ -48,7 +48,7 @@ class ProcessLogin: public Process
     public:
         void draw() const override;
         void update(double) override;
-        void processEvent(const SDL_Event &) override;
+        void processEvent(const MirEvent &) override;
 
     private:
         void doExit();

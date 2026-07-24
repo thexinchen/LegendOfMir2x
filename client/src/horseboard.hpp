@@ -38,5 +38,5 @@ class HorseBoard: public Widget
                 bool     = false);
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 };

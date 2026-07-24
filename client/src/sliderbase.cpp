@@ -1,4 +1,4 @@
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 #include "gldevice.hpp"
 #include "sliderbase.hpp"
 #include "clientargparser.hpp"
@@ -78,7 +78,7 @@ SliderBase::SliderBase(SliderBase::InitArgs args)
     }
 }
 
-bool SliderBase::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool SliderBase::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return consumeFocus(false);
@@ -93,7 +93,7 @@ bool SliderBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(inSlider(to_d(event.button.x), to_d(event.button.y), m)){
                     m_sliderState = BEVENT_DOWN;
@@ -121,7 +121,7 @@ bool SliderBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
                     return consumeFocus(false);
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
             {
                 if(inSlider(to_d(event.button.x), to_d(event.button.y), m)){
                     m_sliderState = BEVENT_ON;
@@ -132,9 +132,9 @@ bool SliderBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
                     return consumeFocus(false);
                 }
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if(event.motion.state & SDL_BUTTON_LMASK){
+                if(event.motion.state & MIR_BUTTON_LMASK){
                     if(inSlider(to_d(event.motion.x), to_d(event.motion.y), m) || focus()){
                         m_sliderState = BEVENT_DOWN;
                         if(const auto newValue = std::clamp<float>(getValue() + [&event, this]() -> float

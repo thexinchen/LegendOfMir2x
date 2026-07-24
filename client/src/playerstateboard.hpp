@@ -42,7 +42,7 @@ class PlayerStateBoard: public Widget
         void drawWear();
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     private:
         void drawItemHoverText(int) const;

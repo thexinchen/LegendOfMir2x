@@ -13,7 +13,7 @@
 
 #include "gltex.hpp"
 #include <type_traits>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 #include "mathf.hpp"
 #include "colorf.hpp"
 #include "fflerror.hpp"
@@ -59,7 +59,7 @@ class WidgetTreeNode // tree concept, used by class Widget only
         using alias_VarDecimal     = VarTypeHelper<float>;
         using alias_VarSize        = VarTypeHelper<int>;
         using alias_VarBool        = VarTypeHelper<bool>;
-        using alias_VarBlendMode   = VarTypeHelper<SDL_BlendMode>;
+        using alias_VarBlendMode   = VarTypeHelper<MirBlendMode>;
         using alias_VarTexLoadFunc = VarTypeHelper<GLTexID >;
 
     protected:
@@ -339,7 +339,7 @@ class Widget: public WidgetTreeNode
             bool moveOnFocus = true;
 
             std::function<void(      Widget *                                         )> afterResize  = nullptr;
-            std::function<bool(      Widget *, const SDL_Event &, bool, Widget::ROIMap)> processEvent = nullptr;
+            std::function<bool(      Widget *, const MirEvent &, bool, Widget::ROIMap)> processEvent = nullptr;
             std::function<void(      Widget *, double                                 )> update       = nullptr;
             std::function<void(const Widget *,                          Widget::ROIMap)> draw         = nullptr;
         };
@@ -387,7 +387,7 @@ class Widget: public WidgetTreeNode
         static float            evalDecimal    (const Widget::VarDecimal     &, const Widget *, const void * = nullptr);
         static int              evalSize       (const Widget::VarSize        &, const Widget *, const void * = nullptr);
         static bool             evalBool       (const Widget::VarBool        &, const Widget *, const void * = nullptr);
-        static SDL_BlendMode    evalBlendMode  (const Widget::VarBlendMode   &, const Widget *, const void * = nullptr);
+        static MirBlendMode    evalBlendMode  (const Widget::VarBlendMode   &, const Widget *, const void * = nullptr);
         static GLTexID     evalTexLoadFunc(const Widget::VarTexLoadFunc &, const Widget *, const void * = nullptr);
 
     public:
@@ -456,9 +456,9 @@ class Widget: public WidgetTreeNode
         virtual void updateDefault(double);
 
     public:
-        virtual bool processEvent      (const SDL_Event &, bool, Widget::ROIMap) final;
-        virtual bool processEventRoot  (const SDL_Event &, bool, Widget::ROIMap) final;
-        virtual bool processEventParent(const SDL_Event &, bool, Widget::ROIMap) final;
+        virtual bool processEvent      (const MirEvent &, bool, Widget::ROIMap) final;
+        virtual bool processEventRoot  (const MirEvent &, bool, Widget::ROIMap) final;
+        virtual bool processEventParent(const MirEvent &, bool, Widget::ROIMap) final;
 
     protected:
         // for draw() and processEventDefault(), it doesn't check show()
@@ -473,7 +473,7 @@ class Widget: public WidgetTreeNode
         //     2. won't alter any internal state, directly bypass the event
         //     3. parent needs to change focus outside, not inside widget itself
         //
-        virtual bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap);
+        virtual bool processEventDefault(const MirEvent &, bool, Widget::ROIMap);
 
     public:
         virtual void draw       (                                  Widget::ROIMap) const final;

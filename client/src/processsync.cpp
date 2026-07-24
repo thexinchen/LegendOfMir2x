@@ -61,12 +61,12 @@ ProcessSync::ProcessSync()
       }}
 {}
 
-void ProcessSync::processEvent(const SDL_Event &event)
+void ProcessSync::processEvent(const MirEvent &event)
 {
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
-                if(event.key.key == SDLK_ESCAPE){
+                if(event.key.key == MIRK_ESCAPE){
                     g_client->requestProcess(PROCESSID_LOGIN);
                 }
                 break;

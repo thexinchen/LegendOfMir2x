@@ -134,7 +134,7 @@ void ProcessCreateChar::draw() const
     m_notifyBoard.draw({.dir=DIR_UPLEFT, .x=notifX, .y=notifY});
 }
 
-void ProcessCreateChar::processEvent(const SDL_Event &event)
+void ProcessCreateChar::processEvent(const MirEvent &event)
 {
     bool tookEvent = false;
 
@@ -148,10 +148,10 @@ void ProcessCreateChar::processEvent(const SDL_Event &event)
 
     if(!tookEvent){
         switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_TAB:
+                    case MIRK_TAB:
                         {
                             m_nameBox.setFocus(true);
                             break;
@@ -163,7 +163,7 @@ void ProcessCreateChar::processEvent(const SDL_Event &event)
                 }
                 break;
             }
-            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            case MIR_EVENT_MOUSE_BUTTON_DOWN:
                 {
                     const auto [px, py] = GLDeviceHelper::getMousePLoc();
                     if(mathf::pointInRectangle(px, py, 200, 290, 90, 260)){

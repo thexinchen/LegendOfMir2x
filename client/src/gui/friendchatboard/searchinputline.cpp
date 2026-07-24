@@ -69,7 +69,7 @@ SearchInputLine::SearchInputLine(Widget::VarDir argDir,
 
           .texLoadFunc = [](const Widget *) { return g_progUseDB->retrieve(0X00001200); },
 
-          .blendMode = SDL_BLENDMODE_NONE,
+          .blendMode = MIR_BLENDMODE_NONE,
           .parent{this},
       }}
 

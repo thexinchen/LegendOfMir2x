@@ -48,7 +48,7 @@ class TextInput: public Widget
         TextInput(TextInput::InitArgs);
 
     public:
-        bool processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m) override
+        bool processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m) override
         {
             return m_input.processEventParent(event, valid, m);
         }

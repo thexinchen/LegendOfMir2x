@@ -116,5 +116,5 @@ struct ChatItem: public Widget
 
     void setMaxWidth(int);
     void updateDefault(double) override;
-    bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+    bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 };

@@ -57,7 +57,7 @@ class GUIManager: public Widget
         void drawDefault(Widget::ROIMap) const override;
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     public:
         Widget *getWidget(const std::string_view &);

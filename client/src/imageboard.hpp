@@ -1,7 +1,7 @@
 #pragma once
 #include <variant>
 #include <functional>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 #include "widget.hpp"
 #include "colorf.hpp"
 
@@ -38,7 +38,7 @@ class ImageBoard: public Widget
             int  rotate = 0;
 
             Widget::VarU32 modColor = colorf::WHITE_A255;
-            Widget::VarBlendMode blendMode = SDL_BLENDMODE_BLEND;
+            Widget::VarBlendMode blendMode = MIR_BLENDMODE_BLEND;
 
             Widget::WADPair parent {};
         };

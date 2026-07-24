@@ -74,22 +74,22 @@ TritexButton::TritexButton(TritexButton::InitArgs args)
                   const auto  onTime = std::get<1>(m_blinkTime.value());
 
                   if(offTime == 0){
-                      return SDL_BLENDMODE_ADD;
+                      return MIR_BLENDMODE_ADD;
                   }
                   else if(onTime == 0){
-                      return SDL_BLENDMODE_BLEND;
+                      return MIR_BLENDMODE_BLEND;
                   }
                   else{
                       if(std::fmod(m_accuBlinkTime, offTime + onTime) < offTime){
-                          return SDL_BLENDMODE_BLEND;
+                          return MIR_BLENDMODE_BLEND;
                       }
                       else{
-                          return SDL_BLENDMODE_ADD;
+                          return MIR_BLENDMODE_ADD;
                       }
                   }
               }
               else{
-                  return SDL_BLENDMODE_BLEND;
+                  return MIR_BLENDMODE_BLEND;
               }
           },
       }}

@@ -34,7 +34,7 @@ ClientGuard::ClientGuard(uint64_t uid, ProcessRun *proc, const ActionNode &actio
 
 bool ClientGuard::parseAction(const ActionNode &action)
 {
-    m_lastActive = SDL_GetTicks();
+    m_lastActive = mirGetTicks();
     m_motionQueue.clear();
 
     switch(action.type){

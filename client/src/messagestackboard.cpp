@@ -87,7 +87,7 @@ void MessageStackBoard::addXMLMessage(const std::u8string &xml)
             const auto boxH = self->h();
             const auto corner = std::min<int>({m_corner, boxW / 2, boxH / 2});
 
-            const GLDeviceHelper::EnableRenderBlendMode enableBlend(SDL_BLENDMODE_BLEND);
+            const GLDeviceHelper::EnableRenderBlendMode enableBlend(MIR_BLENDMODE_BLEND);
             g_glDevice->fillRectangle(Widget::evalU32(m_bgColor, this), drawDstX, drawDstY, boxW, boxH, corner);
         },
 
@@ -98,7 +98,7 @@ void MessageStackBoard::addXMLMessage(const std::u8string &xml)
             const auto corner = std::min<int>({m_corner, boxW / 2, boxH / 2});
 
             if(colorf::A(Widget::evalU32(m_borderColor, this))){
-                const GLDeviceHelper::EnableRenderBlendMode enableBlend(SDL_BLENDMODE_BLEND);
+                const GLDeviceHelper::EnableRenderBlendMode enableBlend(MIR_BLENDMODE_BLEND);
                 g_glDevice->drawRectangle(Widget::evalU32(m_borderColor, this), drawDstX, drawDstY, boxW, boxH, corner);
             }
         },

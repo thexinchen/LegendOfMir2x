@@ -28,7 +28,7 @@ AcutionBoard::AcutionBoard(ProcessRun *argProc, Widget *argParent, bool argAutoD
               return g_progUseDB->retrieve(0X00001400);
           },
 
-          .blendMode = SDL_BLENDMODE_NONE,
+          .blendMode = MIR_BLENDMODE_NONE,
           .parent{this},
       }}
 {}

@@ -2,7 +2,7 @@
 #include <deque>
 #include <cstdint>
 #include <cstddef>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 
 class FPSMonitor
 {
@@ -18,7 +18,7 @@ class FPSMonitor
     public:
         void update()
         {
-            m_timeStamp.push_back(SDL_GetTicks());
+            m_timeStamp.push_back(mirGetTicks());
             if(m_timeStamp.size() > m_size){
                 m_timeStamp.pop_front();
             }

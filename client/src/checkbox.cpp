@@ -132,7 +132,7 @@ CheckBox::CheckBox(CheckBox::InitArgs args)
             [argH = std::move(args.h), this]{ return Widget::evalSizeOpt(argH, this, [this]{ return std::max<int>({m_img.w(), m_img.h(), 16}); }); });
 }
 
-bool CheckBox::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool CheckBox::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return consumeFocus(false);
@@ -143,11 +143,11 @@ bool CheckBox::processEventDefault(const SDL_Event &event, bool valid, Widget::R
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
             {
                 return consumeFocus(m.in(to_d(event.button.x), to_d(event.button.y)));
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(m.in(to_d(event.button.x), to_d(event.button.y))){
                     setFocus(true);
@@ -158,20 +158,20 @@ bool CheckBox::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                     return consumeFocus(false);
                 }
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
                 return consumeFocus(m.in(to_d(event.motion.x), to_d(event.motion.y)));
             }
-        case SDL_EVENT_KEY_UP:
+        case MIR_EVENT_KEY_UP:
             {
                 return consumeFocus(focus());
             }
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 if(focus()){
                     switch(event.key.key){
-                        case SDLK_SPACE:
-                        case SDLK_RETURN:
+                        case MIRK_SPACE:
+                        case MIRK_RETURN:
                             {
                                 setFocus(true);
                                 toggle();

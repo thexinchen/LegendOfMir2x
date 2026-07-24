@@ -202,7 +202,7 @@ CBMiddle::CBMiddle(
     moveFront(&m_bg);
 }
 
-bool CBMiddle::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool CBMiddle::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -213,14 +213,14 @@ bool CBMiddle::processEventDefault(const SDL_Event &event, bool valid, Widget::R
     }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 if(!valid){
                     return false;
                 }
 
                 switch(event.key.key){
-                    case SDLK_RETURN:
+                    case MIRK_RETURN:
                         {
                             return hasParent<ControlBoard>()->m_cmdBoard.consumeFocus(true);
                         }
@@ -230,9 +230,9 @@ bool CBMiddle::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_MOTION:
         default:
             {
                 return false;

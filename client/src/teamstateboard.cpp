@@ -264,7 +264,7 @@ void TeamStateBoard::drawDefault(Widget::ROIMap m) const
     drawChild(&m_close,        m);
 }
 
-bool TeamStateBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool TeamStateBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -285,7 +285,7 @@ bool TeamStateBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
     const auto remapYDiff = m.y - m.ro->y;
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 int selectedLine = -1;
                 for(size_t i = 0; i < lineShowCount(); ++i){
@@ -317,7 +317,7 @@ bool TeamStateBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
 
                 return consumeFocus(true);
             }
-        case SDL_EVENT_MOUSE_WHEEL:
+        case MIR_EVENT_MOUSE_WHEEL:
             {
                 const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
                 if(mathf::pointInRectangle<int>(mousePX, mousePY, remapXDiff + m_uidRegionX, remapYDiff + m_uidRegionY, m_uidRegionW, lineHeight() * lineShowCount())){
@@ -333,9 +333,9 @@ bool TeamStateBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
                 }
                 return consumeFocus(true);
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
+                if((event.motion.state & MIR_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
                     const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
                     const int maxX = rendererW - w();
                     const int maxY = rendererH - h();

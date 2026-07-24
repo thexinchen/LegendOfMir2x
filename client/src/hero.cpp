@@ -565,7 +565,7 @@ bool Hero::motionValid(const std::unique_ptr<MotionNode> &motionPtr) const
 
 bool Hero::parseAction(const ActionNode &action)
 {
-    m_lastActive = SDL_GetTicks();
+    m_lastActive = mirGetTicks();
 
     m_currMotion->speed = SYS_MAXSPEED;
     m_motionQueue.clear();

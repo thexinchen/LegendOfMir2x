@@ -56,7 +56,7 @@ void MotionEffect::drawShift(int shiftX, int shiftY, uint32_t modColor)
     if(const auto texID = frameTexID(); texID != SYS_U32NIL){
         if(auto [texPtr, offX, offY] = g_magicDB->retrieve(texID); texPtr){
             GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor, modColor));
-            GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
+            GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, MIR_BLENDMODE_BLEND);
             g_glDevice->drawTexture(texPtr, shiftX + offX, shiftY + offY);
         }
     }

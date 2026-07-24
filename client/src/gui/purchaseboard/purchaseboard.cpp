@@ -293,7 +293,7 @@ void PurchaseBoard::drawDefault(Widget::ROIMap m) const
     }
 }
 
-bool PurchaseBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool PurchaseBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -340,7 +340,7 @@ bool PurchaseBoard::processEventDefault(const SDL_Event &event, bool valid, Widg
     const auto remapY = m.y - m.ro->y;
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 const int mouseDX = to_d(event.button.x) - remapX;
                 const int mouseDY = to_d(event.button.y) - remapY;
@@ -372,7 +372,7 @@ bool PurchaseBoard::processEventDefault(const SDL_Event &event, bool valid, Widg
                 }
                 break;
             }
-        case SDL_EVENT_MOUSE_WHEEL:
+        case MIR_EVENT_MOUSE_WHEEL:
             {
                 const Widget::ROI select
                 {

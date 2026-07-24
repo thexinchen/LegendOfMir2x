@@ -9,14 +9,14 @@ extern PNGTexDB *g_progUseDB;
 extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
-void ProcessLogo::processEvent(const SDL_Event &event)
+void ProcessLogo::processEvent(const MirEvent &event)
 {
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_SPACE:
-                    case SDLK_ESCAPE:
+                    case MIRK_SPACE:
+                    case MIRK_ESCAPE:
                         {
                             g_client->requestProcess(PROCESSID_SYRC);
                         }

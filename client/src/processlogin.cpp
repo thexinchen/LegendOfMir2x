@@ -164,13 +164,13 @@ void ProcessLogin::draw() const
     m_canvas.drawRoot({});
 }
 
-void ProcessLogin::processEvent(const SDL_Event &event)
+void ProcessLogin::processEvent(const MirEvent &event)
 {
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_TAB:
+                    case MIRK_TAB:
                         {
                             if(true
                                     && !m_idBox      .focus()

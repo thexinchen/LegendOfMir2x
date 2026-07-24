@@ -91,7 +91,7 @@ class GfxDupBoard: public Widget
         }
 
     public:
-        bool processEventDefault(const SDL_Event &e, bool valid, Widget::ROIMap m) override
+        bool processEventDefault(const MirEvent &e, bool valid, Widget::ROIMap m) override
         {
             bool takenEvent = false;
             gridHelper(m, [&e, valid, &takenEvent](auto *widget, const auto &cm)

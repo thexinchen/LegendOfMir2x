@@ -1,7 +1,7 @@
 #include <mutex>
 #include <memory>
 #include <chrono>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 #include "glfont.hpp"
 
 #include "log.hpp"
@@ -125,10 +125,10 @@ InitView::~InitView()
 
 void InitView::processEvent()
 {
-    SDL_Event event;
+    MirEvent event;
     while(g_glDevice->pollEvent(&event)){
         switch(event.type){
-            case SDL_EVENT_MOUSE_BUTTON_UP:
+            case MIR_EVENT_MOUSE_BUTTON_UP:
                 {
                     if(mathf::pointInRectangle(to_d(event.button.x), to_d(event.button.y), m_buttonX, m_buttonY, m_buttonW, m_buttonH)){
                         if(m_buttonState == BEVENT_DOWN){
@@ -143,10 +143,10 @@ void InitView::processEvent()
                     }
                     break;
                 }
-            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            case MIR_EVENT_MOUSE_BUTTON_DOWN:
                 {
                     switch(event.button.button){
-                        case SDL_BUTTON_LEFT:
+                        case MIR_BUTTON_LEFT:
                             {
                                 if(mathf::pointInRectangle(to_d(event.button.x), to_d(event.button.y), m_buttonX, m_buttonY, m_buttonW, m_buttonH)){
                                     m_buttonState = BEVENT_DOWN;
@@ -160,7 +160,7 @@ void InitView::processEvent()
                     }
                     break;
                 }
-            case SDL_EVENT_MOUSE_MOTION:
+            case MIR_EVENT_MOUSE_MOTION:
                 {
                     if(mathf::pointInRectangle(to_d(event.button.x), to_d(event.button.y), m_buttonX, m_buttonY, m_buttonW, m_buttonH)){
                         m_buttonState = BEVENT_ON;

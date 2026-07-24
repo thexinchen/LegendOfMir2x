@@ -252,14 +252,14 @@ void ProcessChangePassword::draw() const
     }
 }
 
-void ProcessChangePassword::processEvent(const SDL_Event &event)
+void ProcessChangePassword::processEvent(const MirEvent &event)
 {
     if(m_quit.processEventRoot(event, true, {})){
         return;
     }
 
     if(hasInfo()){
-        SDL_FlushEvent(SDL_EVENT_KEY_DOWN);
+        g_glDevice->flushEvent(MIR_EVENT_KEY_DOWN);
         return;
     }
 
@@ -268,10 +268,10 @@ void ProcessChangePassword::processEvent(const SDL_Event &event)
     }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_TAB:
+                    case MIRK_TAB:
                         {
                             Widget * boxPtrList[]
                             {

@@ -317,7 +317,7 @@ MiniMapBoard::MiniMapBoard(MiniMapBoard::InitArgs args)
     setShow([this] -> bool { return getMiniMapTexture(); });
 }
 
-bool MiniMapBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool MiniMapBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -340,9 +340,9 @@ bool MiniMapBoard::processEventDefault(const SDL_Event &event, bool valid, Widge
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
             {
-                if(event.button.button == SDL_BUTTON_LEFT){
+                if(event.button.button == MIR_BUTTON_LEFT){
                     if(m_dragStarted){
                         m_dragStarted = false;
                         return true;
@@ -350,16 +350,16 @@ bool MiniMapBoard::processEventDefault(const SDL_Event &event, bool valid, Widge
                 }
                 return false;
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
-                if(event.button.button == SDL_BUTTON_LEFT){
+                if(event.button.button == MIR_BUTTON_LEFT){
                     if(m.in(to_d(event.button.x), to_d(event.button.y))){
                         m_dragStarted = true;
                         return true;
                     }
                 }
 
-                else if(event.button.button == SDL_BUTTON_RIGHT){
+                else if(event.button.button == MIR_BUTTON_RIGHT){
                     if(m.in(to_d(event.button.x), to_d(event.button.y))){
                         const auto onCanvasPX = to_d(event.button.x) - m.x + m.ro->x;
                         const auto onCanvasPY = to_d(event.button.y) - m.y + m.ro->y;
@@ -370,7 +370,7 @@ bool MiniMapBoard::processEventDefault(const SDL_Event &event, bool valid, Widge
                 }
                 return false;
             }
-        case SDL_EVENT_MOUSE_WHEEL:
+        case MIR_EVENT_MOUSE_WHEEL:
             {
                 if(m.in(to_d(event.wheel.mouse_x), to_d(event.wheel.mouse_y))){
                     const auto onCanvasPX = to_d(event.wheel.mouse_x) - m.x + m.ro->x;
@@ -380,9 +380,9 @@ bool MiniMapBoard::processEventDefault(const SDL_Event &event, bool valid, Widge
                 }
                 return false;
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if(event.motion.state & SDL_BUTTON_LMASK){
+                if(event.motion.state & MIR_BUTTON_LMASK){
                     if(m.in(to_d(event.motion.x), to_d(event.motion.y))){
                         if(m_dragStarted){
                             if(m_autoCenter){

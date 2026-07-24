@@ -3,7 +3,7 @@
 #include <string>
 #include <cstdint>
 #include <variant>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 
 #include "colorf.hpp"
 #include "widget.hpp"
@@ -21,7 +21,7 @@ class TextBoard: public Widget
             Widget::VarStrFunc textFunc {};
             Widget::FontConfig font {};
 
-            Widget::VarBlendMode blendMode = SDL_BLENDMODE_BLEND;
+            Widget::VarBlendMode blendMode = MIR_BLENDMODE_BLEND;
 
             Widget::InstAttrs attrs {};
             Widget::WADPair  parent {};

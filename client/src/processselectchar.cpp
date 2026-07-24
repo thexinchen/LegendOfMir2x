@@ -116,7 +116,7 @@ void ProcessSelectChar::draw() const
     }
 }
 
-void ProcessSelectChar::processEvent(const SDL_Event &event)
+void ProcessSelectChar::processEvent(const MirEvent &event)
 {
     bool tookEvent = false;
 

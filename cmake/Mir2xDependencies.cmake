@@ -9,11 +9,6 @@ find_package(lz4 CONFIG REQUIRED)
 find_package(zstd CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
 find_package(g3log CONFIG REQUIRED)
-find_package(SDL3 CONFIG REQUIRED)
-find_package(SDL3_image CONFIG REQUIRED)
-find_package(SDL3_ttf CONFIG REQUIRED)
-find_package(SDL3_mixer CONFIG REQUIRED)
-find_package(SDL3_gfx CONFIG REQUIRED)
 find_package(FLTK CONFIG REQUIRED)
 find_package(asio CONFIG REQUIRED)
 find_package(cereal CONFIG REQUIRED)
@@ -53,7 +48,6 @@ add_library(mir2x_project_options INTERFACE)
 add_library(mir2x::project_options ALIAS mir2x_project_options)
 target_compile_definitions(mir2x_project_options INTERFACE
     ASIO_STANDALONE
-    SDL_MAIN_HANDLED
     SOL_ALL_SAFETIES_ON=1
     SOL_SAFE_NUMERICS=1
     ZSTD_MULTITHREAD
@@ -93,19 +87,6 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_options(mir2x_project_options INTERFACE -static-libgcc -static-libstdc++)
 endif()
 
-add_library(mir2x_sdl3 INTERFACE)
-add_library(mir2x::sdl3 ALIAS mir2x_sdl3)
-target_link_libraries(mir2x_sdl3 INTERFACE
-    $<IF:$<TARGET_EXISTS:SDL3::SDL3-static>,SDL3::SDL3-static,SDL3::SDL3-shared>)
-
-add_library(mir2x_sdl3_ext INTERFACE)
-add_library(mir2x::sdl3_ext ALIAS mir2x_sdl3_ext)
-target_link_libraries(mir2x_sdl3_ext INTERFACE
-    mir2x::sdl3
-    $<IF:$<TARGET_EXISTS:SDL3_image::SDL3_image-static>,SDL3_image::SDL3_image-static,SDL3_image::SDL3_image-shared>
-    $<IF:$<TARGET_EXISTS:SDL3_ttf::SDL3_ttf-static>,SDL3_ttf::SDL3_ttf-static,SDL3_ttf::SDL3_ttf-shared>
-    $<IF:$<TARGET_EXISTS:SDL3_mixer::SDL3_mixer-static>,SDL3_mixer::SDL3_mixer-static,SDL3_mixer::SDL3_mixer-shared>
-    $<IF:$<TARGET_EXISTS:SDL3_gfx::SDL3_gfx-static>,SDL3_gfx::SDL3_gfx-static,SDL3_gfx::SDL3_gfx-shared>)
 
 add_library(mir2x_lua INTERFACE)
 add_library(mir2x::lua ALIAS mir2x_lua)
@@ -126,10 +107,9 @@ foreach(MIR2X_FLTK_TARGET IN ITEMS fltk_images fltk_gl fltk)
 endforeach()
 target_link_libraries(mir2x_fltk INTERFACE OpenGL::GL)
 
-# Dear ImGui + GLFW + OpenGL3: the unified UI stack replacing FLTK (server/tools)
-# and the custom SDL3 widget framework (client). miniaudio (header-only, no
-# CMake target) replaces SDL3_mixer; include <miniaudio.h> with
-# MINIAUDIO_IMPLEMENTATION in exactly one translation unit.
+# Dear ImGui + GLFW + OpenGL3: the unified UI stack for client, server, and tools.
+# miniaudio (header-only, no CMake target) handles audio; include <miniaudio.h>
+# with MINIAUDIO_IMPLEMENTATION in exactly one translation unit.
 add_library(mir2x_imgui_glfw_gl INTERFACE)
 add_library(mir2x::imgui_glfw_gl ALIAS mir2x_imgui_glfw_gl)
 target_link_libraries(mir2x_imgui_glfw_gl INTERFACE
@@ -160,7 +140,6 @@ add_library(mir2x_common_deps INTERFACE)
 add_library(mir2x::common_deps ALIAS mir2x_common_deps)
 target_link_libraries(mir2x_common_deps INTERFACE
     mir2x::project_options
-    mir2x::sdl3
     mir2x::fltk
     mir2x::imgui_glfw_gl
     mir2x::lua
