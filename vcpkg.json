@@ -42,6 +42,7 @@
     "sdl3-ttf",
     "sol2",
     "sqlitecpp",
+    "stb",
     "tiny-aes-c",
     "tinyfiledialogs",
     "tinyxml2",

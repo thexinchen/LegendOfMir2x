@@ -1,7 +1,6 @@
 #pragma once
 #include <cstring>
-#include <SDL3/SDL.h>
-#include <SDL3_ttf/SDL_ttf.h>
+#include "glfont.hpp"
 #include <utility>
 #include <unordered_map>
 
@@ -64,7 +63,7 @@ class FontexDB: public innDB<uint64_t, FontexElement>
     private:
         // 0XFF00 : font index
         // 0X00FF : font point size
-        std::unordered_map<uint16_t, TTF_Font *> m_ttfCache;
+        std::unordered_map<uint16_t, std::unique_ptr<GLFontFace>> m_ttfCache;
 
     private:
         std::unordered_map<uint8_t, std::vector<uint8_t>> m_fontDataCache;
@@ -82,12 +81,7 @@ class FontexDB: public innDB<uint64_t, FontexElement>
             : innDB<uint64_t, FontexElement>(resMax)
         {}
 
-        virtual ~FontexDB()
-        {
-            for(auto &p: m_ttfCache){
-                TTF_CloseFont(p.second);
-            }
-        }
+        virtual ~FontexDB() = default;
 
     private:
         const std::vector<uint8_t> &findFontData(uint8_t fontIndex)
@@ -109,8 +103,8 @@ class FontexDB: public innDB<uint64_t, FontexElement>
         }
 
     private:
-        TTF_Font *findTTF(uint16_t);
-        TTF_Font *findTTF(uint8_t, uint8_t);
+        GLFontFace *findTTF(uint16_t);
+        GLFontFace *findTTF(uint8_t, uint8_t);
 
     public:
         void load(const char *fontDBName)
@@ -167,11 +161,11 @@ class FontexDB: public innDB<uint64_t, FontexElement>
             }
 
             if(auto ttfPtr = findTTF(font, 16)){
-                const auto familyName = TTF_GetFontFamilyName(ttfPtr);
-                const auto  styleName = TTF_GetFontStyleName (ttfPtr);
+                const auto familyName = glfont::getFontFamilyName(ttfPtr);
+                const auto  styleName = glfont::getFontStyleName (ttfPtr);
 
-                fflassert(str_haschar(familyName));
-                fflassert(str_haschar( styleName));
+                fflassert(str_haschar(familyName.c_str()));
+                fflassert(str_haschar( styleName.c_str()));
 
                 return {familyName, styleName};
             }
@@ -185,7 +179,7 @@ class FontexDB: public innDB<uint64_t, FontexElement>
             }
 
             if(auto ttfPtr = findTTF(font, fontSize)){
-                return TTF_GetFontAscent(ttfPtr);
+                return glfont::getFontAscent(ttfPtr);
             }
             throw fflpanic("failed to load font: {}", font);
         }
@@ -197,7 +191,7 @@ class FontexDB: public innDB<uint64_t, FontexElement>
             }
 
             if(auto ttfPtr = findTTF(font, fontSize)){
-                return TTF_GetFontDescent(ttfPtr);
+                return glfont::getFontDescent(ttfPtr);
             }
             throw fflpanic("failed to load font: {}", font);
         }
@@ -209,7 +203,7 @@ class FontexDB: public innDB<uint64_t, FontexElement>
             }
 
             if(auto ttfPtr = findTTF(font, fontSize)){
-                return TTF_GetFontHeight(ttfPtr);
+                return glfont::getFontHeight(ttfPtr);
             }
             throw fflpanic("failed to load font: {}", font);
         }
@@ -221,7 +215,7 @@ class FontexDB: public innDB<uint64_t, FontexElement>
             }
 
             if(auto ttfPtr = findTTF(font, fontSize)){
-                return TTF_GetFontLineSkip(ttfPtr);
+                return glfont::getFontLineSkip(ttfPtr);
             }
             throw fflpanic("failed to load font: {}", font);
         }
@@ -233,7 +227,7 @@ class FontexDB: public innDB<uint64_t, FontexElement>
             }
 
             if(auto ttfPtr = findTTF(font, fontSize)){
-                return TTF_FontIsFixedWidth(ttfPtr) != 0;
+                return glfont::fontIsFixedWidth(ttfPtr);
             }
             throw fflpanic("failed to load font: {}", font);
         }
@@ -305,14 +299,14 @@ class FontexDB: public innDB<uint64_t, FontexElement>
 
     private:
         // SDL3_ttf only reports presence (not the glyph index)
-        static bool hasGlphy(TTF_Font *, uint32_t);
+        static bool hasGlphy(GLFontFace *, uint32_t);
 
     public:
         bool hasGlphy(uint16_t,          uint32_t);
         bool hasGlphy( uint8_t, uint8_t, uint32_t);
 
     private:
-        static bool isTransparant(TTF_Font *, uint32_t);
+        static bool isTransparant(GLFontFace *, uint32_t);
         static bool isTransparant(const std::tuple<int, int, int, int, int> &);
 
     public:
@@ -320,13 +314,13 @@ class FontexDB: public innDB<uint64_t, FontexElement>
         bool isTransparant(uint8_t , uint8_t, uint32_t);
 
     private:
-        static std::tuple<int, int, int, int, int> getGlyphMetrics(TTF_Font *, uint32_t); // returns everything
+        static std::tuple<int, int, int, int, int> getGlyphMetrics(GLFontFace *, uint32_t); // returns everything
 
     private:
         static std::tuple<int, int, int> getGlyphPadding  (const std::tuple<int, int, int, int, int> &);
         static std::pair <int, int>      getGlyphPixelSize(const std::tuple<int, int, int, int, int> &);
 
     private:
-        static std::tuple<int, int, int> getGlyphPadding  (TTF_Font *font, uint32_t codePoint){ return getGlyphPadding  (getGlyphMetrics(font, codePoint)); }
-        static std::pair <int, int>      getGlyphPixelSize(TTF_Font *font, uint32_t codePoint){ return getGlyphPixelSize(getGlyphMetrics(font, codePoint)); }
+        static std::tuple<int, int, int> getGlyphPadding  (GLFontFace *font, uint32_t codePoint){ return getGlyphPadding  (getGlyphMetrics(font, codePoint)); }
+        static std::pair <int, int>      getGlyphPixelSize(GLFontFace *font, uint32_t codePoint){ return getGlyphPixelSize(getGlyphMetrics(font, codePoint)); }
 };
