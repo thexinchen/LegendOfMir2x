@@ -3,16 +3,12 @@
 #include "log.hpp"
 #include "argf.hpp"
 #include "dbpod.hpp"
+#include "server.hpp"
 #include "mapbindb.hpp"
 #include "actorpool.hpp"
 #include "peerconfig.hpp"
-#include "mainwindow.hpp"
-#include "scriptwindow.hpp"
-#include "profilerwindow.hpp"
 #include "serverargparser.hpp"
-#include "podmonitorwindow.hpp"
-#include "serverpasswordwindow.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 
 ServerArgParser          *g_serverArgParser;
 PeerConfig               *g_peerConfig;
@@ -21,14 +17,8 @@ ActorPool                *g_actorPool;
 DBPod                    *g_dbPod;
 
 MapBinDB                 *g_mapBinDB;
-ScriptWindow             *g_scriptWindow;
-ProfilerWindow           *g_profilerWindow;
-MainWindow               *g_mainWindow;
-Server               *g_server;
-ServerPasswordWindow     *g_serverPasswordWindow;
-ServerConfigureWindow    *g_serverConfigureWindow;
-PodMonitorWindow         *g_podMonitorWindow;
-ActorMonitorWindow       *g_actorMonitorWindow;
+Server                   *g_server;
+GUICore                  *g_guiCore;
 
 int main(int argc, char *argv[])
 {
@@ -49,12 +39,6 @@ int main(int argc, char *argv[])
             });
         });
 
-        if(!g_serverArgParser->slave){
-            // start FLTK multithreading support
-            // for more details: https://www.fltk.org/doc-1.4/advanced.html
-            Fl::lock();
-        }
-
         g_mir2xLog       = new Log("mir2x-server-v0.1");
         g_server    = new Server();
         g_mapBinDB  = new MapBinDB();
@@ -69,21 +53,11 @@ int main(int argc, char *argv[])
         }
 
         if(!g_serverArgParser->slave){
-            g_scriptWindow          = new ScriptWindow();
-            g_profilerWindow        = new ProfilerWindow();
-            g_mainWindow            = new MainWindow();
-            g_serverPasswordWindow  = new ServerPasswordWindow();
-            g_serverConfigureWindow = new ServerConfigureWindow();
-            g_podMonitorWindow      = new PodMonitorWindow();
-            g_actorMonitorWindow    = new ActorMonitorWindow();
+            g_guiCore = new GUICore();
 
-            if(g_serverArgParser->masterConfig().textFont >= 0){
-                g_mainWindow->setGUIFont(g_serverArgParser->masterConfig().textFont);
-            }
-
-            g_mainWindow->showAll();
             if(g_serverArgParser->masterConfig().autoLaunch){
                 g_server->launch();
+                g_guiCore->setLaunched(true);
             }
         }
 

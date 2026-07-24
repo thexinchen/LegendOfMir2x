@@ -6,7 +6,6 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <cinttypes>
-#include <FL/fl_ask.H>
 
 #include "log.hpp"
 #include "jobf.hpp"
@@ -21,22 +20,19 @@
 #include "serdesmsg.hpp"
 #include "actorpool.hpp"
 #include "syncdriver.hpp"
-#include "mainwindow.hpp"
 #include "server.hpp"
 #include "dispatcher.hpp"
 #include "servicecore.hpp"
-#include "commandwindow.hpp"
 #include "serverargparser.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 
 extern Log *g_mir2xLog;
 extern DBPod *g_dbPod;
 extern MapBinDB *g_mapBinDB;
 extern ActorPool *g_actorPool;
 extern Server *g_server;
-extern MainWindow *g_mainWindow;
+extern GUICore *g_guiCore;
 extern ServerArgParser *g_serverArgParser;
-extern ServerConfigureWindow *g_serverConfigureWindow;
 
 void Server::addFatal(const char *format, ...)
 {
@@ -475,7 +471,7 @@ void Server::loadMapBinDB()
             return "map/mapbin.zsdb";
         }
         else{
-            return g_serverConfigureWindow->getConfig().mapPath;
+            return g_guiCore->getConfig().mapPath;
         }
     }();
 
@@ -490,46 +486,10 @@ void Server::mainLoop()
         m_hasExcept.wait(false);
     }
     else{
-        // gui event loop
-        // Fl::wait() automatically calls Fl::unlock()
-        while(Fl::wait() > 0){
-            switch((uintptr_t)(Fl::thread_message())){
-                case 0:
-                    {
-                        // FLTK will send 0 automatically
-                        // to update the widgets and handle events
-                        //
-                        // if main loop or child thread need to flush
-                        // call Fl::awake(0) to force Fl::wait() to terminate
-                        break;
-                    }
-                case 2:
-                    {
-                        // propagate all exceptions to main thread
-                        // then log it in main thread and request restart
-                        //
-                        // won't handle exception in threads
-                        // all threads need to call Fl::awake(2) to propagate exception(s) caught
-                        try{
-                            g_server->checkException();
-                        }
-                        catch(const std::exception &e){
-                            std::string firstExceptStr;
-                            g_server->logException(e, &firstExceptStr);
-                            g_server->restart(firstExceptStr);
-                        }
-                        break;
-                    }
-                case 1:
-                default:
-                    {
-                        // pase the gui requests in the queue
-                        // designed to send Fl::awake(1) to notify gui
-                        g_server->parseNotifyGUIQ();
-                        break;
-                    }
-            }
-        }
+        // GUI event loop, owned by GUICore (GLFW + ImGui):
+        // the frame loop drains parseNotifyGUIQ() and checkException()
+        // each frame, replacing the legacy Fl::wait()/thread_message() pump
+        g_guiCore->run();
     }
 }
 
@@ -558,7 +518,9 @@ void Server::propagateException() noexcept
         // must have one exception...
         // now we are sure main thread will always capture an std::exception
         m_currException = std::current_exception();
-        Fl::awake((void *)(uintptr_t)(2));
+        if(g_guiCore){
+            g_guiCore->wake(); // GUI frame loop runs checkException()
+        }
     }
 }
 
@@ -730,7 +692,9 @@ void Server::notifyGUI(std::string notifStr)
             std::lock_guard<std::mutex> lockGuard(m_notifyGUILock);
             m_notifyGUIQ.push(notifStr);
         }
-        Fl::awake((void *)(uintptr_t)(1));
+        if(g_guiCore){
+            g_guiCore->wake(); // GUI frame loop drains m_notifyGUIQ
+        }
     }
 }
 
@@ -811,13 +775,9 @@ void Server::parseNotifyGUIQ()
         }
 
         if(fnCheckFront({"restart", "Restart", "RESTART"})){
-            if(tokenList.size() == 1){
-                fl_alert("Fatal error");
-            }
-            else{
-                fl_alert("Fatal error: %s", tokenList.at(1).c_str());
-            }
-            std::exit(0);
+            // replaces fl_alert(): modal shown by the GUI frame loop,
+            // process exits when the user closes it
+            g_guiCore->fatalAlert(tokenList.size() == 1 ? "Fatal error" : ("Fatal error: " + tokenList.at(1)));
             return;
         }
 
@@ -843,7 +803,7 @@ void Server::parseNotifyGUIQ()
             }();
 
             if(cwid > 0){
-                g_mainWindow->DeleteCommandWindow(cwid);
+                g_guiCore->deleteCommandWindow(cwid);
             }
             continue;
         }
@@ -858,7 +818,7 @@ void Server::FlushBrowser()
     {
         auto nCurrLoc = (size_t)(0);
         while(nCurrLoc < m_logBuf.size()){
-            g_mainWindow->addLog(to_d(m_logBuf[nCurrLoc]), &(m_logBuf[nCurrLoc + 1]));
+            g_guiCore->appendLog(to_d(m_logBuf[nCurrLoc]), &(m_logBuf[nCurrLoc + 1]));
             nCurrLoc += (1 + 1 + std::strlen(&(m_logBuf[nCurrLoc + 1])));
         }
         m_logBuf.clear();
@@ -888,7 +848,7 @@ void Server::FlushCWBrowser()
             auto pInfo0 = &(m_CWLogBuf[nCurrLoc + sizeof(nCWID) + 1]);
             auto pInfo1 = &(m_CWLogBuf[nCurrLoc + sizeof(nCWID) + 1 + nInfoLen0 + 1]);
 
-            g_mainWindow->addCWLogString(nCWID, to_d(m_CWLogBuf[nCurrLoc + sizeof(nCWID)]), pInfo0, pInfo1);
+            g_guiCore->appendCWLog(nCWID, to_d(m_CWLogBuf[nCurrLoc + sizeof(nCWID)]), pInfo0, pInfo1);
             nCurrLoc += (sizeof(nCWID) + 1 + nInfoLen0 + 1 + nInfoLen1 + 1);
         }
         m_CWLogBuf.clear();
@@ -1065,7 +1025,7 @@ void Server::regLuaExport(CommandLuaModule *modulePtr, uint32_t nCWID)
 
     modulePtr->bindFunction("history", [nCWID, this]()
     {
-        for(const auto &s: g_mainWindow->getCWHistory(nCWID)){
+        for(const auto &s: g_guiCore->getCWHistory(nCWID)){
             if(!s.empty()){
                 addCWLogString(nCWID, 0, "> ", s.c_str());
             }

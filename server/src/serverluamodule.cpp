@@ -8,14 +8,14 @@
 #include "server.hpp"
 #include "serverargparser.hpp"
 #include "serverluamodule.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 
 extern DBPod *g_dbPod;
 extern MapBinDB *g_mapBinDB;
 extern ActorPool *g_actorPool;
 extern Server *g_server;
 extern ServerArgParser *g_serverArgParser;
-extern ServerConfigureWindow *g_serverConfigureWindow;
+extern GUICore *g_guiCore;
 
 ServerLuaModule::ServerLuaModule()
     : LuaModule()
@@ -37,7 +37,7 @@ ServerLuaModule::ServerLuaModule()
 
     pfrCheck(execString("package.path = package.path .. ';%s/?.lua'", []() -> std::string
     {
-        if(const auto cfgScriptPath = g_serverArgParser->slave ? std::string{} : g_serverConfigureWindow->getConfig().scriptPath; cfgScriptPath.empty()){
+        if(const auto cfgScriptPath = g_serverArgParser->slave ? std::string{} : g_guiCore->getConfig().scriptPath; cfgScriptPath.empty()){
             return "script";
         }
         else{

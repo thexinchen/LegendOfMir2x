@@ -14,12 +14,12 @@
 #include "servicecore.hpp"
 #include "npchar.hpp"
 #include "serverargparser.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 
 extern MapBinDB *g_mapBinDB;
 extern Server *g_server;
 extern ServerArgParser *g_serverArgParser;
-extern ServerConfigureWindow *g_serverConfigureWindow;
+extern GUICore *g_guiCore;
 
 PeerCore::PeerCore()
     : ServerObject(uidsf::getPeerCoreUID())

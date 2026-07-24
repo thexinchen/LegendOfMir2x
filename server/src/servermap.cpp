@@ -21,12 +21,12 @@
 #include "server.hpp"
 #include "rotatecoord.hpp"
 #include "serverargparser.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 
 extern MapBinDB *g_mapBinDB;
 extern Server *g_server;
 extern ServerArgParser *g_serverArgParser;
-extern ServerConfigureWindow *g_serverConfigureWindow;
+extern GUICore *g_guiCore;
 
 ServerMap::LuaThreadRunner::LuaThreadRunner(ServerMap *serverMapPtr)
     : ServerObject::LuaThreadRunner(serverMapPtr)
@@ -386,7 +386,7 @@ ServerMap::LuaThreadRunner::LuaThreadRunner(ServerMap *serverMapPtr)
     if(!g_serverArgParser->sharedConfig().disableMapScript){
         pfrCheck(execFile([this]() -> std::string
         {
-            const auto configScriptPath = g_serverArgParser->slave ? std::string{} : g_serverConfigureWindow->getConfig().scriptPath;
+            const auto configScriptPath = g_serverArgParser->slave ? std::string{} : g_guiCore->getConfig().scriptPath;
             const auto scriptPath = configScriptPath.empty() ? std::string("script/map") : (configScriptPath + "/map");
 
             const auto scriptName = str_printf("%s/%s.lua", scriptPath.c_str(), to_cstr(DBCOM_MAPRECORD(getServerMap()->ID()).name));
@@ -1208,7 +1208,7 @@ corof::awaitable<> ServerMap::loadNPChar()
         co_return;
     }
 
-    const auto cfgScriptPath = g_serverArgParser->slave ? std::string{}: g_serverConfigureWindow->getConfig().scriptPath;
+    const auto cfgScriptPath = g_serverArgParser->slave ? std::string{}: g_guiCore->getConfig().scriptPath;
     const auto scriptPath = cfgScriptPath.empty() ? std::string("script/npc") : (cfgScriptPath + "/npc");
 
     // npc script file has format:
