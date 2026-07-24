@@ -8,7 +8,7 @@
 #include "netio.hpp"
 #include "process.hpp"
 #include "message.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "raiitimer.hpp"
 
 class ProcessRun;

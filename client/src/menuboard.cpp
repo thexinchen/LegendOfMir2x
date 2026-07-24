@@ -1,8 +1,8 @@
 #include "colorf.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "menuboard.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 MenuBoard::MenuBoard(MenuBoard::InitArgs args)
     : Widget
       {{
@@ -26,8 +26,8 @@ MenuBoard::MenuBoard(MenuBoard::InitArgs args)
                           const int h = self->h();
                           const int c = Widget::evalSize(corner, self);
 
-                          g_sdlDevice->fillRectangle(colorf::BLACK_A255, dstDrawX, dstDrawY, w, h, c);
-                          g_sdlDevice->drawRectangle(colorf:: GREY_A255, dstDrawX, dstDrawY, w, h, c);
+                          g_glDevice->fillRectangle(colorf::BLACK_A255, dstDrawX, dstDrawY, w, h, c);
+                          g_glDevice->drawRectangle(colorf:: GREY_A255, dstDrawX, dstDrawY, w, h, c);
                       },
                   }},
 

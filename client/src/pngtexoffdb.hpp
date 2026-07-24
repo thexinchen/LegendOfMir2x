@@ -16,7 +16,7 @@ struct PNGTexOffElement
 {
     int dx = 0;
     int dy = 0;
-    SDL_Texture *texture = nullptr;
+    GLTexID texture = nullptr;
 };
 
 class PNGTexOffDB: public innDB<uint32_t, PNGTexOffElement>
@@ -36,7 +36,7 @@ class PNGTexOffDB: public innDB<uint32_t, PNGTexOffElement>
         }
 
     public:
-        std::tuple<SDL_Texture *, int, int> retrieve(uint32_t key)
+        std::tuple<GLTexID , int, int> retrieve(uint32_t key)
         {
             int dx = 0;
             int dy = 0;
@@ -44,7 +44,7 @@ class PNGTexOffDB: public innDB<uint32_t, PNGTexOffElement>
             return {texPtr, dx, dy};
         }
 
-        SDL_Texture *retrieve(uint32_t key, int *pdx, int *pdy)
+        GLTexID retrieve(uint32_t key, int *pdx, int *pdy)
         {
             if(auto p = innLoad(key)){
                 if(pdx){
@@ -59,7 +59,7 @@ class PNGTexOffDB: public innDB<uint32_t, PNGTexOffElement>
             return nullptr;
         }
 
-        SDL_Texture *retrieve(uint8_t fileIndex, uint16_t imageIndex, int *pdx, int *pdy)
+        GLTexID retrieve(uint8_t fileIndex, uint16_t imageIndex, int *pdx, int *pdy)
         {
             return retrieve(to_u32((to_u32(fileIndex) << 16) + imageIndex), pdx, pdy);
         }

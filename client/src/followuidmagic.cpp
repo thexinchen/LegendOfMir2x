@@ -20,14 +20,14 @@
 #include "pathf.hpp"
 #include "totype.hpp"
 #include "dbcomid.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "attachmagic.hpp"
 #include "pngtexoffdb.hpp"
 #include "followuidmagic.hpp"
 #include "clientargparser.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern PNGTexOffDB *g_magicDB;
 extern ClientArgParser *g_clientArgParser;
 
@@ -111,25 +111,25 @@ void FollowUIDMagic::drawViewOff(int viewX, int viewY, uint32_t modColor) const
     if(const auto texID = frameTexID(); texID != SYS_U32NIL){
         if(auto [texPtr, offX, offY] = g_magicDB->retrieve(texID); texPtr){
             const auto gfxEntryModColor = m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor;
-            SDLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(gfxEntryModColor, modColor));
-            SDLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
+            GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(gfxEntryModColor, modColor));
+            GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
 
             const int drawPX = (m_x + offX) - viewX;
             const int drawPY = (m_y + offY) - viewY;
-            const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+            const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
 
-            g_sdlDevice->drawTexture(texPtr, drawPX, drawPY);
+            g_glDevice->drawTexture(texPtr, drawPX, drawPY);
             if(g_clientArgParser->drawMagicGrid){
-                g_sdlDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(200), drawPX, drawPY, texW, texH);
-                g_sdlDevice->drawLine(colorf::RED + colorf::A_SHF(200), drawPX, drawPY, m_x - viewX, m_y - viewY);
+                g_glDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(200), drawPX, drawPY, texW, texH);
+                g_glDevice->drawLine(colorf::RED + colorf::A_SHF(200), drawPX, drawPY, m_x - viewX, m_y - viewY);
 
                 const auto [srcTargetX, srcTargetY] = targetPLoc();
-                g_sdlDevice->drawLine(colorf::GREEN + colorf::A_SHF(200), m_x - viewX, m_y - viewY, srcTargetX - viewX, srcTargetY - viewY);
+                g_glDevice->drawLine(colorf::GREEN + colorf::A_SHF(200), m_x - viewX, m_y - viewY, srcTargetX - viewX, srcTargetY - viewY);
 
                 if(const auto coPtr = m_process->findUID(m_uid)){
                     const auto [srcTargetX, srcTargetY] = targetPLoc();
                     const auto [dstTargetX, dstTargetY] = coPtr->getTargetBox().targetPLoc();
-                    g_sdlDevice->drawLine(colorf::MAGENTA + colorf::A_SHF(200), srcTargetX - viewX, srcTargetY - viewY, dstTargetX - viewX, dstTargetY - viewY);
+                    g_glDevice->drawLine(colorf::MAGENTA + colorf::A_SHF(200), srcTargetX - viewX, srcTargetY - viewY, dstTargetX - viewX, dstTargetY - viewY);
                 }
             }
         }

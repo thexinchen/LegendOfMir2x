@@ -1,6 +1,6 @@
 #include "hero.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "chatpage.hpp"
 #include "chatitem.hpp"
@@ -9,7 +9,7 @@
 #include "chatitemcontainer.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ChatItemContainer::ChatItemContainer(
         Widget::VarDir  argDir,
@@ -119,7 +119,7 @@ ChatItemContainer::ChatItemContainer(
           .bgDrawFunc = [this](int startDstX, int startDstY)
           {
               const auto roi = nomsg.roi(this);
-              g_sdlDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64),
+              g_glDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64),
                       startDstX + roi.x - ChatItemContainer::BACKGROUND_MARGIN,
                       startDstY + roi.y - ChatItemContainer::BACKGROUND_MARGIN,
                       roi.w + ChatItemContainer::BACKGROUND_MARGIN * 2,
@@ -139,7 +139,7 @@ ChatItemContainer::ChatItemContainer(
 
           .bgDrawFunc = [this](const Widget *, int startDstX, int startDstY)
           {
-              g_sdlDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64),
+              g_glDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64),
                       startDstX - ChatItemContainer::BACKGROUND_MARGIN,
                       startDstY - ChatItemContainer::BACKGROUND_MARGIN,
                       ops.w() + ChatItemContainer::BACKGROUND_MARGIN * 2,

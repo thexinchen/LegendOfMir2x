@@ -10,6 +10,7 @@
 #include "soundeffectdb.hpp"
 #include "messagestackboard.hpp"
 #include "pngtexoffdb.hpp"
+#include "audiodevice.hpp"
 #include "clientargparser.hpp"
 
 // global variables, decide to follow pattern in MapEditor
@@ -34,7 +35,8 @@ BGMusicDB         *g_bgmDB           = nullptr; // database for bgm, contains .M
 SoundEffectDB     *g_seffDB          = nullptr; // database for sound effect, contains .WAV
 MapBinDB          *g_mapBinDB        = nullptr;
 FontexDB          *g_fontexDB        = nullptr;
-SDLDevice         *g_sdlDevice       = nullptr; // for SDL hardware device
+GLDevice         *g_glDevice       = nullptr; // GLFW/GL/ImGui device
+AudioDevice       *g_audioDevice    = nullptr; // miniaudio device
 IMEBoard          *g_imeBoard        = nullptr; //
 MessageStackBoard *g_notifyBoard     = nullptr;
 Client            *g_client          = nullptr; // gobal instance
@@ -62,7 +64,7 @@ int main(int argc, char *argv[])
     }
 
     try{
-        g_sdlDevice    = new SDLDevice();
+        g_glDevice    = new GLDevice();
         g_progUseDB    = new PNGTexDB(1024);
         g_itemDB       = new PNGTexDB(1024);
         g_mapDB        = new PNGTexDB(8192);
@@ -80,6 +82,7 @@ int main(int argc, char *argv[])
         g_emojiDB      = new EmojiDB();
         g_bgmDB        = new BGMusicDB(5);
         g_seffDB       = new SoundEffectDB(128);
+        g_audioDevice  = new AudioDevice(!g_clientArgParser->disableAudio);
         g_client       = new Client();       // loads fontex resource
         g_imeBoard     = new IMEBoard{{}};
         g_notifyBoard  = new MessageStackBoard

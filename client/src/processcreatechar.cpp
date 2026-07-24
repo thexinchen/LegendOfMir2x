@@ -1,7 +1,8 @@
+#include "audiodevice.hpp"
 #include "mathf.hpp"
 #include "client.hpp"
 #include "fflerror.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "pngtexdb.hpp"
 #include "bgmusicdb.hpp"
 #include "soundeffectdb.hpp"
@@ -11,7 +12,8 @@
 #include "processcreatechar.hpp"
 
 extern Client *g_client;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
+extern AudioDevice *g_audioDevice;
 extern IMEBoard *g_imeBoard;
 extern BGMusicDB *g_bgmDB;
 extern SoundEffectDB *g_seffDB;
@@ -65,14 +67,14 @@ ProcessCreateChar::ProcessCreateChar()
           .align = ItemAlign::CENTER,
       }}
 {
-    g_sdlDevice->playBGM(g_bgmDB->retrieve(0X00040001));
+    g_audioDevice->playBGM(g_bgmDB->retrieve(0X00040001));
     g_imeBoard->dropFocus();
 }
 
 ProcessCreateChar::~ProcessCreateChar()
 {
-    g_sdlDevice->stopBGM();
-    g_sdlDevice->stopSoundEffect();
+    g_audioDevice->stopBGM();
+    g_audioDevice->stopSoundEffect();
 }
 
 void ProcessCreateChar::update(double fUpdateTime)
@@ -91,25 +93,25 @@ void ProcessCreateChar::update(double fUpdateTime)
 
 void ProcessCreateChar::draw() const
 {
-    SDLDeviceHelper::RenderNewFrame newFrame;
+    GLDeviceHelper::RenderNewFrame newFrame;
     if(auto texPtr = g_progUseDB->retrieve(0X0D000000)){
-        g_sdlDevice->drawTexture(texPtr, 0, 0);
+        g_glDevice->drawTexture(texPtr, 0, 0);
     }
 
     drawChar( true, 193, 215);
     drawChar(false, 495, 220);
 
     if(auto texPtr = g_progUseDB->retrieve(0X0D000002)){
-        SDLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::RGBA(255, 255, 255, 150));
-        g_sdlDevice->drawTexture(texPtr, 268, 555);
+        GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::RGBA(255, 255, 255, 150));
+        g_glDevice->drawTexture(texPtr, 268, 555);
     }
 
-    g_sdlDevice->fillRectangle(colorf::RGBA(  0,   0,   0, 255), 355, 520, 90, 15);
+    g_glDevice->fillRectangle(colorf::RGBA(  0,   0,   0, 255), 355, 520, 90, 15);
     m_nameBox.drawRoot({});
-    g_sdlDevice->drawRectangle(colorf::RGBA(231, 231, 189, 100), 355, 520, 90, 15);
+    g_glDevice->drawRectangle(colorf::RGBA(231, 231, 189, 100), 355, 520, 90, 15);
 
     if(auto texPtr = g_progUseDB->retrieve(0X0D000001)){
-        g_sdlDevice->drawTexture(texPtr, 320, 500);
+        g_glDevice->drawTexture(texPtr, 320, 500);
     }
 
     m_warrior.drawRoot({});
@@ -126,8 +128,8 @@ void ProcessCreateChar::draw() const
     const int margin = 15;
 
     if(!m_notifyBoard.empty()){
-        g_sdlDevice->fillRectangle(colorf::RGBA(0, 0,   0, 128), notifX - margin, notifY - margin, m_notifyBoard.w() + margin * 2, m_notifyBoard.h() + margin * 2, 8);
-        g_sdlDevice->drawRectangle(colorf::RGBA(0, 0, 255, 128), notifX - margin, notifY - margin, m_notifyBoard.w() + margin * 2, m_notifyBoard.h() + margin * 2, 8);
+        g_glDevice->fillRectangle(colorf::RGBA(0, 0,   0, 128), notifX - margin, notifY - margin, m_notifyBoard.w() + margin * 2, m_notifyBoard.h() + margin * 2, 8);
+        g_glDevice->drawRectangle(colorf::RGBA(0, 0, 255, 128), notifX - margin, notifY - margin, m_notifyBoard.w() + margin * 2, m_notifyBoard.h() + margin * 2, 8);
     }
     m_notifyBoard.draw({.dir=DIR_UPLEFT, .x=notifX, .y=notifY});
 }
@@ -163,7 +165,7 @@ void ProcessCreateChar::processEvent(const SDL_Event &event)
             }
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
                 {
-                    const auto [px, py] = SDLDeviceHelper::getMousePLoc();
+                    const auto [px, py] = GLDeviceHelper::getMousePLoc();
                     if(mathf::pointInRectangle(px, py, 200, 290, 90, 260)){
                         m_activeGender = true;
                     }
@@ -282,8 +284,8 @@ void ProcessCreateChar::drawChar(bool gender, int drawX, int drawY) const
                 }
             }();
 
-            SDLDeviceHelper::EnableTextureModColor enableModColor(texPtr, modColor);
-            g_sdlDevice->drawTexture(texPtr, drawX + dx, drawY + dy);
+            GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, modColor);
+            g_glDevice->drawTexture(texPtr, drawX + dx, drawY + dy);
             return true;
         }
         return false;
@@ -306,5 +308,5 @@ void ProcessCreateChar::playMagicSoundEffect()
         | (to_u32(offJob   ) << 8)               //
         | (to_u32(0        ) << 0);              // 0 for create, 1 for select
 
-    g_sdlDevice->playSoundEffect(g_seffDB->retrieve(seffID));
+    g_audioDevice->playSoundEffect(g_seffDB->retrieve(seffID));
 }

@@ -1,12 +1,12 @@
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 std::optional<std::tuple<PNGTexElement, size_t>> PNGTexDB::loadResource(uint32_t key)
 {
     char keyString[16];
     if(std::vector<uint8_t> dataBuf; m_zsdbPtr->decomp(hexstr::to_string<uint32_t, 4>(key, keyString, true), 8, &dataBuf)){
-        if(auto texPtr = g_sdlDevice->loadPNGTexture(dataBuf.data(), dataBuf.size())){
+        if(auto texPtr = g_glDevice->loadPNGTexture(dataBuf.data(), dataBuf.size())){
             return std::make_tuple(PNGTexElement
             {
                 .texture = texPtr,
@@ -19,7 +19,7 @@ std::optional<std::tuple<PNGTexElement, size_t>> PNGTexDB::loadResource(uint32_t
 void PNGTexDB::freeResource(PNGTexElement &element)
 {
     if(element.texture){
-        SDL_DestroyTexture(element.texture);
+        g_glDevice->destroyTexture(element.texture);
         element.texture = nullptr;
     }
 }

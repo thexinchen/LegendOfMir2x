@@ -1,4 +1,4 @@
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "gfxshapeboard.hpp"
 
 GfxShapeBoard::GfxShapeBoard(GfxShapeBoard::InitArgs args)
@@ -28,7 +28,7 @@ void GfxShapeBoard::drawDefault(Widget::ROIMap m) const
     }
 
     if(Widget::hasDrawFunc(m_drawFunc)){
-        const SDLDeviceHelper::EnableRenderCropRectangle enableClip(m.x, m.y, m.ro->w, m.ro->h);
+        const GLDeviceHelper::EnableRenderCropRectangle enableClip(m.x, m.y, m.ro->w, m.ro->h);
         Widget::execDrawFunc(m_drawFunc, this, m.x - m.ro->x, m.y - m.ro->y);
     }
 }

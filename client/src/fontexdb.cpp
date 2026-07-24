@@ -1,8 +1,8 @@
 #include "colorf.hpp"
 #include "fontexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 TTF_Font *FontexDB::findTTF(uint16_t ttfIndex)
 {
@@ -16,7 +16,7 @@ TTF_Font *FontexDB::findTTF(uint16_t ttfIndex)
         const uint8_t fontSize  = to_u8((ttfIndex & 0X00FF) >> 0);
 
         if(auto &fontDataBuf = findFontData(fontIndex); !fontDataBuf.empty()){
-            return g_sdlDevice->createTTF(fontDataBuf.data(), fontDataBuf.size(), fontSize);
+            return g_glDevice->createTTF(fontDataBuf.data(), fontDataBuf.size(), fontSize);
         }
         return nullptr;
     }();
@@ -49,7 +49,7 @@ std::optional<std::tuple<FontexElement, size_t>> FontexDB::loadResource(uint64_t
         }
 
         if(result.texture){
-            const auto [texW, texH] = SDLDeviceHelper::getTextureSize(result.texture);
+            const auto [texW, texH] = GLDeviceHelper::getTextureSize(result.texture);
             return std::make_tuple(result, texW * texH + 50);
         }
         else if(useLongText){
@@ -365,7 +365,7 @@ std::optional<std::tuple<FontexElement, size_t>> FontexDB::loadResource(uint64_t
     }
 
     if(surf){
-        result.texture = g_sdlDevice->createTextureFromSurface(surf);
+        result.texture = g_glDevice->createTextureFromSurface(surf);
         SDL_DestroySurface(surf);
     }
 
@@ -375,7 +375,7 @@ std::optional<std::tuple<FontexElement, size_t>> FontexDB::loadResource(uint64_t
 void FontexDB::freeResource(FontexElement &element)
 {
     if(element.texture){
-        SDL_DestroyTexture(element.texture);
+        g_glDevice->destroyTexture(element.texture);
         element.texture = nullptr;
     }
 

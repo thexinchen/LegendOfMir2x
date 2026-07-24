@@ -1,7 +1,6 @@
 #include "soundeffecthandle.hpp"
 #include "clientargparser.hpp"
 #include "soundeffectdb.hpp"
-#include "sdldevice.hpp"
 #include "hexstr.hpp"
 
 // sound index remap information mostly from:
@@ -141,7 +140,6 @@
 // 2. remove M27-R.wav, because looks M27-L.wav and M27-R.wav are identical, and these two files are not used for magic sound actually
 
 extern ClientArgParser *g_clientArgParser;
-extern SDLDevice *g_sdlDevice;
 std::optional<std::tuple<SoundEffectElement, size_t>> SoundEffectDB::loadResource(uint32_t key)
 {
     if(g_clientArgParser->disableAudio){
@@ -159,32 +157,22 @@ std::optional<std::tuple<SoundEffectElement, size_t>> SoundEffectDB::loadResourc
         return {};
     }
 
-    // predecode=true: small sound effect, decode fully into memory
-    // closeio=true: MIX_DestroyAudio() closes the iostream
-    MIX_Audio *audioPtr = nullptr;
-    if(auto ioStream = SDL_IOFromConstMem(soundEffectDataBuf.data(), soundEffectDataBuf.size())){
-        audioPtr = MIX_LoadAudio_IO(g_sdlDevice->getMixer(), ioStream, true, true);
-    }
-
-    if(!audioPtr){
-        return {};
-    }
-
+    // miniaudio decodes from the raw (MP3/WAV) bytes at play time
     return std::make_tuple(SoundEffectElement
     {
-        .handle = std::shared_ptr<SoundEffectHandle>(new SoundEffectHandle
+        .handle = std::make_shared<SoundEffectHandle>(SoundEffectHandle
         {
-            .audio = audioPtr,
-            .chunkFileData = std::move(soundEffectDataBuf),
+            .audio = std::make_shared<AudioClip>(AudioClip
+            {
+                .data = std::move(soundEffectDataBuf),
+            }),
+            .chunkFileData = {},
         }),
     }, 1);
 }
 
 void SoundEffectDB::freeResource(SoundEffectElement &element)
 {
-    // check SDL_mixer docmument
-    // Mix_FreeMusic() stops music if it's playing, this is blocking when music doing fading out
-
     if(g_clientArgParser->disableAudio){
         return;
     }

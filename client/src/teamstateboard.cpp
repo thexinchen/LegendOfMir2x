@@ -2,7 +2,7 @@
 #include "strf.hpp"
 #include "uidf.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "combatnode.hpp"
 #include "processrun.hpp"
 #include "pngtexoffdb.hpp"
@@ -14,7 +14,7 @@ extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;
 extern PNGTexOffDB *g_equipDB;
 extern SoundEffectDB *g_seffDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
 TeamStateBoard::TeamStateBoard(int argX, int argY, ProcessRun *runPtr, Widget *argParent, bool argAutoDelete)
@@ -158,7 +158,7 @@ TeamStateBoard::TeamStateBoard(int argX, int argY, ProcessRun *runPtr, Widget *a
     const auto [texW, texH] = []() -> std::tuple<int, int>
     {
         if(auto texPtr = g_progUseDB->retrieve(0X00000150)){
-            return SDLDeviceHelper::getTextureSize(texPtr);
+            return GLDeviceHelper::getTextureSize(texPtr);
         }
         else{
             return {258, 244};
@@ -190,10 +190,10 @@ void TeamStateBoard::drawDefault(Widget::ROIMap m) const
     const auto remapYDiff = m.y - m.ro->y;
 
     if(auto texPtr = g_progUseDB->retrieve(0X00000150)){
-        const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+        const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
         const auto texRepeatStartY = m_uidRegionY + (m_uidRegionH - m_texRepeatH) / 2;
 
-        g_sdlDevice->drawTexture(texPtr, remapXDiff, remapYDiff, 0, 0, texW, texRepeatStartY);
+        g_glDevice->drawTexture(texPtr, remapXDiff, remapYDiff, 0, 0, texW, texRepeatStartY);
 
         const auto neededUIDRegionH = lineShowCount() * lineHeight();
         const auto neededRepeatTexH = neededUIDRegionH - (m_uidRegionH - m_texRepeatH);
@@ -202,32 +202,32 @@ void TeamStateBoard::drawDefault(Widget::ROIMap m) const
         const auto repeatRest  = neededRepeatTexH % m_texRepeatH;
 
         for(size_t i = 0; i < repeatCount; ++i){
-            g_sdlDevice->drawTexture(texPtr, remapXDiff, remapYDiff + texRepeatStartY + i * m_texRepeatH, 0, texRepeatStartY, texW, m_texRepeatH);
+            g_glDevice->drawTexture(texPtr, remapXDiff, remapYDiff + texRepeatStartY + i * m_texRepeatH, 0, texRepeatStartY, texW, m_texRepeatH);
         }
 
         if(repeatRest > 0){
-            g_sdlDevice->drawTexture(texPtr, remapXDiff, remapYDiff + texRepeatStartY + repeatCount * m_texRepeatH, 0, texRepeatStartY, texW, repeatRest);
+            g_glDevice->drawTexture(texPtr, remapXDiff, remapYDiff + texRepeatStartY + repeatCount * m_texRepeatH, 0, texRepeatStartY, texW, repeatRest);
         }
 
         const int texRepeatEndY = texRepeatStartY + m_texRepeatH;
-        g_sdlDevice->drawTexture(texPtr, remapXDiff, remapYDiff + texRepeatStartY + neededRepeatTexH, 0, texRepeatEndY, texW, texH - texRepeatEndY);
+        g_glDevice->drawTexture(texPtr, remapXDiff, remapYDiff + texRepeatStartY + neededRepeatTexH, 0, texRepeatEndY, texW, texH - texRepeatEndY);
 
         LabelBoard header{{.label = m_showCandidateList ? u8"申请加入" : u8"当前队伍", .font{.color = colorf::RGBA(0XFF, 0XFF, 0X00, 0XFF)}}};
         header.draw({.dir=DIR_NONE, .x{remapXDiff + w() / 2}, .y{remapYDiff + 57}});
     }
 
-    const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+    const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
 
     std::string nameText;
     XMLTypeset line(-1, LALIGN_LEFT, false, false, m_font, m_fontSize, m_fontStyle, m_fontColor);
 
     for(size_t i = 0; (i < lineShowCount()) && (i + m_startIndex[m_showCandidateList] < lineCount()); ++i){
         if((m_selectedIndex[m_showCandidateList] >= 0) && (to_d(i) + m_startIndex[m_showCandidateList] == m_selectedIndex[m_showCandidateList])){
-            g_sdlDevice->fillRectangle(m_selectedBGColor, remapXDiff + m_uidRegionX, remapYDiff + m_uidRegionY + i * lineHeight(), m_uidRegionW, lineHeight());
+            g_glDevice->fillRectangle(m_selectedBGColor, remapXDiff + m_uidRegionX, remapYDiff + m_uidRegionY + i * lineHeight(), m_uidRegionW, lineHeight());
         }
 
         if(mathf::pointInRectangle<int>(mousePX, mousePY, remapXDiff + m_uidRegionX, remapYDiff + m_uidRegionY + i * lineHeight(), m_uidRegionW, lineHeight())){
-            g_sdlDevice->fillRectangle(m_hoveredColor, remapXDiff + m_uidRegionX, remapYDiff + m_uidRegionY + i * lineHeight(), m_uidRegionW, lineHeight());
+            g_glDevice->fillRectangle(m_hoveredColor, remapXDiff + m_uidRegionX, remapYDiff + m_uidRegionY + i * lineHeight(), m_uidRegionW, lineHeight());
         }
 
         const auto &sdTP = getSDTeamPlayer(i + m_startIndex[m_showCandidateList]);
@@ -319,7 +319,7 @@ bool TeamStateBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
             }
         case SDL_EVENT_MOUSE_WHEEL:
             {
-                const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+                const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
                 if(mathf::pointInRectangle<int>(mousePX, mousePY, remapXDiff + m_uidRegionX, remapYDiff + m_uidRegionY, m_uidRegionW, lineHeight() * lineShowCount())){
                     if(lineCount() <= lineShowCount()){
                         m_startIndex[m_showCandidateList] = 0;
@@ -336,7 +336,7 @@ bool TeamStateBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
         case SDL_EVENT_MOUSE_MOTION:
             {
                 if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
-                    const auto [rendererW, rendererH] = g_sdlDevice->getRendererSize();
+                    const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
                     const int maxX = rendererW - w();
                     const int maxY = rendererH - h();
 

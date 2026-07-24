@@ -2,11 +2,11 @@
 #include "totype.hpp"
 #include "pngtexdb.hpp"
 #include "textboard.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "gfxdebugboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
     : Widget
@@ -29,8 +29,8 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
           .drawFunc = [this](int dstDrawX, int dstDrawY)
           {
-              g_sdlDevice->fillRectangle(colorf::BLACK + colorf::A_SHF(0XF0), dstDrawX, dstDrawY, w(), h());
-              g_sdlDevice->drawRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, w(), h());
+              g_glDevice->fillRectangle(colorf::BLACK + colorf::A_SHF(0XF0), dstDrawX, dstDrawY, w(), h());
+              g_glDevice->drawRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, w(), h());
           },
 
           .parent{this},
@@ -104,13 +104,13 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
               const float vr0 = m_cropVSlider_0.getValue();
               const float vr1 = m_cropVSlider_1.getValue();
 
-              g_sdlDevice->drawRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, w, h);
+              g_glDevice->drawRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, w, h);
 
-              g_sdlDevice->drawLine(colorf::RED_A255, dstDrawX + hr0 * w, dstDrawY, dstDrawX + hr0 * w, dstDrawY + h - 1);
-              g_sdlDevice->drawLine(colorf::RED_A255, dstDrawX + hr1 * w, dstDrawY, dstDrawX + hr1 * w, dstDrawY + h - 1);
+              g_glDevice->drawLine(colorf::RED_A255, dstDrawX + hr0 * w, dstDrawY, dstDrawX + hr0 * w, dstDrawY + h - 1);
+              g_glDevice->drawLine(colorf::RED_A255, dstDrawX + hr1 * w, dstDrawY, dstDrawX + hr1 * w, dstDrawY + h - 1);
 
-              g_sdlDevice->drawLine(colorf::BLUE_A255, dstDrawX, dstDrawY + vr0 * h, dstDrawX + w - 1, dstDrawY + vr0 * h);
-              g_sdlDevice->drawLine(colorf::BLUE_A255, dstDrawX, dstDrawY + vr1 * h, dstDrawX + w - 1, dstDrawY + vr1 * h);
+              g_glDevice->drawLine(colorf::BLUE_A255, dstDrawX, dstDrawY + vr0 * h, dstDrawX + w - 1, dstDrawY + vr0 * h);
+              g_glDevice->drawLine(colorf::BLUE_A255, dstDrawX, dstDrawY + vr1 * h, dstDrawX + w - 1, dstDrawY + vr1 * h);
           },
 
           .parent{&m_imgCanvas},
@@ -146,7 +146,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
                   .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                   {
-                      g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+                      g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
                   },
               }},
               .autoDelete = true,
@@ -188,7 +188,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
                   .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                   {
-                      g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+                      g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
                   },
               }},
               .autoDelete = true,
@@ -231,7 +231,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
                   .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                   {
-                      g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+                      g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
                   },
               }},
               .autoDelete = true,
@@ -269,7 +269,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
                   .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                   {
-                      g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+                      g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
                   },
               }},
               .autoDelete = true,
@@ -306,7 +306,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
                  .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                  {
-                     g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+                     g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
                  },
              }},
              .autoDelete = true,
@@ -343,7 +343,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
                  .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                  {
-                     g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+                     g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
                  },
              }},
              .autoDelete = true,
@@ -359,7 +359,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
           .textFunc = [this]
           {
-              return str_printf("TEX (%d, %d)", SDLDeviceHelper::getTextureWidth(m_img.getTexture(), 0), SDLDeviceHelper::getTextureHeight(m_img.getTexture(), 0));
+              return str_printf("TEX (%d, %d)", GLDeviceHelper::getTextureWidth(m_img.getTexture(), 0), GLDeviceHelper::getTextureHeight(m_img.getTexture(), 0));
           },
 
           .font{.size = 10},
@@ -443,8 +443,8 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
           .bgDrawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
           {
-              g_sdlDevice->fillRectangle(colorf::BLACK + colorf::A_SHF(0XF0), dstDrawX, dstDrawY, self->w(), self->h());
-              g_sdlDevice->drawRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+              g_glDevice->fillRectangle(colorf::BLACK + colorf::A_SHF(0XF0), dstDrawX, dstDrawY, self->w(), self->h());
+              g_glDevice->drawRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
           },
 
           .fgDrawFunc = [this](const Widget *self, int dstDrawX, int dstDrawY)
@@ -458,13 +458,13 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
               const float vr0 = m_marginVSlider_0.getValue();
               const float vr1 = m_marginVSlider_1.getValue();
 
-              g_sdlDevice->drawRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, w, h);
+              g_glDevice->drawRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, w, h);
 
-              g_sdlDevice->drawLine(colorf::RED_A255, dstDrawX + hr0 * w, dstDrawY, dstDrawX + hr0 * w, dstDrawY + h - 1);
-              g_sdlDevice->drawLine(colorf::RED_A255, dstDrawX + hr1 * w, dstDrawY, dstDrawX + hr1 * w, dstDrawY + h - 1);
+              g_glDevice->drawLine(colorf::RED_A255, dstDrawX + hr0 * w, dstDrawY, dstDrawX + hr0 * w, dstDrawY + h - 1);
+              g_glDevice->drawLine(colorf::RED_A255, dstDrawX + hr1 * w, dstDrawY, dstDrawX + hr1 * w, dstDrawY + h - 1);
 
-              g_sdlDevice->drawLine(colorf::BLUE_A255, dstDrawX, dstDrawY + vr0 * h, dstDrawX + w - 1, dstDrawY + vr0 * h);
-              g_sdlDevice->drawLine(colorf::BLUE_A255, dstDrawX, dstDrawY + vr1 * h, dstDrawX + w - 1, dstDrawY + vr1 * h);
+              g_glDevice->drawLine(colorf::BLUE_A255, dstDrawX, dstDrawY + vr0 * h, dstDrawX + w - 1, dstDrawY + vr0 * h);
+              g_glDevice->drawLine(colorf::BLUE_A255, dstDrawX, dstDrawY + vr1 * h, dstDrawX + w - 1, dstDrawY + vr1 * h);
           },
 
           .parent{&m_dstCanvas},
@@ -503,7 +503,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
                   .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                   {
-                      g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+                      g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
                   },
               }},
               .autoDelete = true,
@@ -545,7 +545,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
                   .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                   {
-                      g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+                      g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
                   },
               }},
               .autoDelete = true,
@@ -586,7 +586,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
                  .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                  {
-                     g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+                     g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
                  },
              }},
              .autoDelete = true,
@@ -627,7 +627,7 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
 
                  .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
                  {
-                     g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
+                     g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(0X80), dstDrawX, dstDrawY, self->w(), self->h());
                  },
              }},
              .autoDelete = true,

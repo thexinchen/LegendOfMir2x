@@ -1,12 +1,17 @@
 #pragma once
-#include <SDL3/SDL.h>
-#include <SDL3_mixer/SDL_mixer.h>
+//
+// Stage 1b: MIX_Audio replaced by an AudioClip (miniaudio decodes at play
+// time, see audiodevice.hpp). chunkFileData kept for struct-shape parity;
+// the bytes now live inside the clip.
+
+#include <memory>
 #include <vector>
+#include <cstdint>
+
+#include "audioclip.hpp"
 
 struct SoundEffectHandle
 {
-    MIX_Audio *audio = nullptr;
+    std::shared_ptr<AudioClip> audio = nullptr;
     std::vector<uint8_t> chunkFileData;
-
-    ~SoundEffectHandle();
 };

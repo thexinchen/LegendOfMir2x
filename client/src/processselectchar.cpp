@@ -1,3 +1,4 @@
+#include "audiodevice.hpp"
 #include "log.hpp"
 #include "jobf.hpp"
 #include "pathf.hpp"
@@ -6,7 +7,7 @@
 #include "bgmusicdb.hpp"
 #include "soundeffectdb.hpp"
 #include "pngtexoffdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "layoutboard.hpp"
 #include "processselectchar.hpp"
 
@@ -15,7 +16,8 @@ extern Client *g_client;
 extern BGMusicDB *g_bgmDB;
 extern SoundEffectDB *g_seffDB;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
+extern AudioDevice *g_audioDevice;
 extern PNGTexOffDB *g_selectCharDB;
 
 ProcessSelectChar::ProcessSelectChar()
@@ -35,8 +37,8 @@ ProcessSelectChar::ProcessSelectChar()
       {{
           .drawFunc = [](const Widget *self, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(colorf::RGBA(0, 0,   0, 128), drawDstX, drawDstY, self->w(), self->h(), 8);
-              g_sdlDevice->drawRectangle(colorf::RGBA(0, 0, 255, 128), drawDstX, drawDstY, self->w(), self->h(), 8);
+              g_glDevice->fillRectangle(colorf::RGBA(0, 0,   0, 128), drawDstX, drawDstY, self->w(), self->h(), 8);
+              g_glDevice->drawRectangle(colorf::RGBA(0, 0, 255, 128), drawDstX, drawDstY, self->w(), self->h(), 8);
           },
 
           .parent{&m_canvas},
@@ -76,13 +78,13 @@ ProcessSelectChar::ProcessSelectChar()
     m_notifyBoard.addMessage(u8"正在下载游戏角色");
 
     g_client->send(CM_QUERYCHAR);
-    g_sdlDevice->playBGM(g_bgmDB->retrieve(0X00040002));
+    g_audioDevice->playBGM(g_bgmDB->retrieve(0X00040002));
 }
 
 ProcessSelectChar::~ProcessSelectChar()
 {
-    g_sdlDevice->stopBGM();
-    g_sdlDevice->stopSoundEffect();
+    g_audioDevice->stopBGM();
+    g_audioDevice->stopSoundEffect();
 }
 
 void ProcessSelectChar::update(double fUpdateTime)
@@ -97,9 +99,9 @@ void ProcessSelectChar::update(double fUpdateTime)
 
 void ProcessSelectChar::draw() const
 {
-    SDLDeviceHelper::RenderNewFrame newFrame;
+    GLDeviceHelper::RenderNewFrame newFrame;
     if(auto texPtr = g_progUseDB->retrieve(0X0C000000)){
-        g_sdlDevice->drawTexture(texPtr, 0, 0);
+        g_glDevice->drawTexture(texPtr, 0, 0);
     }
 
     m_canvas.drawRoot({});
@@ -215,8 +217,8 @@ void ProcessSelectChar::drawCharName() const
         const int drawBoardY = 260 - charBoard.h();
         const int drawBoardMargin = 15;
 
-        g_sdlDevice->fillRectangle(colorf::RGBA(  0,   0,   0, 128), drawBoardX - drawBoardMargin, drawBoardY - drawBoardMargin, charBoard.w() + drawBoardMargin * 2, charBoard.h() + drawBoardMargin * 2, 5);
-        g_sdlDevice->drawRectangle(colorf::RGBA(231, 231, 189, 128), drawBoardX - drawBoardMargin, drawBoardY - drawBoardMargin, charBoard.w() + drawBoardMargin * 2, charBoard.h() + drawBoardMargin * 2, 5);
+        g_glDevice->fillRectangle(colorf::RGBA(  0,   0,   0, 128), drawBoardX - drawBoardMargin, drawBoardY - drawBoardMargin, charBoard.w() + drawBoardMargin * 2, charBoard.h() + drawBoardMargin * 2, 5);
+        g_glDevice->drawRectangle(colorf::RGBA(231, 231, 189, 128), drawBoardX - drawBoardMargin, drawBoardY - drawBoardMargin, charBoard.w() + drawBoardMargin * 2, charBoard.h() + drawBoardMargin * 2, 5);
         charBoard.draw({.x=drawBoardX, .y=drawBoardY});
     }
 }
@@ -299,8 +301,8 @@ void ProcessSelectChar::drawChar() const
             constexpr int drawY = 300;
 
             if(const auto [texPtr, dx, dy] = g_selectCharDB->retrieve(texIndex); texPtr){
-                SDLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::WHITE + colorf::A_SHF(alpha ? 150 : 255));
-                g_sdlDevice->drawTexture(texPtr, drawX + dx, drawY + dy);
+                GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::WHITE + colorf::A_SHF(alpha ? 150 : 255));
+                g_glDevice->drawTexture(texPtr, drawX + dx, drawY + dy);
                 return true;
             }
             return false;
@@ -383,6 +385,6 @@ void ProcessSelectChar::switchCharGfx()
             | (to_u32(offGender) << 4)               //
             | (to_u32(offJob   ) << 8)               //
             | (to_u32(1        ) << 0);              // 0 for create, 1 for select
-        g_sdlDevice->playSoundEffect(g_seffDB->retrieve(seffID));
+        g_audioDevice->playSoundEffect(g_seffDB->retrieve(seffID));
     }
 }

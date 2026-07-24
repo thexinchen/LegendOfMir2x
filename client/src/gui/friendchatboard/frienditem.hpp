@@ -47,7 +47,7 @@ struct FriendItem: public Widget
             const SDChatPeerID &,
 
             const char8_t *,
-            std::function<SDL_Texture *(const Widget *)>,
+            std::function<GLTexID (const Widget *)>,
 
             std::function<void(FriendItem *)> = nullptr,
             std::pair<Widget *, bool> argFuncWidget = {},

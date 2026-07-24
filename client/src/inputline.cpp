@@ -4,12 +4,12 @@
 #include "colorf.hpp"
 #include "imeboard.hpp"
 #include "inputline.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "labelboard.hpp"
 #include "clientargparser.hpp"
 
 extern IMEBoard *g_imeBoard;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
 InputLine::InputLine(InputLine::InitArgs args)
@@ -150,7 +150,7 @@ bool InputLine::processEventDefault(const SDL_Event &event, bool valid, Widget::
                     default:
                         {
                             const auto ime = Widget::evalInt(m_imeEnabled, this);
-                            const char keyChar = SDLDeviceHelper::getKeyChar(event, true);
+                            const char keyChar = GLDeviceHelper::getKeyChar(event, true);
 
                             if(ime == IME_SYSTEM){
                                 // when System IME is enabled
@@ -216,10 +216,10 @@ void InputLine::setFocus(bool argFocus)
 {
     Widget::setFocus(argFocus);
     if(focus() && (Widget::evalInt(m_imeEnabled, this) == IME_SYSTEM)){
-        g_sdlDevice->enableSystemIME(id());
+        g_glDevice->enableSystemIME(id());
     }
     else{
-        g_sdlDevice->disableSystemIME(id());
+        g_glDevice->disableSystemIME(id());
     }
     m_cursorBlink = 0.0;
 }
@@ -281,11 +281,11 @@ void InputLine::drawDefault(Widget::ROIMap m) const
     int cursorH = std::max<int>(m_tpset.ph(), h());
 
     if(mathf::rectangleOverlapRegion(m.x, m.y, m.ro->w, m.ro->h, cursorX, cursorY, cursorW, cursorH)){
-        g_sdlDevice->fillRectangle(Widget::evalU32(m_cursorArgs.color, this), cursorX, cursorY, cursorW, cursorH);
+        g_glDevice->fillRectangle(Widget::evalU32(m_cursorArgs.color, this), cursorX, cursorY, cursorW, cursorH);
     }
 
     if(g_clientArgParser->debugDrawInputLine){
-        g_sdlDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(255), m.x, m.y, w(), h());
+        g_glDevice->drawRectangle(colorf::BLUE + colorf::A_SHF(255), m.x, m.y, w(), h());
     }
 }
 

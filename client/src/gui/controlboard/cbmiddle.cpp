@@ -7,7 +7,7 @@
 #include "colorf.hpp"
 #include "totype.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "imageboard.hpp"
 #include "processrun.hpp"
 #include "controlboard.hpp"
@@ -16,7 +16,7 @@
 
 extern Log *g_mir2xLog;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 CBMiddle::CBMiddle(
         Widget::VarDir argDir,
@@ -79,7 +79,7 @@ CBMiddle::CBMiddle(
 
           .drawFunc = [this](const Widget *self, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(colorf::A_SHF(0XFF), drawDstX, drawDstY, self->w(), self->h());
+              g_glDevice->fillRectangle(colorf::A_SHF(0XFF), drawDstX, drawDstY, self->w(), self->h());
           },
 
           .parent{this},

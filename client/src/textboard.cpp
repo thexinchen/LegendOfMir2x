@@ -24,7 +24,7 @@ TextBoard::TextBoard(TextBoard::InitArgs args)
 
     , m_image
       {{
-          .texLoadFunc = [this]() -> SDL_Texture *
+          .texLoadFunc = [this]() -> GLTexID 
           {
               if(const auto s = getVStr(); s.empty()){
                   return nullptr;

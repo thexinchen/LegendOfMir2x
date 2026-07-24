@@ -2,11 +2,11 @@
 #include "totype.hpp"
 #include "bevent.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "alphaonbutton.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 AlphaOnButton::AlphaOnButton(AlphaOnButton::InitArgs args)
     : TrigfxButton
@@ -32,7 +32,7 @@ AlphaOnButton::AlphaOnButton(AlphaOnButton::InitArgs args)
 
     , m_down
       {{
-          .texLoadFunc = [texID = std::move(args.downTexID), this] -> SDL_Texture *
+          .texLoadFunc = [texID = std::move(args.downTexID), this] -> GLTexID 
           {
               return g_progUseDB->retrieve(Widget::evalU32(texID, this));
           },
@@ -52,9 +52,9 @@ AlphaOnButton::AlphaOnButton(AlphaOnButton::InitArgs args)
                       .w = [this]{ return m_down.h(); }, // downTexID has blank alpha area on right side, use h() as w()
                       .h = [this]{ return m_down.h(); },
 
-                      .texLoadFunc = [this] -> SDL_Texture *
+                      .texLoadFunc = [this] -> GLTexID 
                       {
-                          return g_sdlDevice->getCover(m_onRadius, 360);
+                          return g_glDevice->getCover(m_onRadius, 360);
                       },
 
                       .modColor = std::move(args.modColor),

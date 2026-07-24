@@ -1,13 +1,13 @@
 #include "hero.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "chatpreviewitem.hpp"
 #include "friendchatboard.hpp"
 #include "friendchatboardconst.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ChatPreviewItem::ChatPreviewItem(
         Widget::VarDir  argDir,
@@ -47,7 +47,7 @@ ChatPreviewItem::ChatPreviewItem(
           .w = ChatPreviewItem::AVATAR_WIDTH,
           .h = ChatPreviewItem::HEIGHT - ChatPreviewItem::ITEM_MARGIN * 2,
 
-          .texLoadFunc = [this](const Widget *) -> SDL_Texture *
+          .texLoadFunc = [this](const Widget *) -> GLTexID 
           {
               return g_progUseDB->retrieve(0X010007CF);
           },
@@ -115,12 +115,12 @@ ChatPreviewItem::ChatPreviewItem(
 
           .drawFunc = [this](int drawDstX, int drawDstY)
           {
-              if(Widget::ROIMap{.x=drawDstX, .y=drawDstY, .ro{roi()}}.in(SDLDeviceHelper::getMousePLoc())){
-                  g_sdlDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
-                  g_sdlDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
+              if(Widget::ROIMap{.x=drawDstX, .y=drawDstY, .ro{roi()}}.in(GLDeviceHelper::getMousePLoc())){
+                  g_glDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
+                  g_glDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
               }
               else{
-                  g_sdlDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(32), drawDstX, drawDstY, w(), h());
+                  g_glDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(32), drawDstX, drawDstY, w(), h());
               }
           },
 

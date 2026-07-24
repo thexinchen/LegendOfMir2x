@@ -16,16 +16,16 @@
 #include "sysconst.hpp"
 #include "pngtexdb.hpp"
 #include "raiitimer.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "cerealf.hpp"
 #include "imeboard.hpp"
 #include "gui/controlboard/controlboard.hpp"
 #include "gui/friendchatboard/friendchatboard.hpp"
 #include "serdesmsg.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
 void ProcessRun::on_SM_STARTGAMESCENE(const uint8_t *buf, size_t bufSize)
@@ -604,7 +604,7 @@ void ProcessRun::on_SM_STARTINVOP(const uint8_t *buf, size_t size)
     auto invBoardPtr = dynamic_cast<InventoryBoard *>(getWidget("InventoryBoard"));
 
     invBoardPtr->setShow(true);
-    invBoardPtr->moveAt(DIR_UPRIGHT, g_sdlDevice->getRendererWidth() - 1, 0);
+    invBoardPtr->moveAt(DIR_UPRIGHT, g_glDevice->getRendererWidth() - 1, 0);
     invBoardPtr->startInvOp(cerealf::deserialize<SDStartInvOp>(buf, size));
 }
 
@@ -906,7 +906,7 @@ void ProcessRun::on_SM_SHOWSECUREDITEMLIST(const uint8_t *buf, size_t bufSize)
 
     auto invBoardPtr = dynamic_cast<InventoryBoard *>(getWidget("InventoryBoard"));
     invBoardPtr->setShow(true);
-    invBoardPtr->moveAt(DIR_UPRIGHT, g_sdlDevice->getRendererWidth() - 1, 0);
+    invBoardPtr->moveAt(DIR_UPRIGHT, g_glDevice->getRendererWidth() - 1, 0);
 }
 
 void ProcessRun::on_SM_TEAMCANDIDATE(const uint8_t *buf, size_t bufSize)

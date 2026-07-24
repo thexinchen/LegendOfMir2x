@@ -1,9 +1,9 @@
 #include <SDL3/SDL.h>
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "sliderbase.hpp"
 #include "clientargparser.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
 SliderBase::SliderBase(SliderBase::InitArgs args)
@@ -53,14 +53,14 @@ SliderBase::SliderBase(SliderBase::InitArgs args)
           .drawFunc = [this](const Widget *self, int drawDstX, int drawDstY)
           {
               if(g_clientArgParser->debugSlider){
-                  g_sdlDevice->drawRectangle(colorf::GREEN_A255, drawDstX, drawDstY, self->w(), self->h());
-                  g_sdlDevice->drawRectangle(colorf::BLUE_A255, drawDstX + m_bar.dx(), drawDstY + m_bar.dy(), m_bar.w(), m_bar.h());
+                  g_glDevice->drawRectangle(colorf::GREEN_A255, drawDstX, drawDstY, self->w(), self->h());
+                  g_glDevice->drawRectangle(colorf::BLUE_A255, drawDstX + m_bar.dx(), drawDstY + m_bar.dy(), m_bar.w(), m_bar.h());
 
                   const auto r = getSliderROI(drawDstX, drawDstY);
                   const auto [cx, cy] = getValueCenter(drawDstX, drawDstY);
 
-                  g_sdlDevice->drawLine(colorf::YELLOW_A255, r.x, r.y, cx, cy);
-                  g_sdlDevice->drawRectangle(colorf::RED_A255, r.x, r.y, r.w, r.h);
+                  g_glDevice->drawLine(colorf::YELLOW_A255, r.x, r.y, cx, cy);
+                  g_glDevice->drawRectangle(colorf::RED_A255, r.x, r.y, r.w, r.h);
               }
           },
 

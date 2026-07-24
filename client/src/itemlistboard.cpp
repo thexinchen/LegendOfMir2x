@@ -1,13 +1,13 @@
 #include "strf.hpp"
 #include "client.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "inputstringboard.hpp"
 
 extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ItemListBoard::ItemListBoard(int argX, int argY, Widget *argParent, bool argAutoDelete)
     : Widget
@@ -102,8 +102,8 @@ ItemListBoard::ItemListBoard(int argX, int argY, Widget *argParent, bool argAuto
 {
     setShow(false);
     if(auto texPtr = g_progUseDB->retrieve(0X08000000)){
-        setW(SDLDeviceHelper::getTextureWidth (texPtr));
-        setH(SDLDeviceHelper::getTextureHeight(texPtr));
+        setW(GLDeviceHelper::getTextureWidth (texPtr));
+        setH(GLDeviceHelper::getTextureHeight(texPtr));
     }
     else{
         throw fflpanic("no valid purchase status board frame texture");
@@ -155,7 +155,7 @@ bool ItemListBoard::processEventDefault(const SDL_Event &event, bool valid, Widg
 
 std::optional<size_t> ItemListBoard::getPageGrid() const
 {
-    const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+    const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
 
     const int onBoardPX = mousePX;// - x();
     const int onBoardPY = mousePY;// - y();
@@ -190,9 +190,9 @@ void ItemListBoard::drawGridHoverLayout(size_t index) const
 
     const int margin = 20;
     const int maxWidth = 200;
-    const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+    const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
 
-    g_sdlDevice->fillRectangle(colorf::RGBA(0, 0, 0, 200), mousePX, mousePY, std::max<int>(hoverTextBoard.w(), maxWidth) + margin * 2, hoverTextBoard.h() + margin * 2);
+    g_glDevice->fillRectangle(colorf::RGBA(0, 0, 0, 200), mousePX, mousePY, std::max<int>(hoverTextBoard.w(), maxWidth) + margin * 2, hoverTextBoard.h() + margin * 2);
     hoverTextBoard.draw({.x=mousePX + margin, .y=mousePY + margin});
 }
 
@@ -203,7 +203,7 @@ void ItemListBoard::drawDefault(Widget::ROIMap m) const
     }
 
     if(auto texPtr = g_progUseDB->retrieve(0X08000001)){
-        g_sdlDevice->drawTexture(texPtr, m.x, m.y, m_gfxSrcX, m_gfxSrcY, m_gfxSrcW, m_gfxSrcH);
+        g_glDevice->drawTexture(texPtr, m.x, m.y, m_gfxSrcX, m_gfxSrcY, m_gfxSrcW, m_gfxSrcH);
     }
 
     drawChild(&m_leftButton  , m);
@@ -256,11 +256,11 @@ void ItemListBoard::drawDefault(Widget::ROIMap m) const
             const int remapYDiff = m.y - m.ro->y;
 
             if(auto texPtr = g_itemDB->retrieve(ir.pkgGfxID | 0X02000000)){
-                const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+                const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
                 const int rightDrawX = rightBoxX + (m_boxW - texW) / 2;
                 const int rightDrawY = rightBoxY + (m_boxH - texH) / 2;
 
-                g_sdlDevice->drawTexture(texPtr, remapXDiff + rightDrawX, remapYDiff + rightDrawY);
+                g_glDevice->drawTexture(texPtr, remapXDiff + rightDrawX, remapYDiff + rightDrawY);
             }
 
             if(const auto header = getGridHeader(i); !header.empty()){
@@ -279,13 +279,13 @@ void ItemListBoard::drawDefault(Widget::ROIMap m) const
             const bool gridSelected = m_selectedPageGrid.has_value() && (m_selectedPageGrid.value() == i);
             const bool cursorOn = [rightBoxX, rightBoxY, remapXDiff, remapYDiff, this]() -> bool
             {
-                const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+                const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
                 return mathf::pointInRectangle<int>(mousePX, mousePY, remapXDiff + rightBoxX, remapYDiff + rightBoxY, m_boxW, m_boxH);
             }();
 
             if(gridSelected || cursorOn){
                 const uint32_t gridColor = gridSelected ? (colorf::BLUE + colorf::A_SHF(96)) : (colorf::WHITE + colorf::A_SHF(96));
-                g_sdlDevice->fillRectangle(gridColor, remapXDiff + rightBoxX, remapYDiff + rightBoxY, m_boxW, m_boxH);
+                g_glDevice->fillRectangle(gridColor, remapXDiff + rightBoxX, remapYDiff + rightBoxY, m_boxW, m_boxH);
             }
 
             if(cursorOn){

@@ -7,7 +7,7 @@
 #include "motion.hpp"
 #include "fflerror.hpp"
 #include "sysconst.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "ascendstr.hpp"
 #include "processrun.hpp"
 #include "magicrecord.hpp"
@@ -18,7 +18,7 @@
 #include "clientmonster.hpp"
 
 extern Log *g_mir2xLog;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern SoundEffectDB *g_seffDB;
 
 bool ClientCreature::advanceMotionFrame()

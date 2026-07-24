@@ -1,11 +1,11 @@
 #include "colorf.hpp"
 #include "sysconst.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "tritexbutton.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 TritexButton::TritexButton(TritexButton::InitArgs args)
     : ButtonBase
@@ -103,7 +103,7 @@ void TritexButton::drawDefault(Widget::ROIMap m) const
     drawAsChild(&m_img, DIR_UPLEFT, m_offset[getState()][0], m_offset[getState()][1], m);
 }
 
-SDL_Texture *TritexButton::evalGfxTexture(std::optional<int> stateOpt) const
+GLTexID TritexButton::evalGfxTexture(std::optional<int> stateOpt) const
 {
     const auto state = stateOpt.value_or(getState());
     return std::visit(VarDispatcher
@@ -116,7 +116,7 @@ SDL_Texture *TritexButton::evalGfxTexture(std::optional<int> stateOpt) const
     m_texIDFunc);
 }
 
-SDL_Texture *TritexButton::evalGfxTextureValid() const
+GLTexID TritexButton::evalGfxTextureValid() const
 {
     for(const auto s = getState() - BEVENT_BEGIN; int i: {0, 1, 2}){
         if(const auto gfxPtr = evalGfxTexture(BEVENT_BEGIN + ((s + i) % 3))){

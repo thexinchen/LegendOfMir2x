@@ -1,7 +1,7 @@
 #include "hero.hpp"
 #include "client.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "searchpage.hpp"
 #include "frienditem.hpp"
@@ -10,7 +10,7 @@
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 SearchPage::SearchPage(Widget::VarDir argDir,
 

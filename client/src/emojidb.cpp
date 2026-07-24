@@ -1,11 +1,11 @@
 #include "emojidb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 
-extern SDLDevice *g_sdlDevice;
-SDL_Texture *EmojiDB::retrieve(uint32_t key, int *srcXPtr, int *srcYPtr, int *srcWPtr, int *srcHPtr, int *frameH1Ptr, int *fpsPtr, int *frameCountPtr)
+extern GLDevice *g_glDevice;
+GLTexID EmojiDB::retrieve(uint32_t key, int *srcXPtr, int *srcYPtr, int *srcWPtr, int *srcHPtr, int *frameH1Ptr, int *fpsPtr, int *frameCountPtr)
 {
     if(auto p = innLoad(key & 0XFFFFFF00)){
-        const int texW = SDLDeviceHelper::getTextureWidth(p->texture);
+        const int texW = GLDeviceHelper::getTextureWidth(p->texture);
         const int gridXCount = texW / p->frameW;
         const int frameIndex = to_d(key & 0X000000FF);
 
@@ -22,7 +22,7 @@ SDL_Texture *EmojiDB::retrieve(uint32_t key, int *srcXPtr, int *srcYPtr, int *sr
     return nullptr;
 }
 
-SDL_Texture *EmojiDB::retrieve(uint8_t emojiSet, uint16_t emojiSubset, uint8_t emojiIndex, int *srcXPtr, int *srcYPtr, int *srcWPtr, int *srcHPtr, int *fpsPtr, int *frameH1Ptr, int *frameCountPtr)
+GLTexID EmojiDB::retrieve(uint8_t emojiSet, uint16_t emojiSubset, uint8_t emojiIndex, int *srcXPtr, int *srcYPtr, int *srcWPtr, int *srcHPtr, int *fpsPtr, int *frameH1Ptr, int *frameCountPtr)
 {
     return retrieve((to_u32(emojiSet) << 24) + to_u32(emojiSubset << 8) + to_u32(emojiIndex), srcXPtr, srcYPtr, srcWPtr, srcHPtr, frameH1Ptr, fpsPtr, frameCountPtr);
 }
@@ -33,7 +33,7 @@ std::optional<std::tuple<EmojiElement, size_t>> EmojiDB::loadResource(uint32_t k
     std::vector<uint8_t> dataBuf;
 
     if(auto fileName = m_zsdbPtr->decomp(hexstr::to_string<uint32_t, 4>(key, keyString, true), 8, &dataBuf); fileName && (std::strlen(fileName) >= 22)){
-        if(auto texPtr = g_sdlDevice->loadPNGTexture(dataBuf.data(), dataBuf.size())){
+        if(auto texPtr = g_glDevice->loadPNGTexture(dataBuf.data(), dataBuf.size())){
             return std::make_tuple(EmojiElement
             {
                 .frameW     = to_d(hexstr::to_hex<uint16_t, 2>(fileName + 12)),
@@ -51,7 +51,7 @@ std::optional<std::tuple<EmojiElement, size_t>> EmojiDB::loadResource(uint32_t k
 void EmojiDB::freeResource(EmojiElement &element)
 {
     if(element.texture){
-        SDL_DestroyTexture(element.texture);
+        g_glDevice->destroyTexture(element.texture);
         element.texture = nullptr;
     }
 }

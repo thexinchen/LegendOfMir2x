@@ -1,10 +1,11 @@
+#include "audiodevice.hpp"
 #include <any>
 #include <memory>
 #include "luaf.hpp"
 #include "client.hpp"
 #include "imeboard.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "radioselector.hpp"
 #include "soundeffectdb.hpp"
 #include "processrun.hpp"
@@ -13,7 +14,8 @@
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
+extern AudioDevice *g_audioDevice;
 
 RuntimeConfigBoard::RuntimeConfigBoard(int argX, int argY, int argW, int argH, ProcessRun *proc, Widget *argParent, bool argAutoDelete)
     : Widget
@@ -46,8 +48,8 @@ RuntimeConfigBoard::RuntimeConfigBoard(int argX, int argY, int argW, int argH, P
 
           .drawFunc = [](const Widget *widgetPtr, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(                             colorf::A_SHF(128), drawDstX, drawDstY, widgetPtr->w(), widgetPtr->h(), 10);
-              g_sdlDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(100), drawDstX, drawDstY, widgetPtr->w(), widgetPtr->h(), 10);
+              g_glDevice->fillRectangle(                             colorf::A_SHF(128), drawDstX, drawDstY, widgetPtr->w(), widgetPtr->h(), 10);
+              g_glDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(100), drawDstX, drawDstY, widgetPtr->w(), widgetPtr->h(), 10);
           },
 
           .parent{this},
@@ -495,7 +497,7 @@ RuntimeConfigBoard::RuntimeConfigBoard(int argX, int argY, int argW, int argH, P
         R"###( </layout>                                                )###""\n"
     );
 
-    updateWindowSize(g_sdlDevice->getRendererSize(), false);
+    updateWindowSize(g_glDevice->getRendererSize(), false);
     updateIME(IME_DISABLE, false);
 
     // 1.0f -> SDL_MIX_MAXVOLUME
@@ -560,7 +562,7 @@ bool RuntimeConfigBoard::processEventDefault(const SDL_Event &event, bool valid,
                         moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), par->roi());
                     }
                     else{
-                        moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_sdlDevice->getRendererSize()));
+                        moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_glDevice->getRendererSize()));
                     }
                     return consumeFocus(true);
                 }
@@ -599,8 +601,8 @@ void RuntimeConfigBoard::applyAudioConfig()
     const float  bgmGain = SDRuntimeConfig_getConfig<RTCFG_BGM >(m_sdRuntimeConfig) ? SDRuntimeConfig_getConfig<RTCFG_BGMVALUE >(m_sdRuntimeConfig) : 0.0f;
     const float seffGain = SDRuntimeConfig_getConfig<RTCFG_SEFF>(m_sdRuntimeConfig) ? SDRuntimeConfig_getConfig<RTCFG_SEFFVALUE>(m_sdRuntimeConfig) : 0.0f;
 
-    g_sdlDevice->setBGMVolume(bgmGain);
-    g_sdlDevice->setSoundEffectVolume(seffGain);
+    g_audioDevice->setBGMVolume(bgmGain);
+    g_audioDevice->setSoundEffectVolume(seffGain);
 }
 
 void RuntimeConfigBoard::reportRuntimeConfig(int rtCfg)
@@ -623,7 +625,7 @@ void RuntimeConfigBoard::updateWindowSize(std::pair<int, int> size, bool saveCon
     fflassert(size.second >= 0, size);
 
     m_pageSystem_resolution.getTitle()->setText(str_printf(u8"%d×%d", size.first, size.second).c_str());
-    g_sdlDevice->setWindowSize(size.first, size.second);
+    g_glDevice->setWindowSize(size.first, size.second);
 
     if(saveConfig){
         SDRuntimeConfig_setConfig<RTCFG_WINDOWSIZE>(m_sdRuntimeConfig, size);

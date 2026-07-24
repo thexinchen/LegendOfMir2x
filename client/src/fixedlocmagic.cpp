@@ -1,9 +1,9 @@
 #include "pathf.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "pngtexoffdb.hpp"
 #include "fixedlocmagic.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern PNGTexOffDB *g_magicDB;
 
 void FixedLocMagic::drawViewOff(int viewX, int viewY, uint32_t modColor) const
@@ -19,9 +19,9 @@ void FixedLocMagic::drawViewOff(int viewX, int viewY, uint32_t modColor) const
     const int gfxDirOff = ((m_gfxDirIndex >= 0) ? m_gfxDirIndex : 0) * m_gfxEntry->gfxIDCount;
     if(auto [texPtr, offX, offY] = g_magicDB->retrieve(m_gfxEntry->gfxID + gfxDirOff + frame()); texPtr){
         const auto gfxEntryModColor = m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor;
-        SDLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(gfxEntryModColor, modColor));
-        SDLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
-        g_sdlDevice->drawTexture(texPtr, m_x * SYS_MAPGRIDXP - viewX + offX, m_y * SYS_MAPGRIDYP - viewY + offY);
+        GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(gfxEntryModColor, modColor));
+        GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
+        g_glDevice->drawTexture(texPtr, m_x * SYS_MAPGRIDXP - viewX + offX, m_y * SYS_MAPGRIDYP - viewY + offY);
     }
 }
 
@@ -29,15 +29,15 @@ void FireAshEffect_RUN::drawGroundAsh(int viewX, int viewY, uint32_t modColor) c
 {
     if(auto [texPtr, offX, offY] = g_magicDB->retrieve(0X0F0000DC); texPtr){
         const auto gfxEntryModColor = m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor;
-        SDLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(colorf::modRGBA(gfxEntryModColor, getPlainModColor()), modColor));
-        SDLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
+        GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(colorf::modRGBA(gfxEntryModColor, getPlainModColor()), modColor));
+        GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
 
-        const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+        const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
 
         const int useTexW = std::min<int>(102, texW); // crop left up part to rotate
         const int useTexH = std::min<int>( 72, texH); //
 
-        g_sdlDevice->drawTextureEx(texPtr,
+        g_glDevice->drawTextureEx(texPtr,
                 0,
                 0,
                 useTexW,
@@ -80,11 +80,11 @@ void HellFire_RUN::drawViewOff(int viewX, int viewY, uint32_t modColor) const
 
 void IceThorn_RUN::drawGroundIce(int viewX, int viewY, uint32_t modColor) const
 {
-    const auto [texPtr, useTexW, useTexH, offX, offY] = [this]() -> std::tuple<SDL_Texture *, int, int, int, int>
+    const auto [texPtr, useTexW, useTexH, offX, offY] = [this]() -> std::tuple<GLTexID , int, int, int, int>
     {
         if(m_iceSlagTexSelect){
             if(const auto [texPtr, offX, offY] = g_magicDB->retrieve(0X0F000104); texPtr){
-                const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+                const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
                 return {texPtr, std::min<int>(texW, 83), std::min<int>(texH, 53), offX, offY};
             }
             else{
@@ -93,7 +93,7 @@ void IceThorn_RUN::drawGroundIce(int viewX, int viewY, uint32_t modColor) const
         }
         else{
             if(const auto [texPtr, offX, offY] = g_magicDB->retrieve(0X0F000105); texPtr){
-                const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+                const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
                 return {texPtr, std::min<int>(texW, 76), std::min<int>(texH, 43), offX, offY};
             }
             else{
@@ -104,9 +104,9 @@ void IceThorn_RUN::drawGroundIce(int viewX, int viewY, uint32_t modColor) const
 
     if(texPtr){
         const auto gfxEntryModColor = m_gfxEntryRef ? m_gfxEntryRef->modColor : m_gfxEntry->modColor;
-        SDLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(colorf::modRGBA(gfxEntryModColor, getPlainModColor()), modColor));
-        SDLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
-        g_sdlDevice->drawTextureEx(texPtr,
+        GLDeviceHelper::EnableTextureModColor enableModColor(texPtr, colorf::modRGBA(colorf::modRGBA(gfxEntryModColor, getPlainModColor()), modColor));
+        GLDeviceHelper::EnableTextureBlendMode enableBlendMode(texPtr, SDL_BLENDMODE_BLEND);
+        g_glDevice->drawTextureEx(texPtr,
                 0,
                 0,
                 useTexW,

@@ -5,7 +5,7 @@
 #include "zsdb.hpp"
 #include "inndb.hpp"
 #include "hexstr.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 
 // layout of an emoji on a texture
 // on a single picture, from left to right
@@ -43,7 +43,7 @@ struct EmojiElement
     int fps        = 0;
     int frameCount = 0;
 
-    SDL_Texture *texture = nullptr;
+    GLTexID texture = nullptr;
 };
 
 class EmojiDB: public innDB<uint32_t, EmojiElement>
@@ -74,8 +74,8 @@ class EmojiDB: public innDB<uint32_t, EmojiElement>
         }
 
     public:
-        SDL_Texture *retrieve(uint32_t,                   int *, int *, int *, int *, int *, int *, int *);
-        SDL_Texture *retrieve(uint8_t, uint16_t, uint8_t, int *, int *, int *, int *, int *, int *, int *);
+        GLTexID retrieve(uint32_t,                   int *, int *, int *, int *, int *, int *, int *);
+        GLTexID retrieve(uint8_t, uint16_t, uint8_t, int *, int *, int *, int *, int *, int *, int *);
 
     public:
         std::optional<std::tuple<EmojiElement, size_t>> loadResource(uint32_t) override;

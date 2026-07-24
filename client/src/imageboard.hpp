@@ -31,7 +31,7 @@ class ImageBoard: public Widget
             Widget::VarSizeOpt w = std::nullopt; // {} means image width , otherwise rescale the image
             Widget::VarSizeOpt h = std::nullopt; // {} means image height, otherwise rescale the image
 
-            Widget::VarTexLoadFunc texLoadFunc = nullptr;
+            Widget::VarTexLoadFunc texLoadFunc = GLTexID{};
 
             bool hflip  = false;
             bool vflip  = false;
@@ -90,7 +90,7 @@ class ImageBoard: public Widget
         }
 
     public:
-        SDL_Texture *getTexture() const
+        GLTexID getTexture() const
         {
             return Widget::evalTexLoadFunc(m_loadFunc, this);
         }

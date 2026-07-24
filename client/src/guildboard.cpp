@@ -1,9 +1,9 @@
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "pngtexdb.hpp"
 #include "guildboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 GuildBoard::GuildBoard(int argX, int argY, ProcessRun *runPtr, Widget *argParent, bool argAutoDelete)
     : Widget
@@ -23,7 +23,7 @@ GuildBoard::GuildBoard(int argX, int argY, ProcessRun *runPtr, Widget *argParent
     , m_processRun(runPtr)
     , m_bg
       {{
-          .texLoadFunc = [](const Widget *) -> SDL_Texture *
+          .texLoadFunc = [](const Widget *) -> GLTexID 
           {
               return g_progUseDB->retrieve(0X00000500);
           },
@@ -255,7 +255,7 @@ bool GuildBoard::processEventDefault(const SDL_Event &event, bool valid, Widget:
                     const auto remapXDiff = m.x - m.ro->x;
                     const auto remapYDiff = m.y - m.ro->y;
 
-                    const auto [rendererW, rendererH] = g_sdlDevice->getRendererSize();
+                    const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
                     const int maxX = rendererW - w();
                     const int maxY = rendererH - h();
 

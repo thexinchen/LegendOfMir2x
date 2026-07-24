@@ -1,8 +1,8 @@
 #include "menupage.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "tabheader.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 MenuPage::MenuPage(
         dir8_t argDir,
@@ -38,14 +38,14 @@ MenuPage::MenuPage(
           .drawFunc = [this](const Widget *self, int drawDstX, int drawDstY)
           {
               if(m_selectedHeader){
-                  g_sdlDevice->fillRectangle(colorf::RGBA(231, 231, 189, 100),
+                  g_glDevice->fillRectangle(colorf::RGBA(231, 231, 189, 100),
                           drawDstX + m_selectedHeader->dx(),
                           drawDstY + m_selectedHeader->dy(),
 
                           m_selectedHeader->w(),
                           m_selectedHeader->h());
 
-                  g_sdlDevice->drawLine(colorf::RGBA(231, 231, 189, 100),
+                  g_glDevice->drawLine(colorf::RGBA(231, 231, 189, 100),
                           drawDstX,
                           drawDstY + m_selectedHeader->dy() + m_selectedHeader->h(),
 

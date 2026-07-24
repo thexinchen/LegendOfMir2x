@@ -1,8 +1,8 @@
 #include "xmlf.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "messagestackboard.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 MessageStackBoard::MessageStackBoard(MessageStackBoard::InitArgs args)
     : Widget
@@ -87,8 +87,8 @@ void MessageStackBoard::addXMLMessage(const std::u8string &xml)
             const auto boxH = self->h();
             const auto corner = std::min<int>({m_corner, boxW / 2, boxH / 2});
 
-            const SDLDeviceHelper::EnableRenderBlendMode enableBlend(SDL_BLENDMODE_BLEND);
-            g_sdlDevice->fillRectangle(Widget::evalU32(m_bgColor, this), drawDstX, drawDstY, boxW, boxH, corner);
+            const GLDeviceHelper::EnableRenderBlendMode enableBlend(SDL_BLENDMODE_BLEND);
+            g_glDevice->fillRectangle(Widget::evalU32(m_bgColor, this), drawDstX, drawDstY, boxW, boxH, corner);
         },
 
         .fgDrawFunc = [this](const Widget *self, int drawDstX, int drawDstY)
@@ -98,8 +98,8 @@ void MessageStackBoard::addXMLMessage(const std::u8string &xml)
             const auto corner = std::min<int>({m_corner, boxW / 2, boxH / 2});
 
             if(colorf::A(Widget::evalU32(m_borderColor, this))){
-                const SDLDeviceHelper::EnableRenderBlendMode enableBlend(SDL_BLENDMODE_BLEND);
-                g_sdlDevice->drawRectangle(Widget::evalU32(m_borderColor, this), drawDstX, drawDstY, boxW, boxH, corner);
+                const GLDeviceHelper::EnableRenderBlendMode enableBlend(SDL_BLENDMODE_BLEND);
+                g_glDevice->drawRectangle(Widget::evalU32(m_borderColor, this), drawDstX, drawDstY, boxW, boxH, corner);
             }
         },
     }});

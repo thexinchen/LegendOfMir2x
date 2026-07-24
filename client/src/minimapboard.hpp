@@ -68,7 +68,7 @@ class MiniMapBoard: public Widget
         void flipAutoCenter();
 
     public:
-        SDL_Texture *getMiniMapTexture() const;
+        GLTexID getMiniMapTexture() const;
 
     private:
         void zoomOnCanvasAt(int, int, double);

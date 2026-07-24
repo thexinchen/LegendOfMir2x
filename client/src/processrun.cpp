@@ -1,3 +1,4 @@
+#include "audiodevice.hpp"
 #include <cmath>
 #include <ranges>
 #include <memory>
@@ -16,7 +17,7 @@
 #include "pngtexdb.hpp"
 #include "bgmusicdb.hpp"
 #include "soundeffectdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "clientargparser.hpp"
 #include "processrun.hpp"
 #include "clientluamodule.hpp"
@@ -36,7 +37,8 @@ extern Log *g_mir2xLog;
 extern Client *g_client;
 extern PNGTexDB *g_mapDB;
 extern MapBinDB *g_mapBinDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
+extern AudioDevice *g_audioDevice;
 extern PNGTexDB *g_progUseDB;
 extern BGMusicDB *g_bgmDB;
 extern SoundEffectDB *g_seffDB;
@@ -99,7 +101,7 @@ ProcessRun::ProcessRun(const SMOnlineOK &smOOK)
 
 void ProcessRun::scrollMap()
 {
-    const auto [rendererW, rendererH] = g_sdlDevice->getRendererSize();
+    const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
 
     const auto showWindowW = rendererW;
     const auto showWindowH = rendererH - dynamic_cast<ControlBoard *>(getWidget("ControlBoard"))->shiftHeight();
@@ -226,7 +228,7 @@ uint64_t ProcessRun::getFocusUID(int focusType, bool allowMyHero) const
     switch(focusType){
         case FOCUS_MOUSE:
             {
-                const auto [mouseWinPX, mouseWinPY] = SDLDeviceHelper::getMousePLoc();
+                const auto [mouseWinPX, mouseWinPY] = GLDeviceHelper::getMousePLoc();
                 const auto mousePX = mouseWinPX + m_viewX;
                 const auto mousePY = mouseWinPY + m_viewY;
 
@@ -282,11 +284,11 @@ void ProcessRun::setFocusUID(int focusType, uint64_t uid)
 
 void ProcessRun::draw() const
 {
-    SDLDeviceHelper::RenderNewFrame newFrame;
+    GLDeviceHelper::RenderNewFrame newFrame;
     const int x0 = mathf::bound<int>(-SYS_OBJMAXW + (m_viewX - 2 * SYS_MAPGRIDXP) / SYS_MAPGRIDXP,                                    0, m_mir2xMapData.w());
     const int y0 = mathf::bound<int>(-SYS_OBJMAXH + (m_viewY - 2 * SYS_MAPGRIDYP) / SYS_MAPGRIDYP,                                    0, m_mir2xMapData.h());
-    const int x1 = mathf::bound<int>(+SYS_OBJMAXW + (m_viewX + 2 * SYS_MAPGRIDXP + g_sdlDevice->getRendererWidth() ) / SYS_MAPGRIDXP, 0, m_mir2xMapData.w());
-    const int y1 = mathf::bound<int>(+SYS_OBJMAXH + (m_viewY + 2 * SYS_MAPGRIDYP + g_sdlDevice->getRendererHeight()) / SYS_MAPGRIDYP, 0, m_mir2xMapData.h());
+    const int x1 = mathf::bound<int>(+SYS_OBJMAXW + (m_viewX + 2 * SYS_MAPGRIDXP + g_glDevice->getRendererWidth() ) / SYS_MAPGRIDXP, 0, m_mir2xMapData.w());
+    const int y1 = mathf::bound<int>(+SYS_OBJMAXH + (m_viewY + 2 * SYS_MAPGRIDYP + g_glDevice->getRendererHeight()) / SYS_MAPGRIDYP, 0, m_mir2xMapData.h());
 
     drawTile(x0, y0, x1, y1);
 
@@ -304,7 +306,7 @@ void ProcessRun::draw() const
                     if(true
                             && m_mir2xMapData.validC(tpx, tpy)
                             && mathf::pointInRectangle(tpx, tpy, x0, y0, x1 - x0 + 1, y1 - y0 + 1)){
-                        g_sdlDevice->fillRectangle(colorf::RGBA(0XFF, 0, 0, 100), tpx * SYS_MAPGRIDXP - m_viewX, tpy * SYS_MAPGRIDYP - m_viewY, SYS_MAPGRIDXP, SYS_MAPGRIDYP);
+                        g_glDevice->fillRectangle(colorf::RGBA(0XFF, 0, 0, 100), tpx * SYS_MAPGRIDXP - m_viewX, tpy * SYS_MAPGRIDYP - m_viewY, SYS_MAPGRIDXP, SYS_MAPGRIDYP);
                     }
                 }
             }
@@ -374,7 +376,7 @@ void ProcessRun::draw() const
 
             if(auto p = m_strikeGridList.find({x, y}); p != m_strikeGridList.end()){
                 if(hres_tstamp().to_msec() <= p->second + 1000){
-                    g_sdlDevice->fillRectangle(colorf::RED + colorf::A_SHF(96), x * SYS_MAPGRIDXP - m_viewX, y * SYS_MAPGRIDYP - m_viewY, SYS_MAPGRIDXP, SYS_MAPGRIDYP);
+                    g_glDevice->fillRectangle(colorf::RED + colorf::A_SHF(96), x * SYS_MAPGRIDXP - m_viewX, y * SYS_MAPGRIDYP - m_viewY, SYS_MAPGRIDXP, SYS_MAPGRIDYP);
                 }
             }
 
@@ -398,9 +400,9 @@ void ProcessRun::draw() const
                 }
 
                 if(g_clientArgParser->drawCreatureCover){
-                    SDLDeviceHelper::EnableRenderColor enableColor(colorf::RGBA(0, 0, 255, 128));
-                    SDLDeviceHelper::EnableRenderBlendMode enableBlendMode(SDL_BLENDMODE_BLEND);
-                    g_sdlDevice->fillRectangle(x * SYS_MAPGRIDXP - m_viewX, y * SYS_MAPGRIDYP - m_viewY, SYS_MAPGRIDXP, SYS_MAPGRIDYP);
+                    GLDeviceHelper::EnableRenderColor enableColor(colorf::RGBA(0, 0, 255, 128));
+                    GLDeviceHelper::EnableRenderBlendMode enableBlendMode(SDL_BLENDMODE_BLEND);
+                    g_glDevice->fillRectangle(x * SYS_MAPGRIDXP - m_viewX, y * SYS_MAPGRIDYP - m_viewY, SYS_MAPGRIDXP, SYS_MAPGRIDYP);
                 }
             }
         }
@@ -414,7 +416,7 @@ void ProcessRun::draw() const
         for(int y = y0; y <= y1; ++y){
             for(int x = x0; x <= x1; ++x){
                 if(!(m_mir2xMapData.validC(x, y) && m_mir2xMapData.cell(x, y).land.canThrough())){
-                    g_sdlDevice->fillRectangle(colorf::YELLOW + colorf::A_SHF(127), x * SYS_MAPGRIDXP - m_viewX, y * SYS_MAPGRIDYP - m_viewY, SYS_MAPGRIDXP, SYS_MAPGRIDYP);
+                    g_glDevice->fillRectangle(colorf::YELLOW + colorf::A_SHF(127), x * SYS_MAPGRIDXP - m_viewX, y * SYS_MAPGRIDYP - m_viewY, SYS_MAPGRIDXP, SYS_MAPGRIDYP);
                 }
             }
         }
@@ -424,16 +426,16 @@ void ProcessRun::draw() const
         const int gridX0 = m_viewX / SYS_MAPGRIDXP;
         const int gridY0 = m_viewY / SYS_MAPGRIDYP;
 
-        const int gridX1 = (m_viewX + g_sdlDevice->getRendererWidth ()) / SYS_MAPGRIDXP;
-        const int gridY1 = (m_viewY + g_sdlDevice->getRendererHeight()) / SYS_MAPGRIDYP;
+        const int gridX1 = (m_viewX + g_glDevice->getRendererWidth ()) / SYS_MAPGRIDXP;
+        const int gridY1 = (m_viewY + g_glDevice->getRendererHeight()) / SYS_MAPGRIDYP;
 
-        SDLDeviceHelper::EnableRenderColor drawColor(colorf::RGBA(0, 255, 0, 128));
+        GLDeviceHelper::EnableRenderColor drawColor(colorf::RGBA(0, 255, 0, 128));
         for(int x = gridX0; x <= gridX1; ++x){
-            g_sdlDevice->drawLine(x * SYS_MAPGRIDXP - m_viewX, 0, x * SYS_MAPGRIDXP - m_viewX, g_sdlDevice->getRendererHeight());
+            g_glDevice->drawLine(x * SYS_MAPGRIDXP - m_viewX, 0, x * SYS_MAPGRIDXP - m_viewX, g_glDevice->getRendererHeight());
         }
 
         for(int y = gridY0; y <= gridY1; ++y){
-            g_sdlDevice->drawLine(0, y * SYS_MAPGRIDYP - m_viewY, g_sdlDevice->getRendererWidth(), y * SYS_MAPGRIDYP - m_viewY);
+            g_glDevice->drawLine(0, y * SYS_MAPGRIDYP - m_viewY, g_glDevice->getRendererWidth(), y * SYS_MAPGRIDYP - m_viewY);
         }
     }
 
@@ -459,7 +461,7 @@ void ProcessRun::draw() const
         for(const auto &[magicID, magicKey]: dynamic_cast<const SkillBoard *>(this->getWidget("SkillBoard"))->getConfig().getMagicKeyList()){
             if(const auto iconGfx = SkillBoard::getMagicIconGfx(magicID); iconGfx && iconGfx->magicIcon != SYS_U32NIL){
                 if(auto texPtr = g_progUseDB->retrieve(iconGfx->magicIcon + to_u32(0X00001000))){
-                    g_sdlDevice->drawTexture(texPtr, magicKeyOffX, 0);
+                    g_glDevice->drawTexture(texPtr, magicKeyOffX, 0);
                     const auto coolDownAngle = getMyHero()->getMagicCoolDownAngle(magicID);
                     const auto colorRatio = [coolDownAngle]() -> float
                     {
@@ -467,13 +469,13 @@ void ProcessRun::draw() const
                         return r * r * r * r;
                     }();
 
-                    const auto texW = SDLDeviceHelper::getTextureWidth(texPtr);
+                    const auto texW = GLDeviceHelper::getTextureWidth(texPtr);
                     const auto coverTexW = std::lround(1.41421356237309504880 * texW);
-                    auto coverTexPtr = g_sdlDevice->getCover(coverTexW / 2, coolDownAngle);
-                    SDLDeviceHelper::EnableTextureModColor enableModColor(coverTexPtr, colorf::fadeRGBA(colorf::RGBA(255, 51, 51, 255), colorf::GREEN + colorf::A_SHF(80), colorRatio));
+                    auto coverTexPtr = g_glDevice->getCover(coverTexW / 2, coolDownAngle);
+                    GLDeviceHelper::EnableTextureModColor enableModColor(coverTexPtr, colorf::fadeRGBA(colorf::RGBA(255, 51, 51, 255), colorf::GREEN + colorf::A_SHF(80), colorRatio));
 
                     const auto offCoverX = (coverTexW - texW) / 2;
-                    g_sdlDevice->drawTexture(coverTexPtr, magicKeyOffX, 0, offCoverX, offCoverX, texW, texW);
+                    g_glDevice->drawTexture(coverTexPtr, magicKeyOffX, 0, offCoverX, offCoverX, texW, texW);
                     magicKeyOffX += texW;
                 }
             }
@@ -483,7 +485,7 @@ void ProcessRun::draw() const
     if(getMyHero()->getSDBuffIDListOpt().has_value()){
         constexpr int buffIconDrawW = 30;
         constexpr int buffIconDrawH = 30;
-        int buffIconOffX = g_sdlDevice->getRendererWidth() - buffIconDrawW;
+        int buffIconOffX = g_glDevice->getRendererWidth() - buffIconDrawW;
 
         if(auto boardPtr = getWidget("MiniMapBoard"); boardPtr->show()){
             buffIconOffX -= boardPtr->w();
@@ -495,8 +497,8 @@ void ProcessRun::draw() const
 
             if(br.icon.gfxID != SYS_U32NIL){
                 if(auto iconTexPtr = g_progUseDB->retrieve(br.icon.gfxID)){
-                    const auto [texW, texH] = SDLDeviceHelper::getTextureSize(iconTexPtr);
-                    g_sdlDevice->drawTexture(iconTexPtr, buffIconOffX, 0, buffIconDrawW, buffIconDrawH, 0, 0, texW, texH);
+                    const auto [texW, texH] = GLDeviceHelper::getTextureSize(iconTexPtr);
+                    g_glDevice->drawTexture(iconTexPtr, buffIconOffX, 0, buffIconDrawW, buffIconDrawH, 0, 0, texW, texH);
                     buffIconOffX -= buffIconDrawW;
                 }
             }
@@ -509,20 +511,20 @@ void ProcessRun::draw() const
 
     // draw underlay at the bottom
     // there is one pixel transparent rectangle
-    const auto [winW, winH] = g_sdlDevice->getRendererSize();
-    g_sdlDevice->fillRectangle(colorf::RGBA(0, 0, 0, 0), 0, winH - 4, winW, 4);
+    const auto [winW, winH] = g_glDevice->getRendererSize();
+    g_glDevice->fillRectangle(colorf::RGBA(0, 0, 0, 0), 0, winH - 4, winW, 4);
 
     if(getMyHero()->dead().value_or(false)){
-        g_sdlDevice->fillRectangle(colorf::RGBA(128, 0, 0, 64), 0, 0, winW, winH);
+        g_glDevice->fillRectangle(colorf::RGBA(128, 0, 0, 64), 0, 0, winW, winH);
     }
 
     m_guiManager.drawRoot({});
     if(const auto selectedItemID = getMyHero()->getInvPack().getGrabbedItem().itemID){
         if(const auto &ir = DBCOM_ITEMRECORD(selectedItemID)){
             if(auto texPtr = g_itemDB->retrieve(ir.pkgGfxID | 0X01000000)){
-                const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
-                const auto [ptrX, ptrY] = SDLDeviceHelper::getMousePLoc();
-                g_sdlDevice->drawTexture(texPtr, ptrX - texW / 2, ptrY - texH / 2);
+                const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
+                const auto [ptrX, ptrY] = GLDeviceHelper::getMousePLoc();
+                g_glDevice->drawTexture(texPtr, ptrX - texW / 2, ptrY - texH / 2);
             }
         }
     }
@@ -532,8 +534,8 @@ void ProcessRun::draw() const
             {
                 const auto teamFlagIndex = m_teamFlag.seqFrame() % 13;
                 if(auto flagTex = g_progUseDB->retrieve(0X00000210 + teamFlagIndex)){
-                    const auto [mouseX, mouseY] = SDLDeviceHelper::getMousePLoc();
-                    g_sdlDevice->drawTexture(flagTex, DIR_NONE, mouseX, mouseY);
+                    const auto [mouseX, mouseY] = GLDeviceHelper::getMousePLoc();
+                    g_glDevice->drawTexture(flagTex, DIR_NONE, mouseX, mouseY);
                 }
                 break;
             }
@@ -548,10 +550,10 @@ void ProcessRun::draw() const
         const int w = std::max<int>(g_notifyBoard->w() + 10, 160);
         const int h = g_notifyBoard->h();
         const int x = 0;
-        const int y = g_sdlDevice->getRendererHeight() - h - 133;
+        const int y = g_glDevice->getRendererHeight() - h - 133;
 
-        g_sdlDevice->fillRectangle(colorf::GREEN + colorf::A_SHF(180), x, y, w, h);
-        g_sdlDevice->drawRectangle(colorf::BLUE  + colorf::A_SHF(255), x, y, w, h);
+        g_glDevice->fillRectangle(colorf::GREEN + colorf::A_SHF(180), x, y, w, h);
+        g_glDevice->drawRectangle(colorf::BLUE  + colorf::A_SHF(255), x, y, w, h);
         g_notifyBoard->draw({.x=x, .y=y});
     }
 
@@ -725,7 +727,7 @@ void ProcessRun::processEvent(const SDL_Event &event)
                     default:
                         {
                             if(event.key.mod & (SDL_KMOD_LALT | SDL_KMOD_RALT)){
-                                switch(SDLDeviceHelper::getKeyChar(event, false)){
+                                switch(GLDeviceHelper::getKeyChar(event, false)){
                                     case 'e':
                                         {
                                             std::exit(0);
@@ -733,7 +735,7 @@ void ProcessRun::processEvent(const SDL_Event &event)
                                         }
                                     case 'f':
                                         {
-                                            g_sdlDevice->toggleWindowFullscreen();
+                                            g_glDevice->toggleWindowFullscreen();
                                             break;
                                         }
                                     default:
@@ -791,7 +793,7 @@ void ProcessRun::loadMap(uint64_t newMapUID, int centerGX, int centerGY)
         loadStringBoard.drawScreen(true);
     };
 
-    g_sdlDevice->stopSoundEffect();
+    g_audioDevice->stopSoundEffect();
     fnUpdateLoadRatio(0);
     {
         if(uidf::getMapID(lastMapUID) == uidf::getMapID(newMapUID)){
@@ -851,9 +853,9 @@ void ProcessRun::loadMap(uint64_t newMapUID, int centerGX, int centerGY)
     const auto  newBGMIDOpt = DBCOM_MAPRECORD(                          uidf::getMapID( newMapUID)   ).bgmID;
 
     if(lastBGMIDOpt != newBGMIDOpt){
-        g_sdlDevice->stopBGM();
+        g_audioDevice->stopBGM();
         if(newBGMIDOpt.has_value()){
-            g_sdlDevice->playBGM(g_bgmDB->retrieve(newBGMIDOpt.value()));
+            g_audioDevice->playBGM(g_bgmDB->retrieve(newBGMIDOpt.value()));
         }
     }
 }
@@ -1607,7 +1609,7 @@ void ProcessRun::centerMyHero()
 
     const auto fnSetOff = [this, nX, nY, nDirection, currFrame, frameCount](int stepLen)
     {
-        const auto [rendererWidth, rendererHeight] = g_sdlDevice->getRendererSize();
+        const auto [rendererWidth, rendererHeight] = g_glDevice->getRendererSize();
 
         const auto showWindowW = rendererWidth;
         const auto showWindowH = rendererHeight - dynamic_cast<ControlBoard *>(getWidget("ControlBoard"))->shiftHeight();
@@ -1968,27 +1970,27 @@ void ProcessRun::drawGroundItem(int x0, int y0, int x1, int y1) const
                 continue;
             }
 
-            const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+            const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
             const int drawPX = x * SYS_MAPGRIDXP - m_viewX + SYS_MAPGRIDXP / 2 - texW / 2;
             const int drawPY = y * SYS_MAPGRIDYP - m_viewY + SYS_MAPGRIDYP / 2 - texH / 2;
 
-            const auto [mouseX, mouseY] = SDLDeviceHelper::getMousePLoc();
+            const auto [mouseX, mouseY] = GLDeviceHelper::getMousePLoc();
             const int mouseGridX = (mouseX + m_viewX) / SYS_MAPGRIDXP;
             const int mouseGridY = (mouseY + m_viewY) / SYS_MAPGRIDYP;
 
             const bool mouseOver = (mouseGridX == x && mouseGridY == y);
-            const SDLDeviceHelper::EnableTextureBlendMode blendMode(texPtr, mouseOver ? SDL_BLENDMODE_ADD : SDL_BLENDMODE_BLEND);
+            const GLDeviceHelper::EnableTextureBlendMode blendMode(texPtr, mouseOver ? SDL_BLENDMODE_ADD : SDL_BLENDMODE_BLEND);
 
             // draw item shadow
             {
-                const SDLDeviceHelper::EnableTextureModColor modColor(texPtr, colorf::RGBA(0, 0, 0, 128));
-                g_sdlDevice->drawTexture(texPtr, drawPX + 1, drawPY - 1);
+                const GLDeviceHelper::EnableTextureModColor modColor(texPtr, colorf::RGBA(0, 0, 0, 128));
+                g_glDevice->drawTexture(texPtr, drawPX + 1, drawPY - 1);
             }
 
             // draw item body
             {
-                const SDLDeviceHelper::EnableTextureModColor modColor(texPtr, colorf::WHITE | colorf::A_SHF(255));
-                g_sdlDevice->drawTexture(texPtr, drawPX, drawPY);
+                const GLDeviceHelper::EnableTextureModColor modColor(texPtr, colorf::WHITE | colorf::A_SHF(255));
+                g_glDevice->drawTexture(texPtr, drawPX, drawPY);
             }
 
             if(mouseOver){
@@ -2008,7 +2010,7 @@ void ProcessRun::drawTile(int x0, int y0, int x1, int y1) const
             if(m_mir2xMapData.validC(x, y) && !(x % 2) && !(y % 2)){
                 if(const auto &tile = m_mir2xMapData.tile(x, y); tile.valid){
                     if(auto texPtr = g_mapDB->retrieve(tile.texID)){
-                        g_sdlDevice->drawTexture(texPtr, x * SYS_MAPGRIDXP - m_viewX, y * SYS_MAPGRIDYP - m_viewY);
+                        g_glDevice->drawTexture(texPtr, x * SYS_MAPGRIDXP - m_viewX, y * SYS_MAPGRIDYP - m_viewY);
                     }
                 }
             }
@@ -2046,7 +2048,7 @@ void ProcessRun::drawObject(int x, int y, int objd, bool alpha) const
         }
 
         if(auto texPtr = g_mapDB->retrieve(imageId)){
-            const int texH = SDLDeviceHelper::getTextureHeight(texPtr);
+            const int texH = GLDeviceHelper::getTextureHeight(texPtr);
             const auto drawAlphaObj = [&obj, alpha]() -> uint8_t
             {
                 if(obj.alpha){
@@ -2059,8 +2061,8 @@ void ProcessRun::drawObject(int x, int y, int objd, bool alpha) const
                 return 255;
             }();
 
-            SDLDeviceHelper::EnableTextureModColor enableColor(texPtr, colorf::RGBA(0XFF, 0XFF, 0XFF, drawAlphaObj));
-            g_sdlDevice->drawTexture(texPtr, x * SYS_MAPGRIDXP - m_viewX, (y + 1) * SYS_MAPGRIDYP - m_viewY - texH);
+            GLDeviceHelper::EnableTextureModColor enableColor(texPtr, colorf::RGBA(0XFF, 0XFF, 0XFF, drawAlphaObj));
+            g_glDevice->drawTexture(texPtr, x * SYS_MAPGRIDXP - m_viewX, (y + 1) * SYS_MAPGRIDYP - m_viewY - texH);
         }
     }
 }
@@ -2076,7 +2078,7 @@ void ProcessRun::drawRotateStar(int x0, int y0, int x1, int y1) const
         return;
     }
 
-    const auto [texW, texH] = SDLDeviceHelper::getTextureSize(texPtr);
+    const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
     const auto currSize = to_d(std::lround(m_starRatio * texW / 2.50));
 
     for(const auto &p: m_groundItemIDList){
@@ -2095,8 +2097,8 @@ void ProcessRun::drawRotateStar(int x0, int y0, int x1, int y1) const
         // TODO make this to be more informative
         // use different color of rotating star for different type
 
-        const SDLDeviceHelper::EnableTextureModColor modColor(texPtr, colorf::WHITE | colorf::A_SHF(128));
-        g_sdlDevice->drawTextureEx(texPtr, 0, 0, texW, texH, drawPX, drawPY, currSize, currSize, currSize / 2, currSize / 2, std::lround(m_starRatio * 360.0));
+        const GLDeviceHelper::EnableTextureModColor modColor(texPtr, colorf::WHITE | colorf::A_SHF(128));
+        g_glDevice->drawTextureEx(texPtr, 0, 0, texW, texH, drawPX, drawPY, currSize, currSize, currSize / 2, currSize / 2, std::lround(m_starRatio * 360.0));
     }
 }
 
@@ -2125,9 +2127,9 @@ std::tuple<int, int> ProcessRun::getACNum(const std::string &name) const
 
 void ProcessRun::drawMouseLocation() const
 {
-    g_sdlDevice->fillRectangle(colorf::RGBA(0, 0, 0, 230), 0, 0, 200, 60);
+    g_glDevice->fillRectangle(colorf::RGBA(0, 0, 0, 230), 0, 0, 200, 60);
 
-    const auto [mouseX, mouseY] = SDLDeviceHelper::getMousePLoc();
+    const auto [mouseX, mouseY] = GLDeviceHelper::getMousePLoc();
     const auto locPixel = str_printf(u8"Pixel: %d, %d", mouseX, mouseY);
     const auto locGrid  = str_printf(u8"Grid: %d, %d", (mouseX + m_viewX) / SYS_MAPGRIDXP, (mouseY + m_viewY) / SYS_MAPGRIDYP);
 
@@ -2140,20 +2142,20 @@ void ProcessRun::drawMouseLocation() const
 
 void ProcessRun::drawFPS() const
 {
-    const auto fpsStr = std::to_string(g_sdlDevice->getFPS());
+    const auto fpsStr = std::to_string(g_glDevice->getFPS());
     LabelBoard fpsBoard{{.label = to_u8rawstr(fpsStr).c_str(), .font{.color = colorf::RGBA(0XFF, 0XFF, 0X00, 0XFF)}}};
 
-    const int winWidth = g_sdlDevice->getRendererWidth();
+    const int winWidth = g_glDevice->getRendererWidth();
     fpsBoard.moveTo(winWidth - fpsBoard.w(), 0);
 
-    g_sdlDevice->fillRectangle(colorf::BLACK + colorf::A_SHF(200), fpsBoard.dx() - 1, fpsBoard.dy(), fpsBoard.w() + 1, fpsBoard.h());
-    g_sdlDevice->drawRectangle(colorf::BLUE  + colorf::A_SHF(255), fpsBoard.dx() - 1, fpsBoard.dy(), fpsBoard.w() + 1, fpsBoard.h());
+    g_glDevice->fillRectangle(colorf::BLACK + colorf::A_SHF(200), fpsBoard.dx() - 1, fpsBoard.dy(), fpsBoard.w() + 1, fpsBoard.h());
+    g_glDevice->drawRectangle(colorf::BLUE  + colorf::A_SHF(255), fpsBoard.dx() - 1, fpsBoard.dy(), fpsBoard.w() + 1, fpsBoard.h());
     fpsBoard.drawRoot({});
 }
 
 void ProcessRun::checkMagicSpell(const SDL_Event &event)
 {
-    const char key = SDLDeviceHelper::getKeyChar(event, false);
+    const char key = GLDeviceHelper::getKeyChar(event, false);
     if(key == '\0'){
         return;
     }
@@ -2644,7 +2646,7 @@ int ProcessRun::getAimDirection(const ActionNode &action, int defDir) const
     return defDir;
 }
 
-std::shared_ptr<SDLSoundEffectChannel> ProcessRun::playSoundEffectAt(uint32_t seffID, int locGX, int locGY, size_t repeats) const
+std::shared_ptr<SoundEffectChannel> ProcessRun::playSoundEffectAt(uint32_t seffID, int locGX, int locGY, size_t repeats) const
 {
     if(seffID == SYS_U32NIL){
         return {};
@@ -2669,7 +2671,7 @@ std::shared_ptr<SDLSoundEffectChannel> ProcessRun::playSoundEffectAt(uint32_t se
         };
     }();
 
-    return g_sdlDevice->playSoundEffect(g_seffDB->retrieve(seffID), distance, angle, repeats);
+    return g_audioDevice->playSoundEffect(g_seffDB->retrieve(seffID), distance, angle, repeats);
 }
 
 void ProcessRun::setCursor(int cursorState)

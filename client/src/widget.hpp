@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <cstring>
 #include <optional>
+
+#include "gltex.hpp"
 #include <type_traits>
 #include <SDL3/SDL.h>
 #include "mathf.hpp"
@@ -58,7 +60,7 @@ class WidgetTreeNode // tree concept, used by class Widget only
         using alias_VarSize        = VarTypeHelper<int>;
         using alias_VarBool        = VarTypeHelper<bool>;
         using alias_VarBlendMode   = VarTypeHelper<SDL_BlendMode>;
-        using alias_VarTexLoadFunc = VarTypeHelper<SDL_Texture *>;
+        using alias_VarTexLoadFunc = VarTypeHelper<GLTexID >;
 
     protected:
         // make all var types distinct
@@ -386,7 +388,7 @@ class Widget: public WidgetTreeNode
         static int              evalSize       (const Widget::VarSize        &, const Widget *, const void * = nullptr);
         static bool             evalBool       (const Widget::VarBool        &, const Widget *, const void * = nullptr);
         static SDL_BlendMode    evalBlendMode  (const Widget::VarBlendMode   &, const Widget *, const void * = nullptr);
-        static SDL_Texture *    evalTexLoadFunc(const Widget::VarTexLoadFunc &, const Widget *, const void * = nullptr);
+        static GLTexID     evalTexLoadFunc(const Widget::VarTexLoadFunc &, const Widget *, const void * = nullptr);
 
     public:
         static int evalSizeOpt(const Widget::VarSizeOpt &, const Widget *,               const auto &);

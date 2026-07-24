@@ -1,5 +1,5 @@
 #include <initializer_list>
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "client.hpp"
 #include "hero.hpp"
 #include "pngtexdb.hpp"
@@ -14,7 +14,7 @@
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 FriendChatBoard::FriendChatBoard(Widget::VarInt argX, Widget::VarInt argY, ProcessRun *runPtr, Widget *argParent, bool argAutoDelete)
     : Widget
@@ -132,7 +132,7 @@ FriendChatBoard::FriendChatBoard(Widget::VarInt argX, Widget::VarInt argY, Proce
                       return {true, colorf::RGBA(231, 231, 189, 96)};
                   }
 
-                  const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+                  const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
 
                   const auto eventDX = mousePX - drawDstX;
                   const auto eventDY = mousePY - drawDstY;
@@ -145,10 +145,10 @@ FriendChatBoard::FriendChatBoard(Widget::VarInt argX, Widget::VarInt argY, Proce
               }();
 
               needDraw){
-                  g_sdlDevice->fillRectangle(drawColor, drawDstX                             , drawDstY                             , w()                 , UIPage_DRAGBORDER[0]);
-                  g_sdlDevice->fillRectangle(drawColor, drawDstX                             , drawDstY + h() - UIPage_DRAGBORDER[1], w()                 , UIPage_DRAGBORDER[1]);
-                  g_sdlDevice->fillRectangle(drawColor, drawDstX                             , drawDstY                             , UIPage_DRAGBORDER[2], h()                 );
-                  g_sdlDevice->fillRectangle(drawColor, drawDstX + w() - UIPage_DRAGBORDER[3], drawDstY                             , UIPage_DRAGBORDER[3], h()                 );
+                  g_glDevice->fillRectangle(drawColor, drawDstX                             , drawDstY                             , w()                 , UIPage_DRAGBORDER[0]);
+                  g_glDevice->fillRectangle(drawColor, drawDstX                             , drawDstY + h() - UIPage_DRAGBORDER[1], w()                 , UIPage_DRAGBORDER[1]);
+                  g_glDevice->fillRectangle(drawColor, drawDstX                             , drawDstY                             , UIPage_DRAGBORDER[2], h()                 );
+                  g_glDevice->fillRectangle(drawColor, drawDstX + w() - UIPage_DRAGBORDER[3], drawDstY                             , UIPage_DRAGBORDER[3], h()                 );
               }
           },
           .parent{this},
@@ -938,7 +938,7 @@ bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
                         const auto remapXDiff = m.x - m.ro->x;
                         const auto remapYDiff = m.y - m.ro->y;
 
-                        const auto [rendererW, rendererH] = g_sdlDevice->getRendererSize();
+                        const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
 
                         const int maxX = rendererW - w();
                         const int maxY = rendererH - h();

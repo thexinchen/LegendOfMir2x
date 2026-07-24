@@ -1,6 +1,6 @@
 #include "dbcomid.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "skillpage.hpp"
 #include "skillboard.hpp"
@@ -9,7 +9,7 @@
 #include "textshadowboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 SkillBoard::SkillBoard(int argX, int argY, ProcessRun *runPtr, Widget *argParent, bool argAutoDelete)
     : Widget
@@ -250,7 +250,7 @@ bool SkillBoard::processEventDefault(const SDL_Event &event, bool valid, Widget:
         case SDL_EVENT_MOUSE_MOTION:
             {
                 if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
-                    moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_sdlDevice->getRendererSize()));
+                    moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_glDevice->getRendererSize()));
                     return consumeFocus(true);
                 }
                 return consumeFocus(false);

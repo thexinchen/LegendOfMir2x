@@ -1,10 +1,10 @@
 #include "acbutton.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ACButton::ACButton(ACButton::InitArgs args)
     : TrigfxButton
