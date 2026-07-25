@@ -108,7 +108,16 @@ void ActorPod::innHandler(const ActorMsgPack &mpk)
     else{
         m_podMonitor.amProcMonitorList[mpk.type()].recvCount++;
         {
-            [mpk = mpk, thisptr = this]() -> corof::awaitable<> // save mpk into coroutine state
+            // don't capture mpk/this, pass them as parameters instead so they get
+            // copied into the coroutine state (coroutine parameters are copied into
+            // the coroutine frame, lambda captures may not be, see below)
+            //
+            // gcc (verified on gcc-16, PR c++/100611) does not copy a coroutine
+            // lambda's closure object into the coroutine frame: capturing mpk here
+            // would leave the copy on innHandler()'s stack, dangling once the
+            // coroutine suspends and innHandler() returns (use-after-return).
+            //
+            [](ActorPod *thisptr, ActorMsgPack mpk) -> corof::awaitable<> // save mpk into coroutine state
             {
                 const raii_timer tickTimer(std::addressof(thisptr->m_podMonitor.amProcMonitorList[mpk.type()].procTick));
                 if(const auto &mpkFunc = thisptr->m_msgOpList.at(mpk.type())){
@@ -117,7 +126,7 @@ void ActorPod::innHandler(const ActorMsgPack &mpk)
                 else{
                     co_await thisptr->m_SO->onActorMsg(mpk);
                 }
-            }().resume();
+            }(this, mpk).resume();
         }
     }
 

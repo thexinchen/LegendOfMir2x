@@ -1042,7 +1042,10 @@ BaseBuff *BattleObject::addBuff(uint64_t fromUID, uint64_t fromBuffSeq, uint32_t
                 if(paura->getBAR().aura.self){
                     addBuff(buff->fromUID(), buff->buffSeq(), DBCOM_BUFFID(paura->getBAR().aura.buff));
                 }
-                [paura]() -> corof::awaitable<> { co_await paura->dispatch(); }().resume();
+                // pass paura as parameter instead of capturing it, see the comment
+                // in ActorPod::innHandler(): gcc doesn't copy a coroutine lambda's
+                // closure into the coroutine frame (PR c++/100611)
+                [](auto paura) -> corof::awaitable<> { co_await paura->dispatch(); }(paura).resume();
             }
 
             if(buff->getBR().icon.show){
