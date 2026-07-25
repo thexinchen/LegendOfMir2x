@@ -42,7 +42,7 @@ void GUIConfigureWindow::draw()
     bool open = true;
     ImGui::SetNextWindowSize(ImVec2(570, 360), ImGuiCond_Appearing);
     if(ImGui::Begin("Server Configure", &open, ImGuiWindowFlags_NoResize)){
-        ImGui::SetCursorPos(ImVec2(20, 20));
+        ImGui::SetCursorPos(ImVec2(20, 30));
         ImGui::TextUnformatted("Map Path:");
         ImGui::SameLine(150);
         ImGui::SetNextItemWidth(300);
@@ -53,7 +53,7 @@ void GUIConfigureWindow::draw()
             m_fileDialog.open("Select map package", m_mapPath, GUIFileDialog::Mode::File, ".zsdb");
         }
 
-        ImGui::SetCursorPos(ImVec2(20, 60));
+        ImGui::SetCursorPos(ImVec2(20, 70));
         ImGui::TextUnformatted("Script Path:");
         ImGui::SameLine(150);
         ImGui::SetNextItemWidth(300);
@@ -73,15 +73,15 @@ void GUIConfigureWindow::draw()
             ImGui::InputText(id, buffer, bufferSize);
         };
 
-        drawField(100, "Maximal Player:", "##maxPlayer",      m_maxPlayerCount, sizeof(m_maxPlayerCount));
-        drawField(140, "Experience Rate:", "##experienceRate", m_experienceRate, sizeof(m_experienceRate));
-        drawField(180, "Drop Rate:",       "##dropRate",       m_dropRate,       sizeof(m_dropRate));
-        drawField(220, "Gold Rate:",       "##goldRate",       m_goldRate,       sizeof(m_goldRate));
+        drawField(110, "Maximal Player:", "##maxPlayer",      m_maxPlayerCount, sizeof(m_maxPlayerCount));
+        drawField(150, "Experience Rate:", "##experienceRate", m_experienceRate, sizeof(m_experienceRate));
+        drawField(190, "Drop Rate:",       "##dropRate",       m_dropRate,       sizeof(m_dropRate));
+        drawField(230, "Gold Rate:",       "##goldRate",       m_goldRate,       sizeof(m_goldRate));
 
         if(!m_clientPortEditable){
             ImGui::BeginDisabled();
         }
-        drawField(260, "Client Port:", "##clientPort", m_clientPort, sizeof(m_clientPort));
+        drawField(270, "Client Port:", "##clientPort", m_clientPort, sizeof(m_clientPort));
         if(!m_clientPortEditable){
             ImGui::EndDisabled();
         }
@@ -89,12 +89,12 @@ void GUIConfigureWindow::draw()
         if(!m_slavePortEditable){
             ImGui::BeginDisabled();
         }
-        drawField(300, "SlavePort:", "##slavePort", m_slavePort, sizeof(m_slavePort));
+        drawField(310, "SlavePort:", "##slavePort", m_slavePort, sizeof(m_slavePort));
         if(!m_slavePortEditable){
             ImGui::EndDisabled();
         }
 
-        ImGui::SetCursorPos(ImVec2(300, 315));
+        ImGui::SetCursorPos(ImVec2(300, 325));
         if(ImGui::Button("Cancel", ImVec2(70, 25))){
             open = false;
         }

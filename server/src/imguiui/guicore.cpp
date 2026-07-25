@@ -84,21 +84,29 @@ void GUICore::setupFonts()
     // ASCII font with a console warning.
     static const char *const cjkFontPathList[] =
     {
+#ifdef _WIN32
+        "C:/Windows/Fonts/msyh.ttc",
+        "C:/Windows/Fonts/msyhbd.ttc",
+        "C:/Windows/Fonts/simhei.ttf",
+        "C:/Windows/Fonts/simsun.ttc",
+#else
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
         "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
         "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+#endif
     };
 
     ImGuiIO &io = ImGui::GetIO();
     ImFontConfig fontCfg;
-    fontCfg.SizePixels = 16.0f;
+    fontCfg.SizePixels = 18.0f;
 
     for(const auto *fontPath: cjkFontPathList){
         if(std::FILE *fp = std::fopen(fontPath, "rb"); fp){
             std::fclose(fp);
-            io.Fonts->AddFontFromFileTTF(fontPath, 16.0f, nullptr, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
-            return;
+            if(io.Fonts->AddFontFromFileTTF(fontPath, 18.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull())){
+                return;
+            }
         }
     }
 
