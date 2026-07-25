@@ -98,7 +98,7 @@ ClientTaoDog::ClientTaoDog(uint64_t uid, ProcessRun *proc, const ActionNode &act
 
 bool ClientTaoDog::onActionStand(const ActionNode &action)
 {
-    if(finalStandMode() != action.extParam.stand.dog.standMode){
+    if(finalStandMode() != to_bool(action.extParam.stand.dog.standMode)){
         addActionTransf();
     }
     return ClientMonster::onActionStand(action);

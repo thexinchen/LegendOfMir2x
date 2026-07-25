@@ -23,6 +23,7 @@ class ActorPod final
         {
             ActorPod * const actor;
             uint64_t   const seqID;
+            std::coroutine_handle<corof::awaitable<ActorMsgPack>::promise_type> handle;
 
             constexpr bool await_ready() const noexcept
             {
@@ -31,6 +32,7 @@ class ActorPod final
 
             void await_suspend(std::coroutine_handle<corof::awaitable<ActorMsgPack>::promise_type> handle)
             {
+                this->handle = handle;
                 if constexpr(AllowOverwrite){
                     actor->m_respondCBList.insert_or_assign(seqID, handle);
                 }
@@ -41,7 +43,10 @@ class ActorPod final
                 }
             }
 
-            void await_resume() const noexcept {}
+            ActorMsgPack await_resume()
+            {
+                return std::move(handle.promise().m_result).value();
+            }
         };
 
     private:
@@ -141,14 +146,11 @@ class ActorPod final
         corof::awaitable<ActorMsgPack> send(std::pair<uint64_t, uint64_t> addr, ActorMsgBuf mbuf)
         {
             if(const auto seqIDOpt = doPost(addr, std::move(mbuf), true); seqIDOpt.has_value()){
-                co_await RegisterContinuationAwaiter<false>
+                co_return co_await RegisterContinuationAwaiter<false>
                 {
                     .actor = this,
                     .seqID = seqIDOpt.value(),
                 };
-
-                // no return statement here
-                // return_value() called explicitly by innHandler()
             }
             else{
                 co_return ActorMsgPack{AM_BADACTORPOD};
@@ -186,7 +188,7 @@ class ActorPod final
                 *tokenPtr = token;
             }
 
-            co_await RegisterContinuationAwaiter<true>
+            co_return co_await RegisterContinuationAwaiter<true>
             {
                 .actor = this,
                 .seqID = token.second,

@@ -154,8 +154,8 @@ ServerMap::LuaThreadRunner::LuaThreadRunner(ServerMap *serverMapPtr)
                             true,
                             0,
                             0,
-                            getServerMap()->mapBin()->w(),
-                            getServerMap()->mapBin()->h(),
+                            to_d(getServerMap()->mapBin()->w()),
+                            to_d(getServerMap()->mapBin()->h()),
                         };
                     }
                 case 4:

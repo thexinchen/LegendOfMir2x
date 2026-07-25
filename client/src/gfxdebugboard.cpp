@@ -636,16 +636,16 @@ GfxDebugBoard::GfxDebugBoard(GfxDebugBoard::InitArgs args)
           .parent{&m_dstWidget},
       }}
 {
-    m_img.setSize([this]{ return m_imgCanvas.w() * m_imgResizeHSlider.getValue(); },
-                  [this]{ return m_imgCanvas.h() * m_imgResizeVSlider.getValue(); });
+    m_img.setSize([this]{ return to_d(m_imgCanvas.w() * m_imgResizeHSlider.getValue()); },
+                  [this]{ return to_d(m_imgCanvas.h() * m_imgResizeVSlider.getValue()); });
 
     m_imgContainer.moveTo(m_imgFrame.dx(), m_imgFrame.dy());
     m_resizeBoard.setGfxMargin(Widget::VarMargin
     {
-        .up    = [this]{ return         std::min<float>(m_marginVSlider_0.getValue(), m_marginVSlider_1.getValue())  * m_dstCanvas.h(); },
-        .down  = [this]{ return (1.0f - std::max<float>(m_marginVSlider_0.getValue(), m_marginVSlider_1.getValue())) * m_dstCanvas.h(); },
-        .left  = [this]{ return         std::min<float>(m_marginHSlider_0.getValue(), m_marginHSlider_1.getValue())  * m_dstCanvas.w(); },
-        .right = [this]{ return (1.0f - std::max<float>(m_marginHSlider_0.getValue(), m_marginHSlider_1.getValue())) * m_dstCanvas.w(); },
+        .up    = [this]{ return to_d(        std::min<float>(m_marginVSlider_0.getValue(), m_marginVSlider_1.getValue())  * m_dstCanvas.h()); },
+        .down  = [this]{ return to_d((1.0f - std::max<float>(m_marginVSlider_0.getValue(), m_marginVSlider_1.getValue())) * m_dstCanvas.h()); },
+        .left  = [this]{ return to_d(        std::min<float>(m_marginHSlider_0.getValue(), m_marginHSlider_1.getValue())  * m_dstCanvas.w()); },
+        .right = [this]{ return to_d((1.0f - std::max<float>(m_marginHSlider_0.getValue(), m_marginHSlider_1.getValue())) * m_dstCanvas.w()); },
     });
 
     m_resizeBoard.setGfxResize(Widget::VarSize2D

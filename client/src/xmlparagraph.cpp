@@ -93,7 +93,7 @@ size_t XMLParagraph::insertUTF8String(int leafIndex, int leafOff, const char *ut
         // use lambda here on purpose to prevent oldValue pointer get exposed to outiler scope
 
         const auto oldValue  = leaf(leafIndex).xmlNode()->Value();
-        const auto oldLength = std::strlen(oldValue);
+        const auto oldLength = to_d(std::strlen(oldValue));
 
         if(leafOff >= to_d(utf8OffRef.size())){
             return {oldLength, std::string(oldValue) + utf8String};

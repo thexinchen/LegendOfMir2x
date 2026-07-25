@@ -18,7 +18,7 @@ if(MSVC)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>")
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/permissive->")
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/Zc:preprocessor>")
-    add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/utf-8>")
+    add_compile_options(/utf-8)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/bigobj>")
     add_compile_options(/MP)  # multi-process compilation
     add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN _CRT_SECURE_NO_WARNINGS)

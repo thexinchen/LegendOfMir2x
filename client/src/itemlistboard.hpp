@@ -47,8 +47,8 @@ class ItemListBoard: public Widget
 
             return
             {
-                m_startX + m_boxW * gridX,
-                m_startY + m_boxH * gridY,
+                m_startX + m_boxW * to_d(gridX),
+                m_startY + m_boxH * to_d(gridY),
                 m_boxW,
                 m_boxH,
             };

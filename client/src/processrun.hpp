@@ -472,7 +472,7 @@ class ProcessRun: public Process
     public:
         std::tuple<uint64_t, int, int> getMap() const
         {
-            return {m_mapUID, m_mir2xMapData.w(), m_mir2xMapData.h()};
+            return {m_mapUID, to_d(m_mir2xMapData.w()), to_d(m_mir2xMapData.h())};
         }
 
         const auto &getCOList() const
