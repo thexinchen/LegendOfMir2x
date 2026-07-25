@@ -656,12 +656,24 @@ std::tuple<int, int> GLDeviceHelper::getTextureSize(GLTexID tex)
 
 int GLDeviceHelper::getTextureWidth(GLTexID tex, std::optional<int> optW)
 {
-    return optW.value_or(tex.w);
+    if(tex){
+        return tex.w;
+    }
+    else if(optW.has_value() && optW.value() >= 0){
+        return optW.value();
+    }
+    throw fflpanic("invalid texture and optional width");
 }
 
 int GLDeviceHelper::getTextureHeight(GLTexID tex, std::optional<int> optH)
 {
-    return optH.value_or(tex.h);
+    if(tex){
+        return tex.h;
+    }
+    else if(optH.has_value() && optH.value() >= 0){
+        return optH.value();
+    }
+    throw fflpanic("invalid texture and optional height");
 }
 
 // ---------------------------------------------------------------------------
