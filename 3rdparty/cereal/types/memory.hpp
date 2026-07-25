@@ -134,7 +134,9 @@ namespace cereal
       // typedefs for parent type and storage type
       using BaseType = typename ::cereal::traits::get_shared_from_this_base<T>::type;
       using ParentType = std::enable_shared_from_this<BaseType>;
-      using StorageType = typename std::aligned_storage<sizeof(ParentType), CEREAL_ALIGNOF(ParentType)>::type;
+      // std::aligned_storage is deprecated in C++23 and removed in C++26; use an
+      // equivalent alignas buffer struct instead (same size/alignment, trivial).
+      struct StorageType { alignas(CEREAL_ALIGNOF(ParentType)) unsigned char data[sizeof(ParentType)]; };
 
       public:
         //! Saves the state of some type inheriting from enable_shared_from_this
@@ -286,7 +288,9 @@ namespace cereal
     {
       // Storage type for the pointer - since we can't default construct this type,
       // we'll allocate it using std::aligned_storage and use a custom deleter
-      using AlignedStorage = typename std::aligned_storage<sizeof(T), CEREAL_ALIGNOF(T)>::type;
+      // std::aligned_storage is deprecated in C++23 and removed in C++26; use an
+      // equivalent alignas buffer struct instead (same size/alignment, trivial).
+      struct AlignedStorage { alignas(CEREAL_ALIGNOF(T)) unsigned char data[sizeof(T)]; };
 
       // Valid flag - set to true once construction finishes
       //  This prevents us from calling the destructor on
@@ -377,7 +381,9 @@ namespace cereal
       using NonConstT = typename std::remove_const<T>::type;
       // Storage type for the pointer - since we can't default construct this type,
       // we'll allocate it using std::aligned_storage
-      using AlignedStorage = typename std::aligned_storage<sizeof(NonConstT), CEREAL_ALIGNOF(NonConstT)>::type;
+      // std::aligned_storage is deprecated in C++23 and removed in C++26; use an
+      // equivalent alignas buffer struct instead (same size/alignment, trivial).
+      struct AlignedStorage { alignas(CEREAL_ALIGNOF(NonConstT)) unsigned char data[sizeof(NonConstT)]; };
 
       // Allocate storage - note the AlignedStorage type so that deleter is correct if
       //                    an exception is thrown before we are initialized

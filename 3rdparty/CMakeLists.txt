@@ -96,6 +96,13 @@ endif()
 # ----------------------------------------------------------------------------
 add_library(sqlite3 STATIC sqlite3/sqlite3.c)
 target_include_directories(sqlite3 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3)
+if(NOT MSVC)
+    # The vendored sqlite3 amalgamation trips two GCC-only diagnostics: a
+    # -Wstringop-overread false positive in sqlite3Strlen30() and a
+    # -Wdiscarded-qualifiers from sqlite3ShadowTableName()'s intentional
+    # temporary un-const. Suppress just these, just for this target.
+    target_compile_options(sqlite3 PRIVATE -Wno-stringop-overread -Wno-discarded-qualifiers)
+endif()
 
 # ----------------------------------------------------------------------------
 # SQLiteCpp (include <SQLiteCpp/SQLiteCpp.h> -> 3rdparty/SQLiteCpp/)
@@ -115,6 +122,11 @@ list(REMOVE_ITEM LUA_SRCS
 )
 add_library(lua STATIC ${LUA_SRCS})
 target_include_directories(lua PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lua-5.5.0)
+if(NOT WIN32)
+    # Take the POSIX code path: os.tmpname() uses mkstemp instead of tmpnam,
+    # which also silences the "the use of `tmpnam' is dangerous" link warning.
+    target_compile_definitions(lua PRIVATE LUA_USE_POSIX)
+endif()
 
 # ----------------------------------------------------------------------------
 # zlib
