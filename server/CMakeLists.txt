@@ -18,3 +18,14 @@ mir2x_generate_resource(server serverobject_lua             "${CMAKE_CURRENT_SOU
 
 install(TARGETS server DESTINATION server)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/server/script DESTINATION server)
+install(CODE [
+    execute_process(
+        COMMENT "install server resources ..."
+        COMMAND "${Python3_EXECUTABLE}" "${MIR2X_INSTALL_RES_SCRIPT}" 
+            --install-server 
+            --ignore-zsdbmaker-error
+            "--zsdbmaker=$<TARGET_FILE:zsdbmaker>"
+            "--input-dir=${MIR2X_RES_REPO_PATH}"
+            "--output-dir=$<TARGET_FILE_DIR:server>"
+    )
+])

@@ -110,17 +110,9 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set(MIR2X_INSTALL_RES_SCRIPT "${CMAKE_SOURCE_DIR}/tools/installres/src/install_res.py")
 
 set(MIR2X_RES_REPO_PATH "" CACHE PATH "Path to the mir2x resource repository used by resource packing")
-if(NOT MIR2X_RES_REPO_PATH)
-    message(FATAL_ERROR "MIR2X_RES_REPO_PATH is required. "
-        "Configure with -DMIR2X_RES_REPO_PATH=/path/to/mir2x_res")
-endif()
-if(NOT IS_DIRECTORY "${MIR2X_RES_REPO_PATH}")
-    message(FATAL_ERROR "Invalid MIR2X_RES_REPO_PATH: ${MIR2X_RES_REPO_PATH}")
-endif()
-
 message(STATUS "Using mir2x resource path: ${MIR2X_RES_REPO_PATH}")
 
-add_custom_target(installres ALL
+add_custom_target(zsdbdeploy
     COMMAND "${Python3_EXECUTABLE}" "${MIR2X_INSTALL_RES_SCRIPT}"
         --install-client
         --ignore-zsdbmaker-error
@@ -140,7 +132,7 @@ add_custom_target(installres ALL
     VERBATIM
 )
 
-add_dependencies(installres client server zsdbmaker)
+add_dependencies(zsdbdeploy zsdbmaker client server)
 
 # ----------------------------------------------------------------------------
 # Install / CPack
