@@ -98,16 +98,15 @@ void GUICore::setupFonts()
 #endif
     };
 
-    float fontSize = 26.0f;
-    
+    const float fontPixelSize = 28.0f;
     ImGuiIO &io = ImGui::GetIO();
     ImFontConfig fontCfg;
-    fontCfg.SizePixels = fontSize;
+    fontCfg.SizePixels = fontPixelSize;
 
     for(const auto *fontPath: cjkFontPathList){
         if(std::FILE *fp = std::fopen(fontPath, "rb"); fp){
             std::fclose(fp);
-            if(io.Fonts->AddFontFromFileTTF(fontPath, fontSize, nullptr, io.Fonts->GetGlyphRangesChineseFull())){
+            if(io.Fonts->AddFontFromFileTTF(fontPath, fontPixelSize, nullptr, io.Fonts->GetGlyphRangesChineseFull())){
                 return;
             }
         }
