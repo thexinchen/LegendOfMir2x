@@ -37,42 +37,20 @@ if(CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
 
-# ----------------------------------------------------------------------------
-# Build signature
-# ----------------------------------------------------------------------------
-set(MIR2X_COMMON_SOURCE_DIR ${CMAKE_SOURCE_DIR}/common/src)
-
 if(NOT DEFINED MIR2X_BUILD_SIGNATURE)
     string(TIMESTAMP NOW_TIMESTAMP "%Y%m%d%H%M%S")
     set(MIR2X_BUILD_SIGNATURE "VENGINEERING-${NOW_TIMESTAMP}")
 endif()
 message(STATUS "Build signature: ${MIR2X_BUILD_SIGNATURE}")
 
-# ----------------------------------------------------------------------------
-# Generate log file list for logProfiler()
-# ----------------------------------------------------------------------------
-if(DEFINED MIR2X_LOG_FILELIST)
-    message(FATAL_ERROR "Don't define MIR2X_LOG_FILELIST, cmake automatically collect the file list")
-else()
-    file(GLOB_RECURSE MIR2X_LOG_SRC_FILELIST
-        ${CMAKE_SOURCE_DIR}/common/src/*.[hc]pp
-        ${CMAKE_SOURCE_DIR}/client/src/*.[hc]pp
-        ${CMAKE_SOURCE_DIR}/server/src/*.[hc]pp
-    )
+# resource repo path
+set(MIR2X_RES_REPO_PATH "" CACHE PATH "Path to the mir2x resource repository used by resource packing")
+message(STATUS "Using mir2x resource path: ${MIR2X_RES_REPO_PATH}")
 
-    foreach(LOG_SRC ${MIR2X_LOG_SRC_FILELIST})
-        string(REGEX REPLACE "^${CMAKE_SOURCE_DIR}/" "" LOG_SRC_BODY ${LOG_SRC})
-        string(APPEND MIR2X_LOG_FILELIST "R\"DELIM(${LOG_SRC_BODY})DELIM\",\n")
-    endforeach()
-endif()
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set(MIR2X_INSTALL_RES_SCRIPT "${CMAKE_SOURCE_DIR}/tools/installres/src/install_res.py")
 
-if(WIN32 AND MSVC)
-    string(REPLACE "/" "\\" MIR2X_LOG_FILELIST ${MIR2X_LOG_FILELIST})
-endif()
-
-configure_file(${MIR2X_COMMON_SOURCE_DIR}/buildconfig.hpp.in ${CMAKE_BINARY_DIR}/config_file/buildconfig.hpp)
-configure_file(${MIR2X_COMMON_SOURCE_DIR}/logprof.hpp.in     ${CMAKE_BINARY_DIR}/config_file/logprof.hpp)
-
+# macro to gen hpp for embed
 function(mir2x_generate_resource target output_name input)
     set(output "${CMAKE_CURRENT_BINARY_DIR}/${output_name}.hpp")
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${input}")
@@ -94,24 +72,38 @@ function(mir2x_generate_resource target output_name input)
     source_group("Generated Files" FILES "${output}")
 endfunction()
 
-# ----------------------------------------------------------------------------
-# Subdirectories
-# ----------------------------------------------------------------------------
+# logprof
+if(DEFINED MIR2X_LOG_FILELIST)
+    message(FATAL_ERROR "Don't define MIR2X_LOG_FILELIST, cmake automatically collect the file list")
+else()
+    file(GLOB_RECURSE MIR2X_LOG_SRC_FILELIST
+        ${CMAKE_SOURCE_DIR}/common/src/*.[hc]pp
+        ${CMAKE_SOURCE_DIR}/client/src/*.[hc]pp
+        ${CMAKE_SOURCE_DIR}/server/src/*.[hc]pp
+    )
+
+    foreach(LOG_SRC ${MIR2X_LOG_SRC_FILELIST})
+        string(REGEX REPLACE "^${CMAKE_SOURCE_DIR}/" "" LOG_SRC_BODY ${LOG_SRC})
+        string(APPEND MIR2X_LOG_FILELIST "R\"DELIM(${LOG_SRC_BODY})DELIM\",\n")
+    endforeach()
+endif()
+
+if(WIN32 AND MSVC)
+    string(REPLACE "/" "\\" MIR2X_LOG_FILELIST ${MIR2X_LOG_FILELIST})
+endif()
+
+set(MIR2X_COMMON_SOURCE_DIR ${CMAKE_SOURCE_DIR}/common/src)
+configure_file(${MIR2X_COMMON_SOURCE_DIR}/buildconfig.hpp.in ${CMAKE_BINARY_DIR}/config_file/buildconfig.hpp)
+configure_file(${MIR2X_COMMON_SOURCE_DIR}/logprof.hpp.in     ${CMAKE_BINARY_DIR}/config_file/logprof.hpp)
+
+# add sub directory
 add_subdirectory(3rdparty)
 add_subdirectory(common)
 add_subdirectory(server server_dir)
 add_subdirectory(client client_dir)
 add_subdirectory(tools/zsdbmaker)
 
-# ----------------------------------------------------------------------------
-# mir2x res
-# ----------------------------------------------------------------------------
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
-set(MIR2X_INSTALL_RES_SCRIPT "${CMAKE_SOURCE_DIR}/tools/installres/src/install_res.py")
-
-set(MIR2X_RES_REPO_PATH "" CACHE PATH "Path to the mir2x resource repository used by resource packing")
-message(STATUS "Using mir2x resource path: ${MIR2X_RES_REPO_PATH}")
-
+# deploy res to binary dir
 add_custom_target(zsdbdeploy
     COMMAND "${Python3_EXECUTABLE}" "${MIR2X_INSTALL_RES_SCRIPT}"
         --install-client
@@ -134,9 +126,7 @@ add_custom_target(zsdbdeploy
 
 add_dependencies(zsdbdeploy zsdbmaker client server)
 
-# ----------------------------------------------------------------------------
 # Install / CPack
-# ----------------------------------------------------------------------------
 set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION ./)
 set(CMAKE_INSTALL_DEBUG_LIBRARIES TRUE)
 include(InstallRequiredSystemLibraries)

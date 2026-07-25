@@ -16,14 +16,15 @@ mir2x_generate_resource(client ivbutton_png "${CMAKE_CURRENT_SOURCE_DIR}/src/ivb
 mir2x_generate_resource(client monaco_ttf   "${CMAKE_CURRENT_SOURCE_DIR}/src/monaco.ttf")
 
 install(TARGETS client DESTINATION client)
-install(CODE [
+install(CODE "
+    message(STATUS \"install client resources ...\")
     execute_process(
-        COMMENT "install client resources ..."
-        COMMAND "${Python3_EXECUTABLE}" "${MIR2X_INSTALL_RES_SCRIPT}"
+        COMMAND \"${Python3_EXECUTABLE}\" \"${MIR2X_INSTALL_RES_SCRIPT}\"
             --install-client 
             --ignore-zsdbmaker-error
-            "--zsdbmaker=$<TARGET_FILE:zsdbmaker>"
-            "--input-dir=${MIR2X_RES_REPO_PATH}"
-            "--output-dir=$<TARGET_FILE_DIR:client>/res"
+            \"--zsdbmaker=$<TARGET_FILE:zsdbmaker>\"
+            \"--input-dir=${MIR2X_RES_REPO_PATH}\"
+            \"--output-dir=\${CMAKE_INSTALL_PREFIX}/client/res\"
+        COMMAND_ERROR_IS_FATAL ANY
     )
-])
+")
