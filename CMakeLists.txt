@@ -99,8 +99,8 @@ endfunction()
 # ----------------------------------------------------------------------------
 add_subdirectory(3rdparty)
 add_subdirectory(common)
-add_subdirectory(server)
-add_subdirectory(client)
+add_subdirectory(server server_dir)
+add_subdirectory(client client_dir)
 
 # ----------------------------------------------------------------------------
 # Install / CPack

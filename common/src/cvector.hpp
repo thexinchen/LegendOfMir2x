@@ -1,4 +1,7 @@
 #pragma once
+
+#if defined(_MSC_VER)
+
 #include <cstddef>
 #include <initializer_list>
 
@@ -27,3 +30,22 @@ struct cvector
 
     constexpr const T * data() const { return m_ptr; }
 };
+
+#else
+
+#include <initializer_list>
+
+// GCC/Clang reject the ptr+size constructor variant above inside constexpr
+// aggregate arrays: the initializer_list backing array is a temporary whose
+// lifetime is not extended by copying il.begin() into a member, so the whole
+// array initialization is diagnosed as "not a constant expression".
+//
+// A std::initializer_list aggregate member, initialized directly by a
+// braced-init-list, is accepted: its backing array gets static storage
+// duration along with the enclosing constexpr variable. Consumers only use
+// begin()/end()/size(), which std::initializer_list provides.
+
+template<typename T>
+using cvector = std::initializer_list<T>;
+
+#endif

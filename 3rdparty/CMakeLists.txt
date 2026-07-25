@@ -59,6 +59,10 @@ file(WRITE ${G3LOG_GEN_DIR}/g3log/generated_definitions.hpp
 file(GLOB G3LOG_SRCS g3log/src/*.cpp)
 if(WIN32)
     list(REMOVE_ITEM G3LOG_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/g3log/src/crashhandler_unix.cpp)
+else()
+    list(REMOVE_ITEM G3LOG_SRCS
+        ${CMAKE_CURRENT_SOURCE_DIR}/g3log/src/crashhandler_windows.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/g3log/src/stacktrace_windows.cpp)
 endif()
 add_library(g3log STATIC ${G3LOG_SRCS})
 target_include_directories(g3log PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${G3LOG_GEN_DIR})
@@ -118,6 +122,14 @@ target_include_directories(lua PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lua-5.5.0)
 file(GLOB ZLIB_SRCS zlib/*.c)
 add_library(zlib STATIC ${ZLIB_SRCS})
 target_include_directories(zlib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/zlib)
+if(NOT WIN32)
+    # This zconf.h variant only pulls in <unistd.h> (read/write/close/lseek
+    # prototypes for the gz* code) when HAVE_UNISTD_H is defined, which zlib's
+    # own configure/cmake would normally set. Without it GCC 16 (C23, where
+    # implicit function declarations are a hard error) fails to build gzlib.c,
+    # gzread.c and gzwrite.c.
+    target_compile_definitions(zlib PRIVATE HAVE_UNISTD_H=1 HAVE_STDARG_H=1)
+endif()
 
 # ----------------------------------------------------------------------------
 # libpng (needs pnglibconf.h generated from prebuilt)
@@ -162,9 +174,12 @@ add_library(zstd STATIC
 )
 target_include_directories(zstd PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/zstd)
 target_include_directories(zstd PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/zstd/common)
-if(MSVC)
-    target_compile_definitions(zstd PRIVATE ZSTD_DISABLE_ASM)
-endif()
+# The x86-64 BMI2 decompression kernels live in huf_decompress_amd64.S, which the
+# *.c GLOB above never compiles. When ZSTD_DISABLE_ASM is unset the C code still
+# references those asm symbols, so linking fails with undefined references to
+# HUF_decompress4X{1,2}_usingDTable_internal_fast_asm_loop. Disable asm on every
+# platform (the MSVC-only guard left Linux broken).
+target_compile_definitions(zstd PRIVATE ZSTD_DISABLE_ASM)
 
 # ----------------------------------------------------------------------------
 # pinyin stub (libpinyin replacement for Windows - Chinese IME disabled)
@@ -178,6 +193,13 @@ target_include_directories(pinyin_stub PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/pinyin
 add_subdirectory(glfw-3.4)
 if(WIN32)
     target_link_libraries(glfw3 PUBLIC gdi32 opengl32 user32 shell32 kernel32)
+else()
+    # The imgui OpenGL3 backend and the client/server render code call gl* directly.
+    # This vendored GLFW doesn't link or export those symbols, so on non-Windows we
+    # must link the system OpenGL library (opengl32 plays this role on Windows).
+    # PUBLIC so it propagates through imgui to the client and server executables.
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(glfw3 PUBLIC OpenGL::GL)
 endif()
 
 # ----------------------------------------------------------------------------
