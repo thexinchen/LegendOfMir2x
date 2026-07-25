@@ -16,6 +16,10 @@ mir2x_generate_resource(server serverluamodule_lua          "${CMAKE_CURRENT_SOU
 mir2x_generate_resource(server servermap_lua                "${CMAKE_CURRENT_SOURCE_DIR}/src/servermap.lua")
 mir2x_generate_resource(server serverobject_lua             "${CMAKE_CURRENT_SOURCE_DIR}/src/serverobject.lua")
 
+if(MSVC)
+  set_property(TARGET server PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:server>")
+endif()
+
 install(TARGETS server DESTINATION server)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/server/script DESTINATION server)
 install(CODE "
