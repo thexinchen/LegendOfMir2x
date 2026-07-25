@@ -135,7 +135,7 @@ bool GUIFileDialog::draw(std::string &selectedPath)
 
         ImGui::SameLine();
         if(ImGui::Button("Cancel", ImVec2(100, 0))){
-            open = false;
+            ImGui::CloseCurrentPopup();
         }
 
         if(accepted){
