@@ -1,4 +1,6 @@
-# add_subdirectory(mapeditor)  # FLTK GUI tool, disabled pending ImGui port
+set(CMAKE_FOLDER "tools")
+
+#add_subdirectory(mapeditor)  # FLTK GUI tool, disabled pending ImGui port
 # add_subdirectory(pkgviewer)  # FLTK GUI tool, disabled pending ImGui port
 add_subdirectory(mapinfo)
 add_subdirectory(mapdbmaker)

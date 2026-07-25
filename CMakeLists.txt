@@ -101,7 +101,7 @@ add_subdirectory(3rdparty)
 add_subdirectory(common)
 add_subdirectory(server server_dir)
 add_subdirectory(client client_dir)
-add_subdirectory(tools/zsdbmaker)
+add_subdirectory(tools)
 
 # deploy res to binary dir
 add_custom_target(zsdbdeploy
