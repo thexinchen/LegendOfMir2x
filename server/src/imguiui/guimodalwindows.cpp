@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 
 #include <imgui.h>
@@ -40,70 +41,90 @@ GUIConfigureWindow::GUIConfigureWindow(GUICore *core)
 void GUIConfigureWindow::draw()
 {
     bool open = true;
-    ImGui::SetNextWindowSize(ImVec2(570, 360), ImGuiCond_Appearing);
-    if(ImGui::Begin("Server Configure", &open, ImGuiWindowFlags_NoResize)){
-        ImGui::SetCursorPos(ImVec2(20, 30));
-        ImGui::TextUnformatted("Map Path:");
-        ImGui::SameLine(150);
-        ImGui::SetNextItemWidth(300);
-        ImGui::InputText("##mapPath", m_mapPath, sizeof(m_mapPath));
-        ImGui::SameLine(450);
-        if(ImGui::Button("...##map", ImVec2(30, 25))){
-            m_selectingScriptDirectory = false;
-            m_fileDialog.open("Select map package", m_mapPath, GUIFileDialog::Mode::File, ".zsdb");
+    ImGui::SetNextWindowSizeConstraints(ImVec2(570, 0), ImVec2(570, FLT_MAX));
+    if(ImGui::Begin("Server Configure", &open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize)){
+        const float rowHeight = ImGui::GetFrameHeightWithSpacing();
+        const float labelWidth = ImGui::CalcTextSize("Experience Rate:").x + ImGui::GetStyle().ItemSpacing.x;
+        const float browseWidth = ImGui::GetFrameHeight();
+
+        if(ImGui::BeginTable("ConfigureFields", 3, ImGuiTableFlags_SizingStretchProp)){
+            ImGui::TableSetupColumn("Label",  ImGuiTableColumnFlags_WidthFixed, labelWidth);
+            ImGui::TableSetupColumn("Value",  ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Browse", ImGuiTableColumnFlags_WidthFixed, browseWidth);
+
+            const auto drawLabel = [rowHeight](const char *label)
+            {
+                ImGui::TableNextRow(ImGuiTableRowFlags_None, rowHeight);
+                ImGui::TableSetColumnIndex(0);
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted(label);
+                ImGui::TableSetColumnIndex(1);
+            };
+
+            drawLabel("Map Path:");
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            ImGui::InputText("##mapPath", m_mapPath, sizeof(m_mapPath));
+            ImGui::TableSetColumnIndex(2);
+            if(ImGui::Button("...##map", ImVec2(browseWidth, 0))){
+                m_selectingScriptDirectory = false;
+                m_fileDialog.open("Select map package", m_mapPath, GUIFileDialog::Mode::File, ".zsdb");
+            }
+
+            drawLabel("Script Path:");
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            ImGui::InputText("##scriptPath", m_scriptPath, sizeof(m_scriptPath));
+            ImGui::TableSetColumnIndex(2);
+            if(ImGui::Button("...##script", ImVec2(browseWidth, 0))){
+                m_selectingScriptDirectory = true;
+                m_fileDialog.open("Select script directory", m_scriptPath, GUIFileDialog::Mode::Directory);
+            }
+
+            const auto drawField = [&drawLabel](const char *label, const char *id, char *buffer, size_t bufferSize)
+            {
+                drawLabel(label);
+                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+                ImGui::InputText(id, buffer, bufferSize);
+            };
+
+            drawField("Maximal Player:",  "##maxPlayer",      m_maxPlayerCount, sizeof(m_maxPlayerCount));
+            drawField("Experience Rate:", "##experienceRate", m_experienceRate, sizeof(m_experienceRate));
+            drawField("Drop Rate:",       "##dropRate",       m_dropRate,       sizeof(m_dropRate));
+            drawField("Gold Rate:",       "##goldRate",       m_goldRate,       sizeof(m_goldRate));
+
+            if(!m_clientPortEditable){
+                ImGui::BeginDisabled();
+            }
+            drawField("Client Port:", "##clientPort", m_clientPort, sizeof(m_clientPort));
+            if(!m_clientPortEditable){
+                ImGui::EndDisabled();
+            }
+
+            if(!m_slavePortEditable){
+                ImGui::BeginDisabled();
+            }
+            drawField("SlavePort:", "##slavePort", m_slavePort, sizeof(m_slavePort));
+            if(!m_slavePortEditable){
+                ImGui::EndDisabled();
+            }
+            ImGui::EndTable();
         }
 
-        ImGui::SetCursorPos(ImVec2(20, 70));
-        ImGui::TextUnformatted("Script Path:");
-        ImGui::SameLine(150);
-        ImGui::SetNextItemWidth(300);
-        ImGui::InputText("##scriptPath", m_scriptPath, sizeof(m_scriptPath));
-        ImGui::SameLine(450);
-        if(ImGui::Button("...##script", ImVec2(30, 25))){
-            m_selectingScriptDirectory = true;
-            m_fileDialog.open("Select script directory", m_scriptPath, GUIFileDialog::Mode::Directory);
+        ImGui::Separator();
+        const float buttonWidth = std::max(70.0f, ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 2.0f);
+        const float buttonGroupWidth = buttonWidth * 3.0f + ImGui::GetStyle().ItemSpacing.x * 2.0f;
+        if(const float availableWidth = ImGui::GetContentRegionAvail().x; availableWidth > buttonGroupWidth){
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + availableWidth - buttonGroupWidth);
         }
 
-        const auto drawField = [](float y, const char *label, const char *id, char *buffer, size_t bufferSize)
-        {
-            ImGui::SetCursorPos(ImVec2(20, y));
-            ImGui::TextUnformatted(label);
-            ImGui::SameLine(150);
-            ImGui::SetNextItemWidth(60);
-            ImGui::InputText(id, buffer, bufferSize);
-        };
-
-        drawField(110, "Maximal Player:", "##maxPlayer",      m_maxPlayerCount, sizeof(m_maxPlayerCount));
-        drawField(150, "Experience Rate:", "##experienceRate", m_experienceRate, sizeof(m_experienceRate));
-        drawField(190, "Drop Rate:",       "##dropRate",       m_dropRate,       sizeof(m_dropRate));
-        drawField(230, "Gold Rate:",       "##goldRate",       m_goldRate,       sizeof(m_goldRate));
-
-        if(!m_clientPortEditable){
-            ImGui::BeginDisabled();
-        }
-        drawField(270, "Client Port:", "##clientPort", m_clientPort, sizeof(m_clientPort));
-        if(!m_clientPortEditable){
-            ImGui::EndDisabled();
-        }
-
-        if(!m_slavePortEditable){
-            ImGui::BeginDisabled();
-        }
-        drawField(310, "SlavePort:", "##slavePort", m_slavePort, sizeof(m_slavePort));
-        if(!m_slavePortEditable){
-            ImGui::EndDisabled();
-        }
-
-        ImGui::SetCursorPos(ImVec2(300, 325));
-        if(ImGui::Button("Cancel", ImVec2(70, 25))){
+        if(ImGui::Button("Cancel", ImVec2(buttonWidth, 0))){
             open = false;
         }
-        ImGui::SameLine(380);
-        if(ImGui::Button("Apply", ImVec2(70, 25))){
+        ImGui::SameLine();
+        if(ImGui::Button("Apply", ImVec2(buttonWidth, 0))){
             applyConfig();
         }
-        ImGui::SameLine(460);
-        if(ImGui::Button("OK", ImVec2(70, 25))){
+        ImGui::SameLine();
+        if(ImGui::Button("OK", ImVec2(buttonWidth, 0))){
             applyConfig();
             open = false;
         }
