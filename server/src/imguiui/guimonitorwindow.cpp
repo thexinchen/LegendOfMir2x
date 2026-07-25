@@ -1,3 +1,4 @@
+#include <array>
 #include <string>
 #include <algorithm>
 
@@ -142,9 +143,12 @@ void GUIMonitorWindow::drawActorMonitor()
 
                 // full-row selectable gives row hover + double-click detection
                 const auto uidStr = str_printf("%016llx", to_llu(monitor.uid));
-                ImGui::Selectable(uidStr.c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick);
-                if(ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)){
-                    openPodMonitor(monitor.uid); // drills into the pod monitor (legacy behavior)
+                if(ImGui::Selectable(uidStr.c_str(), m_selectedActorUID == monitor.uid,
+                            ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick)){
+                    m_selectedActorUID = monitor.uid;
+                    if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)){
+                        openPodMonitor(monitor.uid); // drills into the pod monitor (legacy behavior)
+                    }
                 }
 
                 ImGui::TableNextColumn();
@@ -166,7 +170,22 @@ void GUIMonitorWindow::drawActorMonitor()
         ImGui::EndTable();
     }
 
-    ImGui::TextDisabled("%zu actor(s), refresh %.2fs", m_actorList.size(), MONITOR_REFRESH_SEC);
+    std::array<size_t, UID_END> uidTypeCounts {};
+    for(const auto &monitor: m_actorList){
+        if(const int uidType = uidf::getUIDType(monitor.uid); uidType >= UID_BEGIN && uidType < UID_END){
+            ++uidTypeCounts.at(uidType);
+        }
+    }
+    ImGui::TextDisabled("ACTORS: %zu, COR: %zu, MAP: %zu, NPC: %zu, MON: %zu, PLY: %zu, RCV: %zu, QST: %zu, SLO: %zu",
+            m_actorList.size(),
+            uidTypeCounts.at(UID_COR),
+            uidTypeCounts.at(UID_MAP),
+            uidTypeCounts.at(UID_NPC),
+            uidTypeCounts.at(UID_MON),
+            uidTypeCounts.at(UID_PLY),
+            uidTypeCounts.at(UID_RCV),
+            uidTypeCounts.at(UID_QST),
+            uidTypeCounts.at(UID_SLO));
     ImGui::End();
     if(!open){
         m_core->setActorMonitorOpen(false);
@@ -218,7 +237,10 @@ void GUIMonitorWindow::drawPodMonitor()
                     ++messageTypeCount;
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    ImGui::TextUnformatted(mpkName(amType));
+                    if(ImGui::Selectable(mpkName(amType), m_selectedAMType == amType,
+                                ImGuiSelectableFlags_SpanAllColumns)){
+                        m_selectedAMType = amType;
+                    }
                     ImGui::TableNextColumn();
                     ImGui::TextUnformatted(fnTimeString(procMonitor.procTick / 1000000ULL).c_str());
                     ImGui::TableNextColumn();

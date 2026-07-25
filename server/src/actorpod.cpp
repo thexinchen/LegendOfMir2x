@@ -23,6 +23,7 @@ ActorPod::ActorPod(ServerObject *serverObject)
 {
     fflassert(UID());
     fflassert(getSO());
+    m_podMonitor.uid = m_UID;
 
     registerOp(AM_ACTIVATE, [thisptr = this](const ActorMsgPack &) -> corof::awaitable<>
     {

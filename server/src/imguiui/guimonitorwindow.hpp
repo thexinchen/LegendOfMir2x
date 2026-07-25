@@ -21,6 +21,8 @@ class GUIMonitorWindow
         std::vector<ActorMonitor> m_actorList;
         ActorPodMonitor           m_podMonitor;
         uint64_t                  m_podUID = 0;
+        uint64_t                  m_selectedActorUID = 0;
+        int                       m_selectedAMType = -1;
         double                    m_lastRefresh = -1.0;
 
     public:
