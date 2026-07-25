@@ -73,7 +73,26 @@ endif()
 configure_file(${MIR2X_COMMON_SOURCE_DIR}/buildconfig.hpp.in ${CMAKE_BINARY_DIR}/config_file/buildconfig.hpp)
 configure_file(${MIR2X_COMMON_SOURCE_DIR}/logprof.hpp.in     ${CMAKE_BINARY_DIR}/config_file/logprof.hpp)
 
-include("${CMAKE_SOURCE_DIR}/cmake/Mir2xResource.cmake")
+function(mir2x_generate_resource target output_name input)
+    set(output "${CMAKE_CURRENT_BINARY_DIR}/${output_name}.hpp")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${input}")
+
+    file(READ "${input}" resource_hex HEX)
+    string(REGEX REPLACE "([0-9a-fA-F][0-9a-fA-F])" "0x\\1," resource_bytes "${resource_hex}")
+    set(resource_content "${resource_bytes}\n")
+
+    if(EXISTS "${output}")
+        file(READ "${output}" current_content)
+    endif()
+
+    if(NOT current_content STREQUAL resource_content)
+        file(WRITE "${output}" "${resource_content}")
+    endif()
+
+    target_sources(${target} PRIVATE "${output}")
+    target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+    source_group("Generated Files" FILES "${output}")
+endfunction()
 
 # ----------------------------------------------------------------------------
 # Subdirectories
