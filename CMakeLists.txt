@@ -95,6 +95,15 @@ function(mir2x_generate_resource target output_name input)
 endfunction()
 
 # ----------------------------------------------------------------------------
+# Subdirectories
+# ----------------------------------------------------------------------------
+add_subdirectory(3rdparty)
+add_subdirectory(common)
+add_subdirectory(server server_dir)
+add_subdirectory(client client_dir)
+add_subdirectory(tools/zsdbmaker)
+
+# ----------------------------------------------------------------------------
 # mir2x res
 # ----------------------------------------------------------------------------
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -111,15 +120,27 @@ endif()
 
 message(STATUS "Using mir2x resource path: ${MIR2X_RES_REPO_PATH}")
 
-# ----------------------------------------------------------------------------
-# Subdirectories
-# ----------------------------------------------------------------------------
-add_subdirectory(3rdparty)
-add_subdirectory(common)
-add_subdirectory(server server_dir)
-add_subdirectory(client client_dir)
-add_subdirectory(tools/zsdbmaker)
-add_subdirectory(installres)
+add_custom_target(installres ALL
+    COMMAND "${Python3_EXECUTABLE}" "${MIR2X_INSTALL_RES_SCRIPT}"
+        --install-client
+        --ignore-zsdbmaker-error
+        "--zsdbmaker=$<TARGET_FILE:zsdbmaker>"
+        "--input-dir=${MIR2X_RES_REPO_PATH}"
+        "--output-dir=$<TARGET_FILE_DIR:client>/res"
+    COMMAND "${Python3_EXECUTABLE}" "${MIR2X_INSTALL_RES_SCRIPT}"
+        --install-server
+        --ignore-zsdbmaker-error
+        "--zsdbmaker=$<TARGET_FILE:zsdbmaker>"
+        "--input-dir=${MIR2X_RES_REPO_PATH}"
+        "--output-dir=$<TARGET_FILE_DIR:server>"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+        "${CMAKE_SOURCE_DIR}/server/script"
+        "$<TARGET_FILE_DIR:server>/script"
+    COMMENT "Deploying client and server resources"
+    VERBATIM
+)
+
+add_dependencies(installres client server zsdbmaker)
 
 # ----------------------------------------------------------------------------
 # Install / CPack
