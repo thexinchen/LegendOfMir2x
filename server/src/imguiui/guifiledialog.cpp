@@ -73,8 +73,12 @@ void GUIFileDialog::enterDirectory(const std::filesystem::path &path)
     }
 }
 
-bool GUIFileDialog::draw(std::string &selectedPath)
+bool GUIFileDialog::draw(std::string &selectedPath, bool *cancelled)
 {
+    if(cancelled){
+        *cancelled = false;
+    }
+
     const auto popupName = m_title + "###" + m_id;
     if(m_openRequested){
         ImGui::OpenPopup(popupName.c_str());
@@ -135,6 +139,9 @@ bool GUIFileDialog::draw(std::string &selectedPath)
 
         ImGui::SameLine();
         if(ImGui::Button("Cancel", ImVec2(100, 0))){
+            if(cancelled){
+                *cancelled = true;
+            }
             ImGui::CloseCurrentPopup();
         }
 
@@ -142,6 +149,9 @@ bool GUIFileDialog::draw(std::string &selectedPath)
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
+    }
+    if(!open && cancelled){
+        *cancelled = true;
     }
     return accepted;
 }

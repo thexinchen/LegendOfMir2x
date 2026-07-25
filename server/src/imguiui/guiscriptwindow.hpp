@@ -17,6 +17,7 @@ class GUIScriptWindow
         std::string m_text;
         std::string m_fileName;
         GUIFileDialog m_fileDialog {"ScriptFileDialog"};
+        bool m_loadRequestedFromMainMenu = false;
 
     public:
         explicit GUIScriptWindow(GUICore *core)
@@ -25,4 +26,10 @@ class GUIScriptWindow
 
     public:
         void draw();
+        void drawFileDialog();
+        void openFileDialog(bool fromMainMenu);
+
+    private:
+        bool loadFile(const char *);
+        void runFile();
 };

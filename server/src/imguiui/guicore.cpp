@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -98,7 +99,7 @@ void GUICore::setupFonts()
     };
 
     float fontSize = 26.0f;
-
+    
     ImGuiIO &io = ImGui::GetIO();
     ImFontConfig fontCfg;
     fontCfg.SizePixels = fontSize;
@@ -175,6 +176,7 @@ void GUICore::drawFrame()
     if(m_showScript){
         m_scriptWindow.draw();
     }
+    m_scriptWindow.drawFileDialog();
 
     m_commandWindow.drawAllWindows();
 
@@ -346,12 +348,10 @@ void GUICore::setCommandWindowOpen(int cwID, bool open)
 
 void GUICore::execScriptInCommandWindow(const std::string &code)
 {
-    // legacy behavior: scripts run through command window #1
-    if(!m_commandWindow.getSlot(1)){
-        if(createCommandWindow() != 1){
-            appendLog(Log::LOGTYPEV_WARNING, "no free command window for script execution");
-            return;
-        }
+    // legacy behavior: Script -> Run requires an already active command window #1
+    if(!(m_commandWindow.getSlot(1) && m_commandWindow.getSlot(1)->open)){
+        appendLog(Log::LOGTYPEV_WARNING, "Command window 1 is not active");
+        return;
     }
     m_commandWindow.execString(1, code);
 }

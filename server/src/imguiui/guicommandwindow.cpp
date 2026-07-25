@@ -201,7 +201,7 @@ void GUICommandWindow::drawSlot(int cwid, Slot &slot)
     if(!ImGui::Begin(title.c_str(), &open, ImGuiWindowFlags_MenuBar)){
         ImGui::End();
         if(!open){
-            deleteCommandWindow(cwid);
+            slot.open = false;
         }
         return;
     }
@@ -273,7 +273,7 @@ void GUICommandWindow::drawSlot(int cwid, Slot &slot)
 
     ImGui::End();
     if(!open){
-        deleteCommandWindow(cwid);
+        slot.open = false;
     }
 }
 

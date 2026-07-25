@@ -58,19 +58,40 @@ void GUIMainWindow::drawMenuBar()
             m_core->createCommandWindow();
         }
         ImGui::Separator();
+
+        bool hasCommandWindow = false;
+        bool allCommandWindowsOpen = true;
         for(int cwid = 1; cwid <= 16; ++cwid){
-            bool open = m_core->isCommandWindowOpen(cwid);
-            if(ImGui::MenuItem(str_printf("Window %d", cwid).c_str(), nullptr, &open)){
-                m_core->setCommandWindowOpen(cwid, open);
+            if(m_core->hasCommandWindow(cwid)){
+                hasCommandWindow = true;
+                allCommandWindowsOpen = allCommandWindowsOpen && m_core->isCommandWindowOpen(cwid);
+            }
+        }
+
+        if(ImGui::MenuItem("Toggle All", nullptr, false, hasCommandWindow)){
+            for(int cwid = 1; cwid <= 16; ++cwid){
+                if(m_core->hasCommandWindow(cwid)){
+                    m_core->setCommandWindowOpen(cwid, !allCommandWindowsOpen);
+                }
+            }
+        }
+
+        for(int cwid = 1; cwid <= 16; ++cwid){
+            if(!m_core->hasCommandWindow(cwid)){
+                continue;
+            }
+
+            const bool open = m_core->isCommandWindowOpen(cwid);
+            if(ImGui::MenuItem(str_printf("Window %02d", cwid).c_str(), nullptr, false, !open)){
+                m_core->setCommandWindowOpen(cwid, true);
             }
         }
         ImGui::EndMenu();
     }
 
     if(ImGui::BeginMenu("Script")){
-        bool showScript = m_core->isScriptOpen();
-        if(ImGui::MenuItem("Load...", nullptr, &showScript)){
-            m_core->setScriptOpen(showScript);
+        if(ImGui::MenuItem("Load...")){
+            m_core->requestScriptLoad();
         }
         ImGui::EndMenu();
     }

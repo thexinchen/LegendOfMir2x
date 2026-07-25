@@ -138,9 +138,11 @@ class GUICore
         void setProfilerOpen    (bool open) { m_showProfiler     = open; }
         void setConfigureOpen   (bool open) { m_showConfigure    = open; }
         void setScriptOpen      (bool open) { m_showScript       = open; }
+        void requestScriptLoad() { m_scriptWindow.openFileDialog(true); }
 
     public:
         int  createCommandWindow() { return m_commandWindow.createCommandWindow(); }
+        bool hasCommandWindow(int cwid) { return m_commandWindow.getSlot(cwid) != nullptr; }
         bool isCommandWindowOpen(int cwid);
         void setCommandWindowOpen(int cwid, bool open);
         void execScriptInCommandWindow(const std::string &code);

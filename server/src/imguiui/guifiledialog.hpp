@@ -37,7 +37,7 @@ class GUIFileDialog
 
     public:
         void open(const char *title, const char *initialPath, Mode mode, const char *extension = nullptr);
-        bool draw(std::string &selectedPath);
+        bool draw(std::string &selectedPath, bool *cancelled = nullptr);
 
     private:
         void refresh();
