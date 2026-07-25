@@ -47,6 +47,10 @@ void Client::processEvent()
     if(m_currentProcess){
         MirEvent stEvent;
         while(g_glDevice->pollEvent(&stEvent)){
+            if(stEvent.type == MIR_EVENT_QUIT){
+                switchProcess(PROCESSID_EXIT);
+                break;
+            }
             m_currentProcess->processEvent(stEvent);
             switchProcess();
         }
