@@ -95,12 +95,31 @@ function(mir2x_generate_resource target output_name input)
 endfunction()
 
 # ----------------------------------------------------------------------------
+# mir2x res
+# ----------------------------------------------------------------------------
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set(MIR2X_INSTALL_RES_SCRIPT "${CMAKE_SOURCE_DIR}/tools/installres/src/install_res.py")
+
+set(MIR2X_RES_REPO_PATH "" CACHE PATH "Path to the mir2x resource repository used by resource packing")
+if(NOT MIR2X_RES_REPO_PATH)
+    message(FATAL_ERROR "MIR2X_RES_REPO_PATH is required. "
+        "Configure with -DMIR2X_RES_REPO_PATH=/path/to/mir2x_res")
+endif()
+if(NOT IS_DIRECTORY "${MIR2X_RES_REPO_PATH}")
+    message(FATAL_ERROR "Invalid MIR2X_RES_REPO_PATH: ${MIR2X_RES_REPO_PATH}")
+endif()
+
+message(STATUS "Using mir2x resource path: ${MIR2X_RES_REPO_PATH}")
+
+# ----------------------------------------------------------------------------
 # Subdirectories
 # ----------------------------------------------------------------------------
 add_subdirectory(3rdparty)
 add_subdirectory(common)
 add_subdirectory(server server_dir)
 add_subdirectory(client client_dir)
+add_subdirectory(tools/zsdbmaker)
+add_subdirectory(installres)
 
 # ----------------------------------------------------------------------------
 # Install / CPack
