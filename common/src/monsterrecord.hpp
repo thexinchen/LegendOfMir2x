@@ -1,10 +1,10 @@
 #pragma once
 #include <tuple>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <initializer_list>
-#include "cvector.hpp"
 #include "sysconst.hpp"
 #include "protocoldef.hpp"
 
@@ -111,7 +111,22 @@ struct MonsterRecord
         const int repeat    = 1;
         const int count     = 1;
     };
-    const cvector<cvector<DropItem>> dropItemList;
+
+    struct DropItemList
+    {
+        size_t groupCount = 0;
+        size_t itemCount  = 0;
+
+        constexpr DropItemList() = default;
+        constexpr DropItemList(std::initializer_list<std::initializer_list<DropItem>> groupList) noexcept
+            : groupCount(groupList.size())
+        {
+            for(const auto &itemList: groupList){
+                itemCount += itemList.size();
+            }
+        }
+    };
+    const DropItemList dropItemList {};
 
     const char8_t *dcName = nullptr;
     const char8_t *description = nullptr;

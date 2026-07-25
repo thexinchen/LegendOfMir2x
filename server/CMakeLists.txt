@@ -6,13 +6,6 @@ target_link_libraries(server PRIVATE common sqlitecpp imgui)
 target_include_directories(server PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(server PRIVATE ${CMAKE_SOURCE_DIR}/3rdparty)
 
-# MSVC C1001 ICE on coroutine-heavy TUs with /O2 /Ob2 (Release defaults).
-# Use /O1 (less aggressive inlining) to work around the compiler bug.
-# Only apply to Release — /O1 conflicts with /RTC1 in Debug.
-if(MSVC)
-    target_compile_options(server PRIVATE $<$<CONFIG:Release>:/O1>)
-endif()
-
 mir2x_generate_resource(server charobject_lua               "${CMAKE_CURRENT_SOURCE_DIR}/src/charobject.lua")
 mir2x_generate_resource(server npchar_lua                   "${CMAKE_CURRENT_SOURCE_DIR}/src/npchar.lua")
 mir2x_generate_resource(server player_lua                   "${CMAKE_CURRENT_SOURCE_DIR}/src/player.lua")
