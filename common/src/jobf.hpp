@@ -1,7 +1,6 @@
 #pragma once
 #include <vector>
 #include <string>
-#include <inplace_vector>
 #include "totype.hpp"
 #include "fflerror.hpp"
 #include "protocoldef.hpp"
@@ -23,7 +22,7 @@ namespace jobf
 
     inline auto jobName(int job)
     {
-        std::inplace_vector<const char8_t *, 3> result;
+        std::vector<const char8_t *> result;
 
         if(job & JOB_WARRIOR) result.push_back(u8"战士");
         if(job & JOB_TAOIST ) result.push_back(u8"道士");
@@ -34,7 +33,7 @@ namespace jobf
 
     inline auto jobGfxIndex(int job)
     {
-        std::inplace_vector<int, 3> result;
+        std::vector<int> result;
 
         if(job & JOB_WARRIOR) result.push_back(0);
         if(job & JOB_TAOIST ) result.push_back(1);

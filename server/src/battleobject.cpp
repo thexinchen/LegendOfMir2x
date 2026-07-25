@@ -798,7 +798,7 @@ std::vector<pathf::PathNode> BattleObject::getValidChaseGrid(int nX, int nY, int
     return result;
 }
 
-void BattleObject::getValidChaseGrid(int nX, int nY, int nDLen, std::inplace_vector<pathf::PathNode, 3> &buf) const
+void BattleObject::getValidChaseGrid(int nX, int nY, int nDLen, std::vector<pathf::PathNode> &buf) const
 {
     buf.clear();
     for(const auto &node: getChaseGrid(nX, nY, nDLen)){
@@ -908,7 +908,7 @@ corof::awaitable<std::optional<SDHealth>> BattleObject::queryHealth(uint64_t uid
 
 corof::awaitable<uint64_t> BattleObject::queryFinalMaster(uint64_t targetUID)
 {
-    const auto fnQuery = [thisptr = this](this auto, uint64_t targetUID) -> corof::awaitable<uint64_t>
+    const auto fnQuery = [thisptr = this](uint64_t targetUID) -> corof::awaitable<uint64_t>
     {
         switch(const auto rmpk = co_await thisptr->m_actorPod->send(targetUID, AM_QUERYFINALMASTER); rmpk.type()){
             case AM_UID:

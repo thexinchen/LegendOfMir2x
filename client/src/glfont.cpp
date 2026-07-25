@@ -58,7 +58,7 @@ GLFontFace *glfont::defaultFont(uint8_t ptSize)
 {
     constexpr static uint8_t ttfData[]
     {
-        #embed "monaco.ttf"
+        #include "monaco_ttf.hpp"
     };
 
     static std::unordered_map<uint8_t, std::unique_ptr<GLFontFace>> cache;

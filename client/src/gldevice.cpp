@@ -2,7 +2,13 @@
 #include <cstring>
 #include <numbers>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <GL/gl.h>
+#ifndef GL_CLAMP_TO_EDGE
+#define GL_CLAMP_TO_EDGE 0x812F
+#endif
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -402,7 +408,7 @@ void GLDevice::initImGui()
     // default UI font with CJK ranges; game text uses FontexDB, not this atlas
     constexpr static uint8_t ttfData[]
     {
-        #embed "monaco.ttf"
+        #include "monaco_ttf.hpp"
     };
 
     static const char *const cjkFontPathList[] =

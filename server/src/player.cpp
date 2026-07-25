@@ -64,7 +64,7 @@ Player::LuaThreadRunner::LuaThreadRunner(Player *playerPtr)
         }
     });
 
-    bindCoop("_RSVD_NAME_getTeamMemberList", [thisptr = this](this auto, LuaCoopResumer onDone) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_getTeamMemberList", [thisptr = this](LuaCoopResumer onDone) -> corof::awaitable<>
     {
         bool closed = false;
         onDone.pushOnClose([&closed](){ closed = true; });
@@ -223,7 +223,7 @@ Player::LuaThreadRunner::LuaThreadRunner(Player *playerPtr)
         getPlayer()->postNetMessage(SM_QUESTDESPLIST, cerealf::serialize(sdQDL));
     });
 
-    bindCoop("_RSVD_NAME_spaceMove", [thisptr = this](this auto, LuaCoopResumer onDone, uint32_t argMapID, int argX, int argY) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_spaceMove", [thisptr = this](LuaCoopResumer onDone, uint32_t argMapID, int argX, int argY) -> corof::awaitable<>
     {
         bool closed = false;
         onDone.pushOnClose([&closed](){ closed = true; });
@@ -264,7 +264,7 @@ Player::LuaThreadRunner::LuaThreadRunner(Player *playerPtr)
         }
     });
 
-    bindCoop("_RSVD_NAME_randomMove", [thisptr = this](this auto, LuaCoopResumer onDone) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_randomMove", [thisptr = this](LuaCoopResumer onDone) -> corof::awaitable<>
     {
         const auto newGLocOpt = [thisptr]() -> std::optional<std::pair<int, int>>
         {
@@ -315,7 +315,7 @@ Player::LuaThreadRunner::LuaThreadRunner(Player *playerPtr)
         }
     });
 
-    bindCoop("_RSVD_NAME_queryQuestTriggerList", [thisptr = this](this auto, LuaCoopResumer onDone, int triggerType) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_queryQuestTriggerList", [thisptr = this](LuaCoopResumer onDone, int triggerType) -> corof::awaitable<>
     {
         fflassert(triggerType >= SYS_ON_BEGIN, triggerType);
         fflassert(triggerType <  SYS_ON_END  , triggerType);
@@ -349,7 +349,7 @@ Player::LuaThreadRunner::LuaThreadRunner(Player *playerPtr)
 
     constexpr static unsigned char luaScript []
     {
-        #embed "player.lua" suffix(,)
+        #include "player_lua.hpp"
         '\0'
     };
     pfrCheck(execRawString(to_rawcstr(luaScript)));
@@ -1053,7 +1053,7 @@ corof::awaitable<> Player::onCMActionAttack(CMAction stCMA)
                                                 }
                                             case DBCOM_MAGICID(u8"半月弯刀"):
                                                 {
-                                                    std::inplace_vector<std::tuple<int, int>, 3> aimGridList;
+                                                    std::vector<std::tuple<int, int>> aimGridList;
                                                     for(int d: {-1, 0, 1}){
                                                         aimGridList.push_back(pathf::getFrontGLoc(X(), Y(), pathf::getNextDir(Direction(), d)));
                                                     }
@@ -1323,7 +1323,7 @@ corof::awaitable<> Player::onCMActionSpell(CMAction cmA)
                 smFM.AimX   = nFrontX;
                 smFM.AimY   = nFrontY;
 
-                addDelay(600, [magicID, smFM, thisptr = this](this auto, bool) -> corof::awaitable<>
+                addDelay(600, [magicID, smFM, thisptr = this](bool) -> corof::awaitable<>
                 {
                     for(int i = 0; i < g_serverArgParser->sharedConfig().summonCount; ++i){
                         if(to_u32(magicID) == DBCOM_MAGICID(u8"召唤骷髅")){
@@ -1353,7 +1353,7 @@ corof::awaitable<> Player::onCMActionSpell(CMAction cmA)
                 smFM.AimX  = nFrontX;
                 smFM.AimY  = nFrontY;
 
-                addDelay(1000, [smFM, thisptr = this](this auto, bool) -> corof::awaitable<>
+                addDelay(1000, [smFM, thisptr = this](bool) -> corof::awaitable<>
                 {
                     for(int i = 0; i < g_serverArgParser->sharedConfig().summonCount; ++i){
                         co_await thisptr->addMonster(DBCOM_MONSTERID(u8"神兽"), smFM.AimX, smFM.AimY, false);
@@ -2048,7 +2048,7 @@ corof::awaitable<bool> Player::followTeamLeader()
         co_return false;
     }
 
-    const auto fnRequestMove = [thisptr = this](this auto, int dstX, int dstY) -> corof::awaitable<bool>
+    const auto fnRequestMove = [thisptr = this](int dstX, int dstY) -> corof::awaitable<bool>
     {
         BattleObject::BOPathFinder finder(thisptr, 1);
         if(!finder.search(thisptr->X(), thisptr->Y(), thisptr->Direction(), dstX, dstY).hasPath()){

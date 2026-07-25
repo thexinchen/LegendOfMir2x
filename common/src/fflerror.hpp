@@ -35,7 +35,7 @@ template<typename ... Args> constexpr size_t _fflerror_count_helper(Args && ...)
         do{ \
             if(cond){}else{ \
                 throw fflpanic("assertion failed: {}{}", #cond, \
-                        (_fflerror_count_helper(__VA_ARGS__) == 0) ? "" : (std::string(", ") + _fflerror_helper(0, ##__VA_ARGS__)).c_str()); \
+                        (_fflerror_count_helper(__VA_ARGS__) == 0) ? "" : (std::string(", ") + _fflerror_helper(0 __VA_OPT__(,) __VA_ARGS__)).c_str()); \
             } \
         } \
         while(0)
@@ -44,4 +44,4 @@ template<typename ... Args> constexpr size_t _fflerror_count_helper(Args && ...)
 #define _fflcheck_helper_2(x, c) [&] ->decltype((x)) { fflassert(c); return x; }()
 
 #define __fflcheck_helper_helper(u, v, NAME, ...) NAME
-#define fflcheck(x, ...) __fflcheck_helper_helper(x, ##__VA_ARGS__, _fflcheck_helper_2, _fflcheck_helper_1)(x, ##__VA_ARGS__)
+#define fflcheck(x, ...) __fflcheck_helper_helper(x __VA_OPT__(,) __VA_ARGS__, _fflcheck_helper_2, _fflcheck_helper_1)(x __VA_OPT__(,) __VA_ARGS__)

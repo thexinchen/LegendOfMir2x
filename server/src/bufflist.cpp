@@ -1,11 +1,11 @@
-#include <inplace_vector>
+#include <vector>
 #include <vector>
 #include "buffactattackmodifier.hpp"
 #include "bufflist.hpp"
 
 std::tuple<uint32_t, uint32_t> BuffList::rollAttackModifier()
 {
-    std::inplace_vector<BaseBuffActAttackModifier *, 16> amodList;
+    std::vector<BaseBuffActAttackModifier *> amodList;
     for(auto &p: m_activeBuffList){
         if(p.second){
             for(auto &actPtr: p.second->m_activeActList){

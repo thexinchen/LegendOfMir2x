@@ -16,7 +16,8 @@ void GUIScriptWindow::draw()
     ImGui::SetNextWindowSize(ImVec2(560, 420), ImGuiCond_FirstUseEver);
     if(ImGui::Begin("Script", &open)){
         if(ImGui::Button("Load file...")){
-            if(const char *picked = tinyfd_openFileDialog("Load Lua script", "", 1, (const char * const[]){"*.lua"}, "Lua script (*.lua)", 0)){
+            static const char * const luaFilter[] = {"*.lua"};
+            if(const char *picked = tinyfd_openFileDialog("Load Lua script", "", 1, luaFilter, "Lua script (*.lua)", 0)){
                 std::ifstream ifs(picked, std::ios::binary);
                 if(ifs){
                     std::stringstream ss;

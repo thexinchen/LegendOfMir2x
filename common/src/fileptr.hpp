@@ -13,6 +13,12 @@
 #include "totype.hpp"
 #include "fflerror.hpp"
 
+#ifdef _MSC_VER
+#define ftello  _ftelli64
+#define fseeko  _fseeki64
+#define fileno  _fileno
+#endif
+
 namespace _fileptr_details
 {
     template<typename C> size_t size_in_bytes(size_t size)

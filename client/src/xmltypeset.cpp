@@ -458,7 +458,7 @@ int XMLTypeset::LineIntervalMaxH2(int argLine, int nIntervalStartX, int nInterva
                 // reuse the cached info
             }
             else{
-                const auto [fontIndex, fontSize, _, _] = utf8f::extractU64Key(pToken->utf8char.key);
+                const auto [fontIndex, fontSize, _u1, _u2] = utf8f::extractU64Key(pToken->utf8char.key);
                 fontInfoOpt = fontInfo;
                 fontDescent = std::max<int>(0, -g_fontexDB->fontDescent(fontIndex, fontSize));
             }
@@ -590,7 +590,7 @@ int XMLTypeset::LineNewStartY(int argLine)
                 // reuse the cached info
             }
             else{
-                const auto [fontIndex, fontSize, _, _] = utf8f::extractU64Key(pToken->utf8char.key);
+                const auto [fontIndex, fontSize, _u1, _u2] = utf8f::extractU64Key(pToken->utf8char.key);
                 fontInfoOpt = fontInfo;
                 fontAscent = g_fontexDB->fontAscent(fontIndex, fontSize);
             }
@@ -1538,7 +1538,7 @@ int XMLTypeset::LineMaxHk(int argLine, int k) const
                 // reuse the cached info
             }
             else{
-                const auto [fontIndex, fontSize, _, _] = utf8f::extractU64Key(tokenPtr->utf8char.key);
+                const auto [fontIndex, fontSize, _u1, _u2] = utf8f::extractU64Key(tokenPtr->utf8char.key);
                 fontInfoOpt = fontInfo;
 
                 if(k == 1){ fontHeightMetric =                   g_fontexDB->fontAscent (fontIndex, fontSize) ; }
@@ -1707,7 +1707,7 @@ std::tuple<int, int> XMLTypeset::getTokenCursorHk(int tokenX, int tokenY) const
 
     const auto tkptr = getToken(tokenX, tokenY);
     if(!m_compactLine && (m_paragraph->leaf(tkptr->leaf).type() == LEAF_UTF8STR)){
-        const auto [fontIndex, fontSize, _, _] = utf8f::extractU64Key(tkptr->utf8char.key);
+        const auto [fontIndex, fontSize, _u1, _u2] = utf8f::extractU64Key(tkptr->utf8char.key);
         return
         {
                               g_fontexDB->fontAscent (fontIndex, fontSize),

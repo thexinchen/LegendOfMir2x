@@ -77,7 +77,7 @@ LuaModule::LuaModule()
         }
     )###");
 
-    m_replaceEnv[sol::metatable_key] = sol::table(m_luaState["_RSVD_NAME_replaceEnvMetaTable"]);
+    m_replaceEnv[sol::metatable_key] = m_luaState["_RSVD_NAME_replaceEnvMetaTable"].get<sol::table>();
 
     // idea from: https://blog.rubenwardy.com/2020/07/26/sol3-script-sandbox/
     // set replaceEnv as default environment, otherwise I don't know how to setup replaceEnv to thread/coroutine
@@ -430,9 +430,9 @@ LuaModule::LuaModule()
         return luaf::quotedLuaString(s);
     });
 
-    constexpr static unsigned char luaScript []
+    constexpr static unsigned char luaScript[]
     {
-        #embed "luamodule.lua" suffix(,)
+        #include "luamodule_lua.hpp"
         '\0'
     };
     m_luaState.script(to_rawcstr(luaScript));

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include <initializer_list>
+#include "cvector.hpp"
 #include "sysconst.hpp"
 #include "protocoldef.hpp"
 
@@ -110,7 +111,7 @@ struct MonsterRecord
         const int repeat    = 1;
         const int count     = 1;
     };
-    const std::initializer_list<std::initializer_list<DropItem>> dropItemList {};
+    const cvector<cvector<DropItem>> dropItemList;
 
     const char8_t *dcName = nullptr;
     const char8_t *description = nullptr;

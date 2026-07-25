@@ -89,12 +89,14 @@ template<typename C> class ACNodeWrapper
         }
 
     public:
-        template<typename Key> auto erase(this auto && self, const Key & key)
+        template<typename Key>
+            requires (!std::same_as<std::remove_cvref_t<Key>, typename C::iterator> && !std::same_as<std::remove_cvref_t<Key>, typename C::const_iterator>)
+        auto erase(const Key & key)
         {
-            if(auto iter = self.m_container.find(key); iter != self.m_container.end()){
-                return self.erase(iter);
+            if(auto iter = m_container.find(key); iter != m_container.end()){
+                return erase(iter);
             }
-            return std::pair(self.m_container.end(), false);
+            return std::pair(m_container.end(), false);
         }
 
     public:

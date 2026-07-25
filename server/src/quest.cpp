@@ -192,7 +192,7 @@ Quest::LuaThreadRunner::LuaThreadRunner(Quest *quest)
         query.exec();
     });
 
-    bindCoop("_RSVD_NAME_modifyQuestTriggerType", [thisptr = this](this auto, LuaCoopResumer onDone, int triggerType, bool enable) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_modifyQuestTriggerType", [thisptr = this](LuaCoopResumer onDone, int triggerType, bool enable) -> corof::awaitable<>
     {
         fflassert(triggerType >= SYS_ON_BEGIN, triggerType);
         fflassert(triggerType <  SYS_ON_END  , triggerType);
@@ -309,7 +309,7 @@ corof::awaitable<> Quest::onActivate()
 
     constexpr static unsigned char luaScript []
     {
-        #embed "quest.lua" suffix(,)
+        #include "quest_lua.hpp"
         '\0'
     };
     m_luaRunner->pfrCheck(m_luaRunner->execRawString(to_rawcstr(luaScript)));

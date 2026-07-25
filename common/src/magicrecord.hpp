@@ -2,7 +2,7 @@
 #include <tuple>
 #include <utility>
 #include <string_view>
-#include <initializer_list>
+#include "cvector.hpp"
 #include "sysconst.hpp"
 #include "motion.hpp"
 #include "colorf.hpp"
@@ -143,7 +143,7 @@ struct MagicGfxEntry
     // target offset
     // only needed for magic type: 跟随
     // targetOffList.size() should be zero or equal to gfxDirType
-    const std::initializer_list<std::tuple<int, int>> targetOffList {};
+    const cvector<std::tuple<int, int>> targetOffList;
     const struct MagicGfxEntrySoundEffect
     {
         // common cases of sound indexing
@@ -311,7 +311,7 @@ struct MagicRecord
     // seffBase is MagID in readme/sql2csv/King_Magic.csv
     // MagicGfxEntry can assign value to absSeffID to give seperate sound effect for specific entry
     const std::optional<int> seffBase {};
-    const std::initializer_list<MagicGfxEntry> gfxList {};
+    const cvector<MagicGfxEntry> gfxList;
 
     constexpr operator bool () const
     {

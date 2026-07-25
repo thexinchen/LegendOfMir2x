@@ -30,13 +30,13 @@ CBMiddleExpand::CBMiddleExpand(
           {
               .inst
               {
-                  .show = [](const Widget *self)
+                  .show = std::function<bool(const Widget *)>([](const Widget *self)
                   {
                       if(const auto cb = self->hasParent<ControlBoard>(); !cb->m_minimize && cb->m_expand){
                           return true;
                       }
                       return false;
-                  },
+                  }),
 
                   .afterResize = [](Widget *self)
                   {

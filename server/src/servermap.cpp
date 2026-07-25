@@ -92,8 +92,8 @@ ServerMap::LuaThreadRunner::LuaThreadRunner(ServerMap *serverMapPtr)
                             true,
                             0,
                             0,
-                            getServerMap()->mapBin()->w(),
-                            getServerMap()->mapBin()->h(),
+                            (int)getServerMap()->mapBin()->w(),
+                            (int)getServerMap()->mapBin()->h(),
                         };
                     }
                 case 4:
@@ -378,7 +378,7 @@ ServerMap::LuaThreadRunner::LuaThreadRunner(ServerMap *serverMapPtr)
 
     constexpr static unsigned char luaScript []
     {
-        #embed "servermap.lua" suffix(,)
+        #include "servermap_lua.hpp"
         '\0'
     };
     pfrCheck(execRawString(to_rawcstr(luaScript)));

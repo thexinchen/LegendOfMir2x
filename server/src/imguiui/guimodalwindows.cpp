@@ -44,7 +44,8 @@ void GUIConfigureWindow::draw()
     ImGui::SetNextWindowSize(ImVec2(460, 0), ImGuiCond_FirstUseEver);
     if(ImGui::Begin("Server Configure", &open)){
         if(ImGui::Button("Browse...##map")){
-            if(const char *picked = tinyfd_openFileDialog("Map package", m_mapPath, 1, (const char * const[]){"*.zsdb"}, "map package (*.zsdb)", 0)){
+            static const char * const mapFilter[] = {"*.zsdb"};
+            if(const char *picked = tinyfd_openFileDialog("Map package", m_mapPath, 1, mapFilter, "map package (*.zsdb)", 0)){
                 std::strncpy(m_mapPath, picked, sizeof(m_mapPath) - 1);
             }
         }

@@ -1034,7 +1034,7 @@ void Server::regLuaExport(CommandLuaModule *modulePtr, uint32_t nCWID)
 
     constexpr static unsigned char luaScript []
     {
-        #embed "server.lua" suffix(,)
+        #include "server_lua.hpp"
         '\0'
     };
     modulePtr->pfrCheck(modulePtr->execRawString(to_rawcstr(luaScript)));

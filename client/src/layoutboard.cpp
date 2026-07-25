@@ -1,4 +1,5 @@
 #include <cmath>
+#include <ranges>
 #include <algorithm>
 #include "colorf.hpp"
 #include "fflerror.hpp"

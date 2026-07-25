@@ -28,7 +28,7 @@ class WidgetTreeNode // tree concept, used by class Widget only
             const bool    addChild = true;
             const bool removeChild = true;
 
-            const std::string name {};
+            const std::string name;
         };
 
     private:
@@ -329,8 +329,8 @@ class Widget: public WidgetTreeNode
 
         struct InstAttrs final // per instance attributes
         {
-            std::string name {};
-            std::any    data {};
+            std::string name;
+            std::any    data;
 
             Widget::VarBool show = true;
             Widget::VarBool active = true;
@@ -346,8 +346,8 @@ class Widget: public WidgetTreeNode
 
         struct InitAttrs final
         {
-            Widget::TypeAttrs type {};
-            Widget::InstAttrs inst {};
+            Widget::TypeAttrs type;
+            Widget::InstAttrs inst;
         };
 
     public:
@@ -371,10 +371,10 @@ class Widget: public WidgetTreeNode
             Widget::VarSizeOpt w = 0; // nullopt means auto-resize
             Widget::VarSizeOpt h = 0;
 
-            std::vector<Widget::AddChildArgs> childList {};
+            std::vector<Widget::AddChildArgs> childList;
 
-            Widget::InitAttrs attrs {};
-            Widget::WADPair  parent {};
+            Widget::InitAttrs attrs;
+            Widget::WADPair  parent;
         };
 
     public:

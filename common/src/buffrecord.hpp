@@ -4,7 +4,7 @@
 #include <string>
 #include <variant>
 #include <string_view>
-#include <initializer_list>
+#include "cvector.hpp"
 #include "sysconst.hpp"
 #include "protocoldef.hpp"
 
@@ -269,7 +269,7 @@ struct BuffRecord
             return name && !std::u8string_view(name).empty();
         }
     };
-    const std::initializer_list<BuffActRecordRef> actList {};
+    const cvector<BuffActRecordRef> actList;
 
     operator bool() const
     {

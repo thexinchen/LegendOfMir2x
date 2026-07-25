@@ -12,6 +12,9 @@
 
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__))
 #define LOG_PATH "./"
+#ifndef __PRETTY_FUNCTION__
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
 #else
 #define LOG_PATH "/tmp/"
 #endif

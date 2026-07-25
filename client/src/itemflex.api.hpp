@@ -15,7 +15,7 @@ private:
         Widget::VarSize itemSpace = 0;
         Widget::VarSize tailSpace = 0;
 
-        std::initializer_list<std::pair<Widget *, bool>> childList {};
+        std::initializer_list<std::pair<Widget *, bool>> childList;
         Widget::WADPair parent {};
     };
 

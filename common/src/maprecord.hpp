@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <optional>
-#include <initializer_list>
+#include "cvector.hpp"
 
 struct MapSwitch
 {
@@ -25,7 +25,7 @@ struct MapRecord
     const char8_t *name = nullptr;
     const std::optional<uint32_t> bgmID {};
     const std::optional<uint32_t> miniMapID {};
-    const std::initializer_list<MapSwitch> mapSwitchList {};
+    const cvector<MapSwitch> mapSwitchList;
 
     operator bool () const
     {

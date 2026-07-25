@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include "raiitimer.hpp"
@@ -29,10 +30,15 @@ namespace _logProf
                 return false;
             }
 
-            // filesv ends with: "/" + listsv
+            // filesv ends with: "/" + listsv (or "\" + listsv on MSVC)
             // this prevents false match like: abc/abcdef/abcd.cpp matches def/abcd.cpp
 
-            return (filesv.size() == listsv.size()) || (filesv[filesv.size() - listsv.size() - 1] == '/');
+            if(filesv.size() == listsv.size()){
+                return true;
+            }
+
+            const auto sep = filesv[filesv.size() - listsv.size() - 1];
+            return (sep == '/') || (sep == '\\');
         };
 
         size_t found = _logProf::rc_FOUND_NONE;

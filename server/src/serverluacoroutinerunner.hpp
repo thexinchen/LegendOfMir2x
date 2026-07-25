@@ -292,20 +292,21 @@ class ServerLuaCoroutineRunner: public ServerLuaModule
         }
 
     private:
-        template<typename Lambda, typename... Args> static std::tuple<Args...> _extractLambdaUserArgsHelper(corof::awaitable<> (*)(Lambda, LuaCoopResumer, Args...));
-        template<typename Lambda, typename... Args> static std::tuple<Args...> _extractLambdaUserArgsHelper(corof::awaitable<> (*)(Lambda, LuaCoopResumer, LuaCoopState, Args...));
+        // Extract user args from coroutine lambda signature (regular lambda, no deducing-this)
+        template<typename Lambda, typename... Args> static std::tuple<Args...> _extractLambdaUserArgsHelper(corof::awaitable<> (Lambda::*)(LuaCoopResumer, Args...) const);
+        template<typename Lambda, typename... Args> static std::tuple<Args...> _extractLambdaUserArgsHelper(corof::awaitable<> (Lambda::*)(LuaCoopResumer, LuaCoopState, Args...) const);
 
-        template<typename Lambda                                 > static void _extractLambdaThirdArgHelper(corof::awaitable<> (*)(Lambda, LuaCoopResumer));
-        template<typename Lambda, typename Arg2, typename... Args> static Arg2 _extractLambdaThirdArgHelper(corof::awaitable<> (*)(Lambda, LuaCoopResumer, Arg2, Args...));
+        template<typename Lambda                                 > static void _extractLambdaThirdArgHelper(corof::awaitable<> (Lambda::*)(LuaCoopResumer) const);
+        template<typename Lambda, typename Arg2, typename... Args> static Arg2 _extractLambdaThirdArgHelper(corof::awaitable<> (Lambda::*)(LuaCoopResumer, Arg2, Args...) const);
 
         template<typename Lambda> struct _extractLambdaUserArgsAsTuple
         {
-            using type = decltype(_extractLambdaUserArgsHelper(&Lambda:: template operator()<Lambda>));
+            using type = decltype(_extractLambdaUserArgsHelper(&Lambda::operator()));
         };
 
         template<typename Lambda> struct _extractLambdaThirdArg
         {
-            using type = decltype(_extractLambdaThirdArgHelper(&Lambda:: template operator()<Lambda>));
+            using type = decltype(_extractLambdaThirdArgHelper(&Lambda::operator()));
         };
 
     public:

@@ -4,6 +4,9 @@
 #include <ctime>
 #include <stdexcept>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #include <imgui.h>
@@ -47,7 +50,9 @@ GUICore::GUICore()
     ImGui::CreateContext();
 
     ImGuiIO &io = ImGui::GetIO();
+    #ifdef ImGuiConfigFlags_DockingEnable
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+#endif
     io.IniFilename = "mir2x-server.imgui.ini";
 
     ImGui::StyleColorsDark();
@@ -139,7 +144,9 @@ void GUICore::drawFrame()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    #ifdef ImGuiConfigFlags_DockingEnable
     ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+#endif
 
     m_mainWindow->drawMenuBar();
     m_mainWindow->drawConsole();
@@ -247,7 +254,11 @@ void GUICore::appendLog(int type, const char *line)
     {
         const auto nowTime = std::time(nullptr);
         std::tm nowTM {};
+        #ifdef _WIN32
+        localtime_s(&nowTM, &nowTime);
+#else
         localtime_r(&nowTime, &nowTM);
+#endif
         std::strftime(timeBuf, sizeof(timeBuf), "%H:%M:%S", &nowTM);
     }
 

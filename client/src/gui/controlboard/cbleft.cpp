@@ -35,10 +35,10 @@ CBLeft::CBLeft(
           {
               .inst
               {
-                  .show = [](const Widget *self)
+                  .show = std::function<bool(const Widget *)>([](const Widget *self)
                   {
                       return self->hasParent<ControlBoard>()->m_minimize == false;
-                  },
+                  }),
               },
           },
 

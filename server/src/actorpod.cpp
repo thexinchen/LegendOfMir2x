@@ -24,7 +24,7 @@ ActorPod::ActorPod(ServerObject *serverObject)
     fflassert(UID());
     fflassert(getSO());
 
-    registerOp(AM_ACTIVATE, [thisptr = this](this auto, const ActorMsgPack &) -> corof::awaitable<>
+    registerOp(AM_ACTIVATE, [thisptr = this](const ActorMsgPack &) -> corof::awaitable<>
     {
         if(thisptr->m_SO->m_activated){
             throw fflpanic("ServerObject has been activated twice: {}", to_cstr(uidf::getUIDString(thisptr->UID())));
@@ -39,7 +39,7 @@ ActorPod::ActorPod(ServerObject *serverObject)
         thisptr->m_SO->m_waitActivatedOps.clear();
     });
 
-    registerOp(AM_WAITACTIVATED, [thisptr = this](this auto, const ActorMsgPack &mpk) -> corof::awaitable<>
+    registerOp(AM_WAITACTIVATED, [thisptr = this](const ActorMsgPack &mpk) -> corof::awaitable<>
     {
         co_await thisptr->m_SO->waitActivated();
         thisptr->post(mpk.fromAddr(), AM_WAITACTIVATEDOK);
@@ -108,7 +108,7 @@ void ActorPod::innHandler(const ActorMsgPack &mpk)
     else{
         m_podMonitor.amProcMonitorList[mpk.type()].recvCount++;
         {
-            [mpk = mpk, thisptr = this](this auto) -> corof::awaitable<> // save mpk into coroutine state
+            [mpk = mpk, thisptr = this]() -> corof::awaitable<> // save mpk into coroutine state
             {
                 const raii_timer tickTimer(std::addressof(thisptr->m_podMonitor.amProcMonitorList[mpk.type()].procTick));
                 if(const auto &mpkFunc = thisptr->m_msgOpList.at(mpk.type())){

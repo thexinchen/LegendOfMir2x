@@ -3,6 +3,17 @@
 #include "processrun.hpp"
 #include "clientzumataurus.hpp"
 
+static std::unique_ptr<MotionNode> fnMakeStandMotion(int x, int y)
+{
+    return std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_STAND,
+        .direction = DIR_DOWNLEFT,
+        .x = x,
+        .y = y,
+    });
+}
+
 ClientZumaTaurus::ClientZumaTaurus(uint64_t uid, ProcessRun *proc, const ActionNode &action)
     : ClientStandMonster(uid, proc)
 {
@@ -89,19 +100,11 @@ ClientZumaTaurus::ClientZumaTaurus(uint64_t uid, ProcessRun *proc, const ActionN
                         return false;
                     }
 
-                    m_forcedMotionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
-                    {
-                        .type = MOTION_MON_STAND,
-                        .direction = DIR_DOWNLEFT,
-                        .x = motionPtr->x,
-                        .y = motionPtr->y,
-                    }));
+                    m_forcedMotionQueue.push_back(fnMakeStandMotion(motionPtr->x, motionPtr->y));
 
-                    m_processRun->addFixedLocMagic(std::unique_ptr<FixedLocMagic>(new ZumaTaurusFragmentEffect_RUN
-                    {
+                    m_processRun->addFixedLocMagic(std::unique_ptr<FixedLocMagic>(new ZumaTaurusFragmentEffect_RUN(
                         motionPtr->x,
-                        motionPtr->y,
-                    }));
+                        motionPtr->y)));
                     return true;
                 });
 
@@ -287,19 +290,9 @@ void ClientZumaTaurus::addActionTransf()
             return false;
         }
 
-        m_forcedMotionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
-        {
-            .type = MOTION_MON_STAND,
-            .direction = DIR_DOWNLEFT,
-            .x = motionPtr->x,
-            .y = motionPtr->y,
-        }));
+        m_forcedMotionQueue.push_back(fnMakeStandMotion(motionPtr->x, motionPtr->y));
 
-        m_processRun->addFixedLocMagic(std::unique_ptr<FixedLocMagic>(new ZumaTaurusFragmentEffect_RUN
-        {
-            motionPtr->x,
-            motionPtr->y,
-        }));
+        m_processRun->addFixedLocMagic(std::unique_ptr<FixedLocMagic>(new ZumaTaurusFragmentEffect_RUN(motionPtr->x, motionPtr->y)));
         return true;
     });
 }

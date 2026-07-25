@@ -335,7 +335,7 @@ NPChar::LuaThreadRunner::LuaThreadRunner(NPChar *npc)
 
     constexpr static unsigned char luaScript []
     {
-        #embed "npchar.lua" suffix(,)
+        #include "npchar_lua.hpp"
         '\0'
     };
     pfrCheck(execRawString(to_rawcstr(luaScript)));

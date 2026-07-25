@@ -69,12 +69,12 @@ InitView::InitView(uint8_t fontSize)
 {
     constexpr uint8_t boardData []
     {
-        #embed "ivboard.png"
+        #include "ivboard_png.hpp"
     };
 
     constexpr uint8_t buttonData []
     {
-        #embed "ivbutton.png"
+        #include "ivbutton_png.hpp"
     };
 
     g_glDevice->createInitViewWindow();

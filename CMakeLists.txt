@@ -20,6 +20,7 @@ if(MSVC)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/Zc:preprocessor>")
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/utf-8>")
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/bigobj>")
+    add_compile_options(/MP)  # multi-process compilation
     add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN _CRT_SECURE_NO_WARNINGS)
 else()
     set(CMAKE_CXX_STANDARD 26)
@@ -71,6 +72,8 @@ endif()
 
 configure_file(${MIR2X_COMMON_SOURCE_DIR}/buildconfig.hpp.in ${CMAKE_BINARY_DIR}/config_file/buildconfig.hpp)
 configure_file(${MIR2X_COMMON_SOURCE_DIR}/logprof.hpp.in     ${CMAKE_BINARY_DIR}/config_file/logprof.hpp)
+
+include("${CMAKE_SOURCE_DIR}/cmake/Mir2xResource.cmake")
 
 # ----------------------------------------------------------------------------
 # Subdirectories
