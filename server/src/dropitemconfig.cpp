@@ -9,93 +9,48 @@
 #include "dropitemconfig.hpp"
 #include "serverargparser.hpp"
 #include "imguiui/guicore.hpp"
-#include "dropitemdata.hpp"
 
 extern PeerConfig *g_peerConfig;
 extern ServerArgParser *g_serverArgParser;
 extern GUICore *g_guiCore;
 
-static bool validDropItemConfig(const InnDropItemConfig &node)
+struct InnDropItemConfig final
 {
-    return true
-        && DBCOM_MONSTERID(node.monsterName)
-        && DBCOM_ITEMID(node.itemName)
+    const char8_t * const monsterName = nullptr;
+    const char8_t * const    itemName = nullptr;
 
-        && node.group     >= 0
-        && node.probRecip >= 1
+    const int group;        // can only drop at most one item in the group when group is not zero
+    const int probRecip;    // zero means disabled, 1 / p
 
-        && node.repeat >= 1
-        && node.count  >= 1;
-}
+    const int repeat;       // zero means disabled, how many times to try to drop this item
+    const int count;        // zero means disabled, how many items to drop if tried succeefully, need to decompose if itemID is not packable
+
+    operator bool() const
+    {
+        return true
+            && DBCOM_MONSTERID(monsterName)
+            && DBCOM_ITEMID(itemName)
+
+            && group     >= 0
+            && probRecip >= 1
+
+            && repeat >= 1
+            && count  >= 1;
+    }
+};
 
 const std::map<int, std::vector<DropItemConfig>> &getMonsterDropItemConfigList(uint32_t monsterID)
 {
     const static auto s_monsterDropitemConfigList = []()
     {
-        // data split into separate TUs to avoid MSVC code generator crash (ICE 0xC0000005)
-        std::vector<InnDropItemConfig> dropItemConfigNodeList;
-        for(const auto &fn: {
-            getDropItemChunk000,
-            getDropItemChunk001,
-            getDropItemChunk002,
-            getDropItemChunk003,
-            getDropItemChunk004,
-            getDropItemChunk005,
-            getDropItemChunk006,
-            getDropItemChunk007,
-            getDropItemChunk008,
-            getDropItemChunk009,
-            getDropItemChunk010,
-            getDropItemChunk011,
-            getDropItemChunk012,
-            getDropItemChunk013,
-            getDropItemChunk014,
-            getDropItemChunk015,
-            getDropItemChunk016,
-            getDropItemChunk017,
-            getDropItemChunk018,
-            getDropItemChunk019,
-            getDropItemChunk020,
-            getDropItemChunk021,
-            getDropItemChunk022,
-            getDropItemChunk023,
-            getDropItemChunk024,
-            getDropItemChunk025,
-            getDropItemChunk026,
-            getDropItemChunk027,
-            getDropItemChunk028,
-            getDropItemChunk029,
-            getDropItemChunk030,
-            getDropItemChunk031,
-            getDropItemChunk032,
-            getDropItemChunk033,
-            getDropItemChunk034,
-            getDropItemChunk035,
-            getDropItemChunk036,
-            getDropItemChunk037,
-            getDropItemChunk038,
-            getDropItemChunk039,
-            getDropItemChunk040,
-            getDropItemChunk041,
-            getDropItemChunk042,
-            getDropItemChunk043,
-            getDropItemChunk044,
-            getDropItemChunk045,
-            getDropItemChunk046,
-            getDropItemChunk047,
-            getDropItemChunk048,
-            getDropItemChunk049,
-            getDropItemChunk050,
-            getDropItemChunk051,
-            getDropItemChunk052,
-        }){
-            auto chunk = fn();
-            dropItemConfigNodeList.insert(dropItemConfigNodeList.end(), chunk.begin(), chunk.end());
-        }
+        const std::vector<InnDropItemConfig> dropItemConfigNodeList
+        {
+            #include "dropitemconfig.inc"
+        };
 
         std::unordered_map<uint32_t, std::map<int, std::vector<DropItemConfig>>> monsterDropItemList;
         for(const auto &node: dropItemConfigNodeList){
-            if(!validDropItemConfig(node)){
+            if(!node){
                 continue;
             }
 
