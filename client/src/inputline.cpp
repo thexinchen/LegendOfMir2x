@@ -59,15 +59,18 @@ bool InputLine::processEventDefault(const MirEvent &event, bool valid, Widget::R
     switch(event.type){
         case MIR_EVENT_TEXT_INPUT:
             {
-                // when system IME is activated
-                // no matter (void)0 is called or not
-                // IME still show the input candidates, SDL just doesn't dispatch MIR_EVENT_TEXT_INPUT anymore
+                // unlike SDL3, GLFW has no SDL_StopTextInput equivalent
+                // char events are always dispatched (see GLDevice::fnCharEvent)
+                // and the OS IME still shows the input candidates no matter what
 
-                // so SDL_StopTextInput does nothing
-                // just filter the MIR_EVENT_TEXT_INPUT event
+                // so just filter the MIR_EVENT_TEXT_INPUT event
+                // only widgets using the system IME consume it
 
-                if(const auto ime = Widget::evalInt(m_imeEnabled, this); (ime != IME_SYSTEM) && valid){
-                    throw fflpanic("received valid MIR_EVENT_TEXT_INPUT while system input is not enabled: IME {}", ime);
+				//if(const auto ime = Widget::evalInt(m_imeEnabled, this); (ime != IME_SYSTEM) && valid){
+                //    throw fflpanic("received valid MIR_EVENT_TEXT_INPUT while system input is not enabled: IME {}", ime);
+                //}
+                if(const auto ime = Widget::evalInt(m_imeEnabled, this); ime != IME_SYSTEM){
+                    return false;
                 }
 
                 if(!valid || !focus()){

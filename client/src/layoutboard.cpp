@@ -504,8 +504,11 @@ bool LayoutBoard::processEventDefault(const MirEvent &event, bool valid, Widget:
                     return false;
                 }
 
+                // GLFW always delivers char events (no SDL_StopTextInput equivalent)
+                // filter the event for widgets not using the system IME
                 if(const auto ime = Widget::evalInt(m_imeEnabled, this); ime != IME_SYSTEM){
-                    throw fflpanic("received valid MIR_EVENT_TEXT_INPUT while system input is not enabled: IME {}", ime);
+                    //throw fflpanic("received valid MIR_EVENT_TEXT_INPUT while system input is not enabled: IME {}", ime);
+                    return false;
                 }
 
                 if(str_haschar(event.text.text)){

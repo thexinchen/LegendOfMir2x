@@ -140,13 +140,16 @@ void GLDevice::fnCharEvent(GLFWwindow *window, unsigned int codepoint)
         text += (char)(0x80 | (codepoint & 0x3F));
     }
 
-    MirEvent event {};
-    event.type = MIR_EVENT_TEXT_INPUT;
-
     auto *self = static_cast<GLDevice *>(glfwGetWindowUserPointer(window));
     if(self){
         std::lock_guard<std::mutex> lockGuard(self->m_eventLock);
-        self->m_eventQ.emplace_back(event, std::move(text));
+        if(!self->m_imeEnableList.empty()){
+            // no widget enabled the system IME, drop the event,
+            // mimics SDL3's SDL_StopTextInput suppression
+            MirEvent event {};
+            event.type = MIR_EVENT_TEXT_INPUT;
+            self->m_eventQ.emplace_back(event, std::move(text));
+        }
     }
 }
 
@@ -724,8 +727,9 @@ void GLDevice::toggleWindowFullscreen()
 
 void GLDevice::enableSystemIME(uint64_t id)
 {
-    // Stage 1b: text input moves to ImGui widgets (which drive the OS IME
-    // themselves) in Stage 2/3; until then this is a tracked no-op
+    // GLFW has no SDL_StartTextInput equivalent: while m_imeEnableList is
+    // non-empty, fnCharEvent() delivers MIR_EVENT_TEXT_INPUT events; widget
+    // handlers still filter events for non-IME_SYSTEM input lines
     m_imeEnableList.insert(id);
 }
 
