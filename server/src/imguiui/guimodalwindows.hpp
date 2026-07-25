@@ -2,7 +2,9 @@
 //
 // Stage 2: ImGui replacement for serverconfigurewindow.fl. Same field set
 // and validation rules; Apply keeps the AM_PEERCONFIG broadcast to peers.
-// File pickers use tinyfiledialogs (Fl_Native_File_Chooser replacement).
+// File pickers use a cross-platform ImGui file dialog.
+
+#include "guifiledialog.hpp"
 
 class GUICore;
 
@@ -24,6 +26,8 @@ class GUIConfigureWindow
     private:
         bool m_clientPortEditable = true;
         bool m_slavePortEditable  = true;
+        bool m_selectingScriptDirectory = false;
+        GUIFileDialog m_fileDialog {"ConfigureFileDialog"};
 
     public:
         explicit GUIConfigureWindow(GUICore *core);

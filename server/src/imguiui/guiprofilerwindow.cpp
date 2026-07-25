@@ -18,7 +18,7 @@ void GUIProfilerWindow::draw()
     }
 
     bool open = true;
-    ImGui::SetNextWindowSize(ImVec2(640, 420), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(830, 505), ImGuiCond_Appearing);
     if(ImGui::Begin("Profiler", &open)){
         ImGui::TextUnformatted(m_text.c_str());
     }

@@ -148,7 +148,6 @@ void GUICore::drawFrame()
     ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 #endif
 
-    m_mainWindow->drawMenuBar();
     m_mainWindow->drawConsole();
 
     if(m_showActorMonitor){
@@ -198,12 +197,16 @@ void GUICore::drawPasswordModal()
         m_passwordPopupOpen = true;
     }
 
-    if(ImGui::BeginPopupModal("Server Password", nullptr, ImGuiWindowFlags_AlwaysAutoResize)){
-        ImGui::TextUnformatted("Please set server password:");
-        const bool enterPressed = ImGui::InputText("Password", m_passwordInput, sizeof(m_passwordInput),
+    ImGui::SetNextWindowSize(ImVec2(300, 80), ImGuiCond_Appearing);
+    if(ImGui::BeginPopupModal("Server Password", nullptr, ImGuiWindowFlags_NoResize)){
+        const char *title = "Please set server password:";
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(title).x) * 0.5f);
+        ImGui::TextUnformatted(title);
+        ImGui::SetNextItemWidth(-1);
+        const bool enterPressed = ImGui::InputText("##password", m_passwordInput, sizeof(m_passwordInput),
                 ImGuiInputTextFlags_Password | ImGuiInputTextFlags_EnterReturnsTrue);
 
-        if(ImGui::Button("OK", ImVec2(120, 0)) || enterPressed){
+        if(enterPressed){
             m_password = m_passwordInput;
             auto cb = std::move(m_passwordCb);
             m_passwordCb = nullptr;
@@ -214,13 +217,6 @@ void GUICore::drawPasswordModal()
                 cb(m_password);
             }
             return;
-        }
-
-        ImGui::SameLine();
-        if(ImGui::Button("Cancel", ImVec2(120, 0))){
-            m_passwordCb = nullptr;
-            m_passwordPopupOpen = false;
-            ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
     }

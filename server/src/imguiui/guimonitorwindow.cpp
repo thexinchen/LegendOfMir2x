@@ -60,8 +60,8 @@ void GUIMonitorWindow::drawActorMonitor()
     refreshSnapshots();
 
     bool open = true;
-    ImGui::SetNextWindowSize(ImVec2(760, 420), ImGuiCond_FirstUseEver);
-    if(!ImGui::Begin("Actor Monitor", &open)){
+    ImGui::SetNextWindowSize(ImVec2(1030, 445), ImGuiCond_Appearing);
+    if(!ImGui::Begin("Actor Monitor", &open, ImGuiWindowFlags_MenuBar)){
         ImGui::End();
         if(!open){
             m_core->setActorMonitorOpen(false);
@@ -69,13 +69,21 @@ void GUIMonitorWindow::drawActorMonitor()
         return;
     }
 
-    ImGui::TextDisabled("%zu actor(s), refresh %.2fs", m_actorList.size(), MONITOR_REFRESH_SEC);
-    ImGui::Separator();
+    if(ImGui::BeginMenuBar()){
+        if(ImGui::BeginMenu("Monitor")){
+            if(ImGui::MenuItem("Exit")){
+                open = false;
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
 
+    const float footerHeight = ImGui::GetFrameHeight();
     if(ImGui::BeginTable("ActorTable", 8,
                 ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
                 ImGuiTableFlags_Sortable | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
-                ImGuiTableFlags_SizingStretchProp)){
+                ImGuiTableFlags_SizingStretchProp, ImVec2(0, -footerHeight))){
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("UID"        , ImGuiTableColumnFlags_DefaultSort, 1.6f, 0);
         ImGui::TableSetupColumn("TYPE"       , ImGuiTableColumnFlags_DefaultSort, 1.0f, 1);
@@ -158,6 +166,7 @@ void GUIMonitorWindow::drawActorMonitor()
         ImGui::EndTable();
     }
 
+    ImGui::TextDisabled("%zu actor(s), refresh %.2fs", m_actorList.size(), MONITOR_REFRESH_SEC);
     ImGui::End();
     if(!open){
         m_core->setActorMonitorOpen(false);
@@ -169,10 +178,10 @@ void GUIMonitorWindow::drawPodMonitor()
     refreshSnapshots();
 
     bool open = true;
-    ImGui::SetNextWindowSize(ImVec2(620, 380), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(900, 445), ImGuiCond_Appearing);
 
     const auto title = str_printf("Actor Pod Monitor - %016llx", to_llu(m_podUID));
-    if(!ImGui::Begin(title.c_str(), &open)){
+    if(!ImGui::Begin(title.c_str(), &open, ImGuiWindowFlags_MenuBar)){
         ImGui::End();
         if(!open){
             m_core->setPodMonitorOpen(false);
@@ -180,10 +189,22 @@ void GUIMonitorWindow::drawPodMonitor()
         return;
     }
 
+    if(ImGui::BeginMenuBar()){
+        if(ImGui::BeginMenu("Monitor")){
+            if(ImGui::MenuItem("Exit")){
+                open = false;
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
+
+    int messageTypeCount = 0;
+    const float footerHeight = ImGui::GetFrameHeight();
     if(m_podMonitor && m_podMonitor.uid == m_podUID){
         if(ImGui::BeginTable("PodTable", 5,
                     ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg |
-                    ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp)){
+                    ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp, ImVec2(0, -footerHeight))){
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("TYPE"     , ImGuiTableColumnFlags_None, 2.2f);
             ImGui::TableSetupColumn("BUSY"     , ImGuiTableColumnFlags_None, 1.0f);
@@ -194,6 +215,7 @@ void GUIMonitorWindow::drawPodMonitor()
 
             for(int amType = 0; const auto &procMonitor: m_podMonitor.amProcMonitorList){
                 if(procMonitor.sendCount || procMonitor.recvCount){
+                    ++messageTypeCount;
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
                     ImGui::TextUnformatted(mpkName(amType));
@@ -215,6 +237,7 @@ void GUIMonitorWindow::drawPodMonitor()
         ImGui::TextDisabled("waiting for snapshot...");
     }
 
+    ImGui::TextDisabled("MSG_TYPE: %d", messageTypeCount);
     ImGui::End();
     if(!open){
         m_core->setPodMonitorOpen(false);

@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include "guifiledialog.hpp"
+
 class GUICore;
 
 class GUIScriptWindow
@@ -14,6 +16,7 @@ class GUIScriptWindow
         GUICore    *m_core = nullptr;
         std::string m_text;
         std::string m_fileName;
+        GUIFileDialog m_fileDialog {"ScriptFileDialog"};
 
     public:
         explicit GUIScriptWindow(GUICore *core)

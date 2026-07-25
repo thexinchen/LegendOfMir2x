@@ -24,7 +24,7 @@ static ImU32 fnLogTypeColor(int type)
 
 void GUIMainWindow::drawMenuBar()
 {
-    if(!ImGui::BeginMainMenuBar()){
+    if(!ImGui::BeginMenuBar()){
         return;
     }
 
@@ -36,6 +36,8 @@ void GUIMainWindow::drawMenuBar()
                 core->queueLaunch();
             });
         }
+        ImGui::Separator();
+        ImGui::MenuItem("Pause");
         ImGui::Separator();
         if(ImGui::MenuItem("Quit")){
             m_core->quit();
@@ -90,22 +92,29 @@ void GUIMainWindow::drawMenuBar()
         ImGui::EndMenu();
     }
 
-    ImGui::EndMainMenuBar();
+    ImGui::EndMenuBar();
 }
 
 void GUIMainWindow::drawConsole()
 {
-    ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
-    if(!ImGui::Begin("Server Log")){
+    const auto *viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+
+    constexpr auto windowFlags =
+        ImGuiWindowFlags_MenuBar |
+        ImGuiWindowFlags_NoDecoration |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoNavFocus;
+
+    if(!ImGui::Begin("Server", nullptr, windowFlags)){
         ImGui::End();
         return;
     }
 
-    ImGui::Checkbox("Auto-scroll", &m_autoScroll);
-    ImGui::SameLine();
-    // note: entries are GUI-thread only, no locking needed here
-    ImGui::TextDisabled("%zu line(s)", m_core->getLogEntries().size());
-    ImGui::Separator();
+    drawMenuBar();
 
     ImGui::BeginChild("LogScroll", ImVec2(0, 0), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
     for(const auto &entry: m_core->getLogEntries()){

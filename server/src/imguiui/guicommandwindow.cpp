@@ -197,8 +197,8 @@ void GUICommandWindow::drawSlot(int cwid, Slot &slot)
     bool open = true;
     const auto title = str_printf("Command Window %d###CW%d", cwid, cwid);
 
-    ImGui::SetNextWindowSize(ImVec2(580, 400), ImGuiCond_FirstUseEver);
-    if(!ImGui::Begin(title.c_str(), &open)){
+    ImGui::SetNextWindowSize(ImVec2(580, 400), ImGuiCond_Appearing);
+    if(!ImGui::Begin(title.c_str(), &open, ImGuiWindowFlags_MenuBar)){
         ImGui::End();
         if(!open){
             deleteCommandWindow(cwid);
@@ -206,15 +206,24 @@ void GUICommandWindow::drawSlot(int cwid, Slot &slot)
         return;
     }
 
-    ImGui::RadioButton("AUTO", &slot.evalMode, 0);
-    ImGui::SameLine();
-    ImGui::RadioButton("LOCAL", &slot.evalMode, 1);
-    ImGui::SameLine();
-    ImGui::RadioButton("ASYNC", &slot.evalMode, 2);
-    ImGui::Separator();
+    if(ImGui::BeginMenuBar()){
+        if(ImGui::BeginMenu("Configure")){
+            if(ImGui::MenuItem("Clear")){
+                slot.logList.clear();
+            }
+            if(ImGui::BeginMenu("Run Mode")){
+                if(ImGui::MenuItem("Auto",  nullptr, slot.evalMode == 0)){ slot.evalMode = 0; }
+                if(ImGui::MenuItem("Local", nullptr, slot.evalMode == 1)){ slot.evalMode = 1; }
+                if(ImGui::MenuItem("Async", nullptr, slot.evalMode == 2)){ slot.evalMode = 2; }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
 
     // log pane
-    const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+    const float footerHeight = ImGui::GetFrameHeight();
     if(ImGui::BeginChild("CWLog", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders)){
         for(const auto &entry: slot.logList){
             ImGui::PushStyleColor(ImGuiCol_Text, entry.type == 2 ? IM_COL32(240, 90, 90, 255) : IM_COL32(210, 210, 210, 255));
@@ -238,6 +247,11 @@ void GUICommandWindow::drawSlot(int cwid, Slot &slot)
         ImGui::BeginDisabled();
     }
 
+    static const char *const evalModeNameList[] = {"AUTO", "LOCAL", "ASYNC"};
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(evalModeNameList[slot.evalMode]);
+    ImGui::SameLine(55.0f, 0.0f);
+    ImGui::SetNextItemWidth(-1);
     bool exec = ImGui::InputText("##cwinput", slot.inputBuf, sizeof(slot.inputBuf),
             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackHistory,
             fnHistoryCallback, &slot);

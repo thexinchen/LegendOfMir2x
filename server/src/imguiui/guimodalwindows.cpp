@@ -1,7 +1,6 @@
 #include <cstring>
 
 #include <imgui.h>
-#include <tinyfiledialogs/tinyfiledialogs.h>
 
 #include "log.hpp"
 #include "strf.hpp"
@@ -41,36 +40,48 @@ GUIConfigureWindow::GUIConfigureWindow(GUICore *core)
 void GUIConfigureWindow::draw()
 {
     bool open = true;
-    ImGui::SetNextWindowSize(ImVec2(460, 0), ImGuiCond_FirstUseEver);
-    if(ImGui::Begin("Server Configure", &open)){
-        if(ImGui::Button("Browse...##map")){
-            static const char * const mapFilter[] = {"*.zsdb"};
-            if(const char *picked = tinyfd_openFileDialog("Map package", m_mapPath, 1, mapFilter, "map package (*.zsdb)", 0)){
-                std::strncpy(m_mapPath, picked, sizeof(m_mapPath) - 1);
-            }
+    ImGui::SetNextWindowSize(ImVec2(570, 360), ImGuiCond_Appearing);
+    if(ImGui::Begin("Server Configure", &open, ImGuiWindowFlags_NoResize)){
+        ImGui::SetCursorPos(ImVec2(20, 20));
+        ImGui::TextUnformatted("Map Path:");
+        ImGui::SameLine(150);
+        ImGui::SetNextItemWidth(300);
+        ImGui::InputText("##mapPath", m_mapPath, sizeof(m_mapPath));
+        ImGui::SameLine(450);
+        if(ImGui::Button("...##map", ImVec2(30, 25))){
+            m_selectingScriptDirectory = false;
+            m_fileDialog.open("Select map package", m_mapPath, GUIFileDialog::Mode::File, ".zsdb");
         }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-1);
-        ImGui::InputText("Map path", m_mapPath, sizeof(m_mapPath));
 
-        if(ImGui::Button("Browse...##script")){
-            if(const char *picked = tinyfd_selectFolderDialog("Script directory", m_scriptPath)){
-                std::strncpy(m_scriptPath, picked, sizeof(m_scriptPath) - 1);
-            }
+        ImGui::SetCursorPos(ImVec2(20, 60));
+        ImGui::TextUnformatted("Script Path:");
+        ImGui::SameLine(150);
+        ImGui::SetNextItemWidth(300);
+        ImGui::InputText("##scriptPath", m_scriptPath, sizeof(m_scriptPath));
+        ImGui::SameLine(450);
+        if(ImGui::Button("...##script", ImVec2(30, 25))){
+            m_selectingScriptDirectory = true;
+            m_fileDialog.open("Select script directory", m_scriptPath, GUIFileDialog::Mode::Directory);
         }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-1);
-        ImGui::InputText("Script path", m_scriptPath, sizeof(m_scriptPath));
 
-        ImGui::InputText("Max player", m_maxPlayerCount, sizeof(m_maxPlayerCount));
-        ImGui::InputText("Experience rate", m_experienceRate, sizeof(m_experienceRate));
-        ImGui::InputText("Drop rate", m_dropRate, sizeof(m_dropRate));
-        ImGui::InputText("Gold rate", m_goldRate, sizeof(m_goldRate));
+        const auto drawField = [](float y, const char *label, const char *id, char *buffer, size_t bufferSize)
+        {
+            ImGui::SetCursorPos(ImVec2(20, y));
+            ImGui::TextUnformatted(label);
+            ImGui::SameLine(150);
+            ImGui::SetNextItemWidth(60);
+            ImGui::InputText(id, buffer, bufferSize);
+        };
+
+        drawField(100, "Maximal Player:", "##maxPlayer",      m_maxPlayerCount, sizeof(m_maxPlayerCount));
+        drawField(140, "Experience Rate:", "##experienceRate", m_experienceRate, sizeof(m_experienceRate));
+        drawField(180, "Drop Rate:",       "##dropRate",       m_dropRate,       sizeof(m_dropRate));
+        drawField(220, "Gold Rate:",       "##goldRate",       m_goldRate,       sizeof(m_goldRate));
 
         if(!m_clientPortEditable){
             ImGui::BeginDisabled();
         }
-        ImGui::InputText("Client port", m_clientPort, sizeof(m_clientPort));
+        drawField(260, "Client Port:", "##clientPort", m_clientPort, sizeof(m_clientPort));
         if(!m_clientPortEditable){
             ImGui::EndDisabled();
         }
@@ -78,18 +89,31 @@ void GUIConfigureWindow::draw()
         if(!m_slavePortEditable){
             ImGui::BeginDisabled();
         }
-        ImGui::InputText("Slave port", m_slavePort, sizeof(m_slavePort));
+        drawField(300, "SlavePort:", "##slavePort", m_slavePort, sizeof(m_slavePort));
         if(!m_slavePortEditable){
             ImGui::EndDisabled();
         }
 
-        ImGui::Separator();
-        if(ImGui::Button("Apply", ImVec2(100, 0))){
+        ImGui::SetCursorPos(ImVec2(300, 315));
+        if(ImGui::Button("Cancel", ImVec2(70, 25))){
+            open = false;
+        }
+        ImGui::SameLine(380);
+        if(ImGui::Button("Apply", ImVec2(70, 25))){
             applyConfig();
         }
-        ImGui::SameLine();
-        if(ImGui::Button("Close", ImVec2(100, 0))){
+        ImGui::SameLine(460);
+        if(ImGui::Button("OK", ImVec2(70, 25))){
+            applyConfig();
             open = false;
+        }
+
+        std::string selectedPath;
+        if(m_fileDialog.draw(selectedPath)){
+            auto *destination = m_selectingScriptDirectory ? m_scriptPath : m_mapPath;
+            const auto destinationSize = m_selectingScriptDirectory ? sizeof(m_scriptPath) : sizeof(m_mapPath);
+            std::strncpy(destination, selectedPath.c_str(), destinationSize - 1);
+            destination[destinationSize - 1] = '\0';
         }
     }
     ImGui::End();
