@@ -98,7 +98,7 @@ void GUICore::setupFonts()
 #endif
     };
 
-    const float fontPixelSize = 28.0f;
+    const float fontPixelSize = 26.0f;
     ImGuiIO &io = ImGui::GetIO();
     ImFontConfig fontCfg;
     fontCfg.SizePixels = fontPixelSize;

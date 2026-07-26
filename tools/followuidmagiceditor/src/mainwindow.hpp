@@ -138,7 +138,7 @@ class ImGuiApp
 #endif
             };
             
-            const float fFontPixelSize = 28.0f;
+            const float fFontPixelSize = 26.0f;
 
             auto &io = ImGui::GetIO();
             for(const auto *fontPath: fontList){
