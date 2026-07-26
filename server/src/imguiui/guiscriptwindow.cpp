@@ -44,7 +44,7 @@ void GUIScriptWindow::runFile()
 void GUIScriptWindow::openFileDialog(bool fromMainMenu)
 {
     m_loadRequestedFromMainMenu = fromMainMenu;
-    m_fileDialog.open("Load Lua script", m_fileName.c_str(), GUIFileDialog::Mode::File, ".lua");
+    m_fileDialog.open("Load Lua script", m_fileName.c_str(), ImGuiFileDialog::Mode::File, ".lua");
 }
 
 void GUIScriptWindow::drawFileDialog()

@@ -1,10 +1,6 @@
-add_executable(mapeditor
-    animationdb.cpp
-    editormap.cpp
-    imguihelper.cpp
-    main.cpp
-    mainwindow.cpp
-)
+aux_source_directory(. MAPEDITOR_SRC)
+
+add_executable(mapeditor ${MAPEDITOR_SRC})
 if(WIN32)
     set_target_properties(mapeditor PROPERTIES WIN32_EXECUTABLE TRUE)
     if(MSVC)

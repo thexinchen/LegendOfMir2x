@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include "imguihelper.hpp"
+#include <GLTexture.hpp>
 #include "rawbuf.hpp"
 
 class Animation
@@ -17,7 +17,7 @@ class Animation
 
             // AnimationDB uses initializer_list to initialize its internal vector<Animation>, see AnimationDB::AnimationDB(...)
             // it requests Animation to be copy-constructable
-            std::shared_ptr<ImGuiTexture> image {};
+            std::shared_ptr<GLTexture> image {};
         };
 
     private:
@@ -32,7 +32,7 @@ class Animation
                 {
                     .dx = dx,
                     .dy = dy,
-                    .image = std::make_shared<ImGuiTexture>(),
+                    .image = std::make_shared<GLTexture>(),
                 });
                 m_frameList.back().image->loadPNG(imgData.data(), imgData.size());
             }
@@ -44,7 +44,7 @@ class Animation
             return m_frameList.size();
         }
 
-        std::tuple<int, int, ImGuiTexture *> frame(size_t index) const
+        std::tuple<int, int, GLTexture *> frame(size_t index) const
         {
             return
             {

@@ -64,7 +64,7 @@ int MagicDrawArea::magicDirCount() const
     return m_gfxDirType;
 }
 
-std::tuple<ImGuiTexture *, int, int> MagicDrawArea::getFrameImage(int gfxDirIndex)
+std::tuple<GLTexture *, int, int> MagicDrawArea::getFrameImage(int gfxDirIndex)
 {
     if(m_gfxID == SYS_U32NIL){
         return {nullptr, 0, 0};

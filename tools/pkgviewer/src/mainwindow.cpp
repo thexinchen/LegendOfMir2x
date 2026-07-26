@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
-#include <stdexcept>
 
 #include <imgui.h>
 
@@ -277,4 +276,3 @@ void MainWindow::saveImage(uint32_t imageIndex, const std::string &filePath)
         if(layer2){ imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(layer2), width, height, (base.string() + "_2.PNG").c_str()); }
     }
 }
-

@@ -144,7 +144,7 @@ class ServerArgParser
             , m_masterOnlyConfig
               {
                   .textFont           = (argf::parseInteger<int> (parseString(parser, "--text-font",         this->slave, argf::OPT, argf::BAN            ), "text-font",   argf::checkNonNegative,           0          ).first),
-                  .autoLaunch         = (argf::parseInteger<bool>(parseString(parser, "--auto-launch",       this->slave, argf::OPT, argf::BAN, true, true), "auto-launch", argf::checkPass<bool>,            false, true).first),
+                  .autoLaunch         = (argf::parseInteger<bool>(parseString(parser, "--auto-launch",       this->slave, argf::OPT, argf::BAN, true, true), "auto-launch", argf::checkPass<bool>,             true, true).first),
                   .disableQuestScript = (argf::parseInteger<bool>(parseString(parser, "--disable-quest-script",            this->slave, argf::OPT, argf::BAN, true, true), "disable-quest-script",            argf::checkPass<bool>, false, true).first),
                   .clientPort         = (argf::parseInteger<int> (parseString(parser, "--client-port",       this->slave, argf::OPT, argf::BAN            ), "client-port", argf::checkUserListenPort(false), argf::defVal::clientPort)),
                   .preloadMap         = (argf::parseMapIDString  (parseString(parser, "--preload-map",       this->slave, argf::OPT, argf::BAN, true      ), "preload-map", true, 0, 0)),

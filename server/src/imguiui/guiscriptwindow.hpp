@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "guifiledialog.hpp"
+#include <ImGuiFileDialog.hpp>
 
 class GUICore;
 
@@ -16,7 +16,7 @@ class GUIScriptWindow
         GUICore    *m_core = nullptr;
         std::string m_text;
         std::string m_fileName;
-        GUIFileDialog m_fileDialog {"ScriptFileDialog"};
+        ImGuiFileDialog m_fileDialog {"ScriptFileDialog"};
         bool m_loadRequestedFromMainMenu = false;
 
     public:

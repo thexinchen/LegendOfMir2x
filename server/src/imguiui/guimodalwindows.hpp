@@ -4,7 +4,7 @@
 // and validation rules; Apply keeps the AM_PEERCONFIG broadcast to peers.
 // File pickers use a cross-platform ImGui file dialog.
 
-#include "guifiledialog.hpp"
+#include <ImGuiFileDialog.hpp>
 
 class GUICore;
 
@@ -27,7 +27,7 @@ class GUIConfigureWindow
         bool m_clientPortEditable = true;
         bool m_slavePortEditable  = true;
         bool m_selectingScriptDirectory = false;
-        GUIFileDialog m_fileDialog {"ConfigureFileDialog"};
+        ImGuiFileDialog m_fileDialog {"ConfigureFileDialog"};
 
     public:
         explicit GUIConfigureWindow(GUICore *core);

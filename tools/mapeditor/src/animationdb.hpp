@@ -19,7 +19,7 @@ class AnimationDB
         Animation *getAnimation();
 
     public:
-        std::tuple<int, int, ImGuiTexture *> getFrame()
+        std::tuple<int, int, GLTexture *> getFrame()
         {
             if(auto aniPtr = getAnimation()){
                 const auto aniFrameCount = aniPtr->frameCount();

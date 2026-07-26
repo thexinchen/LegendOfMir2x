@@ -2,7 +2,7 @@
 #include "hexstr.hpp"
 #include "magicframedb.hpp"
 
-std::tuple<ImGuiTexture *, int, int> MagicFrameDB::retrieve(uint32_t texID)
+std::tuple<GLTexture *, int, int> MagicFrameDB::retrieve(uint32_t texID)
 {
     if(auto p = m_cachedFrameList.find(texID); p != m_cachedFrameList.end()){
         return

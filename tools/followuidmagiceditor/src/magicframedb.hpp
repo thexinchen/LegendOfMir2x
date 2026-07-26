@@ -4,7 +4,7 @@
 #include <tuple>
 #include <unordered_map>
 
-#include "imguihelper.hpp"
+#include <GLTexture.hpp>
 #include "zsdb.hpp"
 
 class MagicFrameDB final
@@ -14,7 +14,7 @@ class MagicFrameDB final
         {
             int dx = 0;
             int dy = 0;
-            ImGuiTexture image;
+            GLTexture image;
         };
 
         std::unique_ptr<ZSDB> m_zsdbPtr;
@@ -25,5 +25,5 @@ class MagicFrameDB final
             : m_zsdbPtr(std::make_unique<ZSDB>(zsdbPath))
         {}
 
-        std::tuple<ImGuiTexture *, int, int> retrieve(uint32_t);
+        std::tuple<GLTexture *, int, int> retrieve(uint32_t);
 };

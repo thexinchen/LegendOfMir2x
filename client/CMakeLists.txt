@@ -10,7 +10,9 @@ mir2x_generate_resource(client ivbutton_png "${CMAKE_CURRENT_SOURCE_DIR}/src/ivb
 mir2x_generate_resource(client monaco_ttf   "${CMAKE_CURRENT_SOURCE_DIR}/src/monaco.ttf")
 
 if(MSVC)
-  set_property(TARGET client PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:client>")
+    set_target_properties(server PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_link_options(server PRIVATE "/ENTRY:mainCRTStartup")
+    set_property(TARGET server PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:server>")
 endif()
 
 install(TARGETS client DESTINATION client)

@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <cstdint>
-#include "imguihelper.hpp"
+#include <GLTexture.hpp>
 
 class MainWindow;
 
@@ -9,7 +9,7 @@ class PreviewWindow
 {
     MainWindow *m_owner = nullptr;
     std::vector<uint32_t> m_imageBuf;
-    ImGuiTexture m_texture;
+    GLTexture m_texture;
     uint32_t m_imageIndex = 0;
     int m_imageOffX = 0;
     int m_imageOffY = 0;

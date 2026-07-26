@@ -1,4 +1,5 @@
 aux_source_directory(. FOLLOWUIDMAGICEDITOR_SRC)
+
 add_executable(followuidmagiceditor ${FOLLOWUIDMAGICEDITOR_SRC})
 if(WIN32)
     set_target_properties(followuidmagiceditor PROPERTIES WIN32_EXECUTABLE TRUE)

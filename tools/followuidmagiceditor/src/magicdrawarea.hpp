@@ -36,5 +36,5 @@ class MagicDrawArea
     private:
         int magicDirCount() const;
         std::tuple<int, int> getGfxDirPLoc(int, int, int) const;
-        std::tuple<ImGuiTexture *, int, int> getFrameImage(int);
+        std::tuple<GLTexture *, int, int> getFrameImage(int);
 };

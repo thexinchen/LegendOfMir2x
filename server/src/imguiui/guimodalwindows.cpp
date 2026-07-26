@@ -67,7 +67,7 @@ void GUIConfigureWindow::draw()
             ImGui::TableSetColumnIndex(2);
             if(ImGui::Button("...##map", ImVec2(browseWidth, 0))){
                 m_selectingScriptDirectory = false;
-                m_fileDialog.open("Select map package", m_mapPath, GUIFileDialog::Mode::File, ".zsdb");
+                m_fileDialog.open("Select map package", m_mapPath, ImGuiFileDialog::Mode::File, ".zsdb");
             }
 
             drawLabel("Script Path:");
@@ -76,7 +76,7 @@ void GUIConfigureWindow::draw()
             ImGui::TableSetColumnIndex(2);
             if(ImGui::Button("...##script", ImVec2(browseWidth, 0))){
                 m_selectingScriptDirectory = true;
-                m_fileDialog.open("Select script directory", m_scriptPath, GUIFileDialog::Mode::Directory);
+                m_fileDialog.open("Select script directory", m_scriptPath, ImGuiFileDialog::Mode::Directory);
             }
 
             const auto drawField = [&drawLabel](const char *label, const char *id, char *buffer, size_t bufferSize)

@@ -208,7 +208,9 @@ void GUICore::drawPasswordModal()
         m_passwordPopupOpen = true;
     }
 
-    ImGui::SetNextWindowSize(ImVec2(300, 80), ImGuiCond_Appearing);
+    const auto *viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(480, 150), ImGuiCond_Appearing);
     if(ImGui::BeginPopupModal("Server Password", nullptr, ImGuiWindowFlags_NoResize)){
         const char *title = "Please set server password:";
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(title).x) * 0.5f);

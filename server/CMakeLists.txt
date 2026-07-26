@@ -2,6 +2,9 @@
 file(GLOB_RECURSE SERVER_SRC src/*.hpp src/*.cpp)
 
 add_executable(server ${SERVER_SRC})
+if(WIN32)
+endif()
+
 target_link_libraries(server PRIVATE common sqlitecpp imgui)
 target_include_directories(server PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(server PRIVATE ${CMAKE_SOURCE_DIR}/3rdparty)
@@ -17,7 +20,9 @@ mir2x_generate_resource(server servermap_lua                "${CMAKE_CURRENT_SOU
 mir2x_generate_resource(server serverobject_lua             "${CMAKE_CURRENT_SOURCE_DIR}/src/serverobject.lua")
 
 if(MSVC)
-  set_property(TARGET server PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:server>")
+    set_target_properties(server PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_link_options(server PRIVATE "/ENTRY:mainCRTStartup")
+    set_property(TARGET server PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:server>")
 endif()
 
 install(TARGETS server DESTINATION server)
