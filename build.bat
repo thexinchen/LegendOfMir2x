@@ -7,12 +7,19 @@ set "BUILD_TYPE=Release"
 set "BUILD_PRESET=conan-release"
 set "BUILD_TARGET="
 set "MIR2X_RES_OPTION="
+set "USE_GIT_PROXY="
 
 :parse_args
 if "%~1"=="" goto :args_parsed
 
 if /I "%~1"=="-h" goto :help
 if /I "%~1"=="--help" goto :help
+
+if /I "%~1"=="--proxy" (
+    set "USE_GIT_PROXY=1"
+    shift /1
+    goto :parse_args
+)
 
 if /I "%~1"=="Debug" (
     set "BUILD_TYPE=Debug"
@@ -47,6 +54,8 @@ if /I "%~1"=="--mir2x-res" (
 goto :usage
 
 :args_parsed
+if defined USE_GIT_PROXY call :enable_git_proxy
+
 if defined MIR2X_RES_OPTION set "MIR2X_RES_REPO_PATH=%MIR2X_RES_OPTION%"
 
 if not defined MIR2X_RES_REPO_PATH (
@@ -94,19 +103,32 @@ popd
 exit /b 1
 
 :usage
-echo Usage: %~nx0 [Debug^|Release] [--target TARGET] [--mir2x-res PATH]
+echo Usage: %~nx0 [Debug^|Release] [--proxy] [--target TARGET] [--mir2x-res PATH]
 popd
 exit /b 2
 
 :help
-echo Usage: %~nx0 [Debug^|Release] [--target TARGET] [--mir2x-res PATH]
+echo Usage: %~nx0 [Debug^|Release] [--proxy] [--target TARGET] [--mir2x-res PATH]
 echo.
 echo Arguments:
 echo   Debug^|Release       Build configuration. Default: Release.
 echo.
 echo Options:
+echo   --proxy            Use the current Git proxy configuration.
 echo   --target TARGET     Build only the specified CMake target.
 echo   --mir2x-res PATH    Set MIR2X_RES_REPO_PATH for CMake configure.
 echo   -h, --help          Show this help message.
 popd
+exit /b 0
+
+:enable_git_proxy
+set "GIT_HTTP_PROXY="
+set "GIT_HTTPS_PROXY="
+for /f "delims=" %%P in ('git config --get http.proxy 2^>nul') do set "GIT_HTTP_PROXY=%%P"
+for /f "delims=" %%P in ('git config --get https.proxy 2^>nul') do set "GIT_HTTPS_PROXY=%%P"
+set "GIT_CONFIG_COUNT=2"
+set "GIT_CONFIG_KEY_0=http.proxy"
+set "GIT_CONFIG_VALUE_0=%GIT_HTTP_PROXY%"
+set "GIT_CONFIG_KEY_1=https.proxy"
+set "GIT_CONFIG_VALUE_1=%GIT_HTTPS_PROXY%"
 exit /b 0

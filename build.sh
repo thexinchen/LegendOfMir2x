@@ -7,22 +7,28 @@ build_type="Release"
 preset="conan-release"
 build_target=""
 cli_resource_path=""
+use_git_proxy=false
 
 while (( $# > 0 )); do
     case "$1" in
         -h|--help)
             cat <<EOF
-Usage: $(basename "$0") [Debug|Release] [--target TARGET] [--mir2x-res PATH]
+Usage: $(basename "$0") [Debug|Release] [--proxy] [--target TARGET] [--mir2x-res PATH]
 
 Arguments:
   Debug|Release       Build configuration. Default: Release.
 
 Options:
+  --proxy            Use the current Git proxy configuration.
   --target TARGET     Build only the specified CMake target.
   --mir2x-res PATH    Set MIR2X_RES_REPO_PATH for CMake configure.
   -h, --help          Show this help message.
 EOF
             exit 0
+            ;;
+        --proxy)
+            use_git_proxy=true
+            shift
             ;;
         Debug|debug)
             build_type="Debug"
@@ -36,7 +42,7 @@ EOF
             ;;
         --target)
             if (( $# < 2 )) || [[ -n "${build_target}" ]]; then
-                echo "Usage: $0 [Debug|Release] [--target TARGET] [--mir2x-res PATH]" >&2
+                echo "Usage: $0 [Debug|Release] [--proxy] [--target TARGET] [--mir2x-res PATH]" >&2
                 exit 2
             fi
             build_target="$2"
@@ -44,18 +50,28 @@ EOF
             ;;
         --mir2x-res)
             if (( $# < 2 )) || [[ -n "${cli_resource_path}" ]]; then
-                echo "Usage: $0 [Debug|Release] [--target TARGET] [--mir2x-res PATH]" >&2
+                echo "Usage: $0 [Debug|Release] [--proxy] [--target TARGET] [--mir2x-res PATH]" >&2
                 exit 2
             fi
             cli_resource_path="$2"
             shift 2
             ;;
         *)
-            echo "Usage: $0 [Debug|Release] [--target TARGET] [--mir2x-res PATH]" >&2
+            echo "Usage: $0 [Debug|Release] [--proxy] [--target TARGET] [--mir2x-res PATH]" >&2
             exit 2
             ;;
     esac
 done
+
+if [[ "${use_git_proxy}" == true ]]; then
+    git_http_proxy="$(git config --get http.proxy 2>/dev/null || true)"
+    git_https_proxy="$(git config --get https.proxy 2>/dev/null || true)"
+    export GIT_CONFIG_COUNT=2
+    export GIT_CONFIG_KEY_0="http.proxy"
+    export GIT_CONFIG_VALUE_0="${git_http_proxy}"
+    export GIT_CONFIG_KEY_1="https.proxy"
+    export GIT_CONFIG_VALUE_1="${git_https_proxy}"
+fi
 
 resource_args=()
 resource_path=""
