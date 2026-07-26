@@ -29,4 +29,8 @@ target_link_libraries(common PUBLIC
     zstd::libzstd_static
 )
 
+if(WIN32)
+    target_link_libraries(common PUBLIC absl::inlined_vector)
+endif()
+
 mir2x_generate_resource(common luamodule_lua "${CMAKE_CURRENT_SOURCE_DIR}/src/luamodule.lua")

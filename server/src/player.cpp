@@ -1053,7 +1053,7 @@ corof::awaitable<> Player::onCMActionAttack(CMAction stCMA)
                                                 }
                                             case DBCOM_MAGICID(u8"半月弯刀"):
                                                 {
-                                                    std::vector<std::tuple<int, int>> aimGridList;
+                                                    std::inplace_vector<std::tuple<int, int>, 3> aimGridList;
                                                     for(int d: {-1, 0, 1}){
                                                         aimGridList.push_back(pathf::getFrontGLoc(X(), Y(), pathf::getNextDir(Direction(), d)));
                                                     }

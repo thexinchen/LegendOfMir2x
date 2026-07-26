@@ -1,3 +1,6 @@
+if(WIN32)
+    find_package(absl CONFIG REQUIRED)
+endif()
 find_package(argh CONFIG REQUIRED)
 find_package(asio CONFIG REQUIRED)
 find_package(cereal CONFIG REQUIRED)
