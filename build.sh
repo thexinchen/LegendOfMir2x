@@ -77,10 +77,16 @@ if [[ "${build_target}" == "zsdbdeploy" && ! -d "${resource_path}" ]]; then
 fi
 
 echo "[1/3] Installing Conan dependencies for ${build_type}..."
+package_manager_args=(-c tools.system.package_manager:mode=install)
+if (( EUID != 0 )); then
+    package_manager_args+=(-c tools.system.package_manager:sudo=True)
+fi
+
 conan install . \
     -s:h "build_type=${build_type}" \
     -s:h compiler.cppstd=23 \
     -c "tools.cmake:configure_args=['-DCMAKE_POLICY_VERSION_MINIMUM=3.5']" \
+    "${package_manager_args[@]}" \
     --build=missing
 
 echo "[2/3] Configuring CMake..."
