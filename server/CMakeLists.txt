@@ -5,7 +5,7 @@ add_executable(server ${SERVER_SRC})
 if(WIN32)
 endif()
 
-target_link_libraries(server PRIVATE common SQLiteCpp imgui_backends)
+target_link_libraries(server PRIVATE common SQLiteCpp imgui::imgui)
 target_include_directories(server PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 mir2x_generate_resource(server charobject_lua               "${CMAKE_CURRENT_SOURCE_DIR}/src/charobject.lua")

@@ -32,12 +32,12 @@ if(NOT IMGUI_BACKEND_DIR)
     message(FATAL_ERROR "Can't locate the ImGui backend sources in the Conan package")
 endif()
 
-add_library(imgui_backends STATIC
+set_property(TARGET imgui::imgui APPEND PROPERTY INTERFACE_SOURCES
     "${IMGUI_BACKEND_DIR}/imgui_impl_glfw.cpp"
     "${IMGUI_BACKEND_DIR}/imgui_impl_opengl3.cpp"
 )
-target_include_directories(imgui_backends PUBLIC
+set_property(TARGET imgui::imgui APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
     ${CMAKE_CURRENT_SOURCE_DIR}
     "${IMGUI_BACKEND_DIR}"
 )
-target_link_libraries(imgui_backends PUBLIC imgui::imgui glfw)
+set_property(TARGET imgui::imgui APPEND PROPERTY INTERFACE_LINK_LIBRARIES glfw)
