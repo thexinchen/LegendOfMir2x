@@ -2,7 +2,7 @@
 file(GLOB_RECURSE CLIENT_SRCS src/*.hpp src/*.cpp)
 
 add_executable(client ${CLIENT_SRCS})
-target_link_libraries(client PRIVATE common imgui miniaudio stb pinyin_stub)
+target_link_libraries(client PRIVATE common imgui_backends miniaudio::miniaudio stb::stb pinyin_stub)
 target_include_directories(client PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 mir2x_generate_resource(client ivboard_png  "${CMAKE_CURRENT_SOURCE_DIR}/src/ivboard.png")

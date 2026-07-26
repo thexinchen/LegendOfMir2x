@@ -11,6 +11,6 @@ endif()
 target_include_directories(followuidmagiceditor PRIVATE ${MIR2X_COMMON_SOURCE_DIR})
 target_include_directories(followuidmagiceditor PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
-target_link_libraries(followuidmagiceditor PRIVATE common imgui stb)
+target_link_libraries(followuidmagiceditor PRIVATE common imgui_backends stb::stb)
 
 install(TARGETS followuidmagiceditor DESTINATION tools/followuidmagiceditor)
