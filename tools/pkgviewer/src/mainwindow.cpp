@@ -2,24 +2,15 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <filesystem>
 
 #include <imgui.h>
 
+#include "filesys.hpp"
 #include "imgf.hpp"
 #include "strf.hpp"
 #include "totype.hpp"
 #include "mainwindow.hpp"
 #include "previewwindow.hpp"
-
-namespace
-{
-    std::string pathUTF8(const std::filesystem::path &path)
-    {
-        const auto text = path.u8string();
-        return {reinterpret_cast<const char *>(text.data()), text.size()};
-    }
-}
 
 MainWindow::MainWindow()
     : ImGuiApp("pkgviewer", 1200, 800, "pkgviewer.imgui.ini")
@@ -232,17 +223,15 @@ void MainWindow::drawDialogs()
 
 void MainWindow::openPackage(const std::string &fileName)
 {
-    const auto path = std::filesystem::path(to_u8rawstr(fileName));
-    const auto parentPath = pathUTF8(path.parent_path());
-    const auto stem = pathUTF8(path.stem());
-    m_fileFullName = pathUTF8(path);
+    const auto [parentPath, stem, extension] = filesys::decompFileName(fileName.c_str(), true);
+    m_fileFullName = fileName;
     m_package = std::make_unique<WilImagePackage>(parentPath.c_str(), stem.c_str());
     m_entries.clear();
     m_selectedEntry = -1;
     m_scanIndex = 0;
     m_progress = 0;
     m_busy = true;
-    m_status = "Loading " + pathUTF8(path.filename());
+    m_status = "Loading " + stem + "." + extension;
 }
 
 void MainWindow::processJobs()
@@ -263,8 +252,10 @@ void MainWindow::processJobs()
         }
         m_progress = m_package->indexCount() ? to_d(std::lround(100.0 * m_scanIndex / m_package->indexCount())) : 100;
         if(m_scanIndex >= m_package->indexCount()){
-            const auto path = std::filesystem::path(to_u8rawstr(m_fileFullName));
-            m_status = "FileName: " + pathUTF8(path.filename()) +
+            const auto fileParts = filesys::decompFileName(m_fileFullName.c_str(), true);
+            const auto &stem = std::get<1>(fileParts);
+            const auto &extension = std::get<2>(fileParts);
+            m_status = "FileName: " + stem + "." + extension +
                 "    ImageCount: " + std::to_string(m_entries.size()) +
                 "    Version: " + std::to_string(m_package->version());
             m_busy = false;
@@ -336,14 +327,14 @@ void MainWindow::saveImage(uint32_t imageIndex, const std::string &filePath)
     else{
         std::snprintf(indexText, sizeof(indexText), "TMP%s", imageIndexString(imageIndex).c_str());
     }
-    const auto base = std::filesystem::path(to_u8rawstr(filePath)) / indexText;
+    const auto base = filePath + "/" + indexText;
     if(const auto [layer0, layer1, layer2] = m_package->decode(true, m_removeShadowMosaic, m_autoAlpha); layer0){
-        imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(layer0), width, height, (base.string() + "_M.PNG").c_str());
+        imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(layer0), width, height, (base + "_M.PNG").c_str());
     }
     if(m_saveLayers){
         const auto [layer0, layer1, layer2] = m_package->decode(false, m_removeShadowMosaic, m_autoAlpha);
-        if(layer0){ imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(layer0), width, height, (base.string() + "_0.PNG").c_str()); }
-        if(layer1){ imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(layer1), width, height, (base.string() + "_1.PNG").c_str()); }
-        if(layer2){ imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(layer2), width, height, (base.string() + "_2.PNG").c_str()); }
+        if(layer0){ imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(layer0), width, height, (base + "_0.PNG").c_str()); }
+        if(layer1){ imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(layer1), width, height, (base + "_1.PNG").c_str()); }
+        if(layer2){ imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(layer2), width, height, (base + "_2.PNG").c_str()); }
     }
 }

@@ -14,17 +14,17 @@
 bool filesys::hasDir(const char *dirName)
 {
     fflassert(str_haschar(dirName));
-    return std::filesystem::is_directory(dirName);
+    return std::filesystem::is_directory(std::filesystem::path(to_u8rawstr(dirName)));
 }
 
 bool filesys::makeDir(const char *dirName)
 {
-    return std::filesystem::create_directory(dirName);
+    return std::filesystem::create_directory(std::filesystem::path(to_u8rawstr(dirName)));
 }
 
 bool filesys::removeDir(const char *dirName)
 {
-    return std::filesystem::remove_all(dirName);
+    return std::filesystem::remove_all(std::filesystem::path(to_u8rawstr(dirName)));
 }
 
 bool filesys::hasFile(const char *fileName)

@@ -44,7 +44,7 @@ class ImGuiFileDialog
             m_selected = -1;
 
             std::error_code error;
-            auto initial = std::filesystem::absolute(initialPath && initialPath[0] ? initialPath : ".", error);
+            auto initial = std::filesystem::absolute(pathFromUTF8(initialPath && initialPath[0] ? initialPath : "."), error);
             if(error){ initial = "."; }
 
             auto directory = std::filesystem::is_directory(initial, error) ? initial : initial.parent_path();
@@ -119,9 +119,14 @@ class ImGuiFileDialog
         }
 
     private:
+        static std::filesystem::path pathFromUTF8(const char *text)
+        {
+            return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t *>(text)));
+        }
+
         static std::string pathUTF8(const std::filesystem::path &path)
         {
-            const auto text = path.u8string();
+            const auto text = path.generic_u8string();
             return {reinterpret_cast<const char *>(text.data()), text.size()};
         }
 
