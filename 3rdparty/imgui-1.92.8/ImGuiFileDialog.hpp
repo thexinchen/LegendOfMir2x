@@ -91,7 +91,7 @@ class ImGuiFileDialog
                             m_selected = i;
                             if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)){
                                 if(entry.directory){ enterDirectory(entry.path); break; }
-                                selectedPath = entry.path.string();
+                                selectedPath = pathUTF8(entry.path);
                                 accepted = true;
                             }
                         }
@@ -102,7 +102,7 @@ class ImGuiFileDialog
                 const bool selectable = m_mode == Mode::Directory || (m_selected >= 0 && !m_entries.at(m_selected).directory);
                 ImGui::BeginDisabled(!selectable);
                 if(ImGui::Button(m_mode == Mode::Directory ? "Select current directory" : "Select", ImVec2(190, 0))){
-                    selectedPath = m_mode == Mode::Directory ? m_currentDirectory.string() : m_entries.at(m_selected).path.string();
+                    selectedPath = m_mode == Mode::Directory ? pathUTF8(m_currentDirectory) : pathUTF8(m_entries.at(m_selected).path);
                     accepted = true;
                 }
                 ImGui::EndDisabled();

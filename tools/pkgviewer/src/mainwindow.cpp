@@ -12,8 +12,17 @@
 #include "mainwindow.hpp"
 #include "previewwindow.hpp"
 
+namespace
+{
+    std::string pathUTF8(const std::filesystem::path &path)
+    {
+        const auto text = path.u8string();
+        return {reinterpret_cast<const char *>(text.data()), text.size()};
+    }
+}
+
 MainWindow::MainWindow()
-    : ImGuiApp("pkgviewer", 555, 605, "pkgviewer.imgui.ini")
+    : ImGuiApp("pkgviewer", 1200, 800, "pkgviewer.imgui.ini")
     , m_preview(std::make_unique<PreviewWindow>(this))
 {}
 
@@ -31,7 +40,6 @@ void MainWindow::draw()
 {
     processJobs();
     drawMainWindow();
-    m_preview->draw();
     drawDialogs();
     drawProgress();
 
@@ -60,14 +68,76 @@ void MainWindow::drawMainWindow()
         const float statusHeight = ImGui::GetTextLineHeightWithSpacing();
         ImGui::BeginDisabled(m_busy);
         if(ImGui::BeginChild("ImageBrowser", ImVec2(0, -statusHeight), ImGuiChildFlags_Borders)){
-            ImGuiListClipper clipper;
-            clipper.Begin(static_cast<int>(m_entries.size()));
-            while(clipper.Step()){
-                for(int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i){
-                    if(ImGui::Selectable(m_entries.at(i).text.c_str(), m_selectedEntry == i)){
-                        selectEntry(i);
+            const auto layoutFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV;
+            if(m_package && ImGui::BeginTable("BrowserLayout", 2, layoutFlags)){
+                ImGui::TableSetupColumn("Images", ImGuiTableColumnFlags_WidthStretch, 0.40f);
+                ImGui::TableSetupColumn("Preview", ImGuiTableColumnFlags_WidthStretch, 0.60f);
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+                if(ImGui::BeginChild("ImageTablePane")){
+                    const auto tableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                        ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+                    if(ImGui::BeginTable("Images", 5, tableFlags)){
+                        ImGui::TableSetupScrollFreeze(0, 1);
+                        ImGui::TableSetupColumn("Index");
+                        ImGui::TableSetupColumn("W");
+                        ImGui::TableSetupColumn("H");
+                        ImGui::TableSetupColumn("PX");
+                        ImGui::TableSetupColumn("PY");
+                        ImGui::TableHeadersRow();
+
+                        bool scrollToSelected = false;
+                        if(!m_entries.empty() && ImGui::IsWindowFocused()){
+                            int nextEntry = m_selectedEntry;
+                            if(ImGui::IsKeyPressed(ImGuiKey_UpArrow)){
+                                nextEntry = m_selectedEntry > 0 ? m_selectedEntry - 1 : 0;
+                            }
+                            else if(ImGui::IsKeyPressed(ImGuiKey_DownArrow)){
+                                nextEntry = std::min(m_selectedEntry + 1, static_cast<int>(m_entries.size()) - 1);
+                            }
+                            if(nextEntry != m_selectedEntry){
+                                selectEntry(nextEntry);
+                                scrollToSelected = true;
+                            }
+                        }
+
+                        ImGuiListClipper clipper;
+                        clipper.Begin(static_cast<int>(m_entries.size()));
+                        if(scrollToSelected){
+                            clipper.IncludeItemByIndex(m_selectedEntry);
+                        }
+                        while(clipper.Step()){
+                            for(int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i){
+                                const auto &entry = m_entries.at(i);
+                                ImGui::TableNextRow();
+                                ImGui::TableSetColumnIndex(0);
+                                ImGui::PushID(i);
+                                if(ImGui::Selectable(std::to_string(entry.index).c_str(), m_selectedEntry == i,
+                                    ImGuiSelectableFlags_SpanAllColumns)){
+                                    selectEntry(i);
+                                }
+                                if(scrollToSelected && m_selectedEntry == i){
+                                    ImGui::SetScrollHereY();
+                                }
+                                ImGui::PopID();
+                                ImGui::TableSetColumnIndex(1); ImGui::Text("%d", entry.width);
+                                ImGui::TableSetColumnIndex(2); ImGui::Text("%d", entry.height);
+                                ImGui::TableSetColumnIndex(3); ImGui::Text("%d", entry.px);
+                                ImGui::TableSetColumnIndex(4); ImGui::Text("%d", entry.py);
+                            }
+                        }
+                        ImGui::EndTable();
                     }
                 }
+                ImGui::EndChild();
+
+                ImGui::TableSetColumnIndex(1);
+                if(ImGui::BeginChild("PreviewPane")){
+                    m_preview->draw();
+                }
+                ImGui::EndChild();
+                ImGui::EndTable();
             }
         }
         ImGui::EndChild();
@@ -84,7 +154,7 @@ void MainWindow::drawMenu()
     }
     if(ImGui::BeginMenu("File")){
         if(ImGui::MenuItem("Open", "Ctrl+O", false, !m_busy)){
-            m_preview->hide();
+            m_preview->clear();
             m_openDialog.open("Select .WIL File", ".", ImGuiFileDialog::Mode::File, ".wil");
         }
         const bool canExport = m_package && m_selectedEntry >= 0 && !m_busy;
@@ -162,37 +232,39 @@ void MainWindow::drawDialogs()
 
 void MainWindow::openPackage(const std::string &fileName)
 {
-    const auto path = std::filesystem::path(fileName);
-    m_fileFullName = path.generic_string();
-    m_package = std::make_unique<WilImagePackage>(path.parent_path().string().c_str(), path.stem().string().c_str());
+    const auto path = std::filesystem::path(to_u8rawstr(fileName));
+    const auto parentPath = pathUTF8(path.parent_path());
+    const auto stem = pathUTF8(path.stem());
+    m_fileFullName = pathUTF8(path);
+    m_package = std::make_unique<WilImagePackage>(parentPath.c_str(), stem.c_str());
     m_entries.clear();
     m_selectedEntry = -1;
     m_scanIndex = 0;
     m_progress = 0;
     m_busy = true;
-    m_status = "Loading " + path.filename().string();
+    m_status = "Loading " + pathUTF8(path.filename());
 }
 
 void MainWindow::processJobs()
 {
     if(m_busy && m_package && m_scanIndex < m_package->indexCount()){
         const size_t end = std::min(m_scanIndex + 100, m_package->indexCount());
-        int maxLen = 1;
-        for(auto count = m_package->indexCount(); count >= 10; count /= 10){ ++maxLen; }
-        const auto format = "Index: %0" + std::to_string(maxLen) + "d       W:%4d       H:%4d       PX:%4d      PY:%4d";
         for(; m_scanIndex < end; ++m_scanIndex){
             if(m_package->setIndex(to_d(m_scanIndex))){
-                char text[128];
-                std::snprintf(text, sizeof(text), format.c_str(), to_d(m_scanIndex),
-                    m_package->currImageInfo()->width, m_package->currImageInfo()->height,
-                    m_package->currImageInfo()->px, m_package->currImageInfo()->py);
-                m_entries.push_back({to_u32(m_scanIndex), text});
+                const auto *imageInfo = m_package->currImageInfo();
+                m_entries.push_back({
+                    to_u32(m_scanIndex),
+                    imageInfo->width,
+                    imageInfo->height,
+                    imageInfo->px,
+                    imageInfo->py,
+                });
             }
         }
         m_progress = m_package->indexCount() ? to_d(std::lround(100.0 * m_scanIndex / m_package->indexCount())) : 100;
         if(m_scanIndex >= m_package->indexCount()){
-            const auto path = std::filesystem::path(m_fileFullName);
-            m_status = "FileName: " + path.filename().string() +
+            const auto path = std::filesystem::path(to_u8rawstr(m_fileFullName));
+            m_status = "FileName: " + pathUTF8(path.filename()) +
                 "    ImageCount: " + std::to_string(m_entries.size()) +
                 "    Version: " + std::to_string(m_package->version());
             m_busy = false;
@@ -239,7 +311,6 @@ void MainWindow::selectEntry(int entry)
     m_selectedEntry = entry;
     if(m_package && m_package->setIndex(selectedImageIndex())){
         m_preview->loadImage();
-        m_preview->show();
     }
 }
 
@@ -265,7 +336,7 @@ void MainWindow::saveImage(uint32_t imageIndex, const std::string &filePath)
     else{
         std::snprintf(indexText, sizeof(indexText), "TMP%s", imageIndexString(imageIndex).c_str());
     }
-    const auto base = std::filesystem::path(filePath) / indexText;
+    const auto base = std::filesystem::path(to_u8rawstr(filePath)) / indexText;
     if(const auto [layer0, layer1, layer2] = m_package->decode(true, m_removeShadowMosaic, m_autoAlpha); layer0){
         imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(layer0), width, height, (base.string() + "_M.PNG").c_str());
     }

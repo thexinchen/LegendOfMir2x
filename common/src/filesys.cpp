@@ -9,6 +9,7 @@
 #include "fileptr.hpp"
 #include "filesys.hpp"
 #include "fflerror.hpp"
+#include "totype.hpp"
 
 bool filesys::hasDir(const char *dirName)
 {
@@ -28,7 +29,7 @@ bool filesys::removeDir(const char *dirName)
 
 bool filesys::hasFile(const char *fileName)
 {
-    return std::filesystem::exists(fileName);
+    return std::filesystem::exists(std::filesystem::path(to_u8rawstr(fileName)));
 }
 
 void filesys::copyFile(const char *dstFileName, const char *srcFileName)

@@ -181,7 +181,10 @@ class MainWindow final: public ImGuiApp
         struct ImageEntry
         {
             uint32_t index = 0;
-            std::string text;
+            int width = 0;
+            int height = 0;
+            int px = 0;
+            int py = 0;
         };
 
         std::unique_ptr<WilImagePackage> m_package;

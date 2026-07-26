@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <string>
 #include <vector>
 #include <imgui.h>
 #include "imgf.hpp"
@@ -9,46 +8,40 @@
 
 void PreviewWindow::draw()
 {
-    if(!m_open){
-        return;
+    const auto canvasPos = ImGui::GetCursorScreenPos();
+    auto canvasSize = ImGui::GetContentRegionAvail();
+    canvasSize.x = std::max(1.0f, canvasSize.x);
+    canvasSize.y = std::max(1.0f, canvasSize.y);
+    auto *drawList = ImGui::GetWindowDrawList();
+    if(m_owner->clearBackgroundEnabled()){
+        drawList->AddRectFilled(canvasPos, ImVec2(canvasPos.x + canvasSize.x, canvasPos.y + canvasSize.y), IM_COL32_BLACK);
     }
-    if(m_resizeRequested){
-        const float width = std::max(200, m_texture.width() + 40);
-        const float height = std::max(200, m_texture.height() + 60);
-        ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Always);
-        m_resizeRequested = false;
-    }
-    const auto title = "Index_" + std::to_string(m_imageIndex);
-    if(ImGui::Begin(title.c_str(), &m_open)){
-        const auto canvasPos = ImGui::GetCursorScreenPos();
-        const auto canvasSize = ImGui::GetContentRegionAvail();
-        auto *drawList = ImGui::GetWindowDrawList();
-        if(m_owner->clearBackgroundEnabled()){
-            drawList->AddRectFilled(canvasPos, ImVec2(canvasPos.x + canvasSize.x, canvasPos.y + canvasSize.y), IM_COL32_BLACK);
+    if(m_texture.valid()){
+        const float scale = std::min(canvasSize.x / m_texture.width(), canvasSize.y / m_texture.height());
+        const float imageWidth = m_texture.width() * scale;
+        const float imageHeight = m_texture.height() * scale;
+        float imageX = canvasPos.x + (canvasSize.x - imageWidth) / 2;
+        float imageY = canvasPos.y + (canvasSize.y - imageHeight) / 2;
+        if(m_owner->offsetDrawEnabled()){
+            imageX = canvasPos.x + canvasSize.x / 2 + (m_imageOffX - SYS_MAPGRIDXP / 2) * scale;
+            imageY = canvasPos.y + canvasSize.y / 2 + (m_imageOffY - SYS_MAPGRIDYP / 2) * scale;
+            imageX = std::clamp(imageX, canvasPos.x, canvasPos.x + std::max(0.0f, canvasSize.x - imageWidth));
+            imageY = std::clamp(imageY, canvasPos.y, canvasPos.y + std::max(0.0f, canvasSize.y - imageHeight));
         }
-        if(m_texture.valid()){
-            const float imageX = m_owner->offsetDrawEnabled()
-                ? canvasPos.x + canvasSize.x / 2 + m_imageOffX - SYS_MAPGRIDXP / 2
-                : canvasPos.x + (canvasSize.x - m_texture.width()) / 2;
-            const float imageY = m_owner->offsetDrawEnabled()
-                ? canvasPos.y + canvasSize.y / 2 + m_imageOffY - SYS_MAPGRIDYP / 2
-                : canvasPos.y + (canvasSize.y - m_texture.height()) / 2;
-            const ImVec2 imageMin(imageX, imageY);
-            const ImVec2 imageMax(imageX + m_texture.width(), imageY + m_texture.height());
-            drawList->AddImage(m_texture.id(), imageMin, imageMax);
-            drawList->AddRect(imageMin, imageMax, IM_COL32(255, 0, 0, 255));
-            if(m_owner->showOffsetCrossEnabled()){
-                const ImVec2 origin(imageX - m_imageOffX, imageY - m_imageOffY);
-                const ImVec2 cross(origin.x + SYS_MAPGRIDXP / 2, origin.y + SYS_MAPGRIDYP / 2);
-                drawList->AddLine(imageMin, origin, IM_COL32(0, 0, 255, 255));
-                drawList->AddLine(origin, cross, IM_COL32(0, 0, 255, 255));
-                drawList->AddLine(ImVec2(cross.x - 5, cross.y - 5), ImVec2(cross.x + 5, cross.y + 5), IM_COL32(0, 255, 0, 255));
-                drawList->AddLine(ImVec2(cross.x - 5, cross.y + 5), ImVec2(cross.x + 5, cross.y - 5), IM_COL32(0, 255, 0, 255));
-            }
+        const ImVec2 imageMin(imageX, imageY);
+        const ImVec2 imageMax(imageX + imageWidth, imageY + imageHeight);
+        drawList->AddImage(m_texture.id(), imageMin, imageMax);
+        drawList->AddRect(imageMin, imageMax, IM_COL32(255, 0, 0, 255));
+        if(m_owner->showOffsetCrossEnabled()){
+            const ImVec2 origin(imageX - m_imageOffX * scale, imageY - m_imageOffY * scale);
+            const ImVec2 cross(origin.x + SYS_MAPGRIDXP * scale / 2, origin.y + SYS_MAPGRIDYP * scale / 2);
+            drawList->AddLine(imageMin, origin, IM_COL32(0, 0, 255, 255));
+            drawList->AddLine(origin, cross, IM_COL32(0, 0, 255, 255));
+            drawList->AddLine(ImVec2(cross.x - 5, cross.y - 5), ImVec2(cross.x + 5, cross.y + 5), IM_COL32(0, 255, 0, 255));
+            drawList->AddLine(ImVec2(cross.x - 5, cross.y + 5), ImVec2(cross.x + 5, cross.y - 5), IM_COL32(0, 255, 0, 255));
         }
-        ImGui::InvisibleButton("PreviewCanvas", canvasSize);
     }
-    ImGui::End();
+    ImGui::InvisibleButton("PreviewCanvas", canvasSize);
 }
 
 bool PreviewWindow::loadImage()
@@ -72,7 +65,11 @@ bool PreviewWindow::loadImage()
     if(layer[2] && m_owner->layerIndexEnabled(2)){
         imgf::blendImageBuffer(m_imageBuf.data(), width, height, layer[2], width, height, 0, 0);
     }
-    m_imageIndex = m_owner->selectedImageIndex();
-    m_resizeRequested = true;
     return m_texture.loadRGBA(m_imageBuf.data(), width, height);
+}
+
+void PreviewWindow::clear()
+{
+    m_imageBuf.clear();
+    m_texture.clear();
 }
