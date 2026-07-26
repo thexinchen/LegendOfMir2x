@@ -225,6 +225,7 @@ class MainWindow final: public ImGuiApp
         std::string m_workingPath;
         std::string m_status = "no map loaded";
         PendingLoad m_pendingLoad = PendingLoad::None;
+        bool m_continuePendingLoad = false;
 
         float m_scrollX = 0.0f;
         float m_scrollY = 0.0f;

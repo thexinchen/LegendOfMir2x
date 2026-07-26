@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
 #include <stdexcept>
 #include <vector>
 
@@ -107,7 +106,7 @@ bool AttributeSelector::testLand(const Mir2xMapData::LAND &land) const
 }
 
 MainWindow::MainWindow()
-    : ImGuiApp("mapeditor-version-0.0.1", 985, 690, "mapeditor.imgui.ini")
+    : ImGuiApp("mapeditor-version-0.0.1", 1200, 800, "mapeditor.imgui.ini")
 {
     g_mainWindow = this;
     g_layerBrowserWindow = &m_layerBrowser;
@@ -153,18 +152,22 @@ void MainWindow::drawEditor()
     if(ImGui::Begin("mapeditor-version-0.0.1", nullptr, flags)){
         drawMenu();
         const auto available = ImGui::GetContentRegionAvail();
-        const float scrollbar = 20.0f;
-        const float statusHeight = ImGui::GetTextLineHeightWithSpacing() + 4.0f;
+        const bool mapLoaded = g_editorMap.valid();
+        const float scrollbar = mapLoaded ? ImGui::GetFrameHeight() : 0.0f;
+        const float statusHeight = ImGui::GetFrameHeightWithSpacing();
         const ImVec2 canvasSize(std::max(1.0f, available.x - scrollbar), std::max(1.0f, available.y - scrollbar - statusHeight));
         const auto canvasPos = ImGui::GetCursorScreenPos();
         renderEditorCanvas(canvasPos, canvasSize);
 
-        ImGui::SetCursorScreenPos(ImVec2(canvasPos.x + canvasSize.x, canvasPos.y));
-        ImGui::VSliderFloat("##MapVScroll", ImVec2(scrollbar, canvasSize.y), &m_scrollY, 0.0f, 1.0f, "");
-        ImGui::SetCursorScreenPos(ImVec2(canvasPos.x, canvasPos.y + canvasSize.y));
-        ImGui::SetNextItemWidth(canvasSize.x);
-        ImGui::SliderFloat("##MapHScroll", &m_scrollX, 0.0f, 1.0f, "");
-        ImGui::SetCursorScreenPos(ImVec2(canvasPos.x, canvasPos.y + canvasSize.y + scrollbar));
+        if(mapLoaded){
+            ImGui::SetCursorScreenPos(ImVec2(canvasPos.x + canvasSize.x, canvasPos.y));
+            ImGui::VSliderFloat("##MapVScroll", ImVec2(scrollbar, canvasSize.y), &m_scrollY, 0.0f, 1.0f, "");
+            ImGui::SetCursorScreenPos(ImVec2(canvasPos.x, canvasPos.y + canvasSize.y));
+            ImGui::SetNextItemWidth(canvasSize.x);
+            ImGui::SliderFloat("##MapHScroll", &m_scrollX, 0.0f, 1.0f, "");
+        }
+        const float statusY = canvasPos.y + canvasSize.y + scrollbar;
+        ImGui::SetCursorScreenPos(ImVec2(canvasPos.x, statusY + (statusHeight - ImGui::GetTextLineHeight()) / 2));
         ImGui::TextUnformatted(m_status.c_str());
     }
     ImGui::End();
@@ -528,8 +531,6 @@ void MainWindow::beginPendingLoad()
 {
     switch(m_pendingLoad){
         case PendingLoad::Layer:
-            m_layerDialog.open("Select Layer File", ".", ImGuiFileDialog::Mode::File, ".bin");
-            break;
         case PendingLoad::Mir2Map:
             m_mapDialog.open("Select .map file", ".", ImGuiFileDialog::Mode::File, ".map");
             break;
@@ -543,18 +544,23 @@ void MainWindow::beginPendingLoad()
 
 void MainWindow::drawDialogs()
 {
+    if(m_continuePendingLoad){
+        m_continuePendingLoad = false;
+        beginPendingLoad();
+    }
+
     std::string selected;
     try{
         if(m_wilDialog.draw(selected)){
-            m_wilPath = std::filesystem::path(selected).generic_string();
+            m_wilPath = selected;
             m_imageMapDB = std::make_unique<ImageMapDB>(m_wilPath.c_str());
             g_imageMapDB = m_imageMapDB.get();
             clearImageCache();
-            beginPendingLoad();
+            m_continuePendingLoad = true;
         }
         if(m_workingDialog.draw(selected)){
-            m_workingPath = std::filesystem::path(selected).generic_string();
-            std::filesystem::create_directories(m_workingPath);
+            m_workingPath = selected;
+            filesys::makeDir(m_workingPath.c_str());
         }
         if(m_mapDialog.draw(selected)){ loadMir2Map(selected); }
         if(m_layerDialog.draw(selected)){ loadLayer(selected); }
@@ -583,12 +589,12 @@ void MainWindow::loadLayer(const std::string &fileName)
 
 void MainWindow::loadMir2xMapData(const std::string &directory)
 {
-    const auto path = std::filesystem::path(directory) / "DESC.BIN";
-    if(!std::filesystem::is_regular_file(path) || !g_editorMap.loadMir2xMapData(path.string().c_str())){
+    const auto fileName = directory + "/DESC.BIN";
+    if(!filesys::hasFile(fileName.c_str()) || !g_editorMap.loadMir2xMapData(fileName.c_str())){
         throw std::runtime_error("Invalid Mir2xMapData folder: " + directory);
     }
     makeWorkingFolder();
-    afterLoadMap(str_printf("Mir2xMapData %s, width %zu, height %zu", path.string().c_str(), g_editorMap.w(), g_editorMap.h()));
+    afterLoadMap(str_printf("Mir2xMapData %s, width %zu, height %zu", fileName.c_str(), g_editorMap.w(), g_editorMap.h()));
 }
 
 void MainWindow::afterLoadMap(const std::string &status)
@@ -602,9 +608,9 @@ void MainWindow::afterLoadMap(const std::string &status)
 void MainWindow::makeWorkingFolder()
 {
     if(m_workingPath.empty() || m_workingPath.front() == '.'){
-        m_workingPath = (std::filesystem::path(".") / std::to_string(hres_tstamp::localtime())).generic_string();
+        m_workingPath = "./" + std::to_string(hres_tstamp::localtime());
     }
-    std::filesystem::create_directories(m_workingPath);
+    filesys::makeDir(m_workingPath.c_str());
 }
 
 void MainWindow::saveMir2xMapData()
@@ -614,8 +620,8 @@ void MainWindow::saveMir2xMapData()
         return;
     }
     makeWorkingFolder();
-    const auto fileName = std::filesystem::path(m_workingPath) / "DESC.BIN";
-    if(g_editorMap.saveMir2xMapData(fileName.string().c_str())){
+    const auto fileName = m_workingPath + "/DESC.BIN";
+    if(g_editorMap.saveMir2xMapData(fileName.c_str())){
         alert("Save map file in mir2xmapdata format successfully!", "Saved");
     }
 }
@@ -657,8 +663,8 @@ void MainWindow::extractOverview(int ratio)
         exportData = reduced.data();
     }
     const auto name = std::to_string(hres_tstamp::localtime()) + ".PNG";
-    const auto fullName = std::filesystem::path(m_workingPath) / name;
-    if(imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(exportData), exportW, exportH, fullName.string().c_str())){
+    const auto fullName = m_workingPath + "/" + name;
+    if(imgf::saveImageBuffer(reinterpret_cast<const uint8_t *>(exportData), exportW, exportH, fullName.c_str())){
         alert("Done overview map image: " + name, "Exported");
     }
     else{
