@@ -17,10 +17,6 @@ find_package(tinyxml2 CONFIG REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)
 find_package(zstd CONFIG REQUIRED)
 
-# Project-owned Windows fallback used when libpinyin is unavailable.
-add_library(pinyin_stub STATIC pinyin_stub/pinyin_stub.cpp)
-target_include_directories(pinyin_stub PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/pinyin_stub)
-
 # Conan's ImGui package ships the official backend sources as resources.
 foreach(_config RELEASE DEBUG RELWITHDEBINFO MINSIZEREL)
     if(DEFINED imgui_PACKAGE_FOLDER_${_config})
