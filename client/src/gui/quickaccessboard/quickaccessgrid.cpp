@@ -1,10 +1,10 @@
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "pngtexdb.hpp"
 #include "processrun.hpp"
 #include "quickaccessgrid.hpp"
 
 extern PNGTexDB *g_itemDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 QuickAccessGrid::QuickAccessGrid(
         Widget::VarDir argDir,
@@ -46,8 +46,8 @@ QuickAccessGrid::QuickAccessGrid(
 
           .drawFunc = [this](int drawDstX, int drawDstY)
           {
-              if(Widget::ROIMap{.x{drawDstX}, .y{drawDstY}, .ro{roi()}}.in(SDLDeviceHelper::getMousePLoc())){
-                   g_sdlDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
+              if(Widget::ROIMap{.x{drawDstX}, .y{drawDstY}, .ro{roi()}}.in(GLDeviceHelper::getMousePLoc())){
+                   g_glDevice->fillRectangle(colorf::WHITE + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
                }
           },
 
@@ -61,7 +61,7 @@ QuickAccessGrid::QuickAccessGrid(
           .x = [this]{ return w() / 2; },
           .y = [this]{ return h() / 2; },
 
-          .texLoadFunc = [this] -> SDL_Texture *
+          .texLoadFunc = [this] -> GLTexID 
           {
               if(const auto &item = proc->getMyHero()->getBelt(slot)){
                   return g_itemDB->retrieve(DBCOM_ITEMRECORD(item.itemID).pkgGfxID | 0X01000000);

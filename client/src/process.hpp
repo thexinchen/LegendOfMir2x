@@ -1,5 +1,5 @@
 #pragma once
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 
 enum ProcessID: int
 {
@@ -31,5 +31,5 @@ class Process
     public:
         virtual void draw() const = 0;
         virtual void update(double) = 0;
-        virtual void processEvent(const SDL_Event &) = 0;
+        virtual void processEvent(const MirEvent &) = 0;
 };

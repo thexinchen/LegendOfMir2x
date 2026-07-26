@@ -54,7 +54,7 @@ ServerLuaCoroutineRunner::ServerLuaCoroutineRunner(ActorPod *podPtr)
           fflassert(podPtr); return podPtr;
       }())
 {
-    m_actorPod->registerOp(AM_SENDNOTIFY, [thisptr = this](this auto, const ActorMsgPack &mpk) -> corof::awaitable<>
+    m_actorPod->registerOp(AM_SENDNOTIFY, [thisptr = this](const ActorMsgPack &mpk) -> corof::awaitable<>
     {
         auto sdSN = mpk.deserialize<SDSendNotify>();
         auto runnerPtr = thisptr->hasKey(sdSN.key, sdSN.seqID);
@@ -137,7 +137,7 @@ ServerLuaCoroutineRunner::ServerLuaCoroutineRunner(ActorPod *podPtr)
         });
     });
 
-    bindCoop("_RSVD_NAME_remoteCall", [thisptr = this](this auto, LuaCoopResumer onDone, LuaCoopState s, uint64_t uid, std::string code, sol::object args) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_remoteCall", [thisptr = this](LuaCoopResumer onDone, LuaCoopState s, uint64_t uid, std::string code, sol::object args) -> corof::awaitable<>
     {
         fflassert(uid != thisptr->m_actorPod->UID());
 
@@ -215,7 +215,7 @@ ServerLuaCoroutineRunner::ServerLuaCoroutineRunner(ActorPod *podPtr)
         })});
     });
 
-    bindCoop("_RSVD_NAME_sendNotify", [thisptr = this](this auto, LuaCoopResumer onDone, uint64_t dstUID, uint64_t dstThreadKey, uint64_t dstThreadSeqID, sol::object args) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_sendNotify", [thisptr = this](LuaCoopResumer onDone, uint64_t dstUID, uint64_t dstThreadKey, uint64_t dstThreadSeqID, sol::object args) -> corof::awaitable<>
     {
         fflassert(uidf::validUID(dstUID));
         fflassert(dstThreadKey > 0);
@@ -325,7 +325,7 @@ ServerLuaCoroutineRunner::ServerLuaCoroutineRunner(ActorPod *podPtr)
 
     constexpr static unsigned char luaScript []
     {
-        #embed "serverluacoroutinerunner.lua" suffix(,)
+        #include "serverluacoroutinerunner_lua.hpp"
         '\0'
     };
     pfrCheck(execRawString(to_rawcstr(luaScript)));

@@ -269,7 +269,7 @@ struct BuffRecord
             return name && !std::u8string_view(name).empty();
         }
     };
-    const std::initializer_list<BuffActRecordRef> actList {};
+    const std::initializer_list<BuffActRecordRef> actList;
 
     operator bool() const
     {

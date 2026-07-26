@@ -1,11 +1,13 @@
+#include "audiodevice.hpp"
 #include <functional>
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "buttonbase.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "soundeffectdb.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
+extern AudioDevice *g_audioDevice;
 extern SoundEffectDB *g_seffDB;
 
 ButtonBase::ButtonBase(ButtonBase::InitArgs args)
@@ -48,7 +50,7 @@ ButtonBase::ButtonBase(ButtonBase::InitArgs args)
     , m_onTrigger(std::move(args.onTrigger))
 {}
 
-bool ButtonBase::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool ButtonBase::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -85,7 +87,7 @@ bool ButtonBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
             {
                 if(m.in(to_d(event.button.x), to_d(event.button.y))){
                     switch(getState()){
@@ -131,7 +133,7 @@ bool ButtonBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
                     return consumeFocus(false);
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(m.in(to_d(event.button.x), to_d(event.button.y))){
                     switch(getState()){
@@ -172,7 +174,7 @@ bool ButtonBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
                     return consumeFocus(false);
                 }
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
                 if(m.in(to_d(event.motion.x), to_d(event.motion.y))){
                     switch(getState()){
@@ -184,7 +186,7 @@ bool ButtonBase::processEventDefault(const SDL_Event &event, bool valid, Widget:
                             }
                         case BEVENT_DOWN:
                             {
-                                if(event.motion.state & SDL_BUTTON_LMASK){
+                                if(event.motion.state & MIR_BUTTON_LMASK){
                                     // hold the button and moving
                                     // don't trigger
                                 }
@@ -230,7 +232,7 @@ void ButtonBase::onOverIn()
 {
     Button::evalOverCBFunc(m_onOverIn, this);
     if(m_seff.onOverIn.has_value()){
-        g_sdlDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onOverIn.value())));
+        g_audioDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onOverIn.value())));
     }
 }
 
@@ -238,7 +240,7 @@ void ButtonBase::onOverOut()
 {
     Button::evalOverCBFunc(m_onOverOut, this);
     if(m_seff.onOverOut.has_value()){
-        g_sdlDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onOverOut.value())));
+        g_audioDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onOverOut.value())));
     }
 }
 
@@ -250,7 +252,7 @@ void ButtonBase::onClick(bool clickDone, int clickCount)
     }
     else{
         if(m_seff.onClick.has_value()){
-            g_sdlDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onClick.value())));
+            g_audioDevice->playSoundEffect(g_seffDB->retrieve((m_seff.onClick.value())));
         }
     }
 }

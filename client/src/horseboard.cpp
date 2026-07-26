@@ -1,9 +1,9 @@
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "pngtexdb.hpp"
 #include "horseboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 HorseBoard::HorseBoard(
         dir8_t argDir,
@@ -41,7 +41,7 @@ HorseBoard::HorseBoard(
 
           .drawFunc = [](const Widget *self, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(colorf::GREY + colorf::A_SHF(255), drawDstX, drawDstY, self->w(), self->h());
+              g_glDevice->fillRectangle(colorf::GREY + colorf::A_SHF(255), drawDstX, drawDstY, self->w(), self->h());
           },
 
           .parent{this},
@@ -54,7 +54,7 @@ HorseBoard::HorseBoard(
               return g_progUseDB->retrieve(0X00000700);
           },
 
-          .blendMode = SDL_BLENDMODE_NONE,
+          .blendMode = MIR_BLENDMODE_NONE,
           .parent{this},
       }}
 
@@ -152,7 +152,7 @@ HorseBoard::HorseBoard(
     setShow(false);
 }
 
-bool HorseBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool HorseBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -169,10 +169,10 @@ bool HorseBoard::processEventDefault(const SDL_Event &event, bool valid, Widget:
     if(m_show .processEventParent(event, valid, m)){ return true; }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_ESCAPE:
+                    case MIRK_ESCAPE:
                         {
                             setShow(false);
                             setFocus(false);
@@ -184,13 +184,13 @@ bool HorseBoard::processEventDefault(const SDL_Event &event, bool valid, Widget:
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
+                if((event.motion.state & MIR_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
                     const auto remapXDiff = m.x - m.ro->x;
                     const auto remapYDiff = m.y - m.ro->y;
 
-                    const auto [rendererW, rendererH] = g_sdlDevice->getRendererSize();
+                    const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
                     const int maxX = rendererW - w();
                     const int maxY = rendererH - h();
 
@@ -202,7 +202,7 @@ bool HorseBoard::processEventDefault(const SDL_Event &event, bool valid, Widget:
                 }
                 return consumeFocus(false);
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 return consumeFocus(true);
             }

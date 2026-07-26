@@ -1,12 +1,12 @@
 #include "client.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "inputstringboard.hpp"
 
 extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 SecuredItemListBoard::SecuredItemListBoard(int argX, int argY, ProcessRun *runProc, Widget *widgetPtr, bool autoDelete)
     : ItemListBoard

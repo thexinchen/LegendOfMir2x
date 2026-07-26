@@ -1,5 +1,5 @@
 #include <initializer_list>
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "client.hpp"
 #include "hero.hpp"
 #include "pngtexdb.hpp"
@@ -14,7 +14,7 @@
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 FriendChatBoard::FriendChatBoard(Widget::VarInt argX, Widget::VarInt argY, ProcessRun *runPtr, Widget *argParent, bool argAutoDelete)
     : Widget
@@ -132,7 +132,7 @@ FriendChatBoard::FriendChatBoard(Widget::VarInt argX, Widget::VarInt argY, Proce
                       return {true, colorf::RGBA(231, 231, 189, 96)};
                   }
 
-                  const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+                  const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
 
                   const auto eventDX = mousePX - drawDstX;
                   const auto eventDY = mousePY - drawDstY;
@@ -145,10 +145,10 @@ FriendChatBoard::FriendChatBoard(Widget::VarInt argX, Widget::VarInt argY, Proce
               }();
 
               needDraw){
-                  g_sdlDevice->fillRectangle(drawColor, drawDstX                             , drawDstY                             , w()                 , UIPage_DRAGBORDER[0]);
-                  g_sdlDevice->fillRectangle(drawColor, drawDstX                             , drawDstY + h() - UIPage_DRAGBORDER[1], w()                 , UIPage_DRAGBORDER[1]);
-                  g_sdlDevice->fillRectangle(drawColor, drawDstX                             , drawDstY                             , UIPage_DRAGBORDER[2], h()                 );
-                  g_sdlDevice->fillRectangle(drawColor, drawDstX + w() - UIPage_DRAGBORDER[3], drawDstY                             , UIPage_DRAGBORDER[3], h()                 );
+                  g_glDevice->fillRectangle(drawColor, drawDstX                             , drawDstY                             , w()                 , UIPage_DRAGBORDER[0]);
+                  g_glDevice->fillRectangle(drawColor, drawDstX                             , drawDstY + h() - UIPage_DRAGBORDER[1], w()                 , UIPage_DRAGBORDER[1]);
+                  g_glDevice->fillRectangle(drawColor, drawDstX                             , drawDstY                             , UIPage_DRAGBORDER[2], h()                 );
+                  g_glDevice->fillRectangle(drawColor, drawDstX + w() - UIPage_DRAGBORDER[3], drawDstY                             , UIPage_DRAGBORDER[3], h()                 );
               }
           },
           .parent{this},
@@ -834,7 +834,7 @@ void FriendChatBoard::drawDefault(Widget::ROIMap m) const
     }
 }
 
-bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool FriendChatBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -851,11 +851,11 @@ bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
     if(m_uiPageList[m_uiPage].control->processEventParent(event, valid, m)){ return true; }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 if(focus()){
                     switch(event.key.key){
-                        case SDLK_ESCAPE:
+                        case MIRK_ESCAPE:
                             {
                                 setShow(false);
                                 setFocus(false);
@@ -869,7 +869,7 @@ bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
                 }
                 return false;
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(m.create(m_uiPageList[m_uiPage].page->roi()).in(to_d(event.button.x), to_d(event.button.y))){
                     if(m_uiPageList[m_uiPage].page->processEventParent(event, true, m)){
@@ -883,14 +883,14 @@ bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
                 m_dragIndex = getEdgeDragIndex(to_d(event.button.x) - mapXDiff, to_d(event.button.y) - mapYDiff);
                 return consumeFocus(m.in(to_d(event.button.x), to_d(event.button.y)));
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
             {
                 m_dragIndex.reset();
                 return consumeFocus(m.in(to_d(event.button.x), to_d(event.button.y)));
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if(event.motion.state & SDL_BUTTON_LMASK){
+                if(event.motion.state & MIR_BUTTON_LMASK){
                     if(m_dragIndex.has_value()){
                         bool sizeChanged = false;
                         const auto fnAdjustW = [&sizeChanged, this](int dw, bool adjustOff)
@@ -938,7 +938,7 @@ bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
                         const auto remapXDiff = m.x - m.ro->x;
                         const auto remapYDiff = m.y - m.ro->y;
 
-                        const auto [rendererW, rendererH] = g_sdlDevice->getRendererSize();
+                        const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
 
                         const int maxX = rendererW - w();
                         const int maxY = rendererH - h();
@@ -952,7 +952,7 @@ bool FriendChatBoard::processEventDefault(const SDL_Event &event, bool valid, Wi
                 }
                 return false;
             }
-        case SDL_EVENT_MOUSE_WHEEL:
+        case MIR_EVENT_MOUSE_WHEEL:
             {
                 if(m_uiPageList[m_uiPage].page->focus()){
                     if(m_uiPageList[m_uiPage].page->processEvent(event, true, m)){

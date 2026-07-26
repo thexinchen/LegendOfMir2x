@@ -6,12 +6,12 @@
 #include "idstrf.hpp"
 #include "client.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processcreateaccount.hpp"
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ProcessCreateAccount::ProcessCreateAccount()
     : Process()
@@ -175,14 +175,14 @@ void ProcessCreateAccount::update(double fUpdateTime)
 
 void ProcessCreateAccount::draw() const
 {
-    const SDLDeviceHelper::RenderNewFrame newFrame;
-    g_sdlDevice->drawTexture(g_progUseDB->retrieve(0X00000003), 0, 75);
-    g_sdlDevice->drawTexture(g_progUseDB->retrieve(0X00000004), 0, 75, 0, 0, 800, 450);
+    const GLDeviceHelper::RenderNewFrame newFrame;
+    g_glDevice->drawTexture(g_progUseDB->retrieve(0X00000003), 0, 75);
+    g_glDevice->drawTexture(g_progUseDB->retrieve(0X00000004), 0, 75, 0, 0, 800, 450);
 
     m_boxID.drawRoot({});
     m_boxPwd.drawRoot({});
     m_boxPwdConfirm.drawRoot({});
-    g_sdlDevice->drawTexture(g_progUseDB->retrieve(0X0A000000), m_x, m_y);
+    g_glDevice->drawTexture(g_progUseDB->retrieve(0X0A000000), m_x, m_y);
 
     const auto fnDrawInput = [](int x, int y, int dx, auto &title, auto &check)
     {
@@ -207,19 +207,19 @@ void ProcessCreateAccount::draw() const
     m_quit  .drawRoot({});
 
     if(hasInfo()){
-        g_sdlDevice->fillRectangle(colorf::BLUE + colorf::A_SHF(32), 0, 75, 800, 450);
+        g_glDevice->fillRectangle(colorf::BLUE + colorf::A_SHF(32), 0, 75, 800, 450);
         m_infoStr.drawRoot({});
     }
 }
 
-void ProcessCreateAccount::processEvent(const SDL_Event &event)
+void ProcessCreateAccount::processEvent(const MirEvent &event)
 {
     if(m_quit.processEventRoot(event, true, {})){
         return;
     }
 
     if(hasInfo()){
-        SDL_FlushEvent(SDL_EVENT_KEY_DOWN);
+        g_glDevice->flushEvent(MIR_EVENT_KEY_DOWN);
         return;
     }
 
@@ -228,10 +228,10 @@ void ProcessCreateAccount::processEvent(const SDL_Event &event)
     }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_TAB:
+                    case MIRK_TAB:
                         {
                             Widget * boxPtrList[]
                             {

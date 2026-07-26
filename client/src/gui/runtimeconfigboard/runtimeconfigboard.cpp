@@ -1,10 +1,11 @@
+#include "audiodevice.hpp"
 #include <any>
 #include <memory>
 #include "luaf.hpp"
 #include "client.hpp"
 #include "imeboard.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "radioselector.hpp"
 #include "soundeffectdb.hpp"
 #include "processrun.hpp"
@@ -13,7 +14,8 @@
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
+extern AudioDevice *g_audioDevice;
 
 RuntimeConfigBoard::RuntimeConfigBoard(int argX, int argY, int argW, int argH, ProcessRun *proc, Widget *argParent, bool argAutoDelete)
     : Widget
@@ -46,8 +48,8 @@ RuntimeConfigBoard::RuntimeConfigBoard(int argX, int argY, int argW, int argH, P
 
           .drawFunc = [](const Widget *widgetPtr, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(                             colorf::A_SHF(128), drawDstX, drawDstY, widgetPtr->w(), widgetPtr->h(), 10);
-              g_sdlDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(100), drawDstX, drawDstY, widgetPtr->w(), widgetPtr->h(), 10);
+              g_glDevice->fillRectangle(                             colorf::A_SHF(128), drawDstX, drawDstY, widgetPtr->w(), widgetPtr->h(), 10);
+              g_glDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(100), drawDstX, drawDstY, widgetPtr->w(), widgetPtr->h(), 10);
           },
 
           .parent{this},
@@ -495,11 +497,11 @@ RuntimeConfigBoard::RuntimeConfigBoard(int argX, int argY, int argW, int argH, P
         R"###( </layout>                                                )###""\n"
     );
 
-    updateWindowSize(g_sdlDevice->getRendererSize(), false);
+    updateWindowSize(g_glDevice->getRendererSize(), false);
     updateIME(IME_DISABLE, false);
 
-    // 1.0f -> SDL_MIX_MAXVOLUME
-    // SDL_mixer initial sound/music volume is SDL_MIX_MAXVOLUME
+    // 1.0f -> 128
+    // SDL_mixer initial sound/music volume is 128
 
     m_pageSystem_musicSlider      .getSlider()->setValue(0.0, false);
     m_pageSystem_soundEffectSlider.getSlider()->setValue(0.0, false);
@@ -528,7 +530,7 @@ void RuntimeConfigBoard::drawDefault(Widget::ROIMap m) const
     }
 }
 
-bool RuntimeConfigBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool RuntimeConfigBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -545,29 +547,29 @@ bool RuntimeConfigBoard::processEventDefault(const SDL_Event &event, bool valid,
     if(m_pageGameConfig.processEventParent(event, valid, m)){ return true; }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
-                if(event.key.key == SDLK_ESCAPE){
+                if(event.key.key == MIRK_ESCAPE){
                     setShow(false);
                     return consumeFocus(false);
                 }
                 return consumeFocus(true);
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
+                if((event.motion.state & MIR_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
                     if(const auto par = parent()){
                         moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), par->roi());
                     }
                     else{
-                        moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_sdlDevice->getRendererSize()));
+                        moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_glDevice->getRendererSize()));
                     }
                     return consumeFocus(true);
                 }
                 return false;
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 return consumeFocus(m.in(to_d(event.button.x), to_d(event.button.y)));
             }
@@ -599,8 +601,8 @@ void RuntimeConfigBoard::applyAudioConfig()
     const float  bgmGain = SDRuntimeConfig_getConfig<RTCFG_BGM >(m_sdRuntimeConfig) ? SDRuntimeConfig_getConfig<RTCFG_BGMVALUE >(m_sdRuntimeConfig) : 0.0f;
     const float seffGain = SDRuntimeConfig_getConfig<RTCFG_SEFF>(m_sdRuntimeConfig) ? SDRuntimeConfig_getConfig<RTCFG_SEFFVALUE>(m_sdRuntimeConfig) : 0.0f;
 
-    g_sdlDevice->setBGMVolume(bgmGain);
-    g_sdlDevice->setSoundEffectVolume(seffGain);
+    g_audioDevice->setBGMVolume(bgmGain);
+    g_audioDevice->setSoundEffectVolume(seffGain);
 }
 
 void RuntimeConfigBoard::reportRuntimeConfig(int rtCfg)
@@ -623,7 +625,7 @@ void RuntimeConfigBoard::updateWindowSize(std::pair<int, int> size, bool saveCon
     fflassert(size.second >= 0, size);
 
     m_pageSystem_resolution.getTitle()->setText(str_printf(u8"%d×%d", size.first, size.second).c_str());
-    g_sdlDevice->setWindowSize(size.first, size.second);
+    g_glDevice->setWindowSize(size.first, size.second);
 
     if(saveConfig){
         SDRuntimeConfig_setConfig<RTCFG_WINDOWSIZE>(m_sdRuntimeConfig, size);

@@ -1,22 +1,22 @@
 #include "client.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processlogo.hpp"
 #include "clientargparser.hpp"
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
-void ProcessLogo::processEvent(const SDL_Event &event)
+void ProcessLogo::processEvent(const MirEvent &event)
 {
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_SPACE:
-                    case SDLK_ESCAPE:
+                    case MIRK_SPACE:
+                    case MIRK_ESCAPE:
                         {
                             g_client->requestProcess(PROCESSID_SYRC);
                         }
@@ -41,14 +41,14 @@ void ProcessLogo::update(double fDTime)
 
 void ProcessLogo::draw() const
 {
-    SDLDeviceHelper::RenderNewFrame newFrame;
+    GLDeviceHelper::RenderNewFrame newFrame;
     if(auto texPtr = g_progUseDB->retrieve(0X00000000)){
         const auto c = to_u8(to_dround(255 * colorRatio()));
-        const SDLDeviceHelper::EnableTextureModColor modColor(texPtr, colorf::RGBA(c, c, c, 0XFF));
+        const GLDeviceHelper::EnableTextureModColor modColor(texPtr, colorf::RGBA(c, c, c, 0XFF));
 
-        const auto winW = g_sdlDevice->getRendererWidth();
-        const auto winH = g_sdlDevice->getRendererHeight();
-        g_sdlDevice->drawTexture(texPtr, 0, 0, 0, 0, winW, winH);
+        const auto winW = g_glDevice->getRendererWidth();
+        const auto winH = g_glDevice->getRendererHeight();
+        g_glDevice->drawTexture(texPtr, 0, 0, 0, 0, winW, winH);
     }
 }
 

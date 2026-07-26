@@ -1,5 +1,5 @@
 #pragma once
-#include <inplace_vector>
+#include <vector>
 #include <map>
 #include <vector>
 #include <memory>
@@ -216,7 +216,7 @@ class BattleObject: public CharObject
         std::vector<pathf::PathNode> getValidChaseGrid(int, int, int) const;
 
     protected:
-        void getValidChaseGrid(int, int, int, std::inplace_vector<pathf::PathNode, 3> &) const;
+        void getValidChaseGrid(int, int, int, std::vector<pathf::PathNode> &) const;
 
     protected:
         int checkPathGrid(int, int) const;

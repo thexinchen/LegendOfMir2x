@@ -3,13 +3,13 @@
 #include "totype.hpp"
 #include "sysconst.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "npcchatboard.hpp"
 #include "clientargparser.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
 // with face
@@ -95,7 +95,7 @@ NPCChatBoard::NPCChatBoard(
           .x = [this]
           {
               if(auto texPtr = g_progUseDB->retrieve(getNPCFaceKey())){
-                  return m_margin * 2 + SDLDeviceHelper::getTextureWidth(texPtr);
+                  return m_margin * 2 + GLDeviceHelper::getTextureWidth(texPtr);
               }
               else{
                   return w() / 2;
@@ -155,7 +155,7 @@ NPCChatBoard::NPCChatBoard(
     setSize([this]
     {
         if(auto texPtr = g_progUseDB->retrieve(getNPCFaceKey())){
-            return m_margin * 3 + SDLDeviceHelper::getTextureWidth(texPtr) + m_chatBoard.w();
+            return m_margin * 3 + GLDeviceHelper::getTextureWidth(texPtr) + m_chatBoard.w();
         }
         else{
             return m_margin * 2 + m_chatBoard.w();
@@ -165,7 +165,7 @@ NPCChatBoard::NPCChatBoard(
     [this]
     {
         if(auto texPtr = g_progUseDB->retrieve(getNPCFaceKey())){
-            return m_margin * 2 + std::max<int>(SDLDeviceHelper::getTextureHeight(texPtr), m_chatBoard.h());
+            return m_margin * 2 + std::max<int>(GLDeviceHelper::getTextureHeight(texPtr), m_chatBoard.h());
         }
         else{
             return m_margin * 2 + m_chatBoard.h();
@@ -184,11 +184,11 @@ void NPCChatBoard::loadXML(uint64_t uid, const char *eventPath, const char *xmlS
 
     m_chatBoard.clear();
 
-    const int screenWidth = g_sdlDevice->getRendererWidth();
+    const int screenWidth = g_glDevice->getRendererWidth();
     const int  boardWidth = std::max<int>(screenWidth / 3, 300);
 
     if(auto texPtr = g_progUseDB->retrieve(getNPCFaceKey())){
-        m_chatBoard.setLineWidth(boardWidth - m_margin * 3 - SDLDeviceHelper::getTextureWidth(texPtr));
+        m_chatBoard.setLineWidth(boardWidth - m_margin * 3 - GLDeviceHelper::getTextureWidth(texPtr));
     }
     else{
         m_chatBoard.setLineWidth(boardWidth - m_margin * 2);

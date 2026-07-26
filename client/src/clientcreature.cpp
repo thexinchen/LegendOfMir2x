@@ -1,13 +1,13 @@
 #include <algorithm>
 #include <tinyxml2.h>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 
 #include "log.hpp"
 #include "mathf.hpp"
 #include "motion.hpp"
 #include "fflerror.hpp"
 #include "sysconst.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "ascendstr.hpp"
 #include "processrun.hpp"
 #include "magicrecord.hpp"
@@ -18,7 +18,7 @@
 #include "clientmonster.hpp"
 
 extern Log *g_mir2xLog;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 extern SoundEffectDB *g_seffDB;
 
 bool ClientCreature::advanceMotionFrame()
@@ -156,7 +156,7 @@ bool ClientCreature::checkUpdate(double ms)
 
 void ClientCreature::querySelf()
 {
-    m_lastQuerySelf = SDL_GetTicks();
+    m_lastQuerySelf = mirGetTicks();
     m_processRun->queryCORecord(UID());
 }
 

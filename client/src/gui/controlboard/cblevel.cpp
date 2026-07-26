@@ -1,11 +1,11 @@
 #include "bevent.hpp"
 #include "cblevel.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "textboard.hpp"
 #include "imageboard.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 CBLevel::CBLevel(
         Widget::VarDir argDir,
@@ -47,7 +47,7 @@ CBLevel::CBLevel(
                   {{
                       .texLoadFunc = []
                       {
-                          return g_sdlDevice->getCover(8, 360);
+                          return g_glDevice->getCover(8, 360);
                       },
 
                       .modColor = [this] -> uint32_t

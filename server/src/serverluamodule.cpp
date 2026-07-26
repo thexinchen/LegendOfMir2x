@@ -8,14 +8,14 @@
 #include "server.hpp"
 #include "serverargparser.hpp"
 #include "serverluamodule.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 
 extern DBPod *g_dbPod;
 extern MapBinDB *g_mapBinDB;
 extern ActorPool *g_actorPool;
 extern Server *g_server;
 extern ServerArgParser *g_serverArgParser;
-extern ServerConfigureWindow *g_serverConfigureWindow;
+extern GUICore *g_guiCore;
 
 ServerLuaModule::ServerLuaModule()
     : LuaModule()
@@ -37,7 +37,7 @@ ServerLuaModule::ServerLuaModule()
 
     pfrCheck(execString("package.path = package.path .. ';%s/?.lua'", []() -> std::string
     {
-        if(const auto cfgScriptPath = g_serverArgParser->slave ? std::string{} : g_serverConfigureWindow->getConfig().scriptPath; cfgScriptPath.empty()){
+        if(const auto cfgScriptPath = g_serverArgParser->slave ? std::string{} : g_guiCore->getConfig().scriptPath; cfgScriptPath.empty()){
             return "script";
         }
         else{
@@ -101,26 +101,26 @@ ServerLuaModule::ServerLuaModule()
         auto queryStatement = g_dbPod->createQuery(to_cstr(query));
 
         sol::state_view sv(s);
-        std::vector<std::map<std::string, sol::object>> queryResult;
+        sol::table resultTable = sv.create_table();
 
-        queryResult.reserve(8);
+        int rowIndex = 1;
         while(queryStatement.executeStep()){
-            std::map<std::string, sol::object> rowResult;
+            sol::table rowTable = sv.create_table();
             for(int i = 0; i < queryStatement.getColumnCount(); ++i){
                 switch(const auto column = queryStatement.getColumn(i); column.getType()){
                     case SQLITE_INTEGER:
                         {
-                            rowResult[column.getName()] = sol::object(sv, sol::in_place_type<int>, column.getInt());
+                            rowTable[column.getName()] = column.getInt();
                             break;
                         }
                     case SQLITE_FLOAT:
                         {
-                            rowResult[column.getName()] = sol::object(sv, sol::in_place_type<double>, column.getDouble());
+                            rowTable[column.getName()] = column.getDouble();
                             break;
                         }
                     case SQLITE_TEXT:
                         {
-                            rowResult[column.getName()] = sol::object(sv, sol::in_place_type<std::string>, column.getText());
+                            rowTable[column.getName()] = std::string(column.getText());
                             break;
                         }
                     default:
@@ -130,17 +130,14 @@ ServerLuaModule::ServerLuaModule()
                 }
             }
 
-            if(rowResult.size() != to_uz(queryStatement.getColumnCount())){
-                throw fflpanic("failed to parse query result row: missing column");
-            }
-            queryResult.push_back(std::move(rowResult));
+            resultTable[rowIndex++] = std::move(rowTable);
         }
-        return sol::nested<decltype(queryResult)>(std::move(queryResult));
+        return resultTable;
     });
 
     constexpr static unsigned char luaScript []
     {
-        #embed "serverluamodule.lua" suffix(,)
+        #include "serverluamodule_lua.hpp"
         '\0'
     };
     pfrCheck(execRawString(to_rawcstr(luaScript)));

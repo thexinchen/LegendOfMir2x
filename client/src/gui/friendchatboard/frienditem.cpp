@@ -1,8 +1,8 @@
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "frienditem.hpp"
 #include "friendchatboard.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 FriendItem::FriendItem(
         Widget::VarDir  argDir,
@@ -13,7 +13,7 @@ FriendItem::FriendItem(
         const SDChatPeerID &argCPID,
 
         const char8_t *argNameStr,
-        std::function<SDL_Texture *(const Widget *)> argLoadImageFunc,
+        std::function<GLTexID (const Widget *)> argLoadImageFunc,
 
         std::function<void(FriendItem *)> argOnClick,
         std::pair<Widget *, bool> argFuncWidget,
@@ -59,12 +59,12 @@ FriendItem::FriendItem(
 
           .drawFunc = [this](const Widget *self, int drawDstX, int drawDstY)
           {
-              if(Widget::ROIMap{.x=drawDstX, .y=drawDstY, .ro{self->roi()}}.in(SDLDeviceHelper::getMousePLoc())){
-                  g_sdlDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
-                  g_sdlDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
+              if(Widget::ROIMap{.x=drawDstX, .y=drawDstY, .ro{self->roi()}}.in(GLDeviceHelper::getMousePLoc())){
+                  g_glDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
+                  g_glDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
               }
               else{
-                  g_sdlDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(32), drawDstX, drawDstY, w(), h());
+                  g_glDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(32), drawDstX, drawDstY, w(), h());
               }
           },
 
@@ -81,7 +81,7 @@ FriendItem::FriendItem(
 
           .texLoadFunc = std::move(argLoadImageFunc),
 
-          .blendMode = SDL_BLENDMODE_NONE,
+          .blendMode = MIR_BLENDMODE_NONE,
           .parent{this},
       }}
 
@@ -113,7 +113,7 @@ void FriendItem::setFuncWidget(Widget *argFuncWidget, bool argAutoDelete)
     addChild(argFuncWidget, argAutoDelete);
 }
 
-bool FriendItem::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool FriendItem::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -124,7 +124,7 @@ bool FriendItem::processEventDefault(const SDL_Event &event, bool valid, Widget:
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(Widget::processEventDefault(event, valid, m)){
                     return consumeFocus(true);

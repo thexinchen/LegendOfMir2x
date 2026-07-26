@@ -1,12 +1,12 @@
 #include "colorf.hpp"
 #include "fontexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "textboard.hpp"
 #include "fontselector.hpp"
 #include "processrun.hpp"
 
 extern FontexDB *g_fontexDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 FontSelector::FontSelector(FontSelector::InitArgs args)
     : Widget
@@ -180,7 +180,7 @@ FontSelector::FontSelector(FontSelector::InitArgs args)
 
           .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
           {
-              g_sdlDevice->drawRectangle(colorf::GREY_A255, dstDrawX, dstDrawY, self->w(), self->h());
+              g_glDevice->drawRectangle(colorf::GREY_A255, dstDrawX, dstDrawY, self->w(), self->h());
           },
 
           .parent{this},

@@ -7,7 +7,7 @@
 #include "colorf.hpp"
 #include "totype.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "imageboard.hpp"
 #include "processrun.hpp"
 #include "controlboard.hpp"
@@ -16,7 +16,7 @@
 
 extern Log *g_mir2xLog;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 CBMiddle::CBMiddle(
         Widget::VarDir argDir,
@@ -42,13 +42,13 @@ CBMiddle::CBMiddle(
           {
               .inst
               {
-                  .show = [](const Widget *self)
+                  .show = std::function<bool(const Widget *)>([](const Widget *self)
                   {
                       if(const auto cb = self->hasParent<ControlBoard>(); !cb->m_minimize && !cb->m_expand){
                           return true;
                       }
                       return false;
-                  },
+                  }),
 
                   .moveOnFocus = false,
                   .afterResize = [](Widget *self)
@@ -79,7 +79,7 @@ CBMiddle::CBMiddle(
 
           .drawFunc = [this](const Widget *self, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(colorf::A_SHF(0XFF), drawDstX, drawDstY, self->w(), self->h());
+              g_glDevice->fillRectangle(colorf::A_SHF(0XFF), drawDstX, drawDstY, self->w(), self->h());
           },
 
           .parent{this},
@@ -202,7 +202,7 @@ CBMiddle::CBMiddle(
     moveFront(&m_bg);
 }
 
-bool CBMiddle::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool CBMiddle::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -213,14 +213,14 @@ bool CBMiddle::processEventDefault(const SDL_Event &event, bool valid, Widget::R
     }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 if(!valid){
                     return false;
                 }
 
                 switch(event.key.key){
-                    case SDLK_RETURN:
+                    case MIRK_RETURN:
                         {
                             return hasParent<ControlBoard>()->m_cmdBoard.consumeFocus(true);
                         }
@@ -230,9 +230,9 @@ bool CBMiddle::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_MOTION:
         default:
             {
                 return false;

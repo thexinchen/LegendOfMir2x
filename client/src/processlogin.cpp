@@ -1,3 +1,4 @@
+#include "audiodevice.hpp"
 #include <cstring>
 #include <iostream>
 #include <algorithm>
@@ -7,7 +8,7 @@
 #include "message.hpp"
 #include "pngtexdb.hpp"
 #include "bgmusicdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "buildconfig.hpp"
 #include "messagestackboard.hpp"
 #include "processlogin.hpp"
@@ -16,7 +17,8 @@
 extern Log *g_mir2xLog;
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
+extern AudioDevice *g_audioDevice;
 extern BGMusicDB *g_bgmDB;
 extern ClientArgParser *g_clientArgParser;
 
@@ -110,8 +112,8 @@ ProcessLogin::ProcessLogin()
       {{
           .drawFunc = [](const Widget *self, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(colorf::RGBA(0, 0,   0, 128), drawDstX, drawDstY, self->w(), self->h(), 8);
-              g_sdlDevice->drawRectangle(colorf::RGBA(0, 0, 255, 128), drawDstX, drawDstY, self->w(), self->h(), 8);
+              g_glDevice->fillRectangle(colorf::RGBA(0, 0,   0, 128), drawDstX, drawDstY, self->w(), self->h(), 8);
+              g_glDevice->drawRectangle(colorf::RGBA(0, 0, 255, 128), drawDstX, drawDstY, self->w(), self->h(), 8);
           },
 
           .parent{&m_canvas},
@@ -141,7 +143,7 @@ ProcessLogin::ProcessLogin()
     m_notifyBoardBg.moveAt(DIR_UPLEFT, [this]{ return m_notifyBoard.dx() - 10; }, [this]{ return m_notifyBoard.dy() - 10; });
     m_notifyBoardBg.setSize(           [this]{ return m_notifyBoard. w() + 20; }, [this]{ return m_notifyBoard. h() + 20; });
 
-    g_sdlDevice->playBGM(g_bgmDB->retrieve(0X00040007));
+    g_audioDevice->playBGM(g_bgmDB->retrieve(0X00040007));
     if(g_clientArgParser->autoLogin.has_value()){
         sendLogin(g_clientArgParser->autoLogin.value().first, g_clientArgParser->autoLogin.value().second);
     }
@@ -154,21 +156,21 @@ void ProcessLogin::update(double fUpdateTime)
 
 void ProcessLogin::draw() const
 {
-    SDLDeviceHelper::RenderNewFrame newFrame;
-    g_sdlDevice->drawTexture(g_progUseDB->retrieve(0X00000003),   0,  75);
-    g_sdlDevice->drawTexture(g_progUseDB->retrieve(0X00000004),   0, 465);
-    g_sdlDevice->drawTexture(g_progUseDB->retrieve(0X00000011), 103, 536);
+    GLDeviceHelper::RenderNewFrame newFrame;
+    g_glDevice->drawTexture(g_progUseDB->retrieve(0X00000003),   0,  75);
+    g_glDevice->drawTexture(g_progUseDB->retrieve(0X00000004),   0, 465);
+    g_glDevice->drawTexture(g_progUseDB->retrieve(0X00000011), 103, 536);
 
     m_canvas.drawRoot({});
 }
 
-void ProcessLogin::processEvent(const SDL_Event &event)
+void ProcessLogin::processEvent(const MirEvent &event)
 {
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_TAB:
+                    case MIRK_TAB:
                         {
                             if(true
                                     && !m_idBox      .focus()

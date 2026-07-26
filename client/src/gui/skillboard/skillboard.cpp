@@ -1,6 +1,6 @@
 #include "dbcomid.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "skillpage.hpp"
 #include "skillboard.hpp"
@@ -9,7 +9,7 @@
 #include "textshadowboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 SkillBoard::SkillBoard(int argX, int argY, ProcessRun *runPtr, Widget *argParent, bool argAutoDelete)
     : Widget
@@ -214,7 +214,7 @@ void SkillBoard::drawDefault(Widget::ROIMap m) const
     drawChild(&m_pageCanvas, m);
 }
 
-bool SkillBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool SkillBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -247,18 +247,18 @@ bool SkillBoard::processEventDefault(const SDL_Event &event, bool valid, Widget:
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
-                    moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_sdlDevice->getRendererSize()));
+                if((event.motion.state & MIR_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
+                    moveBy(to_d(event.motion.xrel), to_d(event.motion.yrel), Widget::makeROI(0, 0, g_glDevice->getRendererSize()));
                     return consumeFocus(true);
                 }
                 return consumeFocus(false);
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 switch(event.button.button){
-                    case SDL_BUTTON_LEFT:
+                    case MIR_BUTTON_LEFT:
                         {
                             return consumeFocus(m.in(to_d(event.button.x), to_d(event.button.y)));
                         }
@@ -268,7 +268,7 @@ bool SkillBoard::processEventDefault(const SDL_Event &event, bool valid, Widget:
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_WHEEL:
+        case MIR_EVENT_MOUSE_WHEEL:
             {
                 if(m.create(m_pageCanvas.roi(this)).in(to_d(event.wheel.mouse_x), to_d(event.wheel.mouse_y))){
                     m_slider.addValue(to_d(event.wheel.y) * -0.1f, true);

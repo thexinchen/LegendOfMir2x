@@ -1,10 +1,10 @@
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "controlboard.hpp"
 #include "cbmiddleexpand.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 CBMiddleExpand::CBMiddleExpand(
         Widget::VarDir argDir,
@@ -30,13 +30,13 @@ CBMiddleExpand::CBMiddleExpand(
           {
               .inst
               {
-                  .show = [](const Widget *self)
+                  .show = std::function<bool(const Widget *)>([](const Widget *self)
                   {
                       if(const auto cb = self->hasParent<ControlBoard>(); !cb->m_minimize && cb->m_expand){
                           return true;
                       }
                       return false;
-                  },
+                  }),
 
                   .afterResize = [](Widget *self)
                   {
@@ -67,7 +67,7 @@ CBMiddleExpand::CBMiddleExpand(
 
           .drawFunc = [this](const Widget *self, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(colorf::A_SHF(0XF0), drawDstX, drawDstY, self->w(), self->h());
+              g_glDevice->fillRectangle(colorf::A_SHF(0XF0), drawDstX, drawDstY, self->w(), self->h());
           },
 
           .parent{this},
@@ -199,10 +199,10 @@ CBMiddleExpand::CBMiddleExpand(
     {
         if(const auto cb = hasParent<ControlBoard>(); !cb->m_minimize && cb->m_expand){
             if(cb->m_maximize){
-                return g_sdlDevice->getRendererHeight();
+                return g_glDevice->getRendererHeight();
             }
             else{
-                return std::min<int>(400, g_sdlDevice->getRendererHeight());
+                return std::min<int>(400, g_glDevice->getRendererHeight());
             }
         }
         return 0;
@@ -213,7 +213,7 @@ CBMiddleExpand::CBMiddleExpand(
     moveFront(&m_bg);
 }
 
-bool CBMiddleExpand::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool CBMiddleExpand::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -224,10 +224,10 @@ bool CBMiddleExpand::processEventDefault(const SDL_Event &event, bool valid, Wid
     }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_RETURN:
+                    case MIRK_RETURN:
                         {
                             return valid && hasParent<ControlBoard>()->m_cmdBoard.consumeFocus(true);
                         }
@@ -237,9 +237,9 @@ bool CBMiddleExpand::processEventDefault(const SDL_Event &event, bool valid, Wid
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_BUTTON_UP:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_MOTION:
         default:
             {
                 return false;

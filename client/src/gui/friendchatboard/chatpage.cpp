@@ -1,8 +1,8 @@
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "chatpage.hpp"
 #include "friendchatboard.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ChatPage::ChatPage(
         Widget::VarDir  argDir,
@@ -41,7 +41,7 @@ ChatPage::ChatPage(
               const int bottomHeight = UIPage_MARGIN + ChatPage::SEP_MARGIN + ChatPage::INPUT_MARGIN * 2 + input.h() + (showref() ? (chatref->h() + ChatPage::CHATREF_GAP) : 0);
               const int sepLineDY    = h() - bottomHeight - 1;
 
-              g_sdlDevice->drawLine(
+              g_glDevice->drawLine(
                       colorf::RGBA(231, 231, 189, 64),
 
                       drawDstX,
@@ -50,7 +50,7 @@ ChatPage::ChatPage(
                       drawDstX + w(),
                       drawDstY + sepLineDY);
 
-              g_sdlDevice->fillRectangle(
+              g_glDevice->fillRectangle(
                       colorf::RGBA(231, 231, 189, 32),
 
                       drawDstX,
@@ -59,7 +59,7 @@ ChatPage::ChatPage(
                       w(),
                       bottomHeight);
 
-              g_sdlDevice->fillRectangle(
+              g_glDevice->fillRectangle(
                       colorf::BLACK + colorf::A_SHF(255),
 
                       drawDstX + UIPage_MARGIN,
@@ -70,7 +70,7 @@ ChatPage::ChatPage(
 
                       ChatPage::INPUT_CORNER);
 
-              g_sdlDevice->drawRectangle(
+              g_glDevice->drawRectangle(
                       colorf::RGBA(231, 231, 189, 96),
 
                       drawDstX + UIPage_MARGIN,
@@ -174,7 +174,7 @@ void ChatPage::afterResizeDefault()
     enableChatRef(chatref->refer(), chatref->getXML());
 }
 
-bool ChatPage::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool ChatPage::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -197,10 +197,10 @@ bool ChatPage::processEventDefault(const SDL_Event &event, bool valid, Widget::R
     }
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_RETURN:
+                    case MIRK_RETURN:
                         {
                             if(input.focus()){
                                 return Widget::processEventDefault(event, valid, m);
@@ -216,7 +216,7 @@ bool ChatPage::processEventDefault(const SDL_Event &event, bool valid, Widget::R
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(m.create(input.roi()).in(to_d(event.button.x), to_d(event.button.y))){
                     setFocus(false);

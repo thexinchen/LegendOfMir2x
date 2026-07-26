@@ -1,3 +1,5 @@
+set(CMAKE_FOLDER "tools")
+
 add_subdirectory(mapeditor)
 add_subdirectory(pkgviewer)
 add_subdirectory(mapinfo)

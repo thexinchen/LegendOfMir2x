@@ -1,4 +1,5 @@
 #pragma once
+#include "audiodevice.hpp"
 #include <set>
 #include <map>
 #include <list>
@@ -180,7 +181,7 @@ class ProcessRun: public Process
     public:
         virtual void draw() const override;
         virtual void update(double) override;
-        virtual void processEvent(const SDL_Event &) override;
+        virtual void processEvent(const MirEvent &) override;
 
     public:
         std::tuple<int, int> fromPLoc2Grid(int pixelX, int pixelY) const
@@ -195,7 +196,7 @@ class ProcessRun: public Process
 
         std::tuple<int, int> getMouseGLoc() const
         {
-            const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+            const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
             return fromPLoc2Grid(mousePX, mousePY);
         }
 
@@ -408,7 +409,7 @@ class ProcessRun: public Process
         void drawObject(int, int, int, bool) const;
 
     private:
-        void checkMagicSpell(const SDL_Event &);
+        void checkMagicSpell(const MirEvent &);
 
     public:
         std::tuple<int, int> getACNum(const std::string &) const;
@@ -471,7 +472,7 @@ class ProcessRun: public Process
     public:
         std::tuple<uint64_t, int, int> getMap() const
         {
-            return {m_mapUID, m_mir2xMapData.w(), m_mir2xMapData.h()};
+            return {m_mapUID, to_d(m_mir2xMapData.w()), to_d(m_mir2xMapData.h())};
         }
 
         const auto &getCOList() const
@@ -489,7 +490,7 @@ class ProcessRun: public Process
         }
 
     public:
-        std::shared_ptr<SDLSoundEffectChannel> playSoundEffectAt(uint32_t, int, int, size_t repeats = 1) const;
+        std::shared_ptr<SoundEffectChannel> playSoundEffectAt(uint32_t, int, int, size_t repeats = 1) const;
 
     public:
         void setCursor(int);

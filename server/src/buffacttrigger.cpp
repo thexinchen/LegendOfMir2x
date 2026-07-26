@@ -19,7 +19,7 @@ BaseBuffActTrigger::BaseBuffActTrigger(BaseBuff *argBuff, size_t argBuffActOff)
             }
         }();
 
-        getBuff()->getBO()->defer([bo = getBuff()->getBO(), key = actKey(), tick, tgrCount](this auto) -> corof::awaitable<>
+        getBuff()->getBO()->defer([bo = getBuff()->getBO(), key = actKey(), tick, tgrCount]() -> corof::awaitable<>
         {
             if(auto tgrPtr = dynamic_cast<BaseBuffActTrigger *>(bo->m_buffList.hasBuffAct(key))){
                 co_await tgrPtr->runOnTrigger(BATGR_TIME);

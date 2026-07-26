@@ -1,7 +1,7 @@
 #pragma once
 #include <variant>
 #include <functional>
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 #include "widget.hpp"
 #include "colorf.hpp"
 
@@ -31,14 +31,14 @@ class ImageBoard: public Widget
             Widget::VarSizeOpt w = std::nullopt; // {} means image width , otherwise rescale the image
             Widget::VarSizeOpt h = std::nullopt; // {} means image height, otherwise rescale the image
 
-            Widget::VarTexLoadFunc texLoadFunc = nullptr;
+            Widget::VarTexLoadFunc texLoadFunc = GLTexID{};
 
             bool hflip  = false;
             bool vflip  = false;
             int  rotate = 0;
 
             Widget::VarU32 modColor = colorf::WHITE_A255;
-            Widget::VarBlendMode blendMode = SDL_BLENDMODE_BLEND;
+            Widget::VarBlendMode blendMode = MIR_BLENDMODE_BLEND;
 
             Widget::WADPair parent {};
         };
@@ -90,7 +90,7 @@ class ImageBoard: public Widget
         }
 
     public:
-        SDL_Texture *getTexture() const
+        GLTexID getTexture() const
         {
             return Widget::evalTexLoadFunc(m_loadFunc, this);
         }

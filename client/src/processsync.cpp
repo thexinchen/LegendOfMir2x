@@ -1,13 +1,13 @@
 #include "log.hpp"
 #include "client.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "fontstyle.hpp"
 #include "processsync.hpp"
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ProcessSync::ProcessSync()
     : Process()
@@ -61,12 +61,12 @@ ProcessSync::ProcessSync()
       }}
 {}
 
-void ProcessSync::processEvent(const SDL_Event &event)
+void ProcessSync::processEvent(const MirEvent &event)
 {
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
-                if(event.key.key == SDLK_ESCAPE){
+                if(event.key.key == MIRK_ESCAPE){
                     g_client->requestProcess(PROCESSID_LOGIN);
                 }
                 break;
@@ -90,6 +90,6 @@ void ProcessSync::update(double fUpdateTime)
 
 void ProcessSync::draw() const
 {
-    const SDLDeviceHelper::RenderNewFrame newFrame;
+    const GLDeviceHelper::RenderNewFrame newFrame;
     m_canvas.drawRoot({});
 }

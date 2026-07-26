@@ -2,11 +2,20 @@
 #include <array>
 #include <cstdint>
 #include <algorithm>
-#include <SDL3/SDL_pixels.h>
 
 // this header may be included in fltk widget code
 // fltk includes windows.h when compiling under windows, windows.h has a macro defined: RGB
 #undef RGB
+
+// MirColor replaces SDL_Color; kept here so common code has no SDL dependency.
+struct MirColor
+{
+    uint8_t r = 0;
+    uint8_t g = 0;
+    uint8_t b = 0;
+    uint8_t a = 0xFF;
+};
+
 
 namespace colorf
 {
@@ -171,9 +180,9 @@ namespace colorf
         return result;
     }
 
-    inline SDL_Color RGBA2SDLColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+    inline MirColor RGBA2MirColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
     {
-        SDL_Color color;
+        MirColor color;
         color.r = r;
         color.g = g;
         color.b = b;
@@ -181,12 +190,12 @@ namespace colorf
         return color;
     }
 
-    inline SDL_Color RGBA2SDLColor(uint32_t color)
+    inline MirColor RGBA2MirColor(uint32_t color)
     {
-        return RGBA2SDLColor(colorf::R(color), colorf::G(color), colorf::B(color), colorf::A(color));
+        return RGBA2MirColor(colorf::R(color), colorf::G(color), colorf::B(color), colorf::A(color));
     }
 
-    inline uint32_t SDLColor2RGBA(const SDL_Color &color)
+    inline uint32_t MirColor2RGBA(const MirColor &color)
     {
         return RGBA(color.r, color.g, color.b, color.a);
     }

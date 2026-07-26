@@ -1,13 +1,13 @@
 #include "hero.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "processrun.hpp"
 #include "chatpreviewitem.hpp"
 #include "friendchatboard.hpp"
 #include "friendchatboardconst.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ChatPreviewItem::ChatPreviewItem(
         Widget::VarDir  argDir,
@@ -47,12 +47,12 @@ ChatPreviewItem::ChatPreviewItem(
           .w = ChatPreviewItem::AVATAR_WIDTH,
           .h = ChatPreviewItem::HEIGHT - ChatPreviewItem::ITEM_MARGIN * 2,
 
-          .texLoadFunc = [this](const Widget *) -> SDL_Texture *
+          .texLoadFunc = [this](const Widget *) -> GLTexID 
           {
               return g_progUseDB->retrieve(0X010007CF);
           },
 
-          .blendMode = SDL_BLENDMODE_NONE,
+          .blendMode = MIR_BLENDMODE_NONE,
           .parent{this},
       }}
 
@@ -115,12 +115,12 @@ ChatPreviewItem::ChatPreviewItem(
 
           .drawFunc = [this](int drawDstX, int drawDstY)
           {
-              if(Widget::ROIMap{.x=drawDstX, .y=drawDstY, .ro{roi()}}.in(SDLDeviceHelper::getMousePLoc())){
-                  g_sdlDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
-                  g_sdlDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
+              if(Widget::ROIMap{.x=drawDstX, .y=drawDstY, .ro{roi()}}.in(GLDeviceHelper::getMousePLoc())){
+                  g_glDevice->fillRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
+                  g_glDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(64), drawDstX, drawDstY, w(), h());
               }
               else{
-                  g_sdlDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(32), drawDstX, drawDstY, w(), h());
+                  g_glDevice->drawRectangle(colorf::RGB(231, 231, 189) + colorf::A_SHF(32), drawDstX, drawDstY, w(), h());
               }
           },
 
@@ -147,7 +147,7 @@ ChatPreviewItem::ChatPreviewItem(
     });
 }
 
-bool ChatPreviewItem::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool ChatPreviewItem::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -158,7 +158,7 @@ bool ChatPreviewItem::processEventDefault(const SDL_Event &event, bool valid, Wi
     }
 
     switch(event.type){
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 if(m.in(to_d(event.button.x), to_d(event.button.y))){
                     FriendChatBoard::getParentBoard(this)->m_processRun->requestLatestChatMessage({this->cpid.asU64()}, 50, true, true);

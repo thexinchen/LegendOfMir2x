@@ -1,12 +1,12 @@
 #include <cinttypes>
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "cbface.hpp"
 #include "processrun.hpp"
 #include "clientmonster.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 CBFace::CBFace(
         Widget::VarDir argDir,
@@ -70,7 +70,7 @@ CBFace::CBFace(
 
           .drawFunc = [](const Widget *self, int drawDstX, int drawDstY)
           {
-              g_sdlDevice->fillRectangle(colorf::RED_A255, drawDstX, drawDstY, self->w(), self->h());
+              g_glDevice->fillRectangle(colorf::RED_A255, drawDstX, drawDstY, self->w(), self->h());
           },
 
           .parent{this},
@@ -182,8 +182,8 @@ void CBFace::drawBuffIDList(int drawDstX, int drawDstY, int, int) const
                 const int buffIconOffX = buffIconOffStartX + (drawIconCount % 5) * buffIconDrawW;
                 const int buffIconOffY = buffIconOffStartY - (drawIconCount / 5) * buffIconDrawH;
 
-                const auto [texW, texH] = SDLDeviceHelper::getTextureSize(iconTexPtr);
-                g_sdlDevice->drawTexture(iconTexPtr, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, 0, 0, texW, texH);
+                const auto [texW, texH] = GLDeviceHelper::getTextureSize(iconTexPtr);
+                g_glDevice->drawTexture(iconTexPtr, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, 0, 0, texW, texH);
 
                 const auto baseColor = [&br]() -> uint32_t
                 {
@@ -204,7 +204,7 @@ void CBFace::drawBuffIDList(int drawDstX, int drawDstY, int, int) const
                 const auto edgeGridCount = (buffIconDrawW + buffIconDrawH) * 2 - 4;
                 const auto startLoc = std::lround(edgeGridCount * std::fmod(m_accuTime, 1500.0) / 1500.0);
 
-                g_sdlDevice->drawBoxFading(startColor, endColor, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, startLoc, buffIconDrawW + buffIconDrawH);
+                g_glDevice->drawBoxFading(startColor, endColor, buffIconOffX, buffIconOffY, buffIconDrawW, buffIconDrawH, startLoc, buffIconDrawW + buffIconDrawH);
                 drawIconCount++;
             }
         }

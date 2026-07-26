@@ -17,11 +17,11 @@
 #include "serverargparser.hpp"
 #include "peercore.hpp"
 #include "servicecore.hpp"
-#include "serverconfigurewindow.hpp"
+#include "imguiui/guicore.hpp"
 
 extern Server *g_server;
 extern ServerArgParser *g_serverArgParser;
-extern ServerConfigureWindow *g_serverConfigureWindow;
+extern GUICore *g_guiCore;
 
 // KEEP IN MIND:
 // at ANY time only one thread can access one actor message handler
@@ -923,7 +923,7 @@ void ActorPool::launchBalance()
     m_peerCore = std::make_unique<ServiceCore>();
     m_peerCore->activate();
 
-    const auto clientPort = g_serverConfigureWindow->getConfig().clientPort;
+    const auto clientPort = g_guiCore->getConfig().clientPort;
 
     launchNet(clientPort);
     g_server->addLog(LOGTYPE_INFO, "Master server listens players on port %d", clientPort);

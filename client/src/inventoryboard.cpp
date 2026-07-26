@@ -1,6 +1,6 @@
 #include "luaf.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "soundeffectdb.hpp"
 #include "processrun.hpp"
 #include "inventoryboard.hpp"
@@ -8,7 +8,7 @@
 extern PNGTexDB *g_progUseDB;
 extern PNGTexDB *g_itemDB;
 extern SoundEffectDB *g_seffDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 InventoryBoard::InventoryBoard(InventoryBoard::InitArgs args)
     : Widget
@@ -156,8 +156,8 @@ InventoryBoard::InventoryBoard(InventoryBoard::InitArgs args)
         throw fflpanic("no valid inventory frame texture");
     }
 
-    setW(SDLDeviceHelper::getTextureWidth (texPtr));
-    setH(SDLDeviceHelper::getTextureHeight(texPtr));
+    setW(GLDeviceHelper::getTextureWidth (texPtr));
+    setH(GLDeviceHelper::getTextureHeight(texPtr));
 }
 
 void InventoryBoard::drawItem(int dstX, int dstY, size_t startRow, const PackBin &bin, uint32_t fillColor) const
@@ -175,7 +175,7 @@ void InventoryBoard::drawItem(int dstX, int dstY, size_t startRow, const PackBin
             const int  viewX = dstX + m_invGridX0;
             const int  viewY = dstY + m_invGridY0;
 
-            const auto [itemPW, itemPH] = SDLDeviceHelper::getTextureSize(texPtr);
+            const auto [itemPW, itemPH] = GLDeviceHelper::getTextureSize(texPtr);
             int drawDstX = startX + bin.x * SYS_INVGRIDPW + (bin.w * SYS_INVGRIDPW - itemPW) / 2;
             int drawDstY = startY + bin.y * SYS_INVGRIDPH + (bin.h * SYS_INVGRIDPH - itemPH) / 2;
             int drawSrcX = 0;
@@ -193,7 +193,7 @@ void InventoryBoard::drawItem(int dstX, int dstY, size_t startRow, const PackBin
 
                         0, 0, -1, -1,
                         viewX, viewY, SYS_INVGRIDPW * SYS_INVGRIDGW, SYS_INVGRIDPH * SYS_INVGRIDGH)){
-                g_sdlDevice->drawTexture(texPtr, drawDstX, drawDstY, drawSrcX, drawSrcY, drawSrcW, drawSrcH);
+                g_glDevice->drawTexture(texPtr, drawDstX, drawDstY, drawSrcX, drawSrcY, drawSrcW, drawSrcH);
             }
 
             int binGridX = bin.x;
@@ -202,7 +202,7 @@ void InventoryBoard::drawItem(int dstX, int dstY, size_t startRow, const PackBin
             int binGridH = bin.h;
 
             if(mathf::rectangleOverlapRegion<int>(0, startRow, SYS_INVGRIDGW, SYS_INVGRIDGH, binGridX, binGridY, binGridW, binGridH)){
-                g_sdlDevice->fillRectangle(fillColor,
+                g_glDevice->fillRectangle(fillColor,
                         startX + binGridX * SYS_INVGRIDPW,
                         startY + binGridY * SYS_INVGRIDPH, // startY is for (0, 0), not for (0, startRow)
                         binGridW * SYS_INVGRIDPW,
@@ -238,7 +238,7 @@ void InventoryBoard::drawDefault(Widget::ROIMap m) const
     }
 
     if(auto texPtr = g_progUseDB->retrieve(0X0000001B)){
-        g_sdlDevice->drawTexture(texPtr, m.x, m.y);
+        g_glDevice->drawTexture(texPtr, m.x, m.y);
     }
 
     const auto myHeroPtr = m_processRun->getMyHero();
@@ -250,7 +250,7 @@ void InventoryBoard::drawDefault(Widget::ROIMap m) const
     const auto startOffY = m.y - m.ro->y;
 
     const auto startRow = getStartRow();
-    const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+    const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
     const auto cursorOnIndex = getPackBinIndex(mousePX - startOffX, mousePY - startOffY);
     for(int i = 0; i < std::ssize(myHeroPtr->getInvPack().getPackBinList()); ++i){
         const auto fillColor = [i, cursorOnIndex, this]() -> uint32_t
@@ -278,7 +278,7 @@ void InventoryBoard::drawDefault(Widget::ROIMap m) const
         drawChild(&m_sortButton, m);
     }
     else if(m_selectedIndex >= 0){
-        g_sdlDevice->drawTexture(g_progUseDB->retrieve(0X0000B0), m.x + m_invOpButtonX, m.y + m_invOpButtonY);
+        g_glDevice->drawTexture(g_progUseDB->retrieve(0X0000B0), m.x + m_invOpButtonX, m.y + m_invOpButtonY);
         drawChild(&m_invOpButton, m);
         if(m_invOpCost >= 0){
             drawInvOpCost();
@@ -290,7 +290,7 @@ void InventoryBoard::drawDefault(Widget::ROIMap m) const
     }
 }
 
-bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Widget::ROIMap m)
+bool InventoryBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
 {
     if(!m.calibrate(this)){
         return false;
@@ -324,10 +324,10 @@ bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
     const auto startYOff = m.y - m.ro->y;
 
     switch(event.type){
-        case SDL_EVENT_KEY_DOWN:
+        case MIR_EVENT_KEY_DOWN:
             {
                 switch(event.key.key){
-                    case SDLK_ESCAPE:
+                    case MIRK_ESCAPE:
                         {
                             setShow(false);
                             setFocus(false);
@@ -339,13 +339,13 @@ bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_MOTION:
+        case MIR_EVENT_MOUSE_MOTION:
             {
-                if((event.motion.state & SDL_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
+                if((event.motion.state & MIR_BUTTON_LMASK) && (m.in(to_d(event.motion.x), to_d(event.motion.y)) || focus())){
                     const auto remapXDiff = m.x - m.ro->x;
                     const auto remapYDiff = m.y - m.ro->y;
 
-                    const auto [rendererW, rendererH] = g_sdlDevice->getRendererSize();
+                    const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
                     const int maxX = rendererW - w();
                     const int maxY = rendererH - h();
 
@@ -357,14 +357,14 @@ bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
                 }
                 return consumeFocus(false);
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
                 auto myHeroPtr = m_processRun->getMyHero();
                 auto &invPackRef = myHeroPtr->getInvPack();
                 auto lastGrabbedItem = invPackRef.getGrabbedItem();
 
                 switch(event.button.button){
-                    case SDL_BUTTON_LEFT:
+                    case MIR_BUTTON_LEFT:
                         {
                             if(m.in(to_d(event.button.x), to_d(event.button.y))){
                                 if(m_sdInvOp.invOp == INVOP_NONE){
@@ -410,7 +410,7 @@ bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
                             }
                             return consumeFocus(false);
                         }
-                    case SDL_BUTTON_RIGHT:
+                    case MIR_BUTTON_RIGHT:
                         {
                             if(m.in(to_d(event.button.x), to_d(event.button.y))){
                                 if(const int selectedPackIndex = getPackBinIndex(to_d(event.button.x) - startXOff, to_d(event.button.y) - startYOff); selectedPackIndex >= 0){
@@ -427,9 +427,9 @@ bool InventoryBoard::processEventDefault(const SDL_Event &event, bool valid, Wid
                         }
                 }
             }
-        case SDL_EVENT_MOUSE_WHEEL:
+        case MIR_EVENT_MOUSE_WHEEL:
             {
-                const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+                const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
                 if(mathf::pointInRectangle<int>(mousePX, mousePY, m.x + m_invGridX0, m.y + m_invGridY0, SYS_INVGRIDGW * SYS_INVGRIDPW, SYS_INVGRIDGH * SYS_INVGRIDPH)){
                     const auto rowCount = getRowCount();
                     if(rowCount > SYS_INVGRIDGH){
@@ -535,15 +535,15 @@ void InventoryBoard::drawItemHoverText(const PackBin &bin) const
         .lineAlign = LALIGN_JUSTIFY,
     }};
 
-    const auto [mousePX, mousePY] = SDLDeviceHelper::getMousePLoc();
+    const auto [mousePX, mousePY] = GLDeviceHelper::getMousePLoc();
     const auto textBoxW = std::max<int>(hoverTextBoard.w(), 200) + 20;
     const auto textBoxH = hoverTextBoard.h() + 20;
 
-    const auto drawBoardPX = mathf::bound<int>(mousePX, 0, g_sdlDevice->getRendererWidth () - textBoxW);
-    const auto drawBoardPY = mathf::bound<int>(mousePY, 0, g_sdlDevice->getRendererHeight() - textBoxH);
+    const auto drawBoardPX = mathf::bound<int>(mousePX, 0, g_glDevice->getRendererWidth () - textBoxW);
+    const auto drawBoardPY = mathf::bound<int>(mousePY, 0, g_glDevice->getRendererHeight() - textBoxH);
 
-    g_sdlDevice->fillRectangle(colorf::RGBA(  0,   0,   0, 200), drawBoardPX, drawBoardPY, textBoxW, textBoxH, 5);
-    g_sdlDevice->drawRectangle(colorf::RGBA(231, 231, 189, 200), drawBoardPX, drawBoardPY, textBoxW, textBoxH, 5);
+    g_glDevice->fillRectangle(colorf::RGBA(  0,   0,   0, 200), drawBoardPX, drawBoardPY, textBoxW, textBoxH, 5);
+    g_glDevice->drawRectangle(colorf::RGBA(231, 231, 189, 200), drawBoardPX, drawBoardPY, textBoxW, textBoxH, 5);
     hoverTextBoard.draw({.x=drawBoardPX + 10, .y=drawBoardPY + 10});
 }
 

@@ -6,12 +6,12 @@
 #include "gfxcropboard.hpp"
 #include "gfxresizeboard.hpp"
 #include "pngtexdb.hpp"
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "layoutboard.hpp"
 #include "modalstringboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 // cut off middle
 // use rest as string background
@@ -57,8 +57,8 @@ class ModalStringBoardImpl: public Widget
             : Widget
               ({
                   .dir = DIR_NONE,
-                  .x   = [](const Widget *){ return g_sdlDevice->getRendererWidth () / 2; },
-                  .y   = [](const Widget *){ return g_sdlDevice->getRendererHeight() / 2; },
+                  .x   = [](const Widget *){ return g_glDevice->getRendererWidth () / 2; },
+                  .y   = [](const Widget *){ return g_glDevice->getRendererHeight() / 2; },
               })
 
             , m_board
@@ -165,13 +165,13 @@ void ModalStringBoard::loadXML(std::u8string s)
 void ModalStringBoard::drawScreen(bool drainEvents) const
 {
     if(drainEvents){
-        SDL_Event event;
-        while(SDL_PollEvent(&event)){
+        MirEvent event;
+        while(g_glDevice->pollEvent(&event)){
             continue;
         }
     }
 
-    g_sdlDevice->clearScreen();
+    g_glDevice->clearScreen();
     m_boardImpl->drawRoot({});
-    g_sdlDevice->present();
+    g_glDevice->present();
 }

@@ -60,7 +60,7 @@ class MiniMapBoard: public Widget
         MiniMapBoard(MiniMapBoard::InitArgs);
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     public:
         void flipAlpha();
@@ -68,7 +68,7 @@ class MiniMapBoard: public Widget
         void flipAutoCenter();
 
     public:
-        SDL_Texture *getMiniMapTexture() const;
+        GLTexID getMiniMapTexture() const;
 
     private:
         void zoomOnCanvasAt(int, int, double);

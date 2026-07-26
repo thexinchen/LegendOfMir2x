@@ -3,7 +3,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <cerealf.hpp>
+#include "cerealf.hpp"
 
 class SDRuntimeConfig
 {

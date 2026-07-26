@@ -88,7 +88,7 @@ class ButtonBase: public Widget
         ButtonBase(ButtonBase::InitArgs);
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     protected:
         int offX() const { return m_offset[getState()][0]; }

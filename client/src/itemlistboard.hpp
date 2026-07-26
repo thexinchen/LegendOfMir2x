@@ -34,7 +34,7 @@ class ItemListBoard: public Widget
         void drawDefault(Widget::ROIMap) const override;
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     protected:
         std::optional<size_t> getPageGrid() const;
@@ -47,8 +47,8 @@ class ItemListBoard: public Widget
 
             return
             {
-                m_startX + m_boxW * gridX,
-                m_startY + m_boxH * gridY,
+                m_startX + m_boxW * to_d(gridX),
+                m_startY + m_boxH * to_d(gridY),
                 m_boxW,
                 m_boxH,
             };

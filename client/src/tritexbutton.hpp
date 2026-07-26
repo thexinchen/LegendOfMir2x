@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <functional>
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "buttonbase.hpp"
 #include "imageboard.hpp"
 
@@ -120,10 +120,10 @@ class TritexButton: public ButtonBase
         }
 
     private:
-        SDL_Texture *evalGfxTexture     (std::optional<int> = std::nullopt) const;
-        SDL_Texture *evalGfxTextureValid(                                 ) const; // search the first valid Texture
+        GLTexID evalGfxTexture     (std::optional<int> = std::nullopt) const;
+        GLTexID evalGfxTextureValid(                                 ) const; // search the first valid Texture
 
     public:
-        int w() const override { return SDLDeviceHelper::getTextureWidth (evalGfxTextureValid(), 0); }
-        int h() const override { return SDLDeviceHelper::getTextureHeight(evalGfxTextureValid(), 0); }
+        int w() const override { return GLDeviceHelper::getTextureWidth (evalGfxTextureValid(), 0); }
+        int h() const override { return GLDeviceHelper::getTextureHeight(evalGfxTextureValid(), 0); }
 };

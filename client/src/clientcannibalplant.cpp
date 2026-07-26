@@ -20,7 +20,7 @@ bool ClientCannibalPlant::onActionSpawn(const ActionNode &action)
 
 bool ClientCannibalPlant::onActionStand(const ActionNode &action)
 {
-    if(finalStandMode() != action.extParam.stand.cannibalPlant.standMode){
+    if(finalStandMode() != to_bool(action.extParam.stand.cannibalPlant.standMode)){
         addActionTransf();
     }
     return true;

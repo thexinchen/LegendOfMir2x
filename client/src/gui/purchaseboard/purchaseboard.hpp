@@ -105,7 +105,7 @@ class PurchaseBoard: public Widget
         void drawDefault(Widget::ROIMap) const override;
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     public:
         void loadSell(uint64_t, std::vector<uint32_t>);
@@ -148,5 +148,5 @@ class PurchaseBoard: public Widget
         void drawItemInGrid(const char8_t *, uint32_t, int, int, Widget::ROIMap) const;
 
     private:
-        static SDL_Texture *getItemTexture(const char8_t *, uint32_t);
+        static GLTexID getItemTexture(const char8_t *, uint32_t);
 };

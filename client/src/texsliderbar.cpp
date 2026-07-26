@@ -39,8 +39,8 @@ TexSliderBar::TexSliderBar(TexSliderBar::InitArgs args)
           .x = [this]{ return m_bg.getInputROI().x; },
           .y = [this]{ return m_bg.getInputROI().y; },
 
-          .w = [this]{ return m_bg.getInputROI().w * ( vbar() ? 1.0f : getValue()); },
-          .h = [this]{ return m_bg.getInputROI().h * (!vbar() ? 1.0f : getValue()); },
+          .w = [this]{ return to_d(m_bg.getInputROI().w * ( vbar() ? 1.0f : getValue())); },
+          .h = [this]{ return to_d(m_bg.getInputROI().h * (!vbar() ? 1.0f : getValue())); },
 
           .getter = &m_imgBar,
           .parent{&m_bg},

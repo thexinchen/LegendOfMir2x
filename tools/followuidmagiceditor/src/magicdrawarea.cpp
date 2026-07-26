@@ -1,219 +1,164 @@
-#include <cmath>
-#include <cstdio>
-#include <string>
-#include <cstdarg>
-#include <cstring>
 #include <algorithm>
-#include <cinttypes>
-#include <FL/Fl.H>
-#include <FL/fl_ask.H>
-#include <FL/fl_draw.H>
-#include "strf.hpp"
-#include "mathf.hpp"
+#include <cmath>
+
+#include <imgui.h>
+
 #include "fflerror.hpp"
+#include "mathf.hpp"
+#include "strf.hpp"
 #include "sysconst.hpp"
-#include "flwrapper.hpp"
-#include "dbcomid.hpp"
+#include "totype.hpp"
 #include "magicdrawarea.hpp"
 
-MagicDrawArea::MagicDrawArea(int argX, int argY, int argW, int argH)
-    : Fl_Box(argX, argY, argW, argH)
-{}
-
-void MagicDrawArea::drawImage(Fl_Image *image, int dstX, int dstY)
+namespace
 {
-    if(image){
-        drawImage(image, dstX, dstY, 0, 0, image->w(), image->h());
+    constexpr ImU32 GREEN   = IM_COL32(0, 255, 0, 255);
+    constexpr ImU32 RED     = IM_COL32(255, 0, 0, 255);
+    constexpr ImU32 BLUE    = IM_COL32(0, 80, 255, 255);
+    constexpr ImU32 MAGENTA = IM_COL32(255, 0, 255, 255);
+
+    struct RunGfxConfig
+    {
+        uint32_t magicID = 0;
+        uint32_t gfxID = SYS_U32NIL;
+        int frameCount = 0;
+        int gfxIDCount = 0;
+        int gfxDirType = 0;
+    };
+
+    // MSVC doesn't preserve the backing arrays of the nested constexpr
+    // initializer_list members used by MagicRecord for runtime traversal.
+    // Keep the scalar "运行/跟随" fields here so this editor also works on
+    // Windows; the values mirror common/src/magicrecord.inc.
+    constexpr RunGfxConfig RUN_GFX_CONFIGS[]
+    {
+        {DBCOM_MAGICID(u8"魔法特效_护身符"), 0X000003D4, 3, 10, 16},
+        {DBCOM_MAGICID(u8"魔法特效_火球术"), 0X000001A4, 5, 10, 16},
+        {DBCOM_MAGICID(u8"魔法特效_大火球"), 0X00000668, 6, 10, 16},
+        {DBCOM_MAGICID(u8"月魂断玉"),        0X00000D02, 6, 10,  1},
+        {DBCOM_MAGICID(u8"月魂灵波"),        0X00000D70, 6, 10,  1},
+        {DBCOM_MAGICID(u8"冰月神掌"),        0X00000A8C, 3, 10, 16},
+        {DBCOM_MAGICID(u8"冰月震天"),        0X00000B90, 6,  6,  1},
+        {DBCOM_MAGICID(u8"霹雳掌"),          0X00000BFE, 6, 10, 16},
+        {DBCOM_MAGICID(u8"风掌"),            0X010001AE, 5, 10, 16},
+        {DBCOM_MAGICID(u8"沙漠树魔_喷刺"),   0X030003C0, 1,  1,  1},
+        {DBCOM_MAGICID(u8"掷斧骷髅_掷斧"),   0X03000320, 6, 10,  8},
+        {DBCOM_MAGICID(u8"暗黑战士_喷刺"),   0X030004D8, 1, 10, 16},
+        {DBCOM_MAGICID(u8"祖玛弓箭手_射箭"), 0X03000578, 1, 10, 16},
+        {DBCOM_MAGICID(u8"爆毒蚂蚁_喷毒"),   0X03000050, 6,  6,  1},
+    };
+
+    const RunGfxConfig *findRunGfxConfig(uint32_t magicID)
+    {
+        for(const auto &config: RUN_GFX_CONFIGS){
+            if(config.magicID == magicID){
+                return &config;
+            }
+        }
+        return nullptr;
     }
 }
 
-void MagicDrawArea::drawImage(Fl_Image *image, int dstX, int dstY, int srcX, int srcY, int srcW, int srcH)
+int MagicDrawArea::magicDirCount() const
 {
-    if(true
-            && w() > 0
-            && h() > 0
+    return m_gfxDirType;
+}
 
-            && image
-            && image->w() > 0
-            && image->h() > 0){
+std::tuple<GLTexture *, int, int> MagicDrawArea::getFrameImage(int gfxDirIndex)
+{
+    if(m_gfxID == SYS_U32NIL){
+        return {nullptr, 0, 0};
+    }
+    return m_frameDBPtr->retrieve(m_gfxID + m_frame + gfxDirIndex * m_gfxIDCount);
+}
 
-        const int srcXOld = srcX;
-        const int srcYOld = srcY;
+void MagicDrawArea::draw(const ImVec2 &canvasPos, const ImVec2 &canvasSize)
+{
+    auto *drawList = ImGui::GetWindowDrawList();
+    const ImVec2 canvasMax(canvasPos.x + canvasSize.x, canvasPos.y + canvasSize.y);
+    drawList->AddRectFilled(canvasPos, canvasMax, IM_COL32_BLACK);
+    ImGui::SetCursorScreenPos(canvasPos);
+    ImGui::InvisibleButton("MagicCanvas", canvasSize, ImGuiButtonFlags_MouseButtonLeft);
 
-        if(true
-                && srcW > 0
-                && srcH > 0
-                && mathf::rectangleOverlapRegion<int>(0, 0, image->w(), image->h(), srcX, srcY, srcW, srcH)){
+    const int width = static_cast<int>(canvasSize.x);
+    const int height = static_cast<int>(canvasSize.y);
+    const int centerX = width / 2;
+    const int centerY = height / 2;
+    const ImVec2 center(canvasPos.x + centerX, canvasPos.y + centerY);
 
-            dstX += (srcX - srcXOld);
-            dstY += (srcY - srcYOld);
+    if(ImGui::IsItemHovered()){
+        const auto mouse = ImGui::GetIO().MousePos;
+        const int mouseX = static_cast<int>(mouse.x - canvasPos.x);
+        const int mouseY = static_cast<int>(mouse.y - canvasPos.y);
+        const bool control = ImGui::GetIO().KeyCtrl;
+        m_adjustR = control && ImGui::IsMouseDown(ImGuiMouseButton_Left);
+        if(m_adjustR){
+            m_r = mathf::LDistance<int>(centerX, centerY, mouseX, mouseY);
+        }
 
-            const auto dstXOld = dstX;
-            const auto dstYOld = dstY;
-
-            if(true
-                    && srcW > 0
-                    && srcH > 0
-                    && mathf::rectangleOverlapRegion<int>(0, 0, w(), h(), dstX, dstY, srcW, srcH)){
-
-                srcX += (dstX - dstXOld);
-                srcY += (dstY - dstYOld);
-
-                if(true
-                        && srcW > 0
-                        && srcH > 0){
-                    image->draw(dstX + x(), dstY + y(), srcW, srcH, srcX, srcY);
+        if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !control){
+            for(int i = 0; i < magicDirCount(); ++i){
+                const auto [dstX, dstY] = getGfxDirPLoc(i, width, height);
+                const auto [image, dx, dy] = getFrameImage(i);
+                if(image && image->valid() &&
+                        mathf::pointInRectangle(mouseX, mouseY, dstX + dx, dstY + dy, image->width(), image->height())){
+                    m_adjustTargetOff = i;
+                    break;
                 }
             }
         }
+        else if(ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !control && m_adjustTargetOff >= 0){
+            const auto [dstX, dstY] = getGfxDirPLoc(m_adjustTargetOff, width, height);
+            m_offList.at(m_adjustTargetOff) = {mouseX - dstX, mouseY - dstY};
+            m_adjustTargetOff = -1;
+        }
     }
-}
-
-void MagicDrawArea::drawText(int argX, int argY, Fl_Color color, const char *format, ...)
-{
-    std::string text;
-    str_format(format, text);
-
-    fl_wrapper::enable_color enable(color);
-    fl_draw(text.c_str(), argX + x(), argY + y(), x() + w(), y() + h(), FL_ALIGN_TOP_LEFT, nullptr, 0);
-}
-
-void MagicDrawArea::drawCircle(Fl_Color color, int argX, int argY, int argR)
-{
-    fl_wrapper::enable_color enable(color);
-    fl_circle(x() + argX, y() + argY, argR);
-}
-
-void MagicDrawArea::drawLine(Fl_Color color, int argX0, int argY0, int argX1, int argY1)
-{
-    if(mathf::locateLineSegment(0, 0, w(), h(), &argX0, &argY0, &argX1, &argY1)){
-        fl_wrapper::enable_color enable(color);
-        fl_line(argX0 + x(), argY0 + y(), argX1 + x(), argY1 + y());
+    else{
+        m_adjustR = false;
     }
-}
 
-void MagicDrawArea::drawRectangle(Fl_Color color, int argX, int argY, int argW, int argH)
-{
-    fl_wrapper::enable_color enable(color);
-    fl_rect(x() + argX, y() + argY, argW, argH);
-}
-
-void MagicDrawArea::clear()
-{
-    fl_rectf(x(), y(), w(), h(), 0, 0, 0);
-}
-
-std::tuple<Fl_Image *, int, int> MagicDrawArea::getFrameImage(int gfxDirIndex)
-{
-    const auto gfxEntry = DBCOM_MAGICGFXENTRY(m_magicID, u8"运行").first;
-    fflassert(gfxEntry);
-
-    if(gfxEntry->gfxID == SYS_U32NIL){
-        return {nullptr, 0, 0};
-    }
-    return m_frameDBPtr->retrieve(gfxEntry->gfxID + m_frame + gfxDirIndex * gfxEntry->gfxIDCount);
-}
-
-void MagicDrawArea::draw()
-{
-    Fl_Box::draw();
-
-    const int centerX = w() / 2;
-    const int centerY = h() / 2;
-    drawCircle(m_adjustR ? FL_RED : FL_GREEN, centerX, centerY, m_r);
-
+    drawList->PushClipRect(canvasPos, canvasMax, true);
+    drawList->AddCircle(center, static_cast<float>(m_r), m_adjustR ? RED : GREEN);
     for(int i = 0; i < magicDirCount(); ++i){
-        const auto [dstX, dstY] = getGfxDirPLoc(i);
-        drawLine(FL_BLUE, centerX, centerY, dstX, dstY);
+        const auto [dstX, dstY] = getGfxDirPLoc(i, width, height);
+        drawList->AddLine(center, ImVec2(canvasPos.x + dstX, canvasPos.y + dstY), BLUE);
     }
-
     for(int i = 0; i < magicDirCount(); ++i){
-        const auto [dstX, dstY] = getGfxDirPLoc(i);
+        const auto [dstX, dstY] = getGfxDirPLoc(i, width, height);
         const auto [image, dx, dy] = getFrameImage(i);
-
-        fflassert(image);
-        drawImage(image, dstX + dx, dstY + dy);
-        drawRectangle(FL_BLUE, dstX + dx, dstY + dy, image->w(), image->h());
-        drawLine(FL_RED, dstX, dstY, dstX + dx, dstY + dy);
-
-        const auto [txOff, tyOff] = m_offList.at(i);
-        drawLine(FL_RED, dstX, dstY, dstX + txOff, dstY + tyOff);
+        if(!image || !image->valid()){
+            continue;
+        }
+        const ImVec2 anchor(canvasPos.x + dstX, canvasPos.y + dstY);
+        const ImVec2 imageMin(anchor.x + dx, anchor.y + dy);
+        const ImVec2 imageMax(imageMin.x + image->width(), imageMin.y + image->height());
+        drawList->AddImage(image->id(), imageMin, imageMax);
+        drawList->AddRect(imageMin, imageMax, BLUE);
+        drawList->AddLine(anchor, imageMin, RED);
+        const auto [offX, offY] = m_offList.at(i);
+        drawList->AddLine(anchor, ImVec2(anchor.x + offX, anchor.y + offY), RED);
     }
-
     if(m_adjustTargetOff >= 0){
-        const auto mouseX = Fl::event_x() - x();
-        const auto mouseY = Fl::event_y() - y();
-        const auto [dstX, dstY] = getGfxDirPLoc(m_adjustTargetOff);
-
-        drawLine(FL_MAGENTA, dstX, dstY, mouseX, mouseY);
-        drawLine(FL_MAGENTA, mouseX - 8, mouseY, mouseX + 8, mouseY);
-        drawLine(FL_MAGENTA, mouseX, mouseY - 8, mouseX, mouseY + 8);
+        const auto mouse = ImGui::GetIO().MousePos;
+        const auto [dstX, dstY] = getGfxDirPLoc(m_adjustTargetOff, width, height);
+        const ImVec2 anchor(canvasPos.x + dstX, canvasPos.y + dstY);
+        drawList->AddLine(anchor, mouse, MAGENTA);
+        drawList->AddLine(ImVec2(mouse.x - 8, mouse.y), ImVec2(mouse.x + 8, mouse.y), MAGENTA);
+        drawList->AddLine(ImVec2(mouse.x, mouse.y - 8), ImVec2(mouse.x, mouse.y + 8), MAGENTA);
     }
-}
-
-int MagicDrawArea::handle(int event)
-{
-    auto result = Fl_Box::handle(event);
-    const auto mouseX = Fl::event_x() - x();
-    const auto mouseY = Fl::event_y() - y();
-
-    switch(event){
-        case FL_DRAG:
-            {
-                if(m_adjustR){
-                    m_r = mathf::LDistance<int>(w() / 2, h() / 2, mouseX, mouseY);
-                }
-                break;
-            }
-        case FL_PUSH:
-            {
-                if(Fl::event_state() & FL_CTRL){
-                    m_adjustR = true;
-                    fl_cursor(FL_CURSOR_MOVE);
-                }
-                else if(Fl::event_clicks() >= 1){
-                    for(int i = 0; i < magicDirCount(); ++i){
-                        const auto [dstX, dstY] = getGfxDirPLoc(i);
-                        const auto [image, dx, dy] = getFrameImage(i);
-
-                        fflassert(image);
-                        const auto boxX = dstX + dx;
-                        const auto boxY = dstY + dy;
-
-                        if(mathf::pointInRectangle(mouseX, mouseY, boxX, boxY, image->w(), image->h())){
-                            m_adjustTargetOff = i;
-                            break;
-                        }
-                    }
-                }
-                else if(m_adjustTargetOff >= 0){
-                    if(Fl::event_state() & FL_BUTTON1){
-                        const auto [dstX, dstY] = getGfxDirPLoc(m_adjustTargetOff);
-                        m_offList.at(m_adjustTargetOff) = std::tuple<int, int>(mouseX - dstX, mouseY - dstY);
-                    }
-                    m_adjustTargetOff = -1;
-                }
-
-                result = 1;
-                break;
-            }
-        case FL_RELEASE:
-            {
-                m_adjustR = false;
-                fl_cursor(FL_CURSOR_DEFAULT);
-                break;
-            }
-        default:
-            {
-                break;
-            }
-    }
-    return result;
+    drawList->PopClipRect();
 }
 
 void MagicDrawArea::load(uint32_t magicID, const char *dbPathName)
 {
+    const auto *config = findRunGfxConfig(magicID);
+    fflassert(config);
+
     m_magicID = magicID;
+    m_gfxID = config->gfxID;
+    m_frameCount = config->frameCount;
+    m_gfxIDCount = config->gfxIDCount;
+    m_gfxDirType = config->gfxDirType;
     m_frameDBPtr = std::make_unique<MagicFrameDB>(dbPathName);
     m_offList.resize(magicDirCount());
 }
@@ -224,37 +169,30 @@ void MagicDrawArea::reset()
     std::fill(m_offList.begin(), m_offList.end(), std::tuple<int, int>(0, 0));
 }
 
-void MagicDrawArea::output() const
+std::string MagicDrawArea::output() const
 {
-    std::fprintf(stdout, "case DBCOM_MAGICID(u8\"%s\"):\n", to_cstr(DBCOM_MAGICRECORD(m_magicID).name));
-    std::fprintf(stdout, "{\n");
-    std::fprintf(stdout, "switch(gfxDirIndex()){\n");
-
+    std::string result = str_printf("case DBCOM_MAGICID(u8\"%s\"):\n{\nswitch(gfxDirIndex()){\n",
+            to_cstr(DBCOM_MAGICRECORD(m_magicID).name));
     for(int i = 0; const auto &[dx, dy]: m_offList){
-        std::fprintf(stdout, "case %2d: return {%3d, %3d};\n", i++, dx, dy);
+        result += str_printf("case %2d: return {%3d, %3d};\n", i++, dx, dy);
     }
-
-    std::fprintf(stdout, "default: throw bad_reach();\n");
-    std::fprintf(stdout, "}\n");
-    std::fprintf(stdout, "}\n");
+    result += "default: throw bad_reach();\n}\n}\n";
+    return result;
 }
 
 void MagicDrawArea::updateFrame()
 {
-    m_frame = (m_frame + 1) % DBCOM_MAGICGFXENTRY(m_magicID, u8"运行").first->frameCount;
+    m_frame = (m_frame + 1) % m_frameCount;
 }
 
-std::tuple<int, int> MagicDrawArea::getGfxDirPLoc(int gfxDirIndex) const
+std::tuple<int, int> MagicDrawArea::getGfxDirPLoc(int gfxDirIndex, int width, int height) const
 {
     fflassert(gfxDirIndex >= 0);
-
-    constexpr float pi = 3.1415926535;
-    constexpr float angle16 = 2.0 * pi / 16.0;
-
-    const float gfxDirAngle = pi / 2.0 - gfxDirIndex * angle16;
-    return
-    {
-        to_d(w() / 2.0 + to_f(m_r) * std::cos(gfxDirAngle)),
-        to_d(h() / 2.0 - to_f(m_r) * std::sin(gfxDirAngle)),
+    constexpr float pi = 3.1415926535f;
+    constexpr float angle16 = 2.0f * pi / 16.0f;
+    const float angle = pi / 2.0f - gfxDirIndex * angle16;
+    return {
+        to_d(width / 2.0f + to_f(m_r) * std::cos(angle)),
+        to_d(height / 2.0f - to_f(m_r) * std::sin(angle)),
     };
 }

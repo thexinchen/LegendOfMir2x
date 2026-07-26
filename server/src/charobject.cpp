@@ -1,5 +1,5 @@
 #include <cinttypes>
-#include <inplace_vector>
+#include <vector>
 #include "uidf.hpp"
 #include "totype.hpp"
 #include "mathf.hpp"
@@ -31,7 +31,7 @@ CharObject::LuaThreadRunner::LuaThreadRunner(CharObject *charObjectPtr)
 
     constexpr static unsigned char luaScript []
     {
-        #embed "charobject.lua" suffix(,)
+        #include "charobject_lua.hpp"
         '\0'
     };
     pfrCheck(execRawString(to_rawcstr(luaScript)));
@@ -149,7 +149,7 @@ void CharObject::foreachInViewCO(std::function<void(const COLocation &)> fnOnLoc
     // updateInViewCO() may get called in fnOnLoc
     // it may change m_inViewCOList
 
-    std::inplace_vector<COLocation, 128> coLocList;
+    std::vector<COLocation> coLocList;
     for(const auto &[_, coLoc]: m_inViewCOList){
         if(coLocList.size() == coLocList.capacity()){
             break;

@@ -84,7 +84,7 @@ struct ChatItem: public Widget
         const char8_t *message    = nullptr;
         const char8_t *messageRef = nullptr;
 
-        Widget::VarTexLoadFunc texLoadFunc = nullptr;
+        Widget::VarTexLoadFunc texLoadFunc = GLTexID{};
         Widget::VarU32Opt      bgColor     = std::nullopt;
 
         bool showName   = true;
@@ -116,5 +116,5 @@ struct ChatItem: public Widget
 
     void setMaxWidth(int);
     void updateDefault(double) override;
-    bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+    bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 };

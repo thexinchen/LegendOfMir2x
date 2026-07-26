@@ -108,7 +108,7 @@ corof::awaitable<bool> ServerTaoDog::attackUID(uint64_t targetUID, int dcType)
     });
 
     uidList.insert(targetUID);
-    addDelay(550, [dcType, modifierID, uidList, thisptr = this](this auto, bool) -> corof::awaitable<>
+    addDelay(550, [dcType, modifierID, uidList, thisptr = this](bool) -> corof::awaitable<>
     {
         AMAttack amA;
         std::memset(&amA, 0, sizeof(amA));

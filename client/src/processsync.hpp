@@ -1,5 +1,5 @@
 #pragma once
-#include <SDL3/SDL.h>
+#include "mirevent.hpp"
 #include "process.hpp"
 #include "textboard.hpp"
 #include "imageboard.hpp"
@@ -38,5 +38,5 @@ class ProcessSync: public Process
     public:
         void draw() const override;
         void update(double) override;
-        void processEvent(const SDL_Event &) override;
+        void processEvent(const MirEvent &) override;
 };

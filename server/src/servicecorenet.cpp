@@ -82,7 +82,7 @@ corof::awaitable<> ServiceCore::net_CM_QUERYCHAR(uint32_t channID, uint8_t, cons
     SMQueryCharOK smQCOK;
     std::memset(&smQCOK, 0, sizeof(smQCOK));
 
-    smQCOK.name.assign((std::string)(queryChar.getColumn("fld_name")));
+    smQCOK.name.assign(queryChar.getColumn("fld_name").getString());
     smQCOK.gender = queryChar.getColumn("fld_gender");
     smQCOK.job = queryChar.getColumn("fld_job");
     smQCOK.exp = queryChar.getColumn("fld_exp");

@@ -1,7 +1,7 @@
-#include "sdldevice.hpp"
+#include "gldevice.hpp"
 #include "valueselector.hpp"
 
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ValueSelector::ValueSelector(ValueSelector::InitArgs args)
     : Widget
@@ -104,7 +104,7 @@ ValueSelector::ValueSelector(ValueSelector::InitArgs args)
 
           .drawFunc = [](const Widget *self, int dstDrawX, int dstDrawY)
           {
-              g_sdlDevice->drawRectangle(colorf::GREY_A255, dstDrawX, dstDrawY, self->w(), self->h());
+              g_glDevice->drawRectangle(colorf::GREY_A255, dstDrawX, dstDrawY, self->w(), self->h());
           },
 
           .parent{this},

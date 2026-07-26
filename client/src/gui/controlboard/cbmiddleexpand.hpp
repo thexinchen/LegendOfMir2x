@@ -73,7 +73,7 @@ class CBMiddleExpand: public Widget
                 bool     = false);
 
     public:
-        bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap);
+        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap);
 
     private:
         int getLogWindowWidth () const { return w() - m_bgImgFull.w() + LOG_WINDOW_WIDTH_ORIG ; }

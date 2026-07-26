@@ -25,7 +25,7 @@ struct MapRecord
     const char8_t *name = nullptr;
     const std::optional<uint32_t> bgmID {};
     const std::optional<uint32_t> miniMapID {};
-    const std::initializer_list<MapSwitch> mapSwitchList {};
+    const std::initializer_list<MapSwitch> mapSwitchList;
 
     operator bool () const
     {

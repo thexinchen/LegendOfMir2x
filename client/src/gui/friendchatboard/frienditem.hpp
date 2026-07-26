@@ -47,7 +47,7 @@ struct FriendItem: public Widget
             const SDChatPeerID &,
 
             const char8_t *,
-            std::function<SDL_Texture *(const Widget *)>,
+            std::function<GLTexID (const Widget *)>,
 
             std::function<void(FriendItem *)> = nullptr,
             std::pair<Widget *, bool> argFuncWidget = {},
@@ -56,5 +56,5 @@ struct FriendItem: public Widget
             bool     = false);
 
     void setFuncWidget(Widget *, bool);
-    bool processEventDefault(const SDL_Event &, bool, Widget::ROIMap) override;
+    bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 };

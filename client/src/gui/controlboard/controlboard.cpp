@@ -7,15 +7,15 @@
 
 extern Log *g_mir2xLog;
 extern Client *g_client;
-extern SDLDevice *g_sdlDevice;
+extern GLDevice *g_glDevice;
 
 ControlBoard::ControlBoard(ProcessRun *argProc, Widget *argParent, bool argAutoDelete)
     : Widget
       {{
           .dir = DIR_DOWNLEFT,
 
-          .y = [this]{ return g_sdlDevice->getRendererHeight() - 1; },
-          .w = [this]{ return g_sdlDevice->getRendererWidth ()    ; },
+          .y = [this]{ return g_glDevice->getRendererHeight() - 1; },
+          .w = [this]{ return g_glDevice->getRendererWidth ()    ; },
           .h = [this]
           {
               if(m_minimize){

@@ -16,7 +16,7 @@ extern ServerArgParser *g_serverArgParser;
 ServerObject::LuaThreadRunner::LuaThreadRunner(ServerObject *serverObject)
     : ServerLuaCoroutineRunner(serverObject->m_actorPod)
 {
-    bindCoop("_RSVD_NAME_queryQuestUID", [thisptr = this](this auto, LuaCoopResumer onDone, std::string questName) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_queryQuestUID", [thisptr = this](LuaCoopResumer onDone, std::string questName) -> corof::awaitable<>
     {
         bool closed = false;
         onDone.pushOnClose([&closed](){ closed = true; });
@@ -51,7 +51,7 @@ ServerObject::LuaThreadRunner::LuaThreadRunner(ServerObject *serverObject)
         }
     });
 
-    bindCoop("_RSVD_NAME_queryQuestUIDList", [thisptr = this](this auto, LuaCoopResumer onDone) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_queryQuestUIDList", [thisptr = this](LuaCoopResumer onDone) -> corof::awaitable<>
     {
         bool closed = false;
         onDone.pushOnClose([&closed](){ closed = true; });
@@ -78,7 +78,7 @@ ServerObject::LuaThreadRunner::LuaThreadRunner(ServerObject *serverObject)
         }
     });
 
-    bindCoop("_RSVD_NAME_loadMap", [thisptr = this](this auto, LuaCoopResumer onDone, sol::object mapName) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_loadMap", [thisptr = this](LuaCoopResumer onDone, sol::object mapName) -> corof::awaitable<>
     {
         const auto mapID = [&mapName]() -> uint32_t
         {
@@ -118,7 +118,7 @@ ServerObject::LuaThreadRunner::LuaThreadRunner(ServerObject *serverObject)
         }
     });
 
-    bindCoop("_RSVD_NAME_waitActivated", [thisptr = this](this auto, LuaCoopResumer onDone) -> corof::awaitable<>
+    bindCoop("_RSVD_NAME_waitActivated", [thisptr = this](LuaCoopResumer onDone) -> corof::awaitable<>
     {
         bool closed = false;
         onDone.pushOnClose([&closed](){ closed = true; });
@@ -135,7 +135,7 @@ ServerObject::LuaThreadRunner::LuaThreadRunner(ServerObject *serverObject)
 
     constexpr static unsigned char luaScript []
     {
-        #embed "serverobject.lua" suffix(,)
+        #include "serverobject_lua.hpp"
         '\0'
     };
     pfrCheck(execRawString(to_rawcstr(luaScript)));
