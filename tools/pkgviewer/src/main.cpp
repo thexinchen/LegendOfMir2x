@@ -1,34 +1,23 @@
-#include <string>
 #include <iostream>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "mainwindow.hpp"
-#include "previewwindow.hpp"
-#include "wilimagepackage.hpp"
-#include "progressbarwindow.hpp"
 
-std::string          g_fileFullName;
-WilImagePackage     *g_wilPackage;
-MainWindow          *g_mainWindow;
-PreviewWindow       *g_previewWindow;
-ProgressBarWindow   *g_progressBarWindow;
-
+#ifdef _WIN32
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+#else
 int main()
+#endif
 {
-    g_fileFullName      = "";
-    g_wilPackage        = nullptr;
-    g_mainWindow        = nullptr;
-    g_previewWindow     = nullptr;
-    g_progressBarWindow = nullptr;
-
-    Fl::visual(FL_RGB | FL_ALPHA);
-
-    g_progressBarWindow = new ProgressBarWindow();
-    g_previewWindow     = new PreviewWindow();
-    g_mainWindow        = new MainWindow();
-
-    g_previewWindow->hide();
-    g_progressBarWindow->hideAll();
-
-    g_mainWindow->showAll();
-    return Fl::run();
+    try{
+        MainWindow app;
+        return app.run();
+    }
+    catch(const std::exception &e){
+        std::cerr << "pkgviewer: " << e.what() << std::endl;
+        return 1;
+    }
 }

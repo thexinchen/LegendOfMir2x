@@ -2,12 +2,12 @@
 #include "hexstr.hpp"
 #include "magicframedb.hpp"
 
-std::tuple<Fl_Image *, int, int> MagicFrameDB::retrieve(uint32_t texID)
+std::tuple<ImGuiTexture *, int, int> MagicFrameDB::retrieve(uint32_t texID)
 {
     if(auto p = m_cachedFrameList.find(texID); p != m_cachedFrameList.end()){
         return
         {
-            p->second.image.get(),
+            &p->second.image,
             p->second.dx,
             p->second.dy,
         };
@@ -35,7 +35,7 @@ std::tuple<Fl_Image *, int, int> MagicFrameDB::retrieve(uint32_t texID)
         cachedPNGFrame.dx *= to_d(hexstr::to_hex<uint32_t, 2>(dbFileName + 10));
         cachedPNGFrame.dy *= to_d(hexstr::to_hex<uint32_t, 2>(dbFileName + 14));
 
-        cachedPNGFrame.image = std::make_unique<Fl_PNG_Image>(nullptr, pngBuf.data(), pngBuf.size());
+        cachedPNGFrame.image.loadPNG(pngBuf.data(), pngBuf.size());
     }
 
     // alwasy put this into the image db
@@ -44,7 +44,7 @@ std::tuple<Fl_Image *, int, int> MagicFrameDB::retrieve(uint32_t texID)
     auto result = m_cachedFrameList.emplace(texID, std::move(cachedPNGFrame));
     return
     {
-        result.first->second.image.get(),
+        &result.first->second.image,
         result.first->second.dx,
         result.first->second.dy,
     };

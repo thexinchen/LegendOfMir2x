@@ -1,37 +1,24 @@
 #pragma once
 #include <vector>
-#include <memory>
 #include <cstdint>
-#include <optional>
-#include <FL/Fl_Image.H>
-#include <FL/Fl_Double_Window.H>
+#include "imguihelper.hpp"
 
-class PreviewWindow: public Fl_Double_Window
+class MainWindow;
+
+class PreviewWindow
 {
-    private:
-        std::vector<uint32_t> m_imageBuf;
-
-    private:
-        std::optional<uint32_t> m_imageIndex;
-
-    private:
-        int m_imageOffX = 0;
-        int m_imageOffY = 0;
-        std::unique_ptr<Fl_Image> m_image;
-
+    MainWindow *m_owner = nullptr;
+    std::vector<uint32_t> m_imageBuf;
+    ImGuiTexture m_texture;
+    uint32_t m_imageIndex = 0;
+    int m_imageOffX = 0;
+    int m_imageOffY = 0;
+    bool m_open = false;
+    bool m_resizeRequested = false;
     public:
-        PreviewWindow()
-            : Fl_Double_Window(0, 0, 10, 10)
-            , m_imageIndex(0)
-        {}
-
-    public:
-        ~PreviewWindow() = default;
-
-    public:
-        void draw() override;
-
-    public:
+        explicit PreviewWindow(MainWindow *owner): m_owner(owner) {}
+        void draw();
         bool loadImage();
-        void autoResize();
+        void show() { m_open = true; }
+        void hide() { m_open = false; }
 };

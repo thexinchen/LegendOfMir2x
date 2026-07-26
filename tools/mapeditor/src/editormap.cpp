@@ -4,8 +4,6 @@
 #include <cstring>
 #include <algorithm>
 #include <functional>
-#include <FL/fl_ask.H>
-
 #include "imgf.hpp"
 #include "filesys.hpp"
 #include "imagemapdb.hpp"
@@ -14,7 +12,7 @@
 #include "mathf.hpp"
 #include "editormap.hpp"
 #include "mainwindow.hpp"
-#include "progressbarwindow.hpp"
+#include "layerbrowserwindow.hpp"
 
 extern ImageMapDB *g_imageMapDB;
 extern LayerBrowserWindow *g_layerBrowserWindow;
