@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <filesystem>
 #include <stdexcept>
 #include <vector>
 
@@ -94,6 +95,18 @@ namespace
             }
         }
         return dst;
+    }
+
+    std::string parentPath(const std::string &path)
+    {
+        const std::u8string utf8Path(
+            reinterpret_cast<const char8_t *>(path.data()),
+            reinterpret_cast<const char8_t *>(path.data() + path.size()));
+        const auto parent = std::filesystem::path(utf8Path).parent_path().generic_u8string();
+        return {
+            reinterpret_cast<const char *>(parent.data()),
+            parent.size(),
+        };
     }
 }
 
@@ -672,10 +685,11 @@ void MainWindow::requestLoad(PendingLoad load)
 
 void MainWindow::beginPendingLoad()
 {
+    const auto mapPath = parentPath(m_wilPath);
     switch(m_pendingLoad){
         case PendingLoad::Layer:
         case PendingLoad::Mir2Map:
-            m_mapDialog.open("Select .map file", ".", ImGuiFileDialog::Mode::File, ".map");
+            m_mapDialog.open("Select .map file", mapPath.c_str(), ImGuiFileDialog::Mode::File, ".map");
             break;
         case PendingLoad::Mir2xMapData:
             m_mapDataDialog.open("Set Map File Path...", ".", ImGuiFileDialog::Mode::Directory);
