@@ -213,19 +213,25 @@ void MainWindow::drawEditor()
         const bool mapLoaded = g_editorMap.valid();
         const float scrollbar = mapLoaded ? ImGui::GetFrameHeight() : 0.0f;
         const float statusHeight = ImGui::GetFrameHeightWithSpacing();
-        const ImVec2 canvasSize(std::max(1.0f, available.x - scrollbar), std::max(1.0f, available.y - scrollbar - statusHeight));
+        const ImVec2 canvasSize(std::max(1.0f, available.x), std::max(1.0f, available.y - statusHeight));
         m_editorCanvasSize = canvasSize;
         const auto canvasPos = ImGui::GetCursorScreenPos();
         renderEditorCanvas(canvasPos, canvasSize);
 
         if(mapLoaded){
-            ImGui::SetCursorScreenPos(ImVec2(canvasPos.x + canvasSize.x, canvasPos.y));
-            ImGui::VSliderFloat("##MapVScroll", ImVec2(scrollbar, canvasSize.y), &m_scrollY, 0.0f, 1.0f, "");
-            ImGui::SetCursorScreenPos(ImVec2(canvasPos.x, canvasPos.y + canvasSize.y));
-            ImGui::SetNextItemWidth(canvasSize.x);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg,        ImVec4(0.08f, 0.10f, 0.12f, 0.35f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.12f, 0.15f, 0.18f, 0.55f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgActive,  ImVec4(0.16f, 0.19f, 0.22f, 0.70f));
+            ImGui::PushStyleColor(ImGuiCol_SliderGrab,     ImVec4(0.72f, 0.76f, 0.80f, 0.60f));
+            ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.88f, 0.91f, 0.94f, 0.85f));
+            ImGui::SetCursorScreenPos(ImVec2(canvasPos.x + canvasSize.x - scrollbar, canvasPos.y));
+            ImGui::VSliderFloat("##MapVScroll", ImVec2(scrollbar, canvasSize.y - scrollbar), &m_scrollY, 0.0f, 1.0f, "");
+            ImGui::SetCursorScreenPos(ImVec2(canvasPos.x, canvasPos.y + canvasSize.y - scrollbar));
+            ImGui::SetNextItemWidth(canvasSize.x - scrollbar);
             ImGui::SliderFloat("##MapHScroll", &m_scrollX, 0.0f, 1.0f, "");
+            ImGui::PopStyleColor(5);
         }
-        const float statusY = canvasPos.y + canvasSize.y + scrollbar;
+        const float statusY = canvasPos.y + canvasSize.y;
         ImGui::SetCursorScreenPos(ImVec2(canvasPos.x, statusY + (statusHeight - ImGui::GetTextLineHeight()) / 2));
         ImGui::TextUnformatted(m_status.c_str());
     }
@@ -473,8 +479,12 @@ void MainWindow::renderEditorCanvas(const ImVec2 &canvasPos, const ImVec2 &canva
     if(m_clearBackground){
         drawList->AddRectFilled(canvasPos, canvasMax, IM_COL32_BLACK);
     }
+    const float inputInset = g_editorMap.valid() ? ImGui::GetFrameHeight() : 0.0f;
+    const ImVec2 inputSize(
+        std::max(1.0f, canvasSize.x - inputInset),
+        std::max(1.0f, canvasSize.y - inputInset));
     ImGui::SetCursorScreenPos(canvasPos);
-    ImGui::InvisibleButton("EditorCanvas", canvasSize,
+    ImGui::InvisibleButton("EditorCanvas", inputSize,
         ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
 
     if(!g_editorMap.valid()){
@@ -593,11 +603,11 @@ void MainWindow::renderEditorCanvas(const ImVec2 &canvasPos, const ImVec2 &canva
     }
     drawList->PopClipRect();
 
-    drawList->AddRectFilled(canvasPos, ImVec2(canvasPos.x + 250, canvasPos.y + 110), IM_COL32(0, 0, 0, 192));
+    drawList->AddRectFilled(canvasPos, ImVec2(canvasPos.x + 250, canvasPos.y + 150), IM_COL32(24, 27, 31, 112));
     const auto mouse = ImGui::GetIO().MousePos;
     const int mousePX = std::max(0, static_cast<int>(mouse.x - canvasPos.x + offsetX));
     const int mousePY = std::max(0, static_cast<int>(mouse.y - canvasPos.y + offsetY));
-    drawList->AddText(ImVec2(canvasPos.x + 10, canvasPos.y + 10), IM_COL32(255, 0, 0, 255),
+    drawList->AddText(ImVec2(canvasPos.x + 10, canvasPos.y + 10), IM_COL32(210, 215, 220, 210),
         str_printf("OffsetX: %d %d\nOffsetY: %d %d\nMouseGX: %d %d\nMouseGY: %d %d",
             to_d(offsetX) / SYS_MAPGRIDXP, to_d(offsetX), to_d(offsetY) / SYS_MAPGRIDYP, to_d(offsetY),
             mousePX / SYS_MAPGRIDXP, mousePX, mousePY / SYS_MAPGRIDYP, mousePY).c_str());
