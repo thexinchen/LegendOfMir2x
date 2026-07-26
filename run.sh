@@ -44,7 +44,7 @@ fi
 
 cd "${run_dir}"
 ./server --auto-launch &
-sleep 1
+sleep 3
 
 if [[ "${auto}" == true ]]; then
     ./client --server-ip=localhost --auto-login=test:123456

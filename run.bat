@@ -42,7 +42,7 @@ if not exist "%RUN_DIR%\client.exe" (
 )
 
 start "mir2x server" /D "%RUN_DIR%" "%RUN_DIR%\server.exe" --auto-launch
-timeout /t 1 /nobreak >nul
+timeout /t 3 /nobreak >nul
 
 pushd "%RUN_DIR%"
 if defined AUTO (
