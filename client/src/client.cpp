@@ -13,16 +13,10 @@
 #include "gldevice.hpp"
 #include "servermsg.hpp"
 #include "processrun.hpp"
-#include "processlogo.hpp"
-#include "processsync.hpp"
-#include "processselectchar.hpp"
-#include "processcreatechar.hpp"
-#include "processcreateaccount.hpp"
-#include "processchangepassword.hpp"
+#include "Login.hpp"
 #include "gui_texture.hpp"
 #include "messagestackboard.hpp"
 #include "buildconfig.hpp"
-#include "processlogin.hpp"
 #include "clientargparser.hpp"
 
 extern Log *g_mir2xLog;
