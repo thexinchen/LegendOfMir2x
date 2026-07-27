@@ -1,5 +1,5 @@
 #include <cinttypes>
-#include <vector>
+#include "inplace_vector.hpp"
 #include "uidf.hpp"
 #include "totype.hpp"
 #include "mathf.hpp"
@@ -149,7 +149,7 @@ void CharObject::foreachInViewCO(std::function<void(const COLocation &)> fnOnLoc
     // updateInViewCO() may get called in fnOnLoc
     // it may change m_inViewCOList
 
-    std::vector<COLocation> coLocList;
+    std::inplace_vector<COLocation, 128> coLocList;
     for(const auto &[_, coLoc]: m_inViewCOList){
         if(coLocList.size() == coLocList.capacity()){
             break;

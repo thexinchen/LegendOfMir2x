@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -205,6 +207,27 @@ class MainWindow final: public ImGuiApp
             bool attempted = false;
         };
 
+        struct OverviewImage
+        {
+            std::vector<uint32_t> pixels;
+            int width = 0;
+            int height = 0;
+        };
+
+        struct OverviewBuild
+        {
+            std::vector<uint32_t> pixels;
+            std::unordered_map<uint64_t, OverviewImage> imageCache;
+            std::unordered_map<uint32_t, std::pair<int, int>> sourceSizes;
+            size_t nextCell = 0;
+            size_t totalCells = 0;
+            int width = 0;
+            int height = 0;
+            float scaleX = 1.0f;
+            float scaleY = 1.0f;
+            bool active = false;
+        };
+
         enum class PendingLoad
         {
             None,
@@ -214,6 +237,8 @@ class MainWindow final: public ImGuiApp
         };
 
         std::unordered_map<uint32_t, CachedImage> m_imageCache;
+        GLTexture m_overviewTexture;
+        OverviewBuild m_overviewBuild;
         std::unique_ptr<ImageMapDB> m_imageMapDB;
         LayerBrowserWindow m_layerBrowser;
         AttributeSelector m_attributeSelect;
@@ -229,6 +254,9 @@ class MainWindow final: public ImGuiApp
 
         float m_scrollX = 0.0f;
         float m_scrollY = 0.0f;
+        ImVec2 m_editorCanvasSize = {};
+        ImVec2 m_overviewDragOffset = {};
+        bool m_overviewOpen = false;
         bool m_showAbout = false;
         bool m_confirmQuit = false;
 
@@ -278,6 +306,7 @@ class MainWindow final: public ImGuiApp
     private:
         void drawMenu();
         void drawEditor();
+        void drawOverview();
         void drawDialogs();
         void drawModals();
         void renderEditorCanvas(const ImVec2 &, const ImVec2 &);
@@ -285,6 +314,9 @@ class MainWindow final: public ImGuiApp
         void addSelection(int, int, float, float, float, float);
         CachedImage *retrieveImage(uint32_t);
         void clearImageCache() { m_imageCache.clear(); }
+        void startOverviewBuild();
+        void updateOverviewBuild();
+        void blendOverviewImage(uint32_t, int, int, bool);
 
         void requestLoad(PendingLoad);
         void beginPendingLoad();

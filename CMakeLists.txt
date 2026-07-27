@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 4.2.3)
 
+# conan install . -s compiler.cppstd=23 -s build_type=Debug/Release --build=missing
+# cmake --preset conan-default -DMIR2X_RES_REPO_PATH="../mir2x_res"
+# cmake --list-presets=all
+# cmake --build --preset conan-debug/release
+# cmake --build --preset conan-debug/release --target zsdbdeploy
+
 project(mir2x LANGUAGES C CXX)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 set(${PROJECT_NAME}_MAJOR_VERSION 0)
 set(${PROJECT_NAME}_MINOR_VERSION 1)
@@ -30,6 +37,7 @@ endif()
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_SKIP_RPATH TRUE)
+set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL TRUE)
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)

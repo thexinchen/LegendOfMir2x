@@ -1,11 +1,14 @@
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <filesystem>
 #include <stdexcept>
 #include <vector>
 
 #include <imgui.h>
 
 #include "filesys.hpp"
+#include "colorf.hpp"
 #include "imgf.hpp"
 #include "raiitimer.hpp"
 #include "strf.hpp"
@@ -50,6 +53,59 @@ namespace
             std::max(0, static_cast<int>(offsetY) / SYS_MAPGRIDYP - 2),
             std::min(to_d(map.w()), static_cast<int>(offsetX + size.x) / SYS_MAPGRIDXP + 3),
             std::min(to_d(map.h()), static_cast<int>(offsetY + size.y) / SYS_MAPGRIDYP + 8),
+        };
+    }
+
+    std::vector<uint32_t> scaleImage(const uint32_t *src, int srcW, int srcH, int dstW, int dstH)
+    {
+        std::vector<uint32_t> dst(to_uz(dstW) * dstH);
+        for(int y = 0; y < dstH; ++y){
+            const double srcY0 = to_df(y) * srcH / dstH;
+            const double srcY1 = to_df(y + 1) * srcH / dstH;
+            for(int x = 0; x < dstW; ++x){
+                const double srcX0 = to_df(x) * srcW / dstW;
+                const double srcX1 = to_df(x + 1) * srcW / dstW;
+                double sumR = 0.0;
+                double sumG = 0.0;
+                double sumB = 0.0;
+                double sumA = 0.0;
+                double sumWeight = 0.0;
+                for(int srcY = to_d(std::floor(srcY0)); srcY < to_d(std::ceil(srcY1)); ++srcY){
+                    const double weightY = std::min(srcY1, to_df(srcY + 1)) - std::max(srcY0, to_df(srcY));
+                    for(int srcX = to_d(std::floor(srcX0)); srcX < to_d(std::ceil(srcX1)); ++srcX){
+                        const double weightX = std::min(srcX1, to_df(srcX + 1)) - std::max(srcX0, to_df(srcX));
+                        const double weight = weightX * weightY;
+                        const uint32_t pixel = src[to_uz(srcY) * srcW + srcX];
+                        const double alpha = colorf::A(pixel) / 255.0;
+                        sumR += colorf::R(pixel) * alpha * weight;
+                        sumG += colorf::G(pixel) * alpha * weight;
+                        sumB += colorf::B(pixel) * alpha * weight;
+                        sumA += alpha * weight;
+                        sumWeight += weight;
+                    }
+                }
+                const auto alpha = colorf::round255(sumA * 255.0 / sumWeight);
+                dst[to_uz(y) * dstW + x] = sumA > 0.0
+                    ? colorf::RGBA(
+                        colorf::round255(sumR / sumA),
+                        colorf::round255(sumG / sumA),
+                        colorf::round255(sumB / sumA),
+                        alpha)
+                    : 0;
+            }
+        }
+        return dst;
+    }
+
+    std::string parentPath(const std::string &path)
+    {
+        const std::u8string utf8Path(
+            reinterpret_cast<const char8_t *>(path.data()),
+            reinterpret_cast<const char8_t *>(path.data() + path.size()));
+        const auto parent = std::filesystem::path(utf8Path).parent_path().generic_u8string();
+        return {
+            reinterpret_cast<const char *>(parent.data()),
+            parent.size(),
         };
     }
 }
@@ -129,11 +185,13 @@ bool MainWindow::onCloseRequested()
 void MainWindow::update(double delta)
 {
     m_aniTimer.update(to_u32(std::lround(delta * 1000.0)));
+    updateOverviewBuild();
 }
 
 void MainWindow::draw()
 {
     drawEditor();
+    drawOverview();
     drawDialogs();
     m_attributeSelect.draw("Attribute Select");
     m_attributeGrid.draw("Attribute Grid");
@@ -155,18 +213,25 @@ void MainWindow::drawEditor()
         const bool mapLoaded = g_editorMap.valid();
         const float scrollbar = mapLoaded ? ImGui::GetFrameHeight() : 0.0f;
         const float statusHeight = ImGui::GetFrameHeightWithSpacing();
-        const ImVec2 canvasSize(std::max(1.0f, available.x - scrollbar), std::max(1.0f, available.y - scrollbar - statusHeight));
+        const ImVec2 canvasSize(std::max(1.0f, available.x), std::max(1.0f, available.y - statusHeight));
+        m_editorCanvasSize = canvasSize;
         const auto canvasPos = ImGui::GetCursorScreenPos();
         renderEditorCanvas(canvasPos, canvasSize);
 
         if(mapLoaded){
-            ImGui::SetCursorScreenPos(ImVec2(canvasPos.x + canvasSize.x, canvasPos.y));
-            ImGui::VSliderFloat("##MapVScroll", ImVec2(scrollbar, canvasSize.y), &m_scrollY, 0.0f, 1.0f, "");
-            ImGui::SetCursorScreenPos(ImVec2(canvasPos.x, canvasPos.y + canvasSize.y));
-            ImGui::SetNextItemWidth(canvasSize.x);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg,        ImVec4(0.08f, 0.10f, 0.12f, 0.35f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.12f, 0.15f, 0.18f, 0.55f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgActive,  ImVec4(0.16f, 0.19f, 0.22f, 0.70f));
+            ImGui::PushStyleColor(ImGuiCol_SliderGrab,     ImVec4(0.72f, 0.76f, 0.80f, 0.60f));
+            ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.88f, 0.91f, 0.94f, 0.85f));
+            ImGui::SetCursorScreenPos(ImVec2(canvasPos.x + canvasSize.x - scrollbar, canvasPos.y));
+            ImGui::VSliderFloat("##MapVScroll", ImVec2(scrollbar, canvasSize.y - scrollbar), &m_scrollY, 0.0f, 1.0f, "");
+            ImGui::SetCursorScreenPos(ImVec2(canvasPos.x, canvasPos.y + canvasSize.y - scrollbar));
+            ImGui::SetNextItemWidth(canvasSize.x - scrollbar);
             ImGui::SliderFloat("##MapHScroll", &m_scrollX, 0.0f, 1.0f, "");
+            ImGui::PopStyleColor(5);
         }
-        const float statusY = canvasPos.y + canvasSize.y + scrollbar;
+        const float statusY = canvasPos.y + canvasSize.y;
         ImGui::SetCursorScreenPos(ImVec2(canvasPos.x, statusY + (statusHeight - ImGui::GetTextLineHeight()) / 2));
         ImGui::TextUnformatted(m_status.c_str());
     }
@@ -216,6 +281,8 @@ void MainWindow::drawMenu()
         ImGui::EndMenu();
     }
     if(ImGui::BeginMenu("Show")){
+        ImGui::MenuItem("Overview", nullptr, &m_overviewOpen);
+        ImGui::Separator();
         ImGui::MenuItem("Light", nullptr, &m_showLight);
         ImGui::Separator();
         ImGui::MenuItem("Tile", nullptr, &m_showTile);
@@ -289,6 +356,101 @@ void MainWindow::drawMenu()
     ImGui::EndMenuBar();
 }
 
+void MainWindow::drawOverview()
+{
+    if(!m_overviewOpen){
+        return;
+    }
+    const auto *viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowSize(ImVec2(380.0f, 300.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(
+        ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - 10.0f, viewport->WorkPos.y + 10.0f),
+        ImGuiCond_FirstUseEver,
+        ImVec2(1.0f, 0.0f));
+    if(ImGui::Begin("Overview###MapOverviewV2", &m_overviewOpen)){
+        const auto windowPos = ImGui::GetWindowPos();
+        const auto windowSize = ImGui::GetWindowSize();
+        const ImVec2 clampedPos(
+            std::clamp(
+                windowPos.x,
+                viewport->WorkPos.x,
+                std::max(viewport->WorkPos.x, viewport->WorkPos.x + viewport->WorkSize.x - windowSize.x)),
+            std::clamp(
+                windowPos.y,
+                viewport->WorkPos.y,
+                std::max(viewport->WorkPos.y, viewport->WorkPos.y + viewport->WorkSize.y - windowSize.y)));
+        if(clampedPos.x != windowPos.x || clampedPos.y != windowPos.y){
+            ImGui::SetWindowPos(clampedPos);
+        }
+        if(m_overviewBuild.active){
+            const float progress = m_overviewBuild.totalCells
+                ? to_f(m_overviewBuild.nextCell) / m_overviewBuild.totalCells
+                : 0.0f;
+            ImGui::TextUnformatted("Generating overview...");
+            ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f));
+            ImGui::End();
+            return;
+        }
+        if(!g_editorMap.valid() || !m_overviewTexture.valid()){
+            ImGui::TextUnformatted("No map overview available");
+            ImGui::End();
+            return;
+        }
+
+        const auto available = ImGui::GetContentRegionAvail();
+        const float fitScale = std::min(available.x / m_overviewTexture.width(), available.y / m_overviewTexture.height());
+        const ImVec2 imageSize(
+            std::max(1.0f, m_overviewTexture.width() * fitScale),
+            std::max(1.0f, m_overviewTexture.height() * fitScale));
+        const auto cursor = ImGui::GetCursorScreenPos();
+        const ImVec2 imagePos(
+            cursor.x + std::max(0.0f, (available.x - imageSize.x) * 0.5f),
+            cursor.y + std::max(0.0f, (available.y - imageSize.y) * 0.5f));
+
+        ImGui::SetCursorScreenPos(imagePos);
+        ImGui::InvisibleButton("OverviewCanvas", imageSize, ImGuiButtonFlags_MouseButtonLeft);
+
+        const float mapWidth = to_f(g_editorMap.w()) * SYS_MAPGRIDXP;
+        const float mapHeight = to_f(g_editorMap.h()) * SYS_MAPGRIDYP;
+        const float viewRatioX = std::min(1.0f, m_editorCanvasSize.x / mapWidth);
+        const float viewRatioY = std::min(1.0f, m_editorCanvasSize.y / mapHeight);
+        const ImVec2 rectSize(
+            std::min(imageSize.x, std::max(2.0f, imageSize.x * viewRatioX)),
+            std::min(imageSize.y, std::max(2.0f, imageSize.y * viewRatioY)));
+        const float travelX = std::max(0.0f, imageSize.x - rectSize.x);
+        const float travelY = std::max(0.0f, imageSize.y - rectSize.y);
+        ImVec2 rectMin(imagePos.x + m_scrollX * travelX, imagePos.y + m_scrollY * travelY);
+
+        const auto mouse = ImGui::GetIO().MousePos;
+        if(ImGui::IsItemActivated()){
+            const bool inside = mouse.x >= rectMin.x && mouse.x <= rectMin.x + rectSize.x
+                && mouse.y >= rectMin.y && mouse.y <= rectMin.y + rectSize.y;
+            m_overviewDragOffset = inside
+                ? ImVec2(mouse.x - rectMin.x, mouse.y - rectMin.y)
+                : ImVec2(rectSize.x * 0.5f, rectSize.y * 0.5f);
+        }
+        if(ImGui::IsItemActive()){
+            m_scrollX = travelX > 0.0f
+                ? std::clamp((mouse.x - m_overviewDragOffset.x - imagePos.x) / travelX, 0.0f, 1.0f)
+                : 0.0f;
+            m_scrollY = travelY > 0.0f
+                ? std::clamp((mouse.y - m_overviewDragOffset.y - imagePos.y) / travelY, 0.0f, 1.0f)
+                : 0.0f;
+            rectMin = ImVec2(imagePos.x + m_scrollX * travelX, imagePos.y + m_scrollY * travelY);
+        }
+        if(ImGui::IsItemHovered() || ImGui::IsItemActive()){
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        }
+
+        auto *drawList = ImGui::GetWindowDrawList();
+        drawList->AddImage(m_overviewTexture.id(), imagePos, ImVec2(imagePos.x + imageSize.x, imagePos.y + imageSize.y));
+        const ImVec2 rectMax(rectMin.x + rectSize.x, rectMin.y + rectSize.y);
+        drawList->AddRectFilled(rectMin, rectMax, IM_COL32(255, 80, 40, 35));
+        drawList->AddRect(rectMin, rectMax, IM_COL32(255, 80, 40, 255), 0.0f, 0, 2.0f);
+    }
+    ImGui::End();
+}
+
 MainWindow::CachedImage *MainWindow::retrieveImage(uint32_t texID)
 {
     auto &image = m_imageCache.try_emplace(texID).first->second;
@@ -317,8 +479,12 @@ void MainWindow::renderEditorCanvas(const ImVec2 &canvasPos, const ImVec2 &canva
     if(m_clearBackground){
         drawList->AddRectFilled(canvasPos, canvasMax, IM_COL32_BLACK);
     }
+    const float inputInset = g_editorMap.valid() ? ImGui::GetFrameHeight() : 0.0f;
+    const ImVec2 inputSize(
+        std::max(1.0f, canvasSize.x - inputInset),
+        std::max(1.0f, canvasSize.y - inputInset));
     ImGui::SetCursorScreenPos(canvasPos);
-    ImGui::InvisibleButton("EditorCanvas", canvasSize,
+    ImGui::InvisibleButton("EditorCanvas", inputSize,
         ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
 
     if(!g_editorMap.valid()){
@@ -437,11 +603,11 @@ void MainWindow::renderEditorCanvas(const ImVec2 &canvasPos, const ImVec2 &canva
     }
     drawList->PopClipRect();
 
-    drawList->AddRectFilled(canvasPos, ImVec2(canvasPos.x + 250, canvasPos.y + 110), IM_COL32(0, 0, 0, 192));
+    drawList->AddRectFilled(canvasPos, ImVec2(canvasPos.x + 250, canvasPos.y + 150), IM_COL32(24, 27, 31, 112));
     const auto mouse = ImGui::GetIO().MousePos;
     const int mousePX = std::max(0, static_cast<int>(mouse.x - canvasPos.x + offsetX));
     const int mousePY = std::max(0, static_cast<int>(mouse.y - canvasPos.y + offsetY));
-    drawList->AddText(ImVec2(canvasPos.x + 10, canvasPos.y + 10), IM_COL32(255, 0, 0, 255),
+    drawList->AddText(ImVec2(canvasPos.x + 10, canvasPos.y + 10), IM_COL32(210, 215, 220, 210),
         str_printf("OffsetX: %d %d\nOffsetY: %d %d\nMouseGX: %d %d\nMouseGY: %d %d",
             to_d(offsetX) / SYS_MAPGRIDXP, to_d(offsetX), to_d(offsetY) / SYS_MAPGRIDYP, to_d(offsetY),
             mousePX / SYS_MAPGRIDXP, mousePX, mousePY / SYS_MAPGRIDYP, mousePY).c_str());
@@ -529,10 +695,11 @@ void MainWindow::requestLoad(PendingLoad load)
 
 void MainWindow::beginPendingLoad()
 {
+    const auto mapPath = parentPath(m_wilPath);
     switch(m_pendingLoad){
         case PendingLoad::Layer:
         case PendingLoad::Mir2Map:
-            m_mapDialog.open("Select .map file", ".", ImGuiFileDialog::Mode::File, ".map");
+            m_mapDialog.open("Select .map file", mapPath.c_str(), ImGuiFileDialog::Mode::File, ".map");
             break;
         case PendingLoad::Mir2xMapData:
             m_mapDataDialog.open("Set Map File Path...", ".", ImGuiFileDialog::Mode::Directory);
@@ -602,7 +769,134 @@ void MainWindow::afterLoadMap(const std::string &status)
     m_scrollX = m_scrollY = 0.0f;
     m_status = status;
     clearImageCache();
+    startOverviewBuild();
+    m_overviewOpen = true;
     m_pendingLoad = PendingLoad::None;
+}
+
+void MainWindow::startOverviewBuild()
+{
+    m_overviewTexture.clear();
+    m_overviewBuild = {};
+    if(!g_editorMap.valid() || !m_imageMapDB){
+        return;
+    }
+
+    constexpr float maxOverviewSize = 1024.0f;
+    const float mapWidth = to_f(g_editorMap.w()) * SYS_MAPGRIDXP;
+    const float mapHeight = to_f(g_editorMap.h()) * SYS_MAPGRIDYP;
+    const float scale = std::min({1.0f, maxOverviewSize / mapWidth, maxOverviewSize / mapHeight});
+    m_overviewBuild.width = std::max(1, to_d(std::lround(mapWidth * scale)));
+    m_overviewBuild.height = std::max(1, to_d(std::lround(mapHeight * scale)));
+    m_overviewBuild.scaleX = m_overviewBuild.width / mapWidth;
+    m_overviewBuild.scaleY = m_overviewBuild.height / mapHeight;
+    m_overviewBuild.totalCells = g_editorMap.w() * g_editorMap.h() * 5;
+    m_overviewBuild.pixels.assign(
+        to_uz(m_overviewBuild.width) * m_overviewBuild.height,
+        colorf::BLACK_A255);
+    m_overviewBuild.active = true;
+}
+
+void MainWindow::updateOverviewBuild()
+{
+    if(!m_overviewBuild.active){
+        return;
+    }
+
+    constexpr auto frameBudget = std::chrono::milliseconds(4);
+    const auto deadline = std::chrono::steady_clock::now() + frameBudget;
+    const size_t mapW = g_editorMap.w();
+    const size_t mapH = g_editorMap.h();
+    const size_t mapCells = mapW * mapH;
+    constexpr int depths[] = {OBJD_GROUND, OBJD_OVERGROUND0, OBJD_OVERGROUND1, OBJD_SKY};
+
+    do{
+        const size_t index = m_overviewBuild.nextCell++;
+        const size_t phase = index / mapCells;
+        const size_t cellIndex = index % mapCells;
+        const int x = to_d(cellIndex % mapW);
+        const int y = to_d(cellIndex / mapW);
+        if(phase == 0){
+            const auto &tile = g_editorMap.tile(x, y);
+            if(!(x % 2) && !(y % 2) && tile.valid){
+                blendOverviewImage(tile.texID, x, y, false);
+            }
+        }
+        else{
+            for(const auto &obj: g_editorMap.cell(x, y).obj){
+                if(obj.valid && obj.depth == depths[phase - 1]){
+                    blendOverviewImage(obj.texID, x, y, true);
+                }
+            }
+        }
+    }while(m_overviewBuild.nextCell < m_overviewBuild.totalCells
+        && std::chrono::steady_clock::now() < deadline);
+
+    if(m_overviewBuild.nextCell >= m_overviewBuild.totalCells){
+        m_overviewTexture.loadRGBA(
+            m_overviewBuild.pixels.data(),
+            m_overviewBuild.width,
+            m_overviewBuild.height);
+        glBindTexture(GL_TEXTURE_2D, m_overviewTexture.id());
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        m_overviewBuild.pixels.clear();
+        m_overviewBuild.imageCache.clear();
+        m_overviewBuild.sourceSizes.clear();
+        m_overviewBuild.active = false;
+    }
+}
+
+void MainWindow::blendOverviewImage(uint32_t texID, int x, int y, bool object)
+{
+    try{
+        auto [sizeIt, sizeInserted] = m_overviewBuild.sourceSizes.try_emplace(texID);
+        if(sizeInserted){
+            if(const auto *imageInfo = m_imageMapDB->setIndex(texID)){
+                sizeIt->second = {to_d(imageInfo->width), to_d(imageInfo->height)};
+            }
+        }
+        const auto [srcW, srcH] = sizeIt->second;
+        if(srcW <= 0 || srcH <= 0){
+            return;
+        }
+        const int worldX = x * SYS_MAPGRIDXP;
+        const int worldY = y * SYS_MAPGRIDYP + (object ? SYS_MAPGRIDYP - srcH : 0);
+        const int dstX0 = to_d(std::lround(worldX * m_overviewBuild.scaleX));
+        const int dstY0 = to_d(std::lround(worldY * m_overviewBuild.scaleY));
+        const int dstX1 = to_d(std::lround((worldX + srcW) * m_overviewBuild.scaleX));
+        const int dstY1 = to_d(std::lround((worldY + srcH) * m_overviewBuild.scaleY));
+        const int dstW = dstX1 - dstX0;
+        const int dstH = dstY1 - dstY0;
+        if(dstW <= 0 || dstH <= 0){
+            return;
+        }
+
+        const uint64_t cacheKey = (to_u64(texID) << 32) | (to_u64(dstW) << 16) | to_u64(dstH);
+        auto [it, inserted] = m_overviewBuild.imageCache.try_emplace(cacheKey);
+        auto &image = it->second;
+        if(inserted){
+            if(const auto [src, decodedW, decodedH] = m_imageMapDB->decode(texID, true); src){
+                image.width = dstW;
+                image.height = dstH;
+                image.pixels = scaleImage(src, to_d(decodedW), to_d(decodedH), dstW, dstH);
+            }
+        }
+        if(image.pixels.empty()){
+            return;
+        }
+        imgf::blendImageBuffer(
+            m_overviewBuild.pixels.data(),
+            m_overviewBuild.width,
+            m_overviewBuild.height,
+            image.pixels.data(),
+            image.width,
+            image.height,
+            dstX0,
+            dstY0);
+    }
+    catch(...){
+    }
 }
 
 void MainWindow::makeWorkingFolder()

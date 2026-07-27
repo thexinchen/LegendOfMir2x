@@ -1,4 +1,8 @@
 build
+build-conan*
+build_vs2016
+build_conan
+CMakeUserPresets.json
 vcpkg
 .vcpkg
 __pycache__

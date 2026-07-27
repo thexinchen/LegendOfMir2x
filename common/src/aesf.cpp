@@ -6,6 +6,9 @@
 #include "totype.hpp"
 #include "fflerror.hpp"
 
+#undef ECB
+#undef CTR
+#undef CBC
 #define ECB 0
 #define CTR 0
 #define CBC 1

@@ -56,73 +56,46 @@ An IME for SDL fullscreen mode:
 
 ### Building from source
 
-mir2x uses vcpkg manifest mode for third-party dependencies on 64-bit native Linux and 64-bit MSYS2 UCRT64/MinGW. The helper script clones and bootstraps a local vcpkg checkout in the current working directory, configures the CMake build, builds, and installs.
+mir2x uses Conan 2 for third-party dependencies and CMake 4.2.3 or newer
+for the project build. A compiler with C++23 support is required.
 
-
-#### Linux (Ubuntu 26.04)
-
-mir2x is built with GCC 16:
+Detect a Conan profile once:
 
 ```sh
-sudo apt update
-sudo apt install -y \
-    autoconf autoconf-archive automake \
-    build-essential cmake curl \
-    g++-16 gcc-16 gawk gettext git libtool ninja-build pkg-config \
-    python3 tar unzip \
-    libgl1-mesa-dev libglu1-mesa-dev \
-    libice-dev libltdl-dev libsm-dev \
-    libx11-dev libxcursor-dev libxext-dev libxfixes-dev \
-    libxft-dev libxinerama-dev libxrender-dev \
-    libasound2-dev libdbus-1-dev libibus-1.0-dev libpulse-dev libudev-dev \
-    libxi-dev libxkbcommon-dev libxrandr-dev libxss-dev libxtst-dev
+conan profile detect
 ```
 
-Then clone and build:
+Install the Conan dependency graph:
 
 ```sh
-git clone https://github.com/etorth/mir2x.git
-mkdir b_mir2x && cd b_mir2x
-python3 /path/to/mir2x/build.py --c-compiler=gcc-16 --cxx-compiler=g++-16 --parallel=10
+conan install . --output-folder=build_conan \
+    -s:h build_type=Release -s:h compiler.cppstd=23 \
+    -c "tools.cmake:configure_args=['-DCMAKE_POLICY_VERSION_MINIMUM=3.5']" \
+    --build=missing
 ```
 
-#### Windows (MSYS2 UCRT64)
-
-Install [MSYS2](https://www.msys2.org/), then from a UCRT64 shell install the toolchain:
+The policy setting lets CMake 4 build older upstream packages such as g3log;
+it does not change mir2x policies. Configure and build in `build_conan`:
 
 ```sh
-pacman -S --needed \
-    mingw-w64-ucrt-x86_64-toolchain \
-    mingw-w64-ucrt-x86_64-git \
-    mingw-w64-ucrt-x86_64-cmake \
-    mingw-w64-ucrt-x86_64-ninja \
-    mingw-w64-ucrt-x86_64-pkgconf \
-    mingw-w64-ucrt-x86_64-python
+cmake -S . -B build_conan \
+    -DCMAKE_TOOLCHAIN_FILE=build_conan/build/generators/conan_toolchain.cmake
+cmake --build build_conan --config Release
 ```
 
-Then clone and build from the same UCRT64 shell; the helper selects the `x64-mingw-static` vcpkg triplet by default:
+For Debug builds, replace `Release` with `Debug` in the Conan command and CMake
+build command.
 
-```sh
-git clone https://github.com/etorth/mir2x.git
-make b_mir2x && cd b_mir2x
-python3 /path/to/mir2x/build.py --build-dir=/path/to/b_mir2x --parallel=10
-```
+The ImGui core, miniaudio and sol2 come from ConanCenter. The ImGui
+GLFW/OpenGL3 backends are compiled from the sources exported by the Conan
+package; `GLTexture.hpp` and `ImGuiFileDialog.hpp` are project extension
+headers in `3rdparty`.
 
-#### Helper script options
+On Linux, install the OpenGL, X11, audio, D-Bus and input development packages
+required by GLFW and miniaudio before running Conan. Set
+`MIR2X_RES_REPO_PATH` at CMake configure time when packaging client/server
+resources from an existing `mir2x_res` checkout.
 
-Builds are incremental by default: rerunning the same command keeps `<build-dir>/build`, including CMake object files, `vcpkg_installed`, and the default resource clone. Use `--fresh` only when you want a real clean build: it deletes `<build-dir>/build`, including `vcpkg_installed` and `<build-dir>/build/assets/mir2x_res`, so vcpkg dependencies are reinstalled/rebuilt and default resources are cloned again.
-
-Install-time client/server resource packing always runs. If `--res-path` is omitted, the CMake build clones `https://github.com/etorth/mir2x_res.git` to `<build-dir>/build/assets/mir2x_res` during the build stage. To use an existing resource checkout, pass:
-
-```sh
-/path/to/mir2x/build.py [options] --res-path=/path/to/mir2x_res
-```
-
-Other useful options:
-
-- `--c-compiler=<cc> --cxx-compiler=<cxx>` selects a compiler for both vcpkg ports and mir2x targets (enables `VCPKG_CHAINLOAD_TOOLCHAIN_FILE` internally).
-- `--parallel=<N>` controls build parallelism.
-- `--verbose` shows detailed CMake/vcpkg command output.
 ### First time run
 To start the monoserver, find a linux machine to host the server, I tried to host it on ```Oracle Cloud Infrastructure```, it works perfectly with the ```always-free``` plan. Click menu server/launch to start the service before start client:
 

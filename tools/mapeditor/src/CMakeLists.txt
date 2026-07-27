@@ -11,6 +11,6 @@ endif()
 target_include_directories(mapeditor PRIVATE ${MIR2X_COMMON_SOURCE_DIR})
 target_include_directories(mapeditor PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
-target_link_libraries(mapeditor PRIVATE common imgui stb)
+target_link_libraries(mapeditor PRIVATE common imgui::imgui stb::stb)
 
 install(TARGETS mapeditor DESTINATION tools/mapeditor)
