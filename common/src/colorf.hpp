@@ -3,8 +3,11 @@
 #include <cstdint>
 #include <algorithm>
 
-// this header may be included in fltk widget code
-// fltk includes windows.h when compiling under windows, windows.h has a macro defined: RGB
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+// windows.h defines RGB as a macro.
 #undef RGB
 
 // MirColor replaces SDL_Color; kept here so common code has no SDL dependency.
