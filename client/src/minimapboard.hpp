@@ -1,10 +1,6 @@
 #pragma once
-#include "widget.hpp"
-#include "imageboard.hpp"
-#include "itemflex.hpp"
-#include "tritexbutton.hpp"
-#include "marginwrapper.hpp"
-#include "gfxshapeboard.hpp"
+#include "gui_core.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessRun;
 class MiniMapBoard: public Widget

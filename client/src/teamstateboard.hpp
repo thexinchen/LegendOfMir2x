@@ -1,11 +1,10 @@
 #pragma once
 #include <deque>
 #include "mathf.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "sysconst.hpp"
-#include "labelboard.hpp"
+#include "gui_widgets.hpp"
 #include "protocoldef.hpp"
-#include "tritexbutton.hpp"
 
 class ProcessRun;
 class TeamStateBoard: public Widget

@@ -7,12 +7,8 @@
 
 #pragma once
 #include <string>
-#include "widget.hpp"
-#include "texslider.hpp"
-#include "labelboard.hpp"
-#include "textboard.hpp"
-#include "wmdaniboard.hpp"
-#include "tritexbutton.hpp"
+#include "gui_core.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessRun;
 class InventoryBoard: public Widget

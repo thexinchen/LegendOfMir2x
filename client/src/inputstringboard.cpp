@@ -1,8 +1,8 @@
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "colorf.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
-#include "gui/controlboard/controlboard.hpp"
+#include "gui/controlboard.hpp"
 #include "inputstringboard.hpp"
 
 extern PNGTexDB *g_progUseDB;

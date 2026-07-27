@@ -1,6 +1,6 @@
 #include "pathf.hpp"
 #include "gldevice.hpp"
-#include "pngtexoffdb.hpp"
+#include "gui_texture.hpp"
 #include "fixedlocmagic.hpp"
 
 extern GLDevice *g_glDevice;

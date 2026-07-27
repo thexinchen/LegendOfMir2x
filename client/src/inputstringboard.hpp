@@ -1,12 +1,9 @@
 #pragma once
 #include <vector>
 #include <cstdint>
-#include "widget.hpp"
-#include "imageboard.hpp"
-#include "passwordbox.hpp"
+#include "gui_core.hpp"
+#include "gui_widgets.hpp"
 #include "layoutboard.hpp"
-#include "tritexbutton.hpp"
-#include "gfxshapeboard.hpp"
 
 class InputStringBoard: public Widget
 {

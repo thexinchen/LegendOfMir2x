@@ -3,7 +3,7 @@
 #include "pathf.hpp"
 #include "colorf.hpp"
 #include "gldevice.hpp"
-#include "pngtexoffdb.hpp"
+#include "gui_texture.hpp"
 #include "motioneffect.hpp"
 #include "clientcreature.hpp"
 

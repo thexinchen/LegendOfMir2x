@@ -1,5 +1,5 @@
 #include "luaf.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "soundeffectdb.hpp"
 #include "processrun.hpp"

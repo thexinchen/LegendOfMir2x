@@ -1,11 +1,9 @@
 #include <cstdint>
 #include <chrono>
-#include "widget.hpp"
-#include "imageboard.hpp"
+#include "gui_core.hpp"
+#include "gui_widgets.hpp"
 #include "layoutboard.hpp"
-#include "gfxcropboard.hpp"
-#include "gfxresizeboard.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "layoutboard.hpp"
 #include "modalstringboard.hpp"

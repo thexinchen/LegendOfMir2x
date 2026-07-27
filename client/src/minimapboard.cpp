@@ -1,11 +1,10 @@
 #include <array>
 #include "maprecord.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
-#include "textboard.hpp"
+#include "gui_widgets.hpp"
 #include "minimapboard.hpp"
-#include "marginwrapper.hpp"
 
 extern PNGTexDB *g_progUseDB;
 extern GLDevice *g_glDevice;

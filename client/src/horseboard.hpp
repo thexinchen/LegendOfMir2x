@@ -1,10 +1,7 @@
 #pragma once
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "serdesmsg.hpp"
-#include "texslider.hpp"
-#include "imageboard.hpp"
-#include "tritexbutton.hpp"
-#include "gfxshapeboard.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessRun;
 class HorseBoard: public Widget

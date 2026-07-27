@@ -2,7 +2,7 @@
 #include <memory>
 #include <chrono>
 #include "mirevent.hpp"
-#include "glfont.hpp"
+#include "gui_font.hpp"
 
 #include "log.hpp"
 #include "strf.hpp"
@@ -10,14 +10,14 @@
 #include "rawbuf.hpp"
 #include "bevent.hpp"
 #include "initview.hpp"
-#include "fontexdb.hpp"
-#include "pngtexdb.hpp"
+#include "gui_font.hpp"
+#include "gui_texture.hpp"
 #include "mapbindb.hpp"
 #include "threadpool.hpp"
-#include "emojidb.hpp"
+#include "gui_texture.hpp"
 #include "bgmusicdb.hpp"
 #include "soundeffectdb.hpp"
-#include "pngtexoffdb.hpp"
+#include "gui_texture.hpp"
 #include "clientargparser.hpp"
 
 extern Log *g_mir2xLog;

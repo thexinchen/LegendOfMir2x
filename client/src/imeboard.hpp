@@ -4,10 +4,8 @@
 #include <cstdint>
 #include "colorf.hpp"
 #include "ime.hpp"
-#include "widget.hpp"
-#include "labelboard.hpp"
-#include "imageboard.hpp"
-#include "gfxresizeboard.hpp"
+#include "gui_core.hpp"
+#include "gui_widgets.hpp"
 
 class IMEBoard: public Widget
 {

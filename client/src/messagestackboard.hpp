@@ -2,11 +2,10 @@
 #include <deque>
 #include <memory>
 #include <string>
-#include "itemflex.hpp"
+#include "gui_widgets.hpp"
 #include "lalign.hpp"
-#include "marginwrapper.hpp"
 #include "raiitimer.hpp"
-#include "xmltypeset.hpp"
+#include "gui_textengine.hpp"
 
 class MessageStackBoard: public Widget
 {

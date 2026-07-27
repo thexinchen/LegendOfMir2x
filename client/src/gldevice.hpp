@@ -26,14 +26,14 @@
 
 #include "mirevent.hpp"
 
-#include "gltex.hpp"
-#include "glfont.hpp"
+#include "gui_texture.hpp"
 #include "totype.hpp"
 #include "protocoldef.hpp"
 #include "fflerror.hpp"
 #include "fpsmonitor.hpp"
 
 struct GLFWwindow;
+struct GLSurface;
 class GLDevice;
 
 namespace GLDeviceHelper
