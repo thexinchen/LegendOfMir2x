@@ -5,7 +5,7 @@
 #include <memory>
 #include <functional>
 #include <unordered_map>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "xmltypeset.hpp"
 #include "gfxshapeboard.hpp"
 

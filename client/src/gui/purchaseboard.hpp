@@ -3,7 +3,7 @@
 // ===== merged from purchaseboard/purchaseboard.hpp =====
 #include <vector>
 #include <cstdint>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "serdesmsg.hpp"
 #include "texslider.hpp"
 #include "tritexbutton.hpp"

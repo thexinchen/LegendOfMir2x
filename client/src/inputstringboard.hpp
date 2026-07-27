@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <cstdint>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 #include "passwordbox.hpp"
 #include "layoutboard.hpp"

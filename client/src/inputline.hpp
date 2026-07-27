@@ -1,7 +1,7 @@
 #pragma once
 #include <functional>
 #include "colorf.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "xmltypeset.hpp"
 #include "ime.hpp"
 

@@ -3,7 +3,7 @@
 #include "utf8f.hpp"
 #include "pathf.hpp"
 #include "totype.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 
 WidgetTreeNode::WidgetTreeNode(WidgetTreeNode::WADPair argParent, WidgetTreeNode::BaseAttrs argAttrs)
     : m_id([]

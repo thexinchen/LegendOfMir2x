@@ -2,7 +2,7 @@
 #include <utility>
 #include <initializer_list>
 #include <concepts>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "itemalign.hpp"
 
 class ItemFlex: public Widget

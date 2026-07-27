@@ -1,6 +1,6 @@
 #pragma once
 #include <functional>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "inputline.hpp"
 #include "labelboard.hpp"
 #include "texinputbackground.hpp"

@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <optional>
 #include <algorithm>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "itemlistboard.hpp"
 
 class SecuredItemListBoard: public ItemListBoard

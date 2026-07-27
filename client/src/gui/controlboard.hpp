@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include "serdesmsg.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 #include "gfxcropboard.hpp"
 #include "gfxshapeboard.hpp"
@@ -59,7 +59,7 @@ class CBFace: public Widget
 // ===== merged from controlboard/cbleft.hpp =====
 #include <cstdint>
 #include <functional>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "textboard.hpp"
 #include "imageboard.hpp"
 #include "tritexbutton.hpp"
@@ -131,7 +131,7 @@ class CBLeft: public Widget
 };
 
 // ===== merged from controlboard/cblevel.hpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "trigfxbutton.hpp"
 
 class ProcessRun;
@@ -160,7 +160,7 @@ class CBLevel: public TrigfxButton
 #include <cstdint>
 #include <functional>
 
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "acbutton.hpp"
 #include "texslider.hpp"
 #include "layoutboard.hpp"
@@ -248,7 +248,7 @@ class CBMiddle: public Widget
 };
 
 // ===== merged from controlboard/cbmiddleexpand.hpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "gfxshapeboard.hpp"
 #include "gfxcropboard.hpp"
 #include "imageboard.hpp"
@@ -337,7 +337,7 @@ class CBMiddleExpand: public Widget
 // ===== merged from controlboard/cbright.hpp =====
 #include <cstdint>
 #include <functional>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "acbutton.hpp"
 #include "textboard.hpp"
 #include "imageboard.hpp"
@@ -393,7 +393,7 @@ class CBRight: public Widget
 };
 
 // ===== merged from controlboard/cbtitle.hpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 #include "texaniboard.hpp"
 
@@ -435,7 +435,7 @@ class CBTitle: public Widget
 
 // ===== merged from controlboard/controlboard.hpp =====
 #include <string_view>
-#include "widget.hpp"
+#include "gui_core.hpp"
 
 // for texture 0X00000012 and 0X00000013
 // I split it into many parts to fix different screen size

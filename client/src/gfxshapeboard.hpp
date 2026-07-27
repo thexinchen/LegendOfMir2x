@@ -1,7 +1,7 @@
 #pragma once
 #include <optional>
 #include <functional>
-#include "widget.hpp"
+#include "gui_core.hpp"
 
 class GfxShapeBoard: public Widget
 {

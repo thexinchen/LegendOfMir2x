@@ -2,7 +2,7 @@
 #include <utility>
 #include <concepts>
 #include <initializer_list>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "itemalign.hpp"
 #include "margincontainer.hpp"
 

@@ -5,7 +5,7 @@
 #include "log.hpp"
 #include "idstrf.hpp"
 #include "client.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "pngtexdb.hpp"
 #include "gldevice.hpp"
 #include "processchangepassword.hpp"

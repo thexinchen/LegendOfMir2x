@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "gldevice.hpp"
 #include "checkbox.hpp"
 #include "labelboard.hpp"

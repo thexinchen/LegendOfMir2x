@@ -13,7 +13,7 @@
 #include <climits>
 #include "mirevent.hpp"
 #include <functional>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "bevent.hpp"
 #include "gfxshapeboard.hpp"
 #include "margincontainer.hpp"

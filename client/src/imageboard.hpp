@@ -2,7 +2,7 @@
 #include <variant>
 #include <functional>
 #include "mirevent.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "colorf.hpp"
 
 // check drawTextureEx comments for how image flip/rotation works

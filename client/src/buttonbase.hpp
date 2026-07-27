@@ -4,7 +4,7 @@
 #include <functional>
 #include "bevent.hpp"
 #include "sysconst.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "button.hpp"
 
 class ButtonBase: public Widget

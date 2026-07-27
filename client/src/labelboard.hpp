@@ -6,7 +6,7 @@
 
 #include "lalign.hpp"
 #include "colorf.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "xmltypeset.hpp"
 
 class LabelBoard: public Widget

@@ -1,6 +1,6 @@
 #pragma once
 #include <functional>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "textboard.hpp"
 
 class TextShadowBoard: public Widget

@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "itembox.hpp"
 #include "menuitem.hpp"
 

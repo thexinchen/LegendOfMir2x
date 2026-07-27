@@ -1,7 +1,7 @@
 #pragma once
 
 // ===== merged from quickaccessboard/quickaccessgrid.hpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "textboard.hpp"
 #include "imageboard.hpp"
 #include "gfxshapeboard.hpp"
@@ -34,7 +34,7 @@ struct QuickAccessGrid: public Widget
 // ===== merged from quickaccessboard/quickaccessboard.hpp =====
 #include <cstdint>
 #include <tuple>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "tritexbutton.hpp"
 #include "gfxshapeboard.hpp"
 

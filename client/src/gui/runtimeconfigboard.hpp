@@ -1,7 +1,7 @@
 #pragma once
 
 // ===== merged from runtimeconfigboard/labelsliderbar.hpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "labelboard.hpp"
 #include "gfxcropboard.hpp"
 #include "texsliderbar.hpp"
@@ -40,7 +40,7 @@ class LabelSliderBar: public Widget
 // ===== merged from runtimeconfigboard/tabheader.hpp =====
 #include <functional>
 #include <any>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "labelboard.hpp"
 #include "trigfxbutton.hpp"
 
@@ -67,7 +67,7 @@ class TabHeader: public Widget
 // ===== merged from runtimeconfigboard/menupage.hpp =====
 #include <tuple>
 #include <initializer_list>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "gfxshapeboard.hpp"
 
 class MenuPage: public Widget
@@ -98,7 +98,7 @@ class MenuPage: public Widget
 #include "mathf.hpp"
 #include "sdruntimeconfig.hpp"
 #include "layoutboard.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "menuboard.hpp"
 #include "imageboard.hpp"
 #include "gfxresizeboard.hpp"

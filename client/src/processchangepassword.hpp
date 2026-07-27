@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <optional>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "process.hpp"
 #include "raiitimer.hpp"
 #include "labelboard.hpp"

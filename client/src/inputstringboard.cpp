@@ -1,4 +1,4 @@
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "colorf.hpp"
 #include "pngtexdb.hpp"
 #include "gldevice.hpp"

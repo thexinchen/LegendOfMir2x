@@ -68,7 +68,7 @@ class SkillBoardConfig final
 #include "mathf.hpp"
 #include "raiitimer.hpp"
 #include "dbcomid.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "magicrecord.hpp"
 #include "labelboard.hpp"
 #include "imageboard.hpp"
@@ -293,7 +293,7 @@ class SkillBoard: public Widget
 
 // ===== merged from skillboard/magiciconbutton.hpp =====
 #include <cstdint>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "tritexbutton.hpp"
 
 class ProcessRun;
@@ -356,7 +356,7 @@ class MagicIconButton: public Widget
 #include <vector>
 #include <span>
 #include "processrun.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 
 class MagicIconButton;

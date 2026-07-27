@@ -33,7 +33,7 @@ enum UIPageType: int
 
 // ===== merged from friendchatboard/chatitemref.hpp =====
 #include <string>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "labelboard.hpp"
 #include "layoutboard.hpp"
 #include "trigfxbutton.hpp"
@@ -120,7 +120,7 @@ class ChatItemRef: public Widget
 #include <cstdint>
 #include <optional>
 #include <functional>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 #include "labelboard.hpp"
 #include "gfxshapeboard.hpp"
@@ -236,7 +236,7 @@ struct ChatItem: public Widget
 };
 
 // ===== merged from friendchatboard/chatinputcontainer.hpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "layoutboard.hpp"
 
 struct ChatInputContainer: public Widget
@@ -257,7 +257,7 @@ struct ChatInputContainer: public Widget
 #include <string>
 #include <unordered_map>
 #include "serdesmsg.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "itembox.hpp"
 #include "labelboard.hpp"
 #include "layoutboard.hpp"
@@ -307,7 +307,7 @@ struct ChatItemContainer: public Widget
 #include <optional>
 #include <unordered_map>
 #include "serdesmsg.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "menuboard.hpp"
 #include "gfxshapeboard.hpp"
 
@@ -398,7 +398,7 @@ struct ChatPage: public Widget
 
 // ===== merged from friendchatboard/chatpreviewitem.hpp =====
 #include "serdesmsg.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "labelboard.hpp"
 #include "layoutboard.hpp"
 #include "imageboard.hpp"
@@ -460,7 +460,7 @@ struct ChatPreviewItem: public Widget
 // ===== merged from friendchatboard/chatpreviewpage.hpp =====
 #include <string>
 #include "serdesmsg.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 
 struct ChatPreviewPage: public Widget
 {
@@ -481,7 +481,7 @@ struct ChatPreviewPage: public Widget
 // ===== merged from friendchatboard/frienditem.hpp =====
 #include <functional>
 #include "serdesmsg.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "labelboard.hpp"
 #include "layoutboard.hpp"
 #include "imageboard.hpp"
@@ -543,7 +543,7 @@ struct FriendItem: public Widget
 #include <functional>
 #include <utility>
 #include "serdesmsg.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 
 struct FriendListPage: public Widget
 {
@@ -564,7 +564,7 @@ struct FriendListPage: public Widget
 // ===== merged from friendchatboard/pagecontrol.hpp =====
 #include <utility>
 #include <initializer_list>
-#include "widget.hpp"
+#include "gui_core.hpp"
 
 struct PageControl: public Widget
 {
@@ -582,7 +582,7 @@ struct PageControl: public Widget
 };
 
 // ===== merged from friendchatboard/searchinputline.hpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "inputline.hpp"
 #include "labelboard.hpp"
 #include "layoutboard.hpp"
@@ -633,7 +633,7 @@ struct SearchInputLine: public Widget
 
 // ===== merged from friendchatboard/searchautocompletionitem.hpp =====
 #include "serdesmsg.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "labelboard.hpp"
 #include "imageboard.hpp"
 #include "gfxshapeboard.hpp"
@@ -690,7 +690,7 @@ struct SearchAutoCompletionItem: public Widget
 // ===== merged from friendchatboard/searchpage.hpp =====
 #include <string>
 #include "serdesmsg.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "layoutboard.hpp"
 
 struct SearchPage: public Widget
@@ -734,7 +734,7 @@ struct SearchPage: public Widget
 #include <optional>
 #include <unordered_map>
 #include "serdesmsg.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "texslider.hpp"
 #include "labelboard.hpp"
 #include "imageboard.hpp"

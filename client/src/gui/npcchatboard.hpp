@@ -1,7 +1,7 @@
 #pragma once
 
 // ===== merged from npcchatboard/npcchatorigframe.hpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 
 class NPCChatOrigFrame: public Widget
@@ -21,7 +21,7 @@ class NPCChatOrigFrame: public Widget
 };
 
 // ===== merged from npcchatboard/npcchatframe.hpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "gfxresizeboard.hpp"
 
 class NPCChatFrame: public Widget
@@ -48,7 +48,7 @@ class NPCChatFrame: public Widget
 // ===== merged from npcchatboard/npcchatboard.hpp =====
 #include <cstdint>
 #include "uidf.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 #include "layoutboard.hpp"
 #include "tritexbutton.hpp"

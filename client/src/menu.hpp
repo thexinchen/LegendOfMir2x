@@ -1,7 +1,7 @@
 #pragma once
 #include <utility>
 #include <functional>
-#include "widget.hpp"
+#include "gui_core.hpp"
 
 namespace Menu
 {

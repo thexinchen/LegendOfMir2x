@@ -1,5 +1,5 @@
 #pragma once
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "itemalign.hpp"
 
 class ItemPair: public Widget

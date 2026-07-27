@@ -1569,7 +1569,7 @@ CBRight::CBRight(
 {}
 
 // ===== merged from controlboard/cbtitle.cpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "pngtexdb.hpp"
 
 extern PNGTexDB *g_progUseDB;

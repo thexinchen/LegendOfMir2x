@@ -1,4 +1,4 @@
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "menubutton.hpp"
 
 MenuButton::MenuButton(MenuButton::InitArgs args)

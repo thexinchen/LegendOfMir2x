@@ -11,7 +11,7 @@
 #include "colorf.hpp"
 #include "bevent.hpp"
 #include "xmlparagraph.hpp"
-#include "widget.hpp" // Widget::VarXXX
+#include "gui_core.hpp" // Widget::VarXXX
 
 class XMLTypeset // means XMLParagraph typeset
 {

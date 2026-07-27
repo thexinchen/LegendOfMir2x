@@ -7,7 +7,7 @@
 
 #pragma once
 #include <string>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "texslider.hpp"
 #include "labelboard.hpp"
 #include "textboard.hpp"

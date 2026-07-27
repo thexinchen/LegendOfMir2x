@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 #include "trigfxbutton.hpp"
 

@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "texslider.hpp"
 #include "imageboard.hpp"
 #include "gfxdupboard.hpp"

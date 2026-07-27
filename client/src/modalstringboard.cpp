@@ -1,6 +1,6 @@
 #include <cstdint>
 #include <chrono>
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 #include "layoutboard.hpp"
 #include "gfxcropboard.hpp"

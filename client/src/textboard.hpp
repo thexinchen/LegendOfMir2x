@@ -6,7 +6,7 @@
 #include "mirevent.hpp"
 
 #include "colorf.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 
 class TextBoard: public Widget

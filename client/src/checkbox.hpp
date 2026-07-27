@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "gldevice.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 #include "gfxshapeboard.hpp"
 

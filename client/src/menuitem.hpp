@@ -1,6 +1,6 @@
 #pragma once
 #include "menu.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "itempair.hpp"
 #include "trigfxbutton.hpp"
 #include "marginwrapper.hpp"

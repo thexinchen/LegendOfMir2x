@@ -2,7 +2,7 @@
 #include <cstdint>
 #include "mirevent.hpp"
 #include "totype.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "sliderbase.hpp"
 #include "imageboard.hpp"
 

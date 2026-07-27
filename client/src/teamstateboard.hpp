@@ -1,7 +1,7 @@
 #pragma once
 #include <deque>
 #include "mathf.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "sysconst.hpp"
 #include "labelboard.hpp"
 #include "protocoldef.hpp"

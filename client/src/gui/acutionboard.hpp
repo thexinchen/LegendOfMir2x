@@ -1,7 +1,7 @@
 #pragma once
 
 // ===== merged from acutionboard/acutionboard.hpp =====
-#include "widget.hpp"
+#include "gui_core.hpp"
 #include "imageboard.hpp"
 
 class ProcessRun;

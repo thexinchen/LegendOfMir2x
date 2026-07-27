@@ -106,7 +106,7 @@ QuickAccessGrid::QuickAccessGrid(
 #include "sysconst.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
-#include "widget.hpp"
+#include "gui_core.hpp"
 
 extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;
