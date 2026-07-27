@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include "gui_core.hpp"
 #include "xmltypeset.hpp"
-#include "gfxshapeboard.hpp"
+#include "gui_widgets.hpp"
 
 class LayoutBoard: public Widget
 {

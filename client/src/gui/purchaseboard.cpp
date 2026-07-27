@@ -6,7 +6,7 @@
 #include "pngtexdb.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
-#include "textboard.hpp"
+#include "gui_widgets.hpp"
 #include "inputstringboard.hpp"
 
 extern Client *g_client;

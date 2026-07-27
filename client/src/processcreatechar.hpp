@@ -3,11 +3,8 @@
 #include <optional>
 #include "process.hpp"
 #include "raiitimer.hpp"
-#include "labelboard.hpp"
-#include "inputline.hpp"
+#include "gui_widgets.hpp"
 #include "messagestackboard.hpp"
-#include "passwordbox.hpp"
-#include "tritexbutton.hpp"
 
 class ProcessCreateChar: public Process
 {

@@ -1,9 +1,7 @@
 #pragma once
 #include "gui_core.hpp"
-#include "pullmenu.hpp"
+#include "gui_widgets.hpp"
 #include "layoutboard.hpp"
-#include "gfxshapeboard.hpp"
-#include "integerselector.hpp"
 
 class ProcessRun;
 class FontSelector: public Widget

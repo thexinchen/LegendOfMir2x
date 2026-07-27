@@ -2,9 +2,7 @@
 
 // ===== merged from runtimeconfigboard/labelsliderbar.hpp =====
 #include "gui_core.hpp"
-#include "labelboard.hpp"
-#include "gfxcropboard.hpp"
-#include "texsliderbar.hpp"
+#include "gui_widgets.hpp"
 
 class LabelSliderBar: public Widget
 {
@@ -41,8 +39,6 @@ class LabelSliderBar: public Widget
 #include <functional>
 #include <any>
 #include "gui_core.hpp"
-#include "labelboard.hpp"
-#include "trigfxbutton.hpp"
 
 class TabHeader: public Widget
 {
@@ -68,7 +64,6 @@ class TabHeader: public Widget
 #include <tuple>
 #include <initializer_list>
 #include "gui_core.hpp"
-#include "gfxshapeboard.hpp"
 
 class MenuPage: public Widget
 {
@@ -99,20 +94,7 @@ class MenuPage: public Widget
 #include "sdruntimeconfig.hpp"
 #include "layoutboard.hpp"
 #include "gui_core.hpp"
-#include "menuboard.hpp"
-#include "imageboard.hpp"
-#include "gfxresizeboard.hpp"
-#include "menubutton.hpp"
-#include "checklabel.hpp"
-#include "labelboard.hpp"
-#include "texslider.hpp"
-#include "tritexbutton.hpp"
-#include "trigfxbutton.hpp"
-#include "texsliderbar.hpp"
-#include "gfxshapeboard.hpp"
 #include "baseframeboard.hpp"
-#include "textinput.hpp"
-#include "pullmenu.hpp"
 
 class ProcessRun;
 class RuntimeConfigBoard: public Widget

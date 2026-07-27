@@ -1,7 +1,7 @@
 #include "colorf.hpp"
 #include "fontexdb.hpp"
 #include "gldevice.hpp"
-#include "textboard.hpp"
+#include "gui_widgets.hpp"
 #include "fontselector.hpp"
 #include "processrun.hpp"
 

@@ -61,8 +61,7 @@ void SkillBoardConfig::setMagicKey(uint32_t magicID, std::optional<char> key)
 #include "pngtexdb.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
-#include "tritexbutton.hpp"
-#include "textshadowboard.hpp"
+#include "gui_widgets.hpp"
 
 extern PNGTexDB *g_progUseDB;
 extern GLDevice *g_glDevice;
@@ -379,7 +378,6 @@ void SkillBoard::drawTabName(Widget::ROIMap m) const
 
 // ===== merged from skillboard/magiciconbutton.cpp =====
 #include "processrun.hpp"
-#include "textboard.hpp"
 
 MagicIconButton::MagicIconButton(MagicIconButton::InitArgs args)
     : Widget

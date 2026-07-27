@@ -5,8 +5,7 @@
 #include <cstdint>
 #include "gui_core.hpp"
 #include "serdesmsg.hpp"
-#include "texslider.hpp"
-#include "tritexbutton.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessRun;
 class PurchaseBoard: public Widget

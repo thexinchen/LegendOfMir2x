@@ -1,5 +1,5 @@
 #include "colorf.hpp"
-#include "gfxshapeboard.hpp"
+#include "gui_widgets.hpp"
 
 class DirRectangle: public Widget
 {

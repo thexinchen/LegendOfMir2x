@@ -4,11 +4,8 @@
 #include "process.hpp"
 #include "raiitimer.hpp"
 #include "servermsg.hpp"
-#include "labelboard.hpp"
+#include "gui_widgets.hpp"
 #include "messagestackboard.hpp"
-#include "passwordbox.hpp"
-#include "tritexbutton.hpp"
-#include "gfxshapeboard.hpp"
 #include "inputstringboard.hpp"
 
 class ProcessSelectChar: public Process

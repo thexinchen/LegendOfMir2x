@@ -253,7 +253,7 @@ MenuPage::MenuPage(
 #include "imeboard.hpp"
 #include "pngtexdb.hpp"
 #include "gldevice.hpp"
-#include "radioselector.hpp"
+#include "gui_widgets.hpp"
 #include "soundeffectdb.hpp"
 #include "processrun.hpp"
 #include "inventoryboard.hpp"

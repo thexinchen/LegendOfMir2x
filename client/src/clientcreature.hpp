@@ -19,7 +19,7 @@
 #include "focustype.hpp"
 #include "serdesmsg.hpp"
 #include "actionnode.hpp"
-#include "labelboard.hpp"
+#include "gui_widgets.hpp"
 #include "motionnode.hpp"
 #include "protocoldef.hpp"
 #include "attachmagic.hpp"

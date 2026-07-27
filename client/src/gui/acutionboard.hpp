@@ -2,7 +2,7 @@
 
 // ===== merged from acutionboard/acutionboard.hpp =====
 #include "gui_core.hpp"
-#include "imageboard.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessRun;
 class AcutionBoard: public Widget

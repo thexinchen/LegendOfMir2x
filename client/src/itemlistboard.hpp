@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "gui_core.hpp"
-#include "tritexbutton.hpp"
+#include "gui_widgets.hpp"
 
 class ItemListBoard: public Widget
 {

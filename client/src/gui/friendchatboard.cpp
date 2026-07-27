@@ -632,7 +632,7 @@ ChatInputContainer::ChatInputContainer(
 #include "pngtexdb.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
-#include "margincontainer.hpp"
+#include "gui_widgets.hpp"
 
 extern PNGTexDB *g_progUseDB;
 extern GLDevice *g_glDevice;

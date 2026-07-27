@@ -1,8 +1,6 @@
 #pragma once
 #include "gui_core.hpp"
-#include "imageboard.hpp"
-#include "tritexbutton.hpp"
-#include "gfxresizeboard.hpp"
+#include "gui_widgets.hpp"
 
 // ProgUse 0X00000450.PNG
 // for corners are identical squares of size 58 x 58

@@ -5,9 +5,7 @@
 #include <optional>
 #include "serdesmsg.hpp"
 #include "gui_core.hpp"
-#include "imageboard.hpp"
-#include "gfxcropboard.hpp"
-#include "gfxshapeboard.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessRun;
 class CBFace: public Widget
@@ -60,10 +58,6 @@ class CBFace: public Widget
 #include <cstdint>
 #include <functional>
 #include "gui_core.hpp"
-#include "textboard.hpp"
-#include "imageboard.hpp"
-#include "tritexbutton.hpp"
-#include "gfxcropboard.hpp"
 
 class ProcessRun;
 class ControlBoard;
@@ -132,7 +126,6 @@ class CBLeft: public Widget
 
 // ===== merged from controlboard/cblevel.hpp =====
 #include "gui_core.hpp"
-#include "trigfxbutton.hpp"
 
 class ProcessRun;
 class CBLevel: public TrigfxButton
@@ -161,14 +154,7 @@ class CBLevel: public TrigfxButton
 #include <functional>
 
 #include "gui_core.hpp"
-#include "acbutton.hpp"
-#include "texslider.hpp"
 #include "layoutboard.hpp"
-#include "tritexbutton.hpp"
-#include "gfxcropboard.hpp"
-#include "alphaonbutton.hpp"
-#include "gfxshapeboard.hpp"
-#include "gfxresizeboard.hpp"
 
 class ProcessRun;
 class ControlBoard;
@@ -249,12 +235,6 @@ class CBMiddle: public Widget
 
 // ===== merged from controlboard/cbmiddleexpand.hpp =====
 #include "gui_core.hpp"
-#include "gfxshapeboard.hpp"
-#include "gfxcropboard.hpp"
-#include "imageboard.hpp"
-#include "gfxresizeboard.hpp"
-#include "tritexbutton.hpp"
-#include "texslider.hpp"
 #include "layoutboard.hpp"
 
 class ProcessRun;
@@ -338,12 +318,6 @@ class CBMiddleExpand: public Widget
 #include <cstdint>
 #include <functional>
 #include "gui_core.hpp"
-#include "acbutton.hpp"
-#include "textboard.hpp"
-#include "imageboard.hpp"
-#include "tritexbutton.hpp"
-#include "gfxcropboard.hpp"
-#include "alphaonbutton.hpp"
 
 class ProcessRun;
 class ControlBoard;
@@ -394,8 +368,6 @@ class CBRight: public Widget
 
 // ===== merged from controlboard/cbtitle.hpp =====
 #include "gui_core.hpp"
-#include "imageboard.hpp"
-#include "texaniboard.hpp"
 
 //                     |
 //                     v

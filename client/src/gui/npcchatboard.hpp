@@ -2,7 +2,7 @@
 
 // ===== merged from npcchatboard/npcchatorigframe.hpp =====
 #include "gui_core.hpp"
-#include "imageboard.hpp"
+#include "gui_widgets.hpp"
 
 class NPCChatOrigFrame: public Widget
 {
@@ -22,7 +22,6 @@ class NPCChatOrigFrame: public Widget
 
 // ===== merged from npcchatboard/npcchatframe.hpp =====
 #include "gui_core.hpp"
-#include "gfxresizeboard.hpp"
 
 class NPCChatFrame: public Widget
 {
@@ -49,9 +48,7 @@ class NPCChatFrame: public Widget
 #include <cstdint>
 #include "uidf.hpp"
 #include "gui_core.hpp"
-#include "imageboard.hpp"
 #include "layoutboard.hpp"
-#include "tritexbutton.hpp"
 
 class ProcessRun;
 class NPCChatBoard: public Widget

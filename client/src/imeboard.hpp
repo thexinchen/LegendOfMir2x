@@ -5,9 +5,7 @@
 #include "colorf.hpp"
 #include "ime.hpp"
 #include "gui_core.hpp"
-#include "labelboard.hpp"
-#include "imageboard.hpp"
-#include "gfxresizeboard.hpp"
+#include "gui_widgets.hpp"
 
 class IMEBoard: public Widget
 {

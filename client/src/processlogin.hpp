@@ -6,12 +6,8 @@
 #include "totype.hpp"
 #include "process.hpp"
 #include "message.hpp"
-#include "inputline.hpp"
-#include "textboard.hpp"
-#include "passwordbox.hpp"
+#include "gui_widgets.hpp"
 #include "messagestackboard.hpp"
-#include "tritexbutton.hpp"
-#include "gfxshapeboard.hpp"
 
 class ProcessLogin: public Process
 {

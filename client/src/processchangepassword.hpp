@@ -4,10 +4,7 @@
 #include "gui_core.hpp"
 #include "process.hpp"
 #include "raiitimer.hpp"
-#include "labelboard.hpp"
-#include "inputline.hpp"
-#include "passwordbox.hpp"
-#include "tritexbutton.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessChangePassword: public Process
 {

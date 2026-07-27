@@ -34,10 +34,8 @@ enum UIPageType: int
 // ===== merged from friendchatboard/chatitemref.hpp =====
 #include <string>
 #include "gui_core.hpp"
-#include "labelboard.hpp"
+#include "gui_widgets.hpp"
 #include "layoutboard.hpp"
-#include "trigfxbutton.hpp"
-#include "gfxshapeboard.hpp"
 
 class ChatItemRef: public Widget
 {
@@ -121,9 +119,6 @@ class ChatItemRef: public Widget
 #include <optional>
 #include <functional>
 #include "gui_core.hpp"
-#include "imageboard.hpp"
-#include "labelboard.hpp"
-#include "gfxshapeboard.hpp"
 
 //            WIDTH
 // |<----------------------->|
@@ -258,10 +253,7 @@ struct ChatInputContainer: public Widget
 #include <unordered_map>
 #include "serdesmsg.hpp"
 #include "gui_core.hpp"
-#include "itembox.hpp"
-#include "labelboard.hpp"
 #include "layoutboard.hpp"
-#include "margincontainer.hpp"
 
 struct ChatItemContainer: public Widget
 {
@@ -308,8 +300,6 @@ struct ChatItemContainer: public Widget
 #include <unordered_map>
 #include "serdesmsg.hpp"
 #include "gui_core.hpp"
-#include "menuboard.hpp"
-#include "gfxshapeboard.hpp"
 
 struct ChatPage: public Widget
 {
@@ -399,10 +389,7 @@ struct ChatPage: public Widget
 // ===== merged from friendchatboard/chatpreviewitem.hpp =====
 #include "serdesmsg.hpp"
 #include "gui_core.hpp"
-#include "labelboard.hpp"
 #include "layoutboard.hpp"
-#include "imageboard.hpp"
-#include "gfxshapeboard.hpp"
 
 struct ChatPreviewItem: public Widget
 {
@@ -482,10 +469,7 @@ struct ChatPreviewPage: public Widget
 #include <functional>
 #include "serdesmsg.hpp"
 #include "gui_core.hpp"
-#include "labelboard.hpp"
 #include "layoutboard.hpp"
-#include "imageboard.hpp"
-#include "gfxshapeboard.hpp"
 
 struct FriendItem: public Widget
 {
@@ -583,11 +567,7 @@ struct PageControl: public Widget
 
 // ===== merged from friendchatboard/searchinputline.hpp =====
 #include "gui_core.hpp"
-#include "inputline.hpp"
-#include "labelboard.hpp"
 #include "layoutboard.hpp"
-#include "imageboard.hpp"
-#include "gfxresizeboard.hpp"
 
 struct SearchInputLine: public Widget
 {
@@ -634,9 +614,6 @@ struct SearchInputLine: public Widget
 // ===== merged from friendchatboard/searchautocompletionitem.hpp =====
 #include "serdesmsg.hpp"
 #include "gui_core.hpp"
-#include "labelboard.hpp"
-#include "imageboard.hpp"
-#include "gfxshapeboard.hpp"
 
 struct SearchAutoCompletionItem: public Widget
 {
@@ -735,12 +712,6 @@ struct SearchPage: public Widget
 #include <unordered_map>
 #include "serdesmsg.hpp"
 #include "gui_core.hpp"
-#include "texslider.hpp"
-#include "labelboard.hpp"
-#include "imageboard.hpp"
-#include "tritexbutton.hpp"
-#include "gfxshapeboard.hpp"
-#include "gfxresizeboard.hpp"
 
 class ProcessRun;
 class FriendChatBoard: public Widget

@@ -2,9 +2,7 @@
 
 // ===== merged from quickaccessboard/quickaccessgrid.hpp =====
 #include "gui_core.hpp"
-#include "textboard.hpp"
-#include "imageboard.hpp"
-#include "gfxshapeboard.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessRun;
 struct QuickAccessGrid: public Widget
@@ -35,8 +33,6 @@ struct QuickAccessGrid: public Widget
 #include <cstdint>
 #include <tuple>
 #include "gui_core.hpp"
-#include "tritexbutton.hpp"
-#include "gfxshapeboard.hpp"
 
 class ProcessRun;
 class QuickAccessBoard: public Widget

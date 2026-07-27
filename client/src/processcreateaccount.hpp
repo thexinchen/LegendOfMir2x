@@ -3,10 +3,7 @@
 #include <optional>
 #include "process.hpp"
 #include "raiitimer.hpp"
-#include "labelboard.hpp"
-#include "inputline.hpp"
-#include "passwordbox.hpp"
-#include "tritexbutton.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessCreateAccount: public Process
 {

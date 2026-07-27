@@ -1,9 +1,8 @@
 #pragma once
 #include "gui_core.hpp"
 #include "sysconst.hpp"
-#include "labelboard.hpp"
+#include "gui_widgets.hpp"
 #include "protocoldef.hpp"
-#include "tritexbutton.hpp"
 
 class ProcessRun;
 class PlayerStateBoard: public Widget

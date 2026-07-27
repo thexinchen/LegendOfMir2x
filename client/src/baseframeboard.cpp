@@ -1,5 +1,5 @@
 #include "pngtexdb.hpp"
-#include "imageboard.hpp"
+#include "gui_widgets.hpp"
 #include "baseframeboard.hpp"
 
 extern PNGTexDB *g_progUseDB;

@@ -554,8 +554,7 @@ std::string CBLeft::getMapGLocStr() const
 #include "bevent.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
-#include "textboard.hpp"
-#include "imageboard.hpp"
+#include "gui_widgets.hpp"
 
 extern GLDevice *g_glDevice;
 
@@ -660,7 +659,6 @@ CBLevel::CBLevel(
 #include "totype.hpp"
 #include "pngtexdb.hpp"
 #include "gldevice.hpp"
-#include "imageboard.hpp"
 #include "processrun.hpp"
 #include "clientmonster.hpp"
 #include "teamstateboard.hpp"

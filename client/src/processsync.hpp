@@ -1,9 +1,7 @@
 #pragma once
 #include "mirevent.hpp"
 #include "process.hpp"
-#include "textboard.hpp"
-#include "imageboard.hpp"
-#include "gfxcropboard.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessSync: public Process
 {
