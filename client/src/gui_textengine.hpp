@@ -1,16 +1,357 @@
 #pragma once
-#include <climits>
-#include <tuple>
-#include <deque>
+#include "totype.hpp"
+
+// ===== token.hpp =====
+// +-------------+------(*: X, Y)
+// |             |
+// |             v
+// |           W1      W       W2
+// |     --->|   |<--------->|   |<--
+// +-------> +---*-----------+---+  --------
+//           |   |  .    .   |   |  ^    ^
+//           |   |           |   |  |    |
+//           |   |  /\_/\    |   |  |    |
+//           |   |=( 0w0 )=  |   |  | H1 | H
+//           |   |  )   (  //|   |  |    |
+//           |   | (__ __)// |   |  v    |
+//           +---+   .       +---+  -    |
+//               |    .      |        H2 v
+//               +-----------+      --------
+//                                  ^
+//                                  |
+
+#include <cstdint>
+#include <cstddef>
+
+struct TOKEN
+{
+    int leaf;
+    int selectID;
+
+    struct _TokenBox
+    {
+        struct _TokenBoxInfo
+        {
+            // general static information
+            // keep unchanged after token initialization
+
+            uint16_t w;
+            uint16_t h;
+        }info;
+
+        struct _TokenBoxState
+        {
+            // we put mutable attributes here
+            // should be valid after token board layout done
+
+            int16_t x;
+            int16_t y;
+            int16_t w1;
+            int16_t w2;
+            int16_t h1;
+            int16_t h2;
+        }state;
+    }box;
+
+    union
+    {
+        struct
+        {
+            uint64_t key;
+        }utf8char;
+
+        struct
+        {
+            uint32_t key;
+
+            uint8_t fps;
+            uint8_t frameCount;
+
+            uint8_t tick;
+            uint8_t frame;
+        }emoji;
+
+        struct
+        {
+            uint64_t key;
+        }image;
+    };
+};
+
+// ===== xmlparagraphleaf.hpp =====
+#include <cctype>
+#include <vector>
 #include <memory>
 #include <optional>
-#include "token.hpp"
-#include "lalign.hpp"
-#include "xmlf.hpp"
+#include <stdexcept>
+#include <tinyxml2.h>
+#include "strf.hpp"
 #include "fflerror.hpp"
+
+constexpr int LEAF_UTF8STR = 0;
+constexpr int LEAF_IMAGE   = 1;
+constexpr int LEAF_EMOJI   = 2;
+
+class XMLParagraphLeaf
+{
+    private:
+        friend class XMLParapragh;
+
+    private:
+        tinyxml2::XMLNode * m_node;
+
+    private:
+        int m_type;
+
+    private:
+        uint64_t m_u64Key;
+
+    private:
+        std::vector<int> m_utf8CharOff;
+        std::optional<std::unordered_map<std::string, std::string>> m_attrListOpt;
+
+    private:
+        std::optional<uint32_t> m_fontColor;
+        std::optional<uint32_t> m_fontBGColor;
+
+    private:
+        int m_event;
+
+    public:
+        explicit XMLParagraphLeaf(tinyxml2::XMLNode *);
+
+    public:
+        int type() const
+        {
+            return m_type;
+        }
+
+        tinyxml2::XMLNode *xmlNode(this auto && self)
+        {
+            return self.m_node;
+        }
+
+        auto & utf8CharOff(this auto && self)
+        {
+            if(self.type() != LEAF_UTF8STR){
+                throw fflpanic("leaf is not an utf8 string");
+            }
+
+            if(self.m_utf8CharOff.empty()){
+                throw fflpanic("utf8 token off doesn't initialized");
+            }
+
+            return self.m_utf8CharOff;
+        }
+
+        int length() const
+        {
+            if(type() == LEAF_UTF8STR){
+                return to_d(utf8CharOff().size());
+            }
+            return 1;
+        }
+
+        const char *utf8Text() const
+        {
+            if(type() != LEAF_UTF8STR){
+                return nullptr;
+            }
+            return xmlNode()->Value();
+        }
+
+        uint64_t imageU64Key() const
+        {
+            if(type() != LEAF_IMAGE){
+                throw fflpanic("leaf is not an image");
+            }
+            return m_u64Key;
+        }
+
+        uint32_t emojiU32Key() const
+        {
+            if(type() != LEAF_EMOJI){
+                throw fflpanic("leaf is not an emoji");
+            }
+            return m_u64Key;
+        }
+
+        uint32_t peekUTF8Code(int) const;
+
+    public:
+        int markEvent(int);
+
+    public:
+        std::optional<bool> wrap() const;
+
+    public:
+        std::optional<uint32_t>   color() const;
+        std::optional<uint32_t> bgColor() const;
+
+    public:
+        std::optional<uint8_t> font()      const;
+        std::optional<uint8_t> fontSize()  const;
+        std::optional<uint8_t> fontStyle() const;
+
+    public:
+        template<typename T> T *leafData() const
+        {
+            return reinterpret_cast<T *>(m_node->GetUserData());
+        }
+
+    public:
+        const std::unordered_map<std::string, std::string> *hasEvent() const
+        {
+            return m_attrListOpt.has_value() ? std::addressof(m_attrListOpt.value()) : nullptr;
+        }
+
+    public:
+        std::tuple<tinyxml2::XMLNode *, tinyxml2::XMLNode *> split(int, tinyxml2::XMLDocument &, tinyxml2::XMLDocument &);
+};
+
+// ===== xmlparagraph.hpp =====
+#include <deque>
+
+#include "xmlf.hpp"
+#include "utf8f.hpp"
+
+class XMLParagraph
+{
+    private:
+        std::unique_ptr<tinyxml2::XMLDocument> m_xmlDocument; // leaf node refers to it
+
+    private:
+        std::deque<XMLParagraphLeaf> m_leafList;
+
+    public:
+        XMLParagraph(const char *xmlString = nullptr)
+            : m_xmlDocument(std::make_unique<tinyxml2::XMLDocument>(true, tinyxml2::PEDANTIC_WHITESPACE))
+        {
+            loadXML(xmlString ? xmlString : "<par/>");
+        }
+
+    public:
+        ~XMLParagraph() = default;
+
+    public:
+        bool empty() const
+        {
+            return leafCount() == 0;
+        }
+
+    public:
+        int leafCount() const
+        {
+            return to_d(m_leafList.size());
+        }
+
+    public:
+        bool leafValid(int leafIndex) const
+        {
+            return leafIndex >= 0 && leafIndex < leafCount();
+        }
+
+    public:
+        auto & leaf(this auto && self, int leafIndex)
+        {
+            if(!self.leafValid(leafIndex)){
+                throw fflpanic("invalid leaf index: {}", leafIndex);
+            }
+            return self.m_leafList[leafIndex];
+        }
+
+    public:
+        bool leafOffValid(int leafIndex, int leafOff) const
+        {
+            if(!leafValid(leafIndex)){
+                return false;
+            }
+            return leafOff >= 0 && leafOff < leaf(leafIndex).length();
+        }
+
+    public:
+        auto & backLeaf(this auto && self)
+        {
+            if(self.m_leafList.empty()){
+                throw fflpanic("no leaf");
+            }
+            return self.m_leafList.back();
+        }
+
+    public:
+        XMLParagraph *split(int, int);
+        void join(const XMLParagraph &, bool);
+
+    public:
+        void loadXML(const char *);
+        void loadXMLNode(const tinyxml2::XMLNode *);
+
+    private:
+        size_t insertXMLAtFront(                     const char *);
+        size_t insertXMLAfter  (tinyxml2::XMLNode *, const char *);
+
+    public:
+        size_t insertLeafXML(int, const char *);
+
+    public:
+        size_t insertUTF8String(int, int, const char *);
+
+    public:
+        tinyxml2::XMLNode *CloneLeaf(tinyxml2::XMLDocument *pDoc, int leafIndex) const
+        {
+            return leaf(leafIndex).xmlNode()->DeepClone(pDoc);
+        }
+
+    public:
+        const tinyxml2::XMLNode *getXMLNode() const
+        {
+            return m_xmlDocument->RootElement();
+        }
+
+    public:
+        std::string getXML() const
+        {
+            tinyxml2::XMLPrinter printer;
+            m_xmlDocument->Accept(&printer);
+
+            std::string result = printer.CStr();
+            while(result.ends_with('\n')){
+                result.pop_back();
+            }
+            return result;
+        }
+
+    public:
+        void deleteToken(int, int, int);
+        void deleteToken(int, int);
+
+    public:
+        void deleteLeaf(int);
+        void deleteUTF8Char(int, int, int);
+
+    public:
+        std::tuple<int, int, int> prevLeafOff(int, int, int) const;
+        std::tuple<int, int, int> nextLeafOff(int, int, int) const;
+
+    public:
+        void clear()
+        {
+            loadXML("<par/>");
+        }
+
+    public:
+        std::string getRawString() const;
+
+    public:
+        size_t tokenCount() const;
+};
+
+// ===== xmltypeset.hpp =====
+#include <climits>
+#include <tuple>
+#include "lalign.hpp"
 #include "colorf.hpp"
 #include "bevent.hpp"
-#include "xmlparagraph.hpp"
 #include "gui_core.hpp" // Widget::VarXXX
 
 class XMLTypeset // means XMLParagraph typeset

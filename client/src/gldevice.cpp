@@ -23,6 +23,7 @@
 #include "colorf.hpp"
 #include "sysconst.hpp"
 #include "gldevice.hpp"
+#include "gui_font.hpp"
 #include "clientargparser.hpp"
 
 extern Log *g_mir2xLog;

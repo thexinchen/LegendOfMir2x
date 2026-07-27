@@ -1,6 +1,6 @@
 #include <array>
 #include "maprecord.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 #include "gui_widgets.hpp"

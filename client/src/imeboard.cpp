@@ -1,6 +1,6 @@
 #include <algorithm>
 #include "gldevice.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "imeboard.hpp"
 
 extern PNGTexDB *g_progUseDB;

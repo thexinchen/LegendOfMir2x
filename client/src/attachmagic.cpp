@@ -2,7 +2,7 @@
 #include "dbcomid.hpp"
 #include "gldevice.hpp"
 #include "attachmagic.hpp"
-#include "pngtexoffdb.hpp"
+#include "gui_texture.hpp"
 
 extern GLDevice *g_glDevice;
 extern PNGTexOffDB *g_magicDB;

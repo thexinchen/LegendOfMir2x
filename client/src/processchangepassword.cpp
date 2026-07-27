@@ -6,7 +6,7 @@
 #include "idstrf.hpp"
 #include "client.hpp"
 #include "gui_core.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processchangepassword.hpp"
 

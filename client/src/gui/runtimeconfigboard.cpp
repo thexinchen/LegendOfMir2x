@@ -251,13 +251,13 @@ MenuPage::MenuPage(
 #include "luaf.hpp"
 #include "client.hpp"
 #include "imeboard.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "gui_widgets.hpp"
 #include "soundeffectdb.hpp"
 #include "processrun.hpp"
 #include "inventoryboard.hpp"
-#include "fontselector.hpp"
+#include "gui_font.hpp"
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;

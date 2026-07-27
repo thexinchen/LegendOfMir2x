@@ -5,7 +5,7 @@
 #include "gui_widgets.hpp"
 #include "lalign.hpp"
 #include "raiitimer.hpp"
-#include "xmltypeset.hpp"
+#include "gui_textengine.hpp"
 
 class MessageStackBoard: public Widget
 {

@@ -1,8 +1,8 @@
 #include "log.hpp"
 #include "client.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
-#include "fontstyle.hpp"
+#include "gui_font.hpp"
 #include "processsync.hpp"
 
 extern Client *g_client;

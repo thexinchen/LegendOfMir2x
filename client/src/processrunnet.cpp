@@ -14,7 +14,7 @@
 #include "clientnpc.hpp"
 #include "uidf.hpp"
 #include "sysconst.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "raiitimer.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"

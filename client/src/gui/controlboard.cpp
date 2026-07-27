@@ -2,7 +2,7 @@
 
 // ===== merged from controlboard/cbface.cpp =====
 #include <cinttypes>
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 #include "clientmonster.hpp"
@@ -221,7 +221,7 @@ void CBFace::drawBuffIDList(int drawDstX, int drawDstY, int, int) const
 
 #include "colorf.hpp"
 #include "totype.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 
@@ -657,7 +657,7 @@ CBLevel::CBLevel(
 #include "log.hpp"
 #include "colorf.hpp"
 #include "totype.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 #include "clientmonster.hpp"
@@ -909,7 +909,7 @@ void CBMiddle::onCmdCursorMove()
 }
 
 // ===== merged from controlboard/cbmiddleexpand.cpp =====
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 
 extern PNGTexDB *g_progUseDB;
@@ -1183,7 +1183,7 @@ void CBMiddleExpand::onCmdCursorMove()
 
 #include "colorf.hpp"
 #include "totype.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 
@@ -1568,7 +1568,7 @@ CBRight::CBRight(
 
 // ===== merged from controlboard/cbtitle.cpp =====
 #include "gui_core.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 
 extern PNGTexDB *g_progUseDB;
 

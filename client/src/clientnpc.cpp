@@ -2,7 +2,7 @@
 #include "mathf.hpp"
 #include "gldevice.hpp"
 #include "clientnpc.hpp"
-#include "pngtexoffdb.hpp"
+#include "gui_texture.hpp"
 #include "clientargparser.hpp"
 
 extern GLDevice *g_glDevice;

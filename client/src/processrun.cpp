@@ -14,7 +14,7 @@
 #include "sysconst.hpp"
 #include "log.hpp"
 #include "mapbindb.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "bgmusicdb.hpp"
 #include "soundeffectdb.hpp"
 #include "gldevice.hpp"

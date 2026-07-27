@@ -1,7 +1,7 @@
 #include "acutionboard.hpp"
 
 // ===== merged from acutionboard/acutionboard.cpp =====
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "processrun.hpp"
 
 extern PNGTexDB *g_progUseDB;

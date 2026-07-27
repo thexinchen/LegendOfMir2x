@@ -3,7 +3,7 @@
 #include <algorithm>
 #include "colorf.hpp"
 #include "fflerror.hpp"
-#include "fontexdb.hpp"
+#include "gui_font.hpp"
 #include "layoutboard.hpp"
 #include "imeboard.hpp"
 #include "gldevice.hpp"
@@ -11,7 +11,7 @@
 #include "mathf.hpp"
 #include "strf.hpp"
 #include "bevent.hpp"
-#include "xmltypeset.hpp"
+#include "gui_textengine.hpp"
 #include "clientargparser.hpp"
 
 extern Log *g_mir2xLog;

@@ -1,5 +1,5 @@
 #include "gldevice.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "horseboard.hpp"
 
 extern PNGTexDB *g_progUseDB;

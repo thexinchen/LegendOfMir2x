@@ -2,7 +2,7 @@
 #include <cinttypes>
 #include "log.hpp"
 #include "colorf.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "ascendstr.hpp"
 #include "gldevice.hpp"
 #include "totype.hpp"

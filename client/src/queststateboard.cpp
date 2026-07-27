@@ -1,6 +1,6 @@
 #include <type_traits>
 #include "strf.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 #include "gui/controlboard.hpp"

@@ -7,12 +7,12 @@
 #include "mathf.hpp"
 #include "sysconst.hpp"
 #include "soundeffectdb.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 #include "motionnode.hpp"
 #include "attachmagic.hpp"
-#include "pngtexoffdb.hpp"
+#include "gui_texture.hpp"
 #include "clientargparser.hpp"
 
 extern Log *g_mir2xLog;

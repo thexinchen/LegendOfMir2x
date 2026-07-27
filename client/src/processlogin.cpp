@@ -6,7 +6,7 @@
 #include "log.hpp"
 #include "client.hpp"
 #include "message.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "bgmusicdb.hpp"
 #include "gldevice.hpp"
 #include "buildconfig.hpp"

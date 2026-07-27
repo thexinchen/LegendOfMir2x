@@ -94,7 +94,7 @@ class MenuPage: public Widget
 #include "sdruntimeconfig.hpp"
 #include "layoutboard.hpp"
 #include "gui_core.hpp"
-#include "baseframeboard.hpp"
+#include "gui_widgets.hpp"
 
 class ProcessRun;
 class RuntimeConfigBoard: public Widget

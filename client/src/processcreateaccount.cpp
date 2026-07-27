@@ -5,7 +5,7 @@
 #include "log.hpp"
 #include "idstrf.hpp"
 #include "client.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processcreateaccount.hpp"
 

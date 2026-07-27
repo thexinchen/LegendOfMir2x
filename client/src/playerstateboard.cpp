@@ -1,11 +1,11 @@
 #include <type_traits>
 #include "strf.hpp"
 #include "uidf.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "combatnode.hpp"
 #include "processrun.hpp"
-#include "pngtexoffdb.hpp"
+#include "gui_texture.hpp"
 #include "soundeffectdb.hpp"
 #include "inventoryboard.hpp"
 #include "clientargparser.hpp"

@@ -491,7 +491,7 @@ bool ChatItem::processEventDefault(const MirEvent &event, bool valid, Widget::RO
 
 // ===== merged from friendchatboard/chatinputcontainer.cpp =====
 #include "client.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 
@@ -629,7 +629,7 @@ ChatInputContainer::ChatInputContainer(
 
 // ===== merged from friendchatboard/chatitemcontainer.cpp =====
 #include "hero.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 #include "gui_widgets.hpp"
@@ -1195,7 +1195,7 @@ ChatItemRef *ChatPage::createChatItemRef(uint64_t msgID, std::string xmlStr, Wid
 
 // ===== merged from friendchatboard/chatpreviewitem.cpp =====
 #include "hero.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 
@@ -1610,7 +1610,7 @@ bool FriendItem::processEventDefault(const MirEvent &event, bool valid, Widget::
 
 // ===== merged from friendchatboard/friendlistpage.cpp =====
 #include "hero.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 
 extern PNGTexDB *g_progUseDB;
 
@@ -1726,7 +1726,7 @@ PageControl::PageControl(
 // ===== merged from friendchatboard/searchinputline.cpp =====
 #include "clientmsg.hpp"
 #include "client.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 
 extern Client *g_client;
 extern PNGTexDB *g_progUseDB;
@@ -1888,7 +1888,7 @@ SearchInputLine::SearchInputLine(Widget::VarDir argDir,
 {}
 
 // ===== merged from friendchatboard/searchautocompletionitem.cpp =====
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 
 extern PNGTexDB *g_progUseDB;
@@ -2015,7 +2015,7 @@ bool SearchAutoCompletionItem::processEventDefault(const MirEvent &event, bool v
 // ===== merged from friendchatboard/searchpage.cpp =====
 #include "hero.hpp"
 #include "client.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 
@@ -2190,7 +2190,7 @@ void SearchPage::appendAutoCompletionItem(bool byID, const SDChatPeer &candidate
 #include "gldevice.hpp"
 #include "client.hpp"
 #include "hero.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "processrun.hpp"
 
 extern Client *g_client;

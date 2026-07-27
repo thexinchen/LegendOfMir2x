@@ -6,7 +6,7 @@
 #include <functional>
 #include <unordered_map>
 #include "gui_core.hpp"
-#include "xmltypeset.hpp"
+#include "gui_textengine.hpp"
 #include "gui_widgets.hpp"
 
 class LayoutBoard: public Widget

@@ -23,7 +23,7 @@
 #include "gldevice.hpp"
 #include "processrun.hpp"
 #include "attachmagic.hpp"
-#include "pngtexoffdb.hpp"
+#include "gui_texture.hpp"
 #include "followuidmagic.hpp"
 #include "clientargparser.hpp"
 

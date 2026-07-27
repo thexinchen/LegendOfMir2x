@@ -58,7 +58,7 @@ void SkillBoardConfig::setMagicKey(uint32_t magicID, std::optional<char> key)
 
 // ===== merged from skillboard/skillboard.cpp =====
 #include "dbcomid.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 #include "gui_widgets.hpp"
@@ -482,7 +482,7 @@ bool MagicIconButton::processEventDefault(const MirEvent &event, bool valid, Wid
 
 // ===== merged from skillboard/skillpage.cpp =====
 #include "gldevice.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 
 extern PNGTexDB *g_progUseDB;
 extern GLDevice *g_glDevice;

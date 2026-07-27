@@ -1,7 +1,7 @@
 #include "npcchatboard.hpp"
 
 // ===== merged from npcchatboard/npcchatorigframe.cpp =====
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 
 extern PNGTexDB *g_progUseDB;
@@ -106,7 +106,7 @@ NPCChatFrame::NPCChatFrame(
 #include "uidf.hpp"
 #include "totype.hpp"
 #include "sysconst.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
 #include "clientargparser.hpp"

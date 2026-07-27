@@ -1,5 +1,5 @@
 #include "client.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processlogo.hpp"
 #include "clientargparser.hpp"

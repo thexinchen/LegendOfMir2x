@@ -11,7 +11,7 @@
 #include <cstring>
 #include <optional>
 
-#include "gltex.hpp"
+#include "gui_texture.hpp"
 #include <type_traits>
 #include "mirevent.hpp"
 #include "mathf.hpp"

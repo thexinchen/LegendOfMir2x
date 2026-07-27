@@ -1,7 +1,7 @@
 #include "audiodevice.hpp"
 #include "dbcomid.hpp"
 #include "invpack.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "fflerror.hpp"
 #include "gldevice.hpp"
 #include "soundeffectdb.hpp"

@@ -656,7 +656,7 @@ void InputLine::setInput(const char *utf8Str)
 // ===== labelboard.cpp =====
 #include "strf.hpp"
 #include "xmlf.hpp"
-#include "xmltypeset.hpp"
+#include "gui_textengine.hpp"
 
 LabelBoard::LabelBoard(LabelBoard::InitArgs args)
     : Widget
@@ -1104,7 +1104,7 @@ void Menu::evalClickCBFunc(const ClickCBFunc &cbFunc, Widget *widget)
 // ===== buttonbase.cpp =====
 #include "audiodevice.hpp"
 #include <functional>
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "soundeffectdb.hpp"
 
 extern GLDevice *g_glDevice;
@@ -1440,7 +1440,7 @@ const Widget *TrigfxButton::evalGfxWidgetValid() const
 }
 
 // ===== textboard.cpp =====
-#include "fontexdb.hpp"
+#include "gui_font.hpp"
 
 extern FontexDB *g_fontexDB;
 TextBoard::TextBoard(TextBoard::InitArgs args)
@@ -5092,3 +5092,73 @@ std::tuple<int, uint8_t> TexAniBoard::getDrawFrame() const
         }(),
     };
 }
+
+// ===== baseframeboard.cpp =====
+
+extern PNGTexDB *g_progUseDB;
+
+BaseFrameBoard::BaseFrameBoard(BaseFrameBoard::InitArgs args)
+    : Widget
+      {{
+          .dir = std::move(args.dir),
+
+          .x = std::move(args.x),
+          .y = std::move(args.y),
+
+          .w = [argW = std::move(args.w), this]{ return std::max<int>(Widget::evalSize(argW, this), 2 * m_cornerSize); },
+          .h = [argH = std::move(args.h), this]{ return std::max<int>(Widget::evalSize(argH, this), 2 * m_cornerSize); },
+
+          .parent = std::move(args.parent),
+      }}
+
+    , m_frame
+      {{
+          .texLoadFunc = [](const Widget *)
+          {
+              return g_progUseDB->retrieve(m_frameTexID);
+          },
+      }}
+
+    , m_frameBoard
+      {{
+          .getter = &m_frame,
+          .vr
+          {
+              m_cornerSize,
+              m_cornerSize,
+              m_frame.w() - 2 * m_cornerSize,
+              m_frame.h() - 2 * m_cornerSize,
+          },
+
+          .resize
+          {
+              [this]{ return w() - 2 * m_cornerSize; },
+              [this]{ return h() - 2 * m_cornerSize; },
+          },
+
+          .parent{this},
+      }}
+
+    , m_close
+      {{
+          .x = [this]{ return w() - 51; },
+          .y = [this]{ return h() - 53; },
+
+          .texIDList
+          {
+              .on   = 0X0000001C,
+              .down = 0X0000001D,
+          },
+
+          .onTrigger = [this](Widget *, int)
+          {
+              this->parent()->setShow(false);
+          },
+
+          .attrs
+          {
+              .moveOnFocus = false,
+          },
+          .parent{this},
+      }}
+{}

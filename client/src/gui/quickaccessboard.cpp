@@ -2,7 +2,7 @@
 
 // ===== merged from quickaccessboard/quickaccessgrid.cpp =====
 #include "gldevice.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "processrun.hpp"
 
 extern PNGTexDB *g_itemDB;
@@ -102,7 +102,7 @@ QuickAccessGrid::QuickAccessGrid(
 #include <tuple>
 #include "totype.hpp"
 #include "invpack.hpp"
-#include "pngtexdb.hpp"
+#include "gui_texture.hpp"
 #include "sysconst.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
