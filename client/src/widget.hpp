@@ -243,9 +243,281 @@ class Widget: public WidgetTreeNode
         using WidgetTreeNode::VarBlendMode;
         using WidgetTreeNode::VarTexLoadFunc;
 
-#include "widget.varstr.hpp"
-#include "widget.offset2d.hpp"
-#include "widget.size2d.hpp"
+// --- merged from widget.varstr.hpp ---
+private:
+    // don't use std::string_view, use const char *
+    // both std::string_view and std::string can be constructed from string literal
+    // which causes ambiguity if assigned from string literal
+
+    // no need to add std::nullptr_t
+    // because const char * is nullable
+
+    using VarStrHelper = std::variant<const char *, // not owning, nullable,
+                                      std::string>; //     owning
+
+public:
+    class VarStr: public VarStrHelper
+    {
+        public:
+            using VarStrHelper::VarStrHelper;
+
+        public:
+            const char *c_str() const
+            {
+                return std::visit(VarDispatcher
+                {
+                    [](const        char *varg){ return varg ? varg : ""; },
+                    [](const std::string &varg){ return varg.c_str()    ; },
+                },
+
+                *this);
+            }
+
+        public:
+            bool empty() const
+            {
+                return c_str()[0] == '\0';
+            }
+
+        public:
+            size_t size() const
+            {
+                return std::visit(VarDispatcher
+                {
+                    [](const        char *varg){ return varg ? std::strlen(varg) : 0; },
+                    [](const std::string &varg){ return varg.size()                 ; },
+                },
+
+                *this);
+            }
+
+        public:
+            std::string str() &
+            {
+                return std::string(c_str());
+            }
+
+            std::string str() &&
+            {
+                if(auto sptr = std::get_if<std::string>(this)){
+                    return std::move(*sptr);
+                }
+                else{
+                    return std::string(c_str());
+                }
+            }
+    };
+
+public:
+    using VarStrFunc = std::variant<
+
+            // no need of std::nullptr_t
+            // because const char * is nullable here
+
+            const char *,  // direct value, not owning, nullable
+            std::string,   // direct value,     owning
+
+            std::function<Widget::VarStr()>,
+            std::function<Widget::VarStr(const Widget *)>,
+            std::function<Widget::VarStr(const Widget *, const void *)>>;
+
+public:
+    static Widget::VarStr evalStrFunc(const Widget::VarStrFunc &, const Widget *, const void * = nullptr);
+
+// --- end widget.varstr.hpp ---
+// --- merged from widget.offset2d.hpp ---
+public:
+    struct IntOffset2D final
+    {
+        int x = 0;
+        int y = 0;
+    };
+
+    class VarOffset2D final
+    {
+        private:
+            std::variant<Widget::VarGetter<Widget::IntOffset2D>, std::tuple<Widget::VarInt, Widget::VarInt>> m_varOffset;
+
+        public:
+            VarOffset2D()
+                : m_varOffset(std::make_tuple(0, 0)) // prefer decoupled offset
+            {}
+
+            VarOffset2D(Widget::VarGetter<Widget::IntOffset2D> arg)
+                : m_varOffset(std::in_place_type<Widget::VarGetter<Widget::IntOffset2D>>, std::move(arg))
+            {}
+
+            VarOffset2D(Widget::VarInt arg1, Widget::VarInt arg2)
+                : m_varOffset(std::in_place_type<std::tuple<Widget::VarInt, Widget::VarInt>>, std::move(arg1), std::move(arg2))
+            {}
+
+        public:
+            int x(const Widget *widget, const void * arg = nullptr) const
+            {
+                return std::visit(VarDispatcher
+                {
+                    [widget, arg](const Widget::VarGetter<Widget::IntOffset2D> &varg)
+                    {
+                        return Widget::evalGetter<Widget::IntOffset2D>(varg, widget, arg).x;
+                    },
+
+                    [widget, arg](const std::tuple<Widget::VarInt, Widget::VarInt> &varg)
+                    {
+                        return Widget::evalInt(std::get<0>(varg), widget, arg);
+                    },
+                },
+
+                m_varOffset);
+            }
+
+            int y(const Widget *widget, const void * arg = nullptr) const
+            {
+                return std::visit(VarDispatcher
+                {
+                    [widget, arg](const Widget::VarGetter<Widget::IntOffset2D> &varg)
+                    {
+                        return Widget::evalGetter<Widget::IntOffset2D>(varg, widget, arg).y;
+                    },
+
+                    [widget, arg](const std::tuple<Widget::VarInt, Widget::VarInt> &varg)
+                    {
+                        return Widget::evalInt(std::get<1>(varg), widget, arg);
+                    },
+                },
+
+                m_varOffset);
+            }
+
+        public:
+            Widget::IntOffset2D offset(const Widget *widget, const void * arg = nullptr) const
+            {
+                return std::visit(VarDispatcher
+                {
+                    [widget, arg](const Widget::VarGetter<Widget::IntOffset2D> &varg)
+                    {
+                        return Widget::evalGetter<Widget::IntOffset2D>(varg, widget, arg);
+                    },
+
+                    [widget, arg](const std::tuple<Widget::VarInt, Widget::VarInt> &varg)
+                    {
+                        return Widget::IntOffset2D
+                        {
+                            .x = Widget::evalInt(std::get<0>(varg), widget, arg),
+                            .y = Widget::evalInt(std::get<1>(varg), widget, arg),
+                        };
+                    },
+                },
+
+                m_varOffset);
+            }
+
+        public:
+            bool combined() const
+            {
+                return std::holds_alternative<Widget::VarGetter<Widget::IntOffset2D>>(m_varOffset);
+            }
+    };
+
+// --- end widget.offset2d.hpp ---
+// --- merged from widget.size2d.hpp ---
+public:
+    struct IntSize2D final
+    {
+        int w = 0;
+        int h = 0;
+    };
+
+    class VarSize2D final
+    {
+        private:
+            std::variant<Widget::VarGetter<Widget::IntSize2D>, std::tuple<Widget::VarSize, Widget::VarSize>> m_varSize;
+
+        public:
+            VarSize2D()
+                : m_varSize(std::make_tuple(0, 0)) // prefer decoupled size
+            {}
+
+            VarSize2D(Widget::VarGetter<Widget::IntSize2D> arg)
+                : m_varSize(std::in_place_type<Widget::VarGetter<Widget::IntSize2D>>, std::move(arg))
+            {}
+
+            VarSize2D(Widget::VarSize arg1, Widget::VarSize arg2)
+                : m_varSize(std::in_place_type<std::tuple<Widget::VarSize, Widget::VarSize>>, std::move(arg1), std::move(arg2))
+            {}
+
+        public:
+            int w(const Widget *widget, const void * arg = nullptr) const
+            {
+                return std::visit(VarDispatcher
+                {
+                    [widget, arg](const Widget::VarGetter<Widget::IntSize2D> &varg)
+                    {
+                        return std::max<int>(Widget::evalGetter<Widget::IntSize2D>(varg, widget, arg).w, 0);
+                    },
+
+                    [widget, arg](const std::tuple<Widget::VarSize, Widget::VarSize> &varg)
+                    {
+                        return Widget::evalSize(std::get<0>(varg), widget, arg);
+                    },
+                },
+
+                m_varSize);
+            }
+
+            int h(const Widget *widget, const void * arg = nullptr) const
+            {
+                return std::visit(VarDispatcher
+                {
+                    [widget, arg](const Widget::VarGetter<Widget::IntSize2D> &varg)
+                    {
+                        return std::max<int>(Widget::evalGetter<Widget::IntSize2D>(varg, widget, arg).h, 0);
+                    },
+
+                    [widget, arg](const std::tuple<Widget::VarSize, Widget::VarSize> &varg)
+                    {
+                        return Widget::evalSize(std::get<1>(varg), widget, arg);
+                    },
+                },
+
+                m_varSize);
+            }
+
+        public:
+            Widget::IntSize2D size(const Widget *widget, const void * arg = nullptr) const
+            {
+                return std::visit(VarDispatcher
+                {
+                    [widget, arg](const Widget::VarGetter<Widget::IntSize2D> &varg)
+                    {
+                        const auto [w, h] = Widget::evalGetter<Widget::IntSize2D>(varg, widget, arg);
+                        return Widget::IntSize2D
+                        {
+                            .w = std::max<int>(w, 0),
+                            .h = std::max<int>(h, 0),
+                        };
+                    },
+
+                    [widget, arg](const std::tuple<Widget::VarSize, Widget::VarSize> &varg)
+                    {
+                        return Widget::IntSize2D
+                        {
+                            .w = Widget::evalSize(std::get<0>(varg), widget, arg),
+                            .h = Widget::evalSize(std::get<1>(varg), widget, arg),
+                        };
+                    },
+                },
+
+                m_varSize);
+            }
+
+        public:
+            bool combined() const
+            {
+                return std::holds_alternative<Widget::VarGetter<Widget::IntSize2D>>(m_varSize);
+            }
+    };
+
+// --- end widget.size2d.hpp ---
 
     public:
         using VarDrawFunc = std::variant<std::nullptr_t,
@@ -316,7 +588,564 @@ class Widget: public WidgetTreeNode
         };
 
     public:
-#include "widget.roi.hpp"
+// --- merged from widget.roi.hpp ---
+struct ROI final
+{
+    int x = 0;
+    int y = 0;
+    int w = 0;
+    int h = 0;
+
+    Widget::IntOffset2D offset() const noexcept
+    {
+        return {x, y};
+    }
+
+    Widget::IntSize2D size() const noexcept
+    {
+        return
+        {
+            std::max<int>(w, 0),
+            std::max<int>(h, 0),
+        };
+    }
+
+    bool empty() const noexcept
+    {
+        return w <= 0 || h <= 0;
+    }
+
+    operator bool () const noexcept
+    {
+        return !empty();
+    }
+
+    bool in(int argX, int argY) const noexcept
+    {
+        return mathf::pointInRectangle<int>(argX, argY, x, y, w, h);
+    }
+
+    bool overlap(const Widget::ROI &r) const noexcept
+    {
+        return mathf::rectangleOverlap<int>(x, y, w, h, r.x, r.y, r.w, r.h);
+    }
+
+    Widget::ROI clone() const noexcept
+    {
+        return *this;
+    }
+
+    Widget::ROI & crop(const Widget::ROI &r)
+    {
+        mathf::cropSegment<int>(x, w, r.x, r.w);
+        mathf::cropSegment<int>(y, h, r.y, r.h);
+        return *this;
+    }
+};
+
+class VarROI final
+{
+    private:
+        std::variant<Widget::VarGetter<Widget::ROI>, std::tuple<Widget::VarOffset2D, Widget::VarSize2D>> m_varROI;
+
+    public:
+        VarROI()
+            : m_varROI(std::tuple<Widget::VarOffset2D, Widget::VarSize2D>{}) // prefer decoupled roi
+        {}
+
+    public:
+        VarROI(Widget::VarGetter<Widget::ROI> arg)
+            : m_varROI(std::in_place_type<Widget::VarGetter<Widget::ROI>>, std::move(arg))
+        {}
+
+        VarROI(Widget::VarOffset2D argOff, Widget::VarSize2D argSize)
+            : m_varROI(std::in_place_type<std::tuple<Widget::VarOffset2D, Widget::VarSize2D>>, std::move(argOff), std::move(argSize))
+        {}
+
+        VarROI(Widget::VarSize2D argSize)
+            : m_varROI(std::in_place_type<std::tuple<Widget::VarOffset2D, Widget::VarSize2D>>, Widget::VarOffset2D{}, std::move(argSize))
+        {}
+
+        VarROI(Widget::VarOffset2D argOff, Widget::VarSize argW, Widget::VarSize argH)
+            : m_varROI(std::in_place_type<std::tuple<Widget::VarOffset2D, Widget::VarSize2D>>, std::move(argOff), Widget::VarSize2D(std::move(argW), std::move(argH)))
+        {}
+
+        VarROI(Widget::VarSize argW, Widget::VarSize argH)
+            : m_varROI(std::in_place_type<std::tuple<Widget::VarOffset2D, Widget::VarSize2D>>, Widget::VarOffset2D{}, Widget::VarSize2D(std::move(argW), std::move(argH)))
+        {}
+
+        VarROI(Widget::VarInt argX, Widget::VarInt argY, Widget::VarSize2D argSize)
+            : m_varROI(std::in_place_type<std::tuple<Widget::VarOffset2D, Widget::VarSize2D>>, Widget::VarOffset2D(std::move(argX), std::move(argY)), std::move(argSize))
+        {}
+
+        VarROI(Widget::VarInt argX, Widget::VarInt argY, Widget::VarSize argW, Widget::VarSize argH)
+            : m_varROI(std::in_place_type<std::tuple<Widget::VarOffset2D, Widget::VarSize2D>>, Widget::VarOffset2D(std::move(argX), std::move(argY)), Widget::VarSize2D(std::move(argW), std::move(argH)))
+        {}
+
+    public:
+        Widget::ROI roi(const Widget *widget, const void *arg = nullptr) const
+        {
+            return std::visit(VarDispatcher
+            {
+                [widget, arg](const Widget::VarGetter<Widget::ROI> &varg)
+                {
+                    return Widget::evalGetter<Widget::ROI>(varg, widget, arg);
+                },
+
+                [widget, arg](const std::tuple<Widget::VarOffset2D, Widget::VarSize2D> &varg)
+                {
+                    const auto [x, y] = std::get<0>(varg).offset(widget, arg);
+                    const auto [w, h] = std::get<1>(varg).  size(widget, arg);
+
+                    return Widget::ROI
+                    {
+                        .x = x,
+                        .y = y,
+                        .w = w,
+                        .h = h,
+                    };
+                },
+            },
+
+            m_varROI);
+        }
+
+        Widget::IntOffset2D offset(const Widget *widget, const void *arg = nullptr) const
+        {
+            return std::visit(VarDispatcher
+            {
+                [widget, arg](const Widget::VarGetter<Widget::ROI> &varg)
+                {
+                    return Widget::evalGetter<Widget::ROI>(varg, widget, arg).offset();
+                },
+
+                [widget, arg](const std::tuple<Widget::VarOffset2D, Widget::VarSize2D> &varg)
+                {
+                    return std::get<0>(varg).offset(widget, arg);
+                },
+            },
+
+            m_varROI);
+        }
+
+        Widget::IntSize2D size(const Widget *widget, const void *arg = nullptr) const
+        {
+            return std::visit(VarDispatcher
+            {
+                [widget, arg](const Widget::VarGetter<Widget::ROI> &varg)
+                {
+                    return Widget::evalGetter<Widget::ROI>(varg, widget, arg).size();
+                },
+
+                [widget, arg](const std::tuple<Widget::VarOffset2D, Widget::VarSize2D> &varg)
+                {
+                    return std::get<1>(varg).size(widget, arg);
+                },
+            },
+
+            m_varROI);
+        }
+
+    public:
+        int x(const Widget *widget, const void *arg = nullptr) const
+        {
+            return std::visit(VarDispatcher
+            {
+                [widget, arg](const Widget::VarGetter<Widget::ROI> &varg)
+                {
+                    return Widget::evalGetter<Widget::ROI>(varg, widget, arg).x;
+                },
+
+                [widget, arg](const std::tuple<Widget::VarOffset2D, Widget::VarSize2D> &varg)
+                {
+                    return std::get<0>(varg).x(widget, arg);
+                },
+            },
+
+            m_varROI);
+        }
+
+        int y(const Widget *widget, const void *arg = nullptr) const
+        {
+            return std::visit(VarDispatcher
+            {
+                [widget, arg](const Widget::VarGetter<Widget::ROI> &varg)
+                {
+                    return Widget::evalGetter<Widget::ROI>(varg, widget, arg).y;
+                },
+
+                [widget, arg](const std::tuple<Widget::VarOffset2D, Widget::VarSize2D> &varg)
+                {
+                    return std::get<0>(varg).y(widget, arg);
+                },
+            },
+
+            m_varROI);
+        }
+
+        int w(const Widget *widget, const void *arg = nullptr) const
+        {
+            return std::visit(VarDispatcher
+            {
+                [widget, arg](const Widget::VarGetter<Widget::ROI> &varg)
+                {
+                    return Widget::evalGetter<Widget::ROI>(varg, widget, arg).w;
+                },
+
+                [widget, arg](const std::tuple<Widget::VarOffset2D, Widget::VarSize2D> &varg)
+                {
+                    return std::get<1>(varg).w(widget, arg);
+                },
+            },
+
+            m_varROI);
+        }
+
+        int h(const Widget *widget, const void *arg = nullptr) const
+        {
+            return std::visit(VarDispatcher
+            {
+                [widget, arg](const Widget::VarGetter<Widget::ROI> &varg)
+                {
+                    return Widget::evalGetter<Widget::ROI>(varg, widget, arg).h;
+                },
+
+                [widget, arg](const std::tuple<Widget::VarOffset2D, Widget::VarSize2D> &varg)
+                {
+                    return std::get<1>(varg).h(widget, arg);
+                },
+            },
+
+            m_varROI);
+        }
+
+    public:
+        bool combinedOffset() const
+        {
+            return std::visit(VarDispatcher
+            {
+                [](const Widget::VarGetter<Widget::ROI> &)
+                {
+                    return true;
+                },
+
+                [](const std::tuple<Widget::VarOffset2D, Widget::VarSize2D> &varg)
+                {
+                    return std::get<0>(varg).combined();
+                },
+            },
+
+            m_varROI);
+        }
+
+        bool combinedSize() const
+        {
+            return std::visit(VarDispatcher
+            {
+                [](const Widget::VarGetter<Widget::ROI> &)
+                {
+                    return true;
+                },
+
+                [](const std::tuple<Widget::VarOffset2D, Widget::VarSize2D> &varg)
+                {
+                    return std::get<1>(varg).combined();
+                },
+            },
+
+            m_varROI);
+        }
+
+        bool combinedROI() const
+        {
+            return std::holds_alternative<Widget::VarGetter<Widget::ROI>>(m_varROI);
+        }
+};
+
+class VarROIOpt final
+{
+    private:
+        std::optional<Widget::VarROI> m_varROIOpt;
+
+    public:
+        VarROIOpt() = default;
+        VarROIOpt(std::nullopt_t): VarROIOpt() {};
+
+    public:
+        template<typename... Args> explicit VarROIOpt(Args&&... args)
+            : m_varROIOpt(Widget::VarROI(std::forward<Args>(args)...))
+        {}
+
+    public:
+        VarROIOpt(const Widget::ROI &r)
+            : VarROIOpt(r.x, r.y, r.w, r.h)
+        {}
+
+        VarROIOpt(const Widget::VarROI &vr)
+            : m_varROIOpt(vr)
+        {}
+
+    public:
+        auto operator -> (this auto && self)
+        {
+            return std::addressof(self.m_varROIOpt.value());
+        }
+
+    public:
+        bool has_value() const
+        {
+            return m_varROIOpt.has_value();
+        }
+
+        decltype(auto) value(this auto && self)
+        {
+            return self.m_varROIOpt.value();
+        }
+
+        Widget::VarROI value_or(Widget::VarROI r) const
+        {
+            return m_varROIOpt.value_or(r);
+        }
+};
+
+class ROIOpt final
+{
+    private:
+        std::optional<Widget::ROI> m_roiOpt;
+
+    public:
+        ROIOpt() = default;
+        ROIOpt(std::nullopt_t): ROIOpt() {};
+
+    public:
+        ROIOpt(const Widget::ROI &roi)
+            : m_roiOpt(roi)
+        {}
+
+    public:
+        ROIOpt(int argX, int argY, int argW, int argH)
+            : m_roiOpt(Widget::ROI{argX, argY, argW, argH})
+        {}
+
+    public:
+        ROIOpt(int argW, int argH)
+            : ROIOpt(0, 0, argW, argH)
+        {}
+
+        ROIOpt(Widget::IntSize2D size)
+            : ROIOpt(0, 0, size.w, size.h)
+        {}
+
+        ROIOpt(Widget::IntOffset2D offset, Widget::IntSize2D size)
+            : ROIOpt(offset.x, offset.y, size.w, size.h)
+        {}
+
+    public:
+        auto operator -> (this auto && self)
+        {
+            return std::addressof(self.m_roiOpt.value());
+        }
+
+    public:
+        bool has_value() const
+        {
+            return m_roiOpt.has_value();
+        }
+
+        decltype(auto) value(this auto && self)
+        {
+            return self.m_roiOpt.value();
+        }
+
+        Widget::ROI value_or(Widget::ROI r) const
+        {
+            return m_roiOpt.value_or(r);
+        }
+};
+
+struct ROIMap final
+{
+    dir8_t dir = DIR_UPLEFT;
+
+    int x = 0;
+    int y = 0;
+
+    Widget::ROIOpt ro = std::nullopt;
+
+    bool empty() const
+    {
+        if(ro.has_value()){
+            return ro->empty();
+        }
+        else{
+            throw fflpanic("ro empty");
+        }
+    }
+
+    operator bool () const
+    {
+        return !empty();
+    }
+
+    bool in(int pixelX, int pixelY) const
+    {
+        if(ro.has_value()){
+            return Widget::ROI{x, y, ro->w, ro->h}.in(pixelX, pixelY);
+        }
+        else{
+            throw fflpanic("ro empty");
+        }
+    }
+
+    template<typename T> bool in(const T &t) const
+    {
+        const auto [tx, ty] = t; return in(tx, ty);
+    }
+
+    Widget::ROIMap clone() const
+    {
+        return *this;
+    }
+
+    Widget::ROIMap & calibrate(const Widget *widget)
+    {
+        if(!ro.has_value()){
+            if(widget){
+                ro = widget->roi();
+            }
+            else{
+                throw fflpanic("invalid widget");
+            }
+        }
+
+        if(dir != DIR_UPLEFT){
+            x  -= xSizeOff(dir, [row = ro->w]{ return row; });
+            y  -= ySizeOff(dir, [roh = ro->h]{ return roh; });
+            dir = DIR_UPLEFT;
+        }
+
+        if(widget){
+            crop(widget->roi());
+        }
+
+        if(x < 0){
+            ro->x -= x;
+            ro->w  = std::max<int>(ro->w + x, 0);
+            x = 0;
+        }
+
+        if(y < 0){
+            ro->y -= y;
+            ro->h  = std::max<int>(ro->h + y, 0);
+            y = 0;
+        }
+
+        return *this;
+    }
+
+    Widget::ROIMap & crop(const Widget::ROI &r)
+    {
+        if(!ro.has_value()){
+            throw fflpanic("ro empty");
+        }
+
+        if(dir != DIR_UPLEFT){
+            x  -= xSizeOff(dir, [row = ro->w]{ return row; });
+            y  -= ySizeOff(dir, [roh = ro->h]{ return roh; });
+            dir = DIR_UPLEFT;
+        }
+
+        const auto oldX = ro->x;
+        const auto oldY = ro->y;
+
+        ro->crop(r);
+
+        x += (ro->x - oldX);
+        y += (ro->y - oldY);
+
+        return *this;
+    }
+
+    Widget::ROIMap map(int dx, int dy, const Widget::ROI &cr) const
+    {
+        // maps from parent's m to child's cm
+        // cr is child's cropped ROI in itself, child's (0, 0) is at (dx, dy) in parent
+
+        auto cm = clone().crop(Widget::ROI
+        {
+            .x = cr.x + dx,
+            .y = cr.y + dy,
+            .w = cr.w,
+            .h = cr.h,
+        });
+
+        cm.ro->x -= dx;
+        cm.ro->y -= dy;
+
+        return cm;
+    }
+
+    Widget::ROIMap create(const Widget::ROI &cr) const
+    {
+        // maps from parent's m to child's cm
+        // cr is child's full ROI in parent, child's (0, 0) is at (cr.x, cr.y) in parent
+
+        return map(cr.x, cr.y, Widget::ROI
+        {
+            .x = 0,
+            .y = 0,
+            .w = cr.w,
+            .h = cr.h,
+        });
+    }
+};
+
+template<typename T> Widget::ROI makeROI(const T &t)
+{
+    const auto [x, y, w, h] = t; return Widget::ROI
+    {
+        .x = x,
+        .y = y,
+        .w = w,
+        .h = h,
+    };
+}
+
+template<typename U, typename V> Widget::ROI makeROI(const U &u, const V &v)
+{
+    const auto [x, y] = u;
+    const auto [w, h] = v; return Widget::ROI
+    {
+        .x = x,
+        .y = y,
+        .w = w,
+        .h = h,
+    };
+}
+
+template<typename T> Widget::ROI makeROI(int x, int y, const T &t)
+{
+    const auto [w, h] = t; return Widget::ROI
+    {
+        .x = x,
+        .y = y,
+        .w = w,
+        .h = h,
+    };
+}
+
+template<typename T> Widget::ROI makeROI(const T &t, int w, int h)
+{
+    const auto [x, y] = t; return Widget::ROI
+    {
+        .x = x,
+        .y = y,
+        .w = w,
+        .h = h,
+    };
+}
+
+// --- end widget.roi.hpp ---
 
     public:
         struct TypeAttrs final // per class attributes
@@ -422,7 +1251,31 @@ class Widget: public WidgetTreeNode
         template<typename T> static bool execCheckFunc(const Widget::VarCheckFunc<T> &, const Widget *, void *, const T &);
 
     private:
-#include "widget.recursion.hpp"
+// --- merged from widget.recursion.hpp ---
+class RecursionDetector final
+{
+    private:
+        bool &m_flag;
+
+    public:
+        RecursionDetector(bool &flag, const char *type, const char *func)
+            : m_flag(flag)
+        {
+            if(m_flag){
+                throw fflpanic("recursion detected in {}::{}", type, func);
+            }
+            else{
+                m_flag = true;
+            }
+        }
+
+        ~RecursionDetector()
+        {
+            m_flag = false;
+        }
+};
+
+// --- end widget.recursion.hpp ---
 
     private:
         Widget::VarDir m_dir;
@@ -449,7 +1302,47 @@ class Widget: public WidgetTreeNode
     public:
         explicit Widget(Widget::InitArgs);
 
-#include "widget.sizeoff.hpp"
+// --- merged from widget.sizeoff.hpp ---
+private:
+    static int sizeOff(auto && func, int index)
+    {
+        /**/ if(index <  0) return          0;
+        else if(index == 0) return func() / 2;
+        else                return func() - 1;
+    }
+
+public:
+    static int xSizeOff(dir8_t argDir, auto && argFunc)
+    {
+        switch(argDir){
+            case DIR_UPLEFT   : return sizeOff(argFunc, -1);
+            case DIR_UP       : return sizeOff(argFunc,  0);
+            case DIR_UPRIGHT  : return sizeOff(argFunc,  1);
+            case DIR_RIGHT    : return sizeOff(argFunc,  1);
+            case DIR_DOWNRIGHT: return sizeOff(argFunc,  1);
+            case DIR_DOWN     : return sizeOff(argFunc,  0);
+            case DIR_DOWNLEFT : return sizeOff(argFunc, -1);
+            case DIR_LEFT     : return sizeOff(argFunc, -1);
+            default           : return sizeOff(argFunc,  0);
+        }
+    }
+
+    static int ySizeOff(dir8_t argDir, auto && argFunc)
+    {
+        switch(argDir){
+            case DIR_UPLEFT   : return sizeOff(argFunc, -1);
+            case DIR_UP       : return sizeOff(argFunc, -1);
+            case DIR_UPRIGHT  : return sizeOff(argFunc, -1);
+            case DIR_RIGHT    : return sizeOff(argFunc,  0);
+            case DIR_DOWNRIGHT: return sizeOff(argFunc,  1);
+            case DIR_DOWN     : return sizeOff(argFunc,  1);
+            case DIR_DOWNLEFT : return sizeOff(argFunc,  1);
+            case DIR_LEFT     : return sizeOff(argFunc,  0);
+            default           : return sizeOff(argFunc,  0);
+        }
+    }
+
+// --- end widget.sizeoff.hpp ---
 
     public:
         virtual void update       (double) final;
@@ -575,4 +1468,470 @@ class Widget: public WidgetTreeNode
         virtual std::vector<std::string> dumpTreeExt() const { return {}; }
 };
 
-#include "widget.implement.hpp"
+// --- merged from widget.implement.hpp ---
+auto WidgetTreeNode::parent(this auto && self, unsigned level) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    check_const_cond_out_ptr_t<decltype(self), Widget> p = std::addressof(self);
+    for(; p && (level > 0); level--){
+        p = p->m_parent;
+    }
+
+    if(p && p->m_dead){
+        throw fflpanic("accessing dead widget: {}", p->name());
+    }
+    return p;
+}
+
+template<std::invocable<const Widget *, bool, const Widget *, bool> F> void WidgetTreeNode::sort(F f)
+{
+    m_childList.sort([&f](const auto &x, const auto &y)
+    {
+        if(x.widget && y.widget){
+            return f(x.widget, x.autoDelete, y.widget, y.autoDelete);
+        }
+        else if(x.widget){
+            return true;
+        }
+        else{
+            return false;
+        }
+    });
+}
+
+template<typename SELF> auto WidgetTreeNode::foreachChild(this SELF && self, bool forward, std::invocable<check_const_cond_out_ptr_t<SELF, Widget>, bool> auto f) -> std::conditional_t<std::is_same_v<std::invoke_result_t<decltype(f), Widget *, bool>, bool>, bool, void>
+{
+    const ValueKeeper keepValue(self.m_inLoop, true);
+    constexpr bool hasBoolResult = std::is_same_v<std::invoke_result_t<decltype(f), Widget *, bool>, bool>;
+
+    if(forward){
+        for(auto p = self.m_childList.begin(); p != self.m_childList.end(); ++p){
+            if(p->widget){
+                if constexpr (hasBoolResult){
+                    if(f(p->widget, p->autoDelete)){
+                        return true;
+                    }
+                }
+                else{
+                    f(p->widget, p->autoDelete);
+                }
+            }
+        }
+
+        if constexpr (hasBoolResult){
+            return false;
+        }
+    }
+    else{
+        for(auto p = self.m_childList.rbegin(); p != self.m_childList.rend(); ++p){
+            if(p->widget){
+                if constexpr (hasBoolResult){
+                    if(f(p->widget, p->autoDelete)){
+                        return true;
+                    }
+                }
+                else{
+                    f(p->widget, p->autoDelete);
+                }
+            }
+        }
+
+        if constexpr (hasBoolResult){
+            return false;
+        }
+    }
+}
+
+template<typename SELF> auto WidgetTreeNode::foreachChild(this SELF && self, std::invocable<check_const_cond_out_ptr_t<SELF, Widget>, bool> auto f) -> std::conditional_t<std::is_same_v<std::invoke_result_t<decltype(f), Widget *, bool>, bool>, bool, void>
+{
+    if constexpr (std::is_same_v<std::invoke_result_t<decltype(f), check_const_cond_out_ptr_t<SELF, Widget>, bool>, bool>){
+        return self.foreachChild(true, f);
+    }
+    else{
+        self.foreachChild(true, f);
+    }
+}
+
+template<typename SELF> auto WidgetTreeNode::foreachChild(this SELF && self, bool forward, std::invocable<check_const_cond_out_ptr_t<SELF, Widget>> auto f) -> std::conditional_t<std::is_same_v<std::invoke_result_t<decltype(f), Widget *>, bool>, bool, void>
+{
+    return self.foreachChild(forward, [&f](auto widget, bool)
+    {
+        return f(widget);
+    });
+}
+
+template<typename SELF> auto WidgetTreeNode::foreachChild(this SELF && self, std::invocable<check_const_cond_out_ptr_t<SELF, Widget>> auto f) -> std::conditional_t<std::is_same_v<std::invoke_result_t<decltype(f), Widget *>, bool>, bool, void>
+{
+    return self.foreachChild([&f](auto widget, bool)
+    {
+        return f(widget);
+    });
+}
+
+auto WidgetTreeNode::firstChild(this auto && self) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    for(auto &child: self.m_childList){
+        if(child.widget){
+            return child.widget;
+        }
+    }
+    return nullptr;
+}
+
+auto WidgetTreeNode::lastChild(this auto && self) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    for(auto p = self.m_childList.rbegin(); p != self.m_childList.rend(); ++p){
+        if(p->widget){
+            return p->widget;
+        }
+    }
+    return nullptr;
+}
+
+void WidgetTreeNode::doClearChild(std::invocable<const Widget *, bool> auto f, bool ignoreCanRemoveChild)
+{
+    for(auto &child: m_childList){
+        if(child.widget){
+            if(f(child.widget, child.autoDelete)){
+                doRemoveChildElement(child, true, ignoreCanRemoveChild);
+            }
+        }
+    }
+}
+
+void WidgetTreeNode::doClearChild(std::invocable<const Widget *> auto f, bool ignoreCanRemoveChild)
+{
+    doClearChild([&f](const Widget *child, bool){ return f(child); }, ignoreCanRemoveChild);
+}
+
+void WidgetTreeNode::clearChild(std::invocable<const Widget *, bool> auto f){ doClearChild(f, false); }
+void WidgetTreeNode::clearChild(std::invocable<const Widget *      > auto f){ doClearChild(f, false); }
+
+void WidgetTreeNode::clearChild()
+{
+    clearChild([](const Widget *){ return true; });
+}
+
+auto WidgetTreeNode::hasChild(this auto && self, uint64_t argID) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    for(auto p = self.m_childList.begin(); p != self.m_childList.end(); ++p){
+        if(p->widget && p->widget->id() == argID){
+            return p->widget;
+        }
+    }
+    return nullptr;
+}
+
+auto WidgetTreeNode::hasChild(this auto && self, std::invocable<const Widget *, bool> auto f) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    for(auto &child: self.m_childList){
+        if(child.widget && f(child.widget, child.autoDelete)){
+            return child.widget;
+        }
+    }
+    return nullptr;
+}
+
+auto WidgetTreeNode::hasChild(this auto && self, std::invocable<const Widget *> auto f) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    return self.hasChild([&f](const Widget *child, bool){ return f(child); });
+}
+
+auto WidgetTreeNode::hasDescendant(this auto && self, uint64_t argID) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    for(auto p = self.m_childList.begin(); p != self.m_childList.end(); ++p){
+        if(p->widget){
+            if(p->widget->id() == argID){
+                return p->widget;
+            }
+            else if(auto descendant = p->widget->hasDescendant(argID)){
+                return descendant;
+            }
+        }
+    }
+    return nullptr;
+}
+
+auto WidgetTreeNode::hasDescendant(this auto && self, std::invocable<const Widget *, bool> auto f) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    for(auto &child: self.m_childList){
+        if(child.widget){
+            if(f(child.widget, child.autoDelete)){
+                return child.widget;
+            }
+            else if(auto descendant = child.widget->hasDescendant(f)){
+                return descendant;
+            }
+        }
+    }
+    return nullptr;
+}
+
+auto WidgetTreeNode::hasDescendant(this auto && self, std::invocable<const Widget *> auto f) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    return self.hasDescendant([&f](const Widget *child, bool){ return f(child); });
+}
+
+auto WidgetTreeNode::prevChild(this auto && self, uint64_t childID) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    for(auto p = self.m_childList.rbegin(); p != self.m_childList.rend(); ++p){
+        if(p->widget && (p->widget->id() == childID)){
+            ++p;
+            for(; p != self.m_childList.rend(); ++p){
+                if(p->widget){
+                    return p->widget;
+                }
+            }
+            return nullptr;
+        }
+    }
+    throw fflpanic("can not find child {}", childID);
+}
+
+auto WidgetTreeNode::nextChild(this auto && self, uint64_t childID) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    for(auto p = self.m_childList.begin(); p != self.m_childList.end(); ++p){
+        if(p->widget && (p->widget->id() == childID)){
+            ++p;
+            for(; p != self.m_childList.end(); ++p){
+                if(p->widget){
+                    return p->widget;
+                }
+            }
+            return nullptr;
+        }
+    }
+    throw fflpanic("can not find child {}", childID);
+}
+
+template<std::derived_from<Widget> T> auto WidgetTreeNode::hasParent(this auto && self) -> check_const_cond_out_ptr_t<decltype(self), T>
+{
+    for(auto p = self.parent(); p; p = p->parent()){
+        if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>){
+            if(dynamic_cast<const T *>(p)){
+                return static_cast<const T *>(p);
+            }
+        }
+        else{
+            if(dynamic_cast<T *>(p)){
+                return static_cast<T *>(p);
+            }
+        }
+    }
+    return nullptr;
+}
+
+int Widget::evalSizeOpt(const Widget::VarSizeOpt &varSizeOpt, const Widget *widget, const auto &f)
+{
+    if(varSizeOpt.has_value()){
+        return evalSize(varSizeOpt.value(), widget, nullptr);
+    }
+    else{
+        return f();
+    }
+}
+
+int Widget::evalSizeOpt(const Widget::VarSizeOpt &varSizeOpt, const Widget *widget, const void *arg, const auto &f)
+{
+    if(varSizeOpt.has_value()){
+        return evalSize(varSizeOpt.value(), widget, arg);
+    }
+    else{
+        return f();
+    }
+}
+
+int Widget::evalU32Opt(const Widget::VarU32Opt &varU32Opt, const Widget *widget, const auto &f)
+{
+    if(varU32Opt.has_value()){
+        return evalU32(varU32Opt.value(), widget, nullptr);
+    }
+    else{
+        return f();
+    }
+}
+
+int Widget::evalU32Opt(const Widget::VarU32Opt &varU32Opt, const Widget *widget, const void *arg, const auto &f)
+{
+    if(varU32Opt.has_value()){
+        return evalU32(varU32Opt.value(), widget, arg);
+    }
+    else{
+        return f();
+    }
+}
+
+template<typename T> T Widget::evalGetter(const Widget::VarGetter<T> &varGetter, const Widget *widget, const void *arg)
+{
+    return std::visit(VarDispatcher
+    {
+        [](const T &varg)
+        {
+            return varg;
+        },
+
+        [](const std::function<T()> &varg)
+        {
+            return varg ? varg() : T{};
+        },
+
+        [widget](const std::function<T(const Widget *)> &varg)
+        {
+            return varg ? varg(widget) : T{};
+        },
+
+        [widget, arg](const std::function<T(const Widget *, const void *)> &varg)
+        {
+            return varg ? varg(widget, arg) : T{};
+        },
+    },
+
+    varGetter);
+}
+
+template<typename Func> Widget::VarInt Widget::transform(Widget::VarInt varInt, Func && func)
+{
+    if(varInt.index() == 0){
+        return func(std::get<int>(varInt));
+    }
+    else{
+        return [varInt = std::move(varInt), func = std::decay_t<Func>(std::forward<Func>(func))](const Widget *widget)
+        {
+            return func(Widget::evalInt(varInt, widget, nullptr));
+        };
+    }
+}
+
+template<typename Func> Widget::VarSize Widget::transform(Widget::VarSize varSize, Func && func)
+{
+    if(varSize.index() == 0){
+        return func(std::get<int>(varSize));
+    }
+    else{
+        return [varSize = std::move(varSize), func = std::decay_t<Func>(std::forward<Func>(func))](const Widget *widget)
+        {
+            return func(Widget::evalSize(varSize, widget, nullptr));
+        };
+    }
+}
+
+template<typename Func> Widget::VarSizeOpt Widget::transform(Widget::VarSizeOpt varSize, Func && func)
+{
+    if(varSize.has_value()){
+        return transform(varSize.value(), std::forward<Func>(func));
+    }
+    else{
+        return std::nullopt;
+    }
+}
+
+template<typename T> bool Widget::hasUpdateFunc(const Widget::VarUpdateFunc<T> &varUpdateFunc)
+{
+    return std::visit(VarDispatcher
+    {
+        [](const std::function<void(                        const T &)> &varg) -> bool { return !!varg; },
+        [](const std::function<void(const Widget *,         const T &)> &varg) -> bool { return !!varg; },
+        [](const std::function<void(const Widget *, void *, const T &)> &varg) -> bool { return !!varg; },
+
+        [](std::nullptr_t){ return false; },
+    },
+
+    varUpdateFunc);
+}
+
+template<typename T> void Widget::execUpdateFunc(const Widget::VarUpdateFunc<T> &varUpdateFunc, const Widget *widget, const T &arg)
+{
+    Widget::execUpdateFunc(varUpdateFunc, widget, nullptr, arg);
+}
+
+template<typename T> void Widget::execUpdateFunc(const Widget::VarUpdateFunc<T> &varUpdateFunc, const Widget *widget, void *argPtr, const T &arg)
+{
+    std::visit(VarDispatcher
+    {
+        [                arg](const std::function<void(                        const T &)> &varg) { if(varg){ varg(                arg); }},
+        [widget,         arg](const std::function<void(const Widget *,         const T &)> &varg) { if(varg){ varg(widget,         arg); }},
+        [widget, argPtr, arg](const std::function<void(const Widget *, void *, const T &)> &varg) { if(varg){ varg(widget, argPtr, arg); }},
+
+        [](std::nullptr_t){},
+    },
+
+    varUpdateFunc);
+}
+
+template<typename T> bool Widget::hasCheckFunc(const Widget::VarCheckFunc<T> &varCheckFunc)
+{
+    return std::visit(VarDispatcher
+    {
+        [](const std::function<bool(                        const T &)> &varg) -> bool { return !!varg; },
+        [](const std::function<bool(const Widget *,         const T &)> &varg) -> bool { return !!varg; },
+        [](const std::function<bool(const Widget *, void *, const T &)> &varg) -> bool { return !!varg; },
+
+        [](std::nullptr_t){ return false; },
+    },
+
+    varCheckFunc);
+}
+
+template<typename T> bool Widget::execCheckFunc(const Widget::VarCheckFunc<T> &varCheckFunc, const Widget *widget, const T &arg)
+{
+    return Widget::execCheckFunc(varCheckFunc, widget, nullptr, arg);
+}
+
+template<typename T> bool Widget::execCheckFunc(const Widget::VarCheckFunc<T> &varCheckFunc, const Widget *widget, void *argPtr, const T &arg)
+{
+    return std::visit(VarDispatcher
+    {
+        [                arg](const std::function<bool(                        const T &)> &varg) { return varg ? varg(                arg) : true; },
+        [widget,         arg](const std::function<bool(const Widget *,         const T &)> &varg) { return varg ? varg(widget,         arg) : true; },
+        [widget, argPtr, arg](const std::function<bool(const Widget *, void *, const T &)> &varg) { return varg ? varg(widget, argPtr, arg) : true; },
+
+        [](std::nullptr_t){ return true; },
+    },
+
+    varCheckFunc);
+}
+
+auto Widget::focusedChild(this auto && self) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    check_const_cond_out_ptr_t<decltype(self), Widget> focusedWidget = nullptr;
+    self.foreachChild([&focusedWidget, &self](auto widget, bool)
+    {
+        if(widget->focus()){
+            if(focusedWidget){
+                throw fflpanic("{} has multiple focused child: {} and {}", self.name(), focusedWidget->name(), widget->name());
+            }
+            else{
+                focusedWidget = widget;
+            }
+        }
+    });
+
+    if(self.m_attrs.inst.focus){
+        if(focusedWidget){
+            throw fflpanic("{} and its child {} has focus simutaneously", self.name(), focusedWidget->name());
+        }
+        return std::addressof(self);
+    }
+
+    else if(focusedWidget){
+        return focusedWidget;
+    }
+
+    else{
+        return nullptr;
+    }
+}
+
+auto Widget::focusedDescendant(this auto && self) -> check_const_cond_out_ptr_t<decltype(self), Widget>
+{
+    if(auto widget = self.focusedChild()){
+        if(widget == std::addressof(self)){
+            return std::addressof(self);
+        }
+        else{
+            return widget->focusedDescendant();
+        }
+    }
+    return nullptr;
+}
+
+// --- end widget.implement.hpp ---
