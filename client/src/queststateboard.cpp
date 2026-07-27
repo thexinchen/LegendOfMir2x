@@ -3,7 +3,7 @@
 #include "pngtexdb.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
-#include "gui/controlboard/controlboard.hpp"
+#include "gui/controlboard.hpp"
 #include "queststateboard.hpp"
 
 extern PNGTexDB *g_progUseDB;

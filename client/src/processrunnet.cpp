@@ -20,8 +20,8 @@
 #include "processrun.hpp"
 #include "cerealf.hpp"
 #include "imeboard.hpp"
-#include "gui/controlboard/controlboard.hpp"
-#include "gui/friendchatboard/friendchatboard.hpp"
+#include "gui/controlboard.hpp"
+#include "gui/friendchatboard.hpp"
 #include "serdesmsg.hpp"
 #include "gldevice.hpp"
 

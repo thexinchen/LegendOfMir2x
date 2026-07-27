@@ -2,7 +2,7 @@
 #include "colorf.hpp"
 #include "pngtexdb.hpp"
 #include "gldevice.hpp"
-#include "gui/controlboard/controlboard.hpp"
+#include "gui/controlboard.hpp"
 #include "inputstringboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
