@@ -1,5 +1,5 @@
 #include <vector>
-#include "inline_vector.h"
+#include "inplace_vector.hpp"
 #include "buffactattackmodifier.hpp"
 #include "bufflist.hpp"
 

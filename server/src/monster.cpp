@@ -1,6 +1,6 @@
 #include <tuple>
 #include <cinttypes>
-#include "inline_vector.h"
+#include "inplace_vector.hpp"
 #include "player.hpp"
 #include "uidf.hpp"
 #include "strf.hpp"
