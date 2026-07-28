@@ -15,6 +15,7 @@
 #include "clientargparser.hpp"
 #include "clientpathfinder.hpp"
 #include "creaturemovable.hpp"
+#include "motioneffect.hpp"
 #include "clienttaodog.hpp"
 #include "clientsandcactus.hpp"
 #include "clienttaoskeleton.hpp"
@@ -952,3 +953,1392 @@ ClientMonster *ClientMonster::create(uint64_t uid, ProcessRun *proc, const Actio
             }
     }
 }
+
+// --- merged from clientcannibalplant.cpp ---
+bool ClientCannibalPlant::onActionSpawn(const ActionNode &action)
+{
+    fflassert(m_forcedMotionQueue.empty());
+    m_currMotion.reset(new MotionNode
+    {
+        .type = MOTION_MON_STAND,
+        .direction = DIR_BEGIN,
+        .x = action.x,
+        .y = action.y,
+    });
+
+    m_standMode = false;
+    return true;
+}
+
+bool ClientCannibalPlant::onActionStand(const ActionNode &action)
+{
+    if(finalStandMode() != to_bool(action.extParam.stand.cannibalPlant.standMode)){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientCannibalPlant::onActionTransf(const ActionNode &action)
+{
+    const auto standReq = to_bool(action.extParam.transf.cannibalPlant.standModeReq);
+    if(finalStandMode() != standReq){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientCannibalPlant::onActionAttack(const ActionNode &action)
+{
+    if(!finalStandMode()){
+        addActionTransf();
+    }
+
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_ATTACK0,
+        .direction = m_processRun->getAimDirection(action, DIR_BEGIN),
+        .x = action.x,
+        .y = action.y,
+    }));
+    return true;
+}
+// --- end clientcannibalplant.cpp ---
+
+// --- merged from clientdualaxeskeleton.cpp ---
+ClientDualAxeSkeleton::ClientDualAxeSkeleton(uint64_t uid, ProcessRun *proc, const ActionNode &action)
+    : ClientMonster(uid, proc, action)
+{
+    fflassert(isMonster(u8"掷斧骷髅"));
+    switch(action.type){
+        case ACTION_SPAWN:
+        case ACTION_STAND:
+        case ACTION_HITTED:
+        case ACTION_DIE:
+        case ACTION_ATTACK:
+        case ACTION_MOVE:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = pathf::dirValid(action.type) ? to_d(action.type) : DIR_BEGIN,
+                    .x = action.x,
+                    .y = action.y,
+                });
+                break;
+            }
+        default:
+            {
+                throw fflpanic("invalid initial action: {}", actionName(action.type));
+            }
+    }
+}
+
+bool ClientDualAxeSkeleton::onActionAttack(const ActionNode &action)
+{
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_ATTACK0,
+        .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+        .x = action.x,
+        .y = action.y,
+    }));
+
+    m_motionQueue.back()->addTrigger(false, [targetUID = action.aimUID, this](MotionNode *motionPtr) -> bool
+    {
+        if(motionPtr->frame < 4){
+            return false;
+        }
+
+        const auto gfxDirIndex = currMotion()->direction - DIR_BEGIN;
+        m_processRun->addFollowUIDMagic(std::unique_ptr<FollowUIDMagic>(new FollowUIDMagic
+        {
+            u8"掷斧骷髅_掷斧",
+            u8"运行",
+
+            currMotion()->x * SYS_MAPGRIDXP,
+            currMotion()->y * SYS_MAPGRIDYP,
+
+            gfxDirIndex,
+            gfxDirIndex * 2,
+            20,
+
+            targetUID,
+            m_processRun,
+        }))->addOnDone([targetUID, proc = m_processRun](BaseMagic *)
+        {
+            // TODO interesting bug, don't directly refer to this->m_processRun
+            // an dual-axe-skeleton can throw dual-axe-magic and die immediately, which makes *this* dangling
+
+            if(auto coPtr = proc->findUID(targetUID)){
+                coPtr->addAttachMagic(std::unique_ptr<AttachMagic>(new AttachMagic(u8"掷斧骷髅_掷斧", u8"裂解")));
+            }
+        });
+        return true;
+    });
+    return true;
+}
+// --- end clientdualaxeskeleton.cpp ---
+
+// --- merged from clientevilcentipede.cpp ---
+ClientEvilCentipede::ClientEvilCentipede(uint64_t uid, ProcessRun *proc, const ActionNode &action)
+    : ClientStandMonster(uid, proc)
+{
+    fflassert(isMonster(u8"触龙神"));
+    switch(action.type){
+        case ACTION_SPAWN:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = DIR_BEGIN,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = false;
+                break;
+            }
+        case ACTION_STAND:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = DIR_BEGIN,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = to_bool(action.extParam.stand.evilCentipede.standMode);
+                break;
+            }
+        case ACTION_ATTACK:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_ATTACK0,
+                    .direction = DIR_BEGIN,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = true;
+                break;
+            }
+        case ACTION_TRANSF:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_SPAWN,
+                    .direction = DIR_BEGIN,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = to_bool(action.extParam.transf.evilCentipede.standModeReq);
+                break;
+            }
+        case ACTION_HITTED:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_HITTED,
+                    .direction = DIR_BEGIN,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = true; // can't be hitted if stay in the soil
+                break;
+            }
+        default:
+            {
+                throw fflpanic("invalid action: {}", actionName(action));
+            }
+    }
+}
+
+bool ClientEvilCentipede::onActionSpawn(const ActionNode &)
+{
+    fflassert(m_forcedMotionQueue.empty());
+    m_currMotion.reset(new MotionNode
+    {
+        .type = MOTION_MON_STAND,
+        .direction = DIR_BEGIN,
+        .x = x(),
+        .y = y(),
+    });
+
+    m_standMode = false;
+    return true;
+}
+
+bool ClientEvilCentipede::onActionStand(const ActionNode &action)
+{
+    if(finalStandMode() != to_bool(action.extParam.stand.evilCentipede.standMode)){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientEvilCentipede::onActionTransf(const ActionNode &action)
+{
+    const auto standReq = to_bool(action.extParam.transf.evilCentipede.standModeReq);
+    if(finalStandMode() != standReq){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientEvilCentipede::onActionAttack(const ActionNode &)
+{
+    if(!finalStandMode()){
+        addActionTransf();
+    }
+
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_ATTACK0,
+        .direction = DIR_BEGIN,
+        .x = x(),
+        .y = y(),
+    }));
+    return true;
+}
+
+bool ClientEvilCentipede::onActionHitted(const ActionNode &)
+{
+    if(!finalStandMode()){
+        addActionTransf();
+    }
+
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_HITTED,
+        .direction = DIR_BEGIN,
+        .x = x(),
+        .y = y(),
+    }));
+    return true;
+}
+// --- end clientevilcentipede.cpp ---
+
+// --- merged from clientguard.cpp ---
+ClientGuard::ClientGuard(uint64_t uid, ProcessRun *proc, const ActionNode &action)
+    : ClientMonster(uid, proc)
+{
+    switch(action.type){
+        case ACTION_ATTACK:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_ATTACK0,
+                    .direction = m_processRun->getAimDirection(action, DIR_BEGIN),
+                    .x = action.x,
+                    .y = action.y,
+                });
+                break;
+            }
+        default:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = pathf::dirValid(action.direction) ? action.direction : to_d(DIR_UP),
+                    .x = action.x,
+                    .y = action.y,
+                });
+                break;
+            }
+    }
+}
+
+bool ClientGuard::parseAction(const ActionNode &action)
+{
+    m_lastActive = mirGetTicks();
+    m_motionQueue.clear();
+
+    switch(action.type){
+        case ACTION_JUMP:
+        case ACTION_STAND:
+        case ACTION_SPAWN:
+            {
+                if(action.x != m_currMotion->x || action.y != m_currMotion->y){
+                    m_currMotion.reset(new MotionNode
+                    {
+                        .type = MOTION_MON_STAND,
+                        .direction = action.direction,
+                        .x = action.x,
+                        .y = action.y,
+                    });
+                }
+                return true;
+            }
+        case ACTION_ATTACK:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_ATTACK0,
+                    .direction = m_processRun->getAimDirection(action, m_currMotion->direction),
+                    .x = action.x,
+                    .y = action.y,
+                });
+                return true;
+            }
+        default:
+            {
+                throw fflvalue(actionName(action.type));
+            }
+    }
+}
+// --- end clientguard.cpp ---
+
+// --- merged from clientminotaurguardian.cpp ---
+bool ClientMinotaurGuardian::onActionAttack(const ActionNode &action)
+{
+    const auto [endX, endY, endDir] = motionEndGLoc().at(1);
+    m_motionQueue = makeWalkMotionQueue(endX, endY, action.x, action.y, SYS_MAXSPEED);
+
+    switch(const auto magicID = action.extParam.attack.magicID){
+        case DBCOM_MAGICID(u8"潘夜右护卫_电魔杖"):
+        case DBCOM_MAGICID(u8"潘夜左护卫_火魔杖"):
+            {
+                m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+                {
+                    .type = MOTION_MON_ATTACK0,
+                    .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+                    .x = action.x,
+                    .y = action.y,
+                }));
+
+                m_motionQueue.back()->effect.reset(new MotionSyncEffect(DBCOM_MAGICRECORD(magicID).name, u8"运行", this, m_motionQueue.back().get(), 3));
+                m_motionQueue.back()->addTrigger(false, [targetUID = action.aimUID, magicID, this](MotionNode *motionPtr) -> bool
+                {
+                    if(motionPtr->frame < 4){
+                        return false;
+                    }
+
+                    if(auto coPtr = m_processRun->findUID(targetUID)){
+                        coPtr->addAttachMagic(std::unique_ptr<AttachMagic>(new AttachMagic(DBCOM_MAGICRECORD(magicID).name, u8"裂解")));
+                    }
+                    return true;
+                });
+                return true;
+            }
+        case DBCOM_MAGICID(u8"潘夜右护卫_雷电术"):
+            {
+                m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+                {
+                    .type = MOTION_MON_ATTACK1,
+                    .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+                    .x = action.x,
+                    .y = action.y,
+                }));
+
+                m_motionQueue.back()->addTrigger(false, [magicID, targetUID = action.aimUID, this](MotionNode *motionPtr) -> bool
+                {
+                    if(motionPtr->frame < 4){
+                        return false;
+                    }
+
+                    if(auto coPtr = m_processRun->findUID(targetUID)){
+                        coPtr->addAttachMagic(std::unique_ptr<AttachMagic>(new Thunderbolt(DBCOM_MAGICRECORD(magicID).name)));
+                    }
+                    return true;
+                });
+                return true;
+            }
+        case DBCOM_MAGICID(u8"潘夜左护卫_火球术"):
+            {
+                m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+                {
+                    .type = MOTION_MON_ATTACK1,
+                    .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+                    .x = action.x,
+                    .y = action.y,
+                }));
+
+                m_motionQueue.back()->addTrigger(false, [targetUID = action.aimUID, this](MotionNode *motionPtr) -> bool
+                {
+                    if(motionPtr->frame < 4){
+                        return false;
+                    }
+
+                    const auto gfx16DirIndex = [targetUID, motionPtr, this]() -> int
+                    {
+                        if(auto coPtr = m_processRun->findUID(targetUID)){
+                            return pathf::getDir16((coPtr->x() - motionPtr->x) * SYS_MAPGRIDXP, (coPtr->y() - motionPtr->y) * SYS_MAPGRIDYP);
+                        }
+                        return (motionPtr->direction - DIR_BEGIN) * 2;
+                    }();
+
+                    m_processRun->addFollowUIDMagic(std::unique_ptr<FollowUIDMagic>(new FollowUIDMagic
+                    {
+                        u8"潘夜左护卫_火球术",
+                        u8"运行",
+
+                        motionPtr->x * SYS_MAPGRIDXP,
+                        motionPtr->y * SYS_MAPGRIDYP,
+
+                        gfx16DirIndex,
+                        gfx16DirIndex,
+                        20,
+
+                        targetUID,
+                        m_processRun,
+                    }))->addOnDone([targetUID, proc = m_processRun](BaseMagic *)
+                    {
+                        if(auto coPtr = proc->findUID(targetUID)){
+                            coPtr->addAttachMagic(std::unique_ptr<AttachMagic>(new AttachMagic(u8"潘夜左护卫_火球术", u8"裂解")));
+                        }
+                    });
+                    return true;
+                });
+                return true;
+            }
+        default:
+            {
+                throw fflpanic("invalid DC: id = {}, name = {}", magicID, to_cstr(DBCOM_MAGICRECORD(magicID).name));
+            }
+    }
+}
+// --- end clientminotaurguardian.cpp ---
+
+// --- merged from clientnumawizard.cpp ---
+bool ClientNumaWizard::onActionAttack_fireBall(const ActionNode &action)
+{
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_ATTACK0,
+        .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+        .x = action.x,
+        .y = action.y,
+    }));
+
+    m_motionQueue.back()->addTrigger(false, [targetUID = action.aimUID, this](MotionNode *motionPtr) -> bool
+    {
+        if(motionPtr->frame < 4){
+            return false;
+        }
+
+        const auto gfx16DirIndex = [targetUID, motionPtr, this]() -> int
+        {
+            if(auto coPtr = m_processRun->findUID(targetUID)){
+                return pathf::getDir16((coPtr->x() - motionPtr->x) * SYS_MAPGRIDXP, (coPtr->y() - motionPtr->y) * SYS_MAPGRIDYP);
+            }
+            return (motionPtr->direction - DIR_BEGIN) * 2;
+        }();
+
+        m_processRun->addFollowUIDMagic(std::unique_ptr<FollowUIDMagic>(new FollowUIDMagic
+        {
+            u8"诺玛法老_火球术",
+            u8"运行",
+
+            motionPtr->x * SYS_MAPGRIDXP,
+            motionPtr->y * SYS_MAPGRIDYP,
+
+            gfx16DirIndex,
+            gfx16DirIndex,
+            20,
+
+            targetUID,
+            m_processRun,
+        }))->addOnDone([targetUID, proc = m_processRun](BaseMagic *)
+        {
+            if(auto coPtr = proc->findUID(targetUID)){
+                coPtr->addAttachMagic(std::unique_ptr<AttachMagic>(new AttachMagic(u8"诺玛法老_火球术", u8"裂解")));
+            }
+        });
+        return true;
+    });
+    return true;
+}
+
+bool ClientNumaWizard::onActionAttack_thunderBolt(const ActionNode &action)
+{
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_ATTACK0,
+        .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+        .x = action.x,
+        .y = action.y,
+    }));
+
+    m_motionQueue.back()->addTrigger(false, [targetUID = action.aimUID, this](MotionNode *motionPtr) -> bool
+    {
+        if(motionPtr->frame < 5){
+            return false;
+        }
+
+        if(auto coPtr = m_processRun->findUID(targetUID)){
+            coPtr->addAttachMagic(std::unique_ptr<AttachMagic>(new Thunderbolt()));
+        }
+        return true;
+    });
+    return true;
+}
+// --- end clientnumawizard.cpp ---
+
+// --- merged from clientrebornzombie.cpp ---
+bool ClientRebornZombie::onActionSpawn(const ActionNode &action)
+{
+    fflassert(m_forcedMotionQueue.empty());
+    m_currMotion.reset(new MotionNode
+    {
+        .type = MOTION_MON_STAND,
+        .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+        .x = action.x,
+        .y = action.y,
+    });
+
+    m_standMode = false;
+    return true;
+}
+
+bool ClientRebornZombie::onActionStand(const ActionNode &action)
+{
+    if(finalStandMode() != to_bool(action.extParam.stand.sandGhost.standMode)){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientRebornZombie::onActionTransf(const ActionNode &action)
+{
+    const auto standReq = to_bool(action.extParam.transf.sandGhost.standModeReq);
+    if(finalStandMode() != standReq){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientRebornZombie::onActionAttack(const ActionNode &action)
+{
+    if(!finalStandMode()){
+        addActionTransf();
+    }
+
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_ATTACK0,
+        .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+        .x = action.x,
+        .y = action.y,
+    }));
+    return true;
+}
+// --- end clientrebornzombie.cpp ---
+
+// --- merged from clientsandcactus.cpp ---
+ClientSandCactus::ClientSandCactus(uint64_t uid, ProcessRun *proc, const ActionNode &action)
+    : ClientMonster(uid, proc, action)
+{
+    fflassert(isMonster(u8"沙漠树魔"));
+    switch(action.type){
+        case ACTION_SPAWN:
+        case ACTION_STAND:
+        case ACTION_HITTED:
+        case ACTION_DIE:
+        case ACTION_ATTACK:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = pathf::dirValid(action.type) ? to_d(action.type) : DIR_BEGIN,
+                    .x = action.x,
+                    .y = action.y,
+                });
+                break;
+            }
+        default:
+            {
+                throw fflpanic("Taodog get invalid initial action: {}", actionName(action.type));
+            }
+    }
+}
+
+bool ClientSandCactus::onActionAttack(const ActionNode &action)
+{
+    fflassert(action.x == currMotion()->x);
+    fflassert(action.y == currMotion()->y);
+
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_ATTACK0,
+        .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+        .x = action.x,
+        .y = action.y,
+    }));
+
+    m_motionQueue.back()->addTrigger(false, [targetUID = action.aimUID, this](MotionNode *motionPtr) -> bool
+    {
+        if(motionPtr->frame < 5){
+            return false;
+        }
+
+        m_processRun->addFollowUIDMagic(std::unique_ptr<FollowUIDMagic>(new FollowUIDMagic
+        {
+            u8"沙漠树魔_喷刺",
+            u8"运行",
+
+            currMotion()->x * SYS_MAPGRIDXP,
+            currMotion()->y * SYS_MAPGRIDYP,
+
+            0,
+            (m_currMotion->direction - DIR_BEGIN) * 2,
+            20,
+
+            targetUID,
+            m_processRun,
+        }))->addOnDone([targetUID, proc = m_processRun](BaseMagic *)
+        {
+            if(auto coPtr = proc->findUID(targetUID)){
+                coPtr->addAttachMagic(std::unique_ptr<AttachMagic>(new AttachMagic(u8"沙漠树魔_喷刺", u8"裂解")));
+            }
+        });
+        return true;
+    });
+    return true;
+}
+// --- end clientsandcactus.cpp ---
+
+// --- merged from clientsandghost.cpp ---
+bool ClientSandGhost::onActionSpawn(const ActionNode &action)
+{
+    fflassert(m_forcedMotionQueue.empty());
+    m_currMotion.reset(new MotionNode
+    {
+        .type = MOTION_MON_STAND,
+        .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+        .x = action.x,
+        .y = action.y,
+    });
+
+    m_standMode = false;
+    return true;
+}
+
+bool ClientSandGhost::onActionStand(const ActionNode &action)
+{
+    if(finalStandMode() != to_bool(action.extParam.stand.sandGhost.standMode)){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientSandGhost::onActionTransf(const ActionNode &action)
+{
+    const auto standReq = to_bool(action.extParam.transf.sandGhost.standModeReq);
+    if(finalStandMode() != standReq){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientSandGhost::onActionAttack(const ActionNode &action)
+{
+    if(!finalStandMode()){
+        addActionTransf();
+    }
+
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_ATTACK0,
+        .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+        .x = action.x,
+        .y = action.y,
+    }));
+    return true;
+}
+// --- end clientsandghost.cpp ---
+
+// --- merged from clientshipwrecklord.cpp ---
+bool ClientShipwreckLord::onActionAttack(const ActionNode &action)
+{
+    const auto [endX, endY, endDir] = motionEndGLoc().at(1);
+    m_motionQueue = makeWalkMotionQueue(endX, endY, action.x, action.y, SYS_MAXSPEED);
+
+    switch(const auto magicID = action.extParam.attack.magicID){
+        case DBCOM_MAGICID(u8"物理攻击"):
+            {
+                m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+                {
+                    .type = MOTION_MON_ATTACK0,
+                    .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+                    .x = action.x,
+                    .y = action.y,
+                }));
+
+                m_motionQueue.back()->effect.reset(new MotionSyncEffect(u8"霸王教主_火刃", u8"运行", this, m_motionQueue.back().get()));
+                return true;
+            }
+        case DBCOM_MAGICID(u8"霸王教主_野蛮冲撞"):
+            {
+                m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+                {
+                    .type = MOTION_MON_SPELL0,
+                    .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+                    .x = action.x,
+                    .y = action.y,
+                }));
+                return true;
+            }
+        default:
+            {
+                throw fflpanic("invalid DC: id = {}, name = {}", magicID, to_cstr(DBCOM_MAGICRECORD(magicID).name));
+            }
+    }
+}
+// --- end clientshipwrecklord.cpp ---
+
+// --- merged from clienttaodog.cpp ---
+ClientTaoDog::ClientTaoDog(uint64_t uid, ProcessRun *proc, const ActionNode &action)
+    : ClientStandMonster(uid, proc)
+{
+    fflassert(isMonster(u8"神兽"));
+    switch(action.type){
+        case ACTION_SPAWN:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_SPECIAL,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = false;
+                break;
+            }
+        case ACTION_STAND:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = action.extParam.stand.dog.standMode;
+                break;
+            }
+        case ACTION_HITTED:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_HITTED,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = action.extParam.hitted.dog.standMode;
+                break;
+            }
+        case ACTION_DIE:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_DIE,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = action.extParam.die.dog.standMode;
+                break;
+            }
+        case ACTION_ATTACK:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_ATTACK0,
+                    .direction = m_processRun->getAimDirection(action, DIR_UP),
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = true;
+                break;
+            }
+        case ACTION_MOVE:
+        case ACTION_SPACEMOVE:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.aimX,
+                    .y = action.aimY,
+                });
+
+                // TODO use crowling state
+                //      next ACTION_STAND/ACTION_MOVE will fix it immdiately
+                m_standMode = false;
+                break;
+            }
+        default:
+            {
+                throw fflpanic("Taodog get invalid initial action: {}", actionName(action.type));
+            }
+    }
+}
+
+bool ClientTaoDog::onActionStand(const ActionNode &action)
+{
+    if(finalStandMode() != to_bool(action.extParam.stand.dog.standMode)){
+        addActionTransf();
+    }
+    return ClientMonster::onActionStand(action);
+}
+
+bool ClientTaoDog::onActionSpawn(const ActionNode &action)
+{
+    fflassert(m_forcedMotionQueue.empty());
+    m_currMotion.reset(new MotionNode
+    {
+        .type = MOTION_MON_SPAWN,
+        .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+        .x = action.x,
+        .y = action.y,
+    });
+
+    m_standMode = false;
+    return true;
+}
+
+bool ClientTaoDog::onActionTransf(const ActionNode &action)
+{
+    const auto standReq = to_bool(action.extParam.transf.dog.standModeReq);
+    if(finalStandMode() != standReq){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientTaoDog::onActionAttack(const ActionNode &action)
+{
+    if(!finalStandMode()){
+        addActionTransf();
+    }
+
+    const auto [endX, endY, endDir] = motionEndGLoc().at(1);
+    m_motionQueue = makeWalkMotionQueue(endX, endY, action.x, action.y, SYS_MAXSPEED);
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_ATTACK0,
+        .direction = m_processRun->getAimDirection(action, endDir),
+        .x = action.x,
+        .y = action.y,
+    }));
+
+    m_motionQueue.back()->addTrigger(false, [this](MotionNode *motionPtr) -> bool
+    {
+        if(motionPtr->frame < 5){
+            return false;
+        }
+
+        fflassert(m_standMode);
+        m_processRun->addFixedLocMagic(std::unique_ptr<FixedLocMagic>(new FixedLocMagic
+        {
+            u8"神兽_喷火",
+            u8"运行",
+            currMotion()->x,
+            currMotion()->y,
+            currMotion()->direction - DIR_BEGIN,
+        }));
+        return true;
+    });
+    return true;
+}
+// --- end clienttaodog.cpp ---
+
+// --- merged from clientwedgemoth.cpp ---
+ClientWedgeMoth::ClientWedgeMoth(uint64_t uid, ProcessRun *proc, const ActionNode &action)
+    : ClientMonster(uid, proc, action)
+{
+    fflassert(isMonster(u8"楔蛾"));
+    switch(action.type){
+        case ACTION_SPAWN:
+        case ACTION_STAND:
+        case ACTION_HITTED:
+        case ACTION_DIE:
+        case ACTION_ATTACK:
+        case ACTION_MOVE:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = pathf::dirValid(action.type) ? to_d(action.type) : DIR_BEGIN,
+                    .x = action.x,
+                    .y = action.y,
+                });
+                break;
+            }
+        default:
+            {
+                throw fflpanic("invalid initial action: {}", actionName(action.type));
+            }
+    }
+}
+
+bool ClientWedgeMoth::onActionAttack(const ActionNode &action)
+{
+    m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_ATTACK0,
+        .direction = m_processRun->getAimDirection(action, currMotion()->direction),
+        .x = action.x,
+        .y = action.y,
+    }));
+
+    m_motionQueue.back()->addTrigger(false, [this](MotionNode *motionPtr) -> bool
+    {
+        if(motionPtr->frame < 5){
+            return false;
+        }
+
+        m_processRun->addFixedLocMagic(std::unique_ptr<FixedLocMagic>(new FixedLocMagic
+        {
+            u8"楔蛾_喷毒",
+            u8"运行",
+            currMotion()->x,
+            currMotion()->y,
+            currMotion()->direction - DIR_BEGIN,
+        }));
+        return true;
+    });
+    return true;
+}
+// --- end clientwedgemoth.cpp ---
+
+// --- merged from clientzumamonster.cpp ---
+ClientZumaMonster::ClientZumaMonster(uint64_t uid, ProcessRun *proc, const ActionNode &action)
+    : ClientStandMonster(uid, proc)
+{
+    fflassert(isMonster(u8"祖玛雕像") || isMonster(u8"祖玛卫士"));
+    switch(action.type){
+        case ACTION_SPAWN:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = false;
+                break;
+            }
+        case ACTION_STAND:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = to_bool(action.extParam.stand.zumaMonster.standMode);
+                break;
+            }
+        case ACTION_ATTACK:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_ATTACK0,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = true;
+                break;
+            }
+        case ACTION_MOVE:
+            {
+                // use MOTION_MON_STAND
+                // MOTION_MON_WALK needs to figure the destination grid
+
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = true;
+                break;
+            }
+        case ACTION_TRANSF:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_SPAWN,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = to_bool(action.extParam.transf.zumaMonster.standModeReq);
+                break;
+            }
+        case ACTION_HITTED:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_HITTED,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = true; // can't be hitted if stay in the soil
+                break;
+            }
+        default:
+            {
+                throw fflpanic("invalid action: {}", actionName(action));
+            }
+    }
+}
+
+bool ClientZumaMonster::onActionSpawn(const ActionNode &action)
+{
+    fflassert(m_forcedMotionQueue.empty());
+    m_currMotion.reset(new MotionNode
+    {
+        .type = MOTION_MON_STAND,
+        .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+        .x = action.x,
+        .y = action.y,
+    });
+
+    m_standMode = false;
+    return true;
+}
+
+bool ClientZumaMonster::onActionStand(const ActionNode &action)
+{
+    if(finalStandMode() != to_bool(action.extParam.stand.zumaMonster.standMode)){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientZumaMonster::onActionTransf(const ActionNode &action)
+{
+    const auto standReq = to_bool(action.extParam.transf.zumaMonster.standModeReq);
+    if(finalStandMode() != standReq){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientZumaMonster::onActionAttack(const ActionNode &action)
+{
+    if(!finalStandMode()){
+        addActionTransf();
+    }
+    return ClientMonster::onActionAttack(action);
+}
+// --- end clientzumamonster.cpp ---
+
+// --- merged from clientzumataurus.cpp ---
+static std::unique_ptr<MotionNode> fnMakeStandMotion(int x, int y)
+{
+    return std::unique_ptr<MotionNode>(new MotionNode
+    {
+        .type = MOTION_MON_STAND,
+        .direction = DIR_DOWNLEFT,
+        .x = x,
+        .y = y,
+    });
+}
+
+ClientZumaTaurus::ClientZumaTaurus(uint64_t uid, ProcessRun *proc, const ActionNode &action)
+    : ClientStandMonster(uid, proc)
+{
+    fflassert(isMonster(u8"祖玛教主"));
+    switch(action.type){
+        case ACTION_SPAWN:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_STAND,
+                    .direction = DIR_BEGIN,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = false;
+                break;
+            }
+        case ACTION_STAND:
+            {
+                if(action.extParam.stand.zumaTaurus.standMode){
+                    m_currMotion.reset(new MotionNode
+                    {
+                        .type = MOTION_MON_STAND,
+                        .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                        .x = action.x,
+                        .y = action.y,
+                    });
+                    m_standMode = true;
+                }
+                else{
+                    m_currMotion.reset(new MotionNode
+                    {
+                        .type = MOTION_MON_STAND,
+                        .direction = DIR_BEGIN,
+                        .x = action.x,
+                        .y = action.y,
+                    });
+                    m_standMode = false;
+                }
+                break;
+            }
+        case ACTION_ATTACK:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_ATTACK0,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = true;
+                break;
+            }
+        case ACTION_MOVE:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    // use STAND
+                    // otherwise need to figure out proper (endX, endY)
+                    .type = MOTION_MON_STAND,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = true;
+                break;
+            }
+        case ACTION_TRANSF:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_SPAWN,
+                    .direction = DIR_BEGIN,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_currMotion->addTrigger(false, [this](MotionNode *motionPtr) -> bool
+                {
+                    if(motionPtr->frame < 9){
+                        return false;
+                    }
+
+                    m_forcedMotionQueue.push_back(fnMakeStandMotion(motionPtr->x, motionPtr->y));
+
+                    m_processRun->addFixedLocMagic(std::unique_ptr<FixedLocMagic>(new ZumaTaurusFragmentEffect_RUN(
+                        motionPtr->x,
+                        motionPtr->y)));
+                    return true;
+                });
+
+                m_standMode = true;
+                break;
+            }
+        case ACTION_HITTED:
+            {
+                m_currMotion.reset(new MotionNode
+                {
+                    .type = MOTION_MON_HITTED,
+                    .direction = pathf::dirValid(action.direction) ? to_d(action.direction) : DIR_UP,
+                    .x = action.x,
+                    .y = action.y,
+                });
+
+                m_standMode = true; // can't be hitted if stay in the soil
+                break;
+            }
+        default:
+            {
+                throw fflpanic("invalid action: {}", actionName(action));
+            }
+    }
+}
+
+bool ClientZumaTaurus::onActionSpawn(const ActionNode &action)
+{
+    fflassert(m_forcedMotionQueue.empty());
+    m_currMotion.reset(new MotionNode
+    {
+        .type = MOTION_MON_STAND,
+        .direction = DIR_BEGIN,
+        .x = action.x,
+        .y = action.y,
+    });
+
+    m_standMode = false;
+    return true;
+}
+
+bool ClientZumaTaurus::onActionStand(const ActionNode &action)
+{
+    if(finalStandMode() != to_bool(action.extParam.stand.zumaTaurus.standMode)){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientZumaTaurus::onActionTransf(const ActionNode &action)
+{
+    const auto standReq = to_bool(action.extParam.transf.zumaTaurus.standModeReq);
+    if(finalStandMode() != standReq){
+        addActionTransf();
+    }
+    return true;
+}
+
+bool ClientZumaTaurus::onActionAttack(const ActionNode &action)
+{
+    if(!finalStandMode()){
+        addActionTransf();
+    }
+
+    const auto [endX, endY, endDir] = motionEndGLoc().at(1);
+    m_motionQueue = makeWalkMotionQueue(endX, endY, action.x, action.y, SYS_MAXSPEED);
+    if(auto coPtr = m_processRun->findUID(action.aimUID)){
+        m_motionQueue.push_back(std::unique_ptr<MotionNode>(new MotionNode
+        {
+            .type = MOTION_MON_ATTACK0,
+            .direction = [&action, endDir, coPtr]() -> int
+            {
+                const auto nX = coPtr->x();
+                const auto nY = coPtr->y();
+                if(mathf::LDistance2<int>(nX, nY, action.x, action.y) == 0){
+                    return endDir;
+                }
+                return pathf::getOffDir(action.x, action.y, nX, nY);
+            }(),
+            .x = action.x,
+            .y = action.y,
+        }));
+
+        switch(action.extParam.attack.magicID){
+            case DBCOM_MAGICID(u8"祖玛教主_火墙"):
+                {
+                    m_motionQueue.back()->effect = std::unique_ptr<MotionAlignedEffect>(new MotionAlignedEffect
+                    {
+                        u8"祖玛教主_火墙",
+                        u8"启动",
+                        this,
+                        m_motionQueue.back().get(),
+                    });
+                    break;
+                }
+            case DBCOM_MAGICID(u8"祖玛教主_地狱火"):
+                {
+                    m_motionQueue.back()->effect = std::unique_ptr<MotionAlignedEffect>(new MotionAlignedEffect
+                    {
+                        u8"祖玛教主_地狱火",
+                        u8"启动",
+                        this,
+                        m_motionQueue.back().get(),
+                    });
+
+                    m_motionQueue.back()->addTrigger(false, [action, this](MotionNode *motionPtr) -> bool
+                    {
+                        if(motionPtr->frame < 4){
+                            return false;
+                        }
+
+                        const auto standDir = [motionPtr, &action, this]() -> int
+                        {
+                            if(action.aimUID){
+                                if(auto coPtr = m_processRun->findUID(action.aimUID); coPtr && coPtr->getTargetBox()){
+                                    if(const auto dir = m_processRun->getAimDirection(action, DIR_NONE); dir != DIR_NONE){
+                                        return dir;
+                                    }
+                                }
+                            }
+                            return motionPtr->direction;
+                        }();
+
+                        const auto castX = motionPtr->endX;
+                        const auto castY = motionPtr->endY;
+
+                        for(const auto distance: {1, 2, 3, 4, 5, 6, 7, 8}){
+                            m_processRun->addDelay(distance * 100, [standDir, castX, castY, distance, castMapID = m_processRun->mapID(), proc = m_processRun]()
+                            {
+                                if(proc->mapID() != castMapID){
+                                    return;
+                                }
+
+                                const auto [aimX, aimY] = pathf::getFrontGLoc(castX, castY, standDir, distance);
+                                if(!proc->groundValid(aimX, aimY)){
+                                    return;
+                                }
+
+                                proc->addFixedLocMagic(std::unique_ptr<FixedLocMagic>(new HellFire_RUN
+                                {
+                                    aimX,
+                                    aimY,
+                                    standDir,
+                                }))->addTrigger([aimX, aimY, proc](BaseMagic *magicPtr)
+                                {
+                                    if(magicPtr->frame() < 10){
+                                        return false;
+                                    }
+
+                                    proc->addFixedLocMagic(std::unique_ptr<FixedLocMagic>(new FireAshEffect_RUN
+                                    {
+                                        aimX,
+                                        aimY,
+                                        1000,
+                                    }));
+                                    return true;
+                                });
+                            });
+                        }
+                        return true;
+                    });
+                    break;
+                }
+            default:
+                {
+                    throw fflreach();
+                }
+        }
+    }
+    return true;
+}
+
+void ClientZumaTaurus::addActionTransf()
+{
+    ClientStandMonster::addActionTransf();
+
+    fflassert(!m_forcedMotionQueue.empty());
+    fflassert(m_forcedMotionQueue.back()->type == MOTION_MON_SPAWN);
+
+    m_forcedMotionQueue.back()->addTrigger(false, [this](MotionNode *motionPtr) -> bool
+    {
+        if(motionPtr->frame < 9){
+            return false;
+        }
+
+        m_forcedMotionQueue.push_back(fnMakeStandMotion(motionPtr->x, motionPtr->y));
+
+        m_processRun->addFixedLocMagic(std::unique_ptr<FixedLocMagic>(new ZumaTaurusFragmentEffect_RUN(motionPtr->x, motionPtr->y)));
+        return true;
+    });
+}
+// --- end clientzumataurus.cpp ---

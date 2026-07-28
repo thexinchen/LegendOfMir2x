@@ -29,9 +29,6 @@
 #include "totype.hpp"
 #include "gui/skillboard.hpp"
 #include "lochashtable.hpp"
-#include "clienttaodog.hpp"
-#include "clienttaoskeleton.hpp"
-#include "clienttaoskeletonext.hpp"
 
 extern Log *g_mir2xLog;
 extern Client *g_client;
