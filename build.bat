@@ -76,20 +76,20 @@ conan install . ^
     -c "tools.cmake:configure_args=['-DCMAKE_POLICY_VERSION_MINIMUM=3.5']" ^
     --build=missing
 if errorlevel 1 goto :error
-
+   
 echo [2/3] Configuring CMake...
 if defined MIR2X_RES_REPO_PATH (
-    cmake --preset conan-default "-DMIR2X_RES_REPO_PATH=%MIR2X_RES_REPO_PATH%"
+    cmake --fresh --preset conan-default "-DMIR2X_RES_REPO_PATH=%MIR2X_RES_REPO_PATH%"
 ) else (
-    cmake --preset conan-default
+    cmake --fresh --preset conan-default
 )
 if errorlevel 1 goto :error
 
 echo [3/3] Building %BUILD_TYPE%...
 if defined BUILD_TARGET (
-    cmake --build --preset %BUILD_PRESET% --target "%BUILD_TARGET%"
+    cmake --build --preset %BUILD_PRESET% --target "%BUILD_TARGET%" --parallel 10
 ) else (
-    cmake --build --preset %BUILD_PRESET%
+    cmake --build --preset %BUILD_PRESET% --parallel 10
 )
 if errorlevel 1 goto :error
 

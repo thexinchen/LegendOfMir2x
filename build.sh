@@ -100,19 +100,19 @@ fi
 
 conan install . \
     -s:h "build_type=${build_type}" \
-    -s:h compiler.cppstd=23 \
+    -s:h compiler.cppstd=26 \
     -c "tools.cmake:configure_args=['-DCMAKE_POLICY_VERSION_MINIMUM=3.5']" \
     "${package_manager_args[@]}" \
     --build=missing
 
 echo "[2/3] Configuring CMake..."
-cmake --preset "${preset}" "${resource_args[@]}"
+cmake --fresh --preset "${preset}" "${resource_args[@]}"
 
 echo "[3/3] Building ${build_type}..."
 if [[ -n "${build_target}" ]]; then
-    cmake --build --preset "${preset}" --target "${build_target}"
+    cmake --build --preset "${preset}" --target "${build_target}" --parallel 10
 else
-    cmake --build --preset "${preset}"
+    cmake --build --preset "${preset}" --parallel 10
 fi
 
 echo "Build completed successfully."
