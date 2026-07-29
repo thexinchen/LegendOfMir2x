@@ -94,7 +94,6 @@ GUIManager::GUIManager(ProcessRun *argProc)
           480,
 
           argProc,
-          this,
       }
 
     , m_securedItemListBoard
@@ -121,6 +120,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     m_horseBoard.draw();
     m_guildBoard.draw();
     m_inputStringBoard.draw();
+    m_runtimeConfigBoard.draw();
     m_questStateBoard.draw();
     m_teamStateBoard.draw();
     m_securedItemListBoard.draw();
@@ -194,6 +194,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_horseBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_guildBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_inputStringBoard.processEvent(event);
+    tookEvent |= valid && !tookEvent && m_runtimeConfigBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_questStateBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_teamStateBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_securedItemListBoard.processEvent(event);
@@ -205,17 +206,6 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_miniMapBoard.processEvent(event);
 
     return tookEvent;
-}
-
-Widget *GUIManager::getWidget(const std::string_view &name)
-{
-    if(name == "RuntimeConfigBoard"){
-        return &m_runtimeConfigBoard;
-    }
-
-    else{
-        throw fflvalue(name);
-    }
 }
 
 void GUIManager::flipBoard(std::string_view name)
@@ -252,7 +242,11 @@ void GUIManager::flipBoard(std::string_view name)
         m_skillBoard.flipShow();
         return;
     }
-    getWidget(name)->flipShow();
+    if(name == "RuntimeConfigBoard"){
+        m_runtimeConfigBoard.flipShow();
+        return;
+    }
+    throw fflvalue(name);
 }
 
 void GUIManager::afterResizeDefault()

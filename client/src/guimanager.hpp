@@ -14,7 +14,7 @@
 #include "ImQuestStateBoard.hpp"
 #include "ImPlayerStateBoard.hpp"
 #include "ImInputStringBoard.hpp"
-#include "gui/runtimeconfigboard.hpp"
+#include "gui/ImRuntimeConfigBoard.hpp"
 #include "ImSecuredItemListBoard.hpp"
 
 class ProcessRun;
@@ -42,7 +42,7 @@ class GUIManager: public Widget
         ImQuestStateBoard m_questStateBoard;
         ImPlayerStateBoard m_playerStateBoard;
         ImInputStringBoard m_inputStringBoard;
-        RuntimeConfigBoard m_runtimeConfigBoard;
+        ImRuntimeConfigBoard m_runtimeConfigBoard;
         ImSecuredItemListBoard m_securedItemListBoard;
 
     public:
@@ -104,6 +104,11 @@ class GUIManager: public Widget
             return std::addressof(self.m_purchaseBoard);
         }
 
+        auto getRuntimeConfigBoard(this auto &&self)
+        {
+            return std::addressof(self.m_runtimeConfigBoard);
+        }
+
     public:
         void updateDefault(double) override;
 
@@ -114,16 +119,7 @@ class GUIManager: public Widget
         bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
 
     public:
-        Widget *getWidget(const std::string_view &);
-
-    public:
         void flipBoard(std::string_view);
-
-    public:
-        const Widget *getWidget(const std::string_view &name) const
-        {
-            return const_cast<GUIManager *>(this)->getWidget(name);
-        }
 
     private:
         void afterResizeDefault() override;

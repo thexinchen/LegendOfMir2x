@@ -388,11 +388,6 @@ class ProcessRun: public Process
         void queryMapBaseUID(uint32_t, std::function<void(uint64_t)>) const;
 
     public:
-        auto getWidget(this auto && self, const std::string_view &widgetName)
-        {
-            return self.getGUIManager()->getWidget(widgetName);
-        }
-
         auto getInputStringBoard(this auto &&self)
         {
             return self.getGUIManager()->getInputStringBoard();
@@ -528,6 +523,6 @@ class ProcessRun: public Process
     public:
         template<int CfgIndex> auto getRuntimeConfig(this auto && self)
         {
-            return SDRuntimeConfig_getConfig<CfgIndex>(dynamic_cast<const RuntimeConfigBoard *>(self.getWidget("RuntimeConfigBoard"))->getConfig());
+            return SDRuntimeConfig_getConfig<CfgIndex>(self.getGUIManager()->getRuntimeConfigBoard()->getConfig());
         }
 };

@@ -68,7 +68,7 @@ void ProcessRun::on_SM_STARTGAMESCENE(const uint8_t *buf, size_t bufSize)
 void ProcessRun::on_SM_PLAYERCONFIG(const uint8_t *buf, size_t bufSize)
 {
     const auto sdPC = cerealf::deserialize<SDPlayerConfig>(buf, bufSize);
-    dynamic_cast<RuntimeConfigBoard *>(getWidget("RuntimeConfigBoard"))->setConfig(sdPC.runtimeConfig);
+    getGUIManager()->getRuntimeConfigBoard()->setConfig(sdPC.runtimeConfig);
 
     for(const auto &[magicID, key]: sdPC.magicKeyList.keyList){
         getGUIManager()->getSkillBoard()->getConfig().setMagicKey(magicID, key);
