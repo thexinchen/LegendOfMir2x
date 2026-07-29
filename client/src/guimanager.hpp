@@ -1,7 +1,7 @@
 #pragma once
 #include "gui_core.hpp"
 #include "ImMainUI.hpp"
-#include "minimapboard.hpp"
+#include "ImMiniMapBoard.hpp"
 #include "ImHorseBoard.hpp"
 #include "gui/skillboard.hpp"
 #include "gui/ImAcutionBoard.hpp"
@@ -34,7 +34,7 @@ class GUIManager: public Widget
         ImHorseBoard m_horseBoard;
         SkillBoard m_skillBoard;
         ImGuildBoard m_guildBoard;
-        MiniMapBoard m_miniMapBoard;
+        ImMiniMapBoard m_miniMapBoard;
         ImAcutionBoard m_acutionBoard;
         PurchaseBoard m_purchaseBoard;
         ImTeamStateBoard m_teamStateBoard;
@@ -77,6 +77,11 @@ class GUIManager: public Widget
         auto getInventoryBoard(this auto &&self)
         {
             return std::addressof(self.m_inventoryBoard);
+        }
+
+        auto getMiniMapBoard(this auto &&self)
+        {
+            return std::addressof(self.m_miniMapBoard);
         }
 
     public:

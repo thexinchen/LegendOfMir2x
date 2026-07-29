@@ -14,7 +14,7 @@
 #include "gui_font.hpp"
 #include "gui_texture.hpp"
 #include "log.hpp"
-#include "minimapboard.hpp"
+#include "ImMiniMapBoard.hpp"
 #include "processrun.hpp"
 #include "strf.hpp"
 #include "totype.hpp"
@@ -339,7 +339,7 @@ void ImMainUI::drawHUD() const
         const_cast<ImMainUI *>(this)->addLog(0, "exchange doesn't implemented yet");
     }
     if(overlayButton("##hud-minimap", 0X00000043, 0X00000043, {rightX + 4, localBaseY + 40})){
-        auto map = dynamic_cast<MiniMapBoard *>(m_processRun->getWidget("MiniMapBoard"));
+        auto map = m_processRun->getGUIManager()->getMiniMapBoard();
         if(map && map->getMiniMapTexture()){
             map->flipShow();
         }

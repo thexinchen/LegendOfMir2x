@@ -484,8 +484,8 @@ void ProcessRun::draw() const
         constexpr int buffIconDrawH = 30;
         int buffIconOffX = g_glDevice->getRendererWidth() - buffIconDrawW;
 
-        if(auto boardPtr = getWidget("MiniMapBoard"); boardPtr->show()){
-            buffIconOffX -= boardPtr->w();
+        if(auto boardPtr = getGUIManager()->getMiniMapBoard(); boardPtr->show() && boardPtr->getMiniMapTexture()){
+            buffIconOffX -= to_dround(boardPtr->size().x);
         }
 
         for(const auto id: getMyHero()->getSDBuffIDListOpt().value().idList | std::views::reverse){
@@ -840,7 +840,7 @@ void ProcessRun::loadMap(uint64_t newMapUID, int centerGX, int centerGY)
     }
 
     fnUpdateLoadRatio(100);
-    if(auto boardPtr = dynamic_cast<MiniMapBoard *>(getWidget("MiniMapBoard"))){
+    if(auto boardPtr = getGUIManager()->getMiniMapBoard()){
         if(!boardPtr->getMiniMapTexture()){
             addCBLog(CBLOG_ERR, u8"没有可用的地图"); // don't need to flip minimap show explicitly
         }

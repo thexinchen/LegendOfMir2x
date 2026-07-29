@@ -54,9 +54,9 @@ GUIManager::GUIManager(ProcessRun *argProc)
       }
 
     , m_miniMapBoard
-      {{
-          .proc = argProc,
-      }}
+      {
+          argProc,
+      }
 
     , m_acutionBoard
       {
@@ -117,7 +117,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
         return;
     }
 
-    m_miniMapBoard.drawRoot({});
+    m_miniMapBoard.draw();
     m_NPCChatBoard.drawRoot({});
     m_mainUI.draw();
     m_acutionBoard.draw();
@@ -155,6 +155,7 @@ void GUIManager::updateDefault(double fUpdateTime)
     m_securedItemListBoard.update(fUpdateTime);
     m_inventoryBoard.update(fUpdateTime);
     m_playerStateBoard.update(fUpdateTime);
+    m_miniMapBoard.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
@@ -202,7 +203,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_inventoryBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_playerStateBoard.processEvent(event);
     fnProcEventRoot(&m_NPCChatBoard);
-    fnProcEventRoot(&m_miniMapBoard);
+    tookEvent |= valid && !tookEvent && m_miniMapBoard.processEvent(event);
 
     return tookEvent;
 }
@@ -219,10 +220,6 @@ Widget *GUIManager::getWidget(const std::string_view &name)
 
     else if(name == "SkillBoard"){
         return &m_skillBoard;
-    }
-
-    else if(name == "MiniMapBoard"){
-        return &m_miniMapBoard;
     }
 
     else if(name == "PurchaseBoard"){
