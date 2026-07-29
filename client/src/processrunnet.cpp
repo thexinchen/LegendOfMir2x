@@ -123,7 +123,7 @@ void ProcessRun::on_SM_LEARNEDMAGICLIST(const uint8_t *buf, size_t bufSize)
 void ProcessRun::on_SM_SELLITEMLIST(const uint8_t *buf, size_t bufSize)
 {
     auto sdSIL = cerealf::deserialize<SDSellItemList>(buf, bufSize);
-    auto purchaseBoardPtr = dynamic_cast<PurchaseBoard *>(getGUIManager()->getWidget("PurchaseBoard"));
+    auto purchaseBoardPtr = getGUIManager()->getPurchaseBoard();
     purchaseBoardPtr->setSellItemList(std::move(sdSIL));
 }
 
@@ -421,7 +421,7 @@ void ProcessRun::on_SM_BUYERROR(const uint8_t *buf, size_t bufSize)
 void ProcessRun::on_SM_BUYSUCCEED(const uint8_t *buf, size_t)
 {
     const auto smBS = ServerMsg::conv<SMBuySucceed>(buf);
-    dynamic_cast<PurchaseBoard *>(getWidget("PurchaseBoard"))->onBuySucceed(smBS.npcUID, smBS.itemID, smBS.seqID);
+    getGUIManager()->getPurchaseBoard()->onBuySucceed(smBS.npcUID, smBS.itemID, smBS.seqID);
 }
 
 void ProcessRun::on_SM_GROUNDITEMIDLIST(const uint8_t *buf, size_t bufSize)
@@ -628,7 +628,7 @@ void ProcessRun::on_SM_NPCXMLLAYOUT(const uint8_t *buf, size_t bufSize)
 {
     const auto sdNPCXMLL = cerealf::deserialize<SDNPCXMLLayout>(buf, bufSize);
     auto npcChatBoardPtr  = getGUIManager()->getNPCChatBoard();
-    auto purchaseBoardPtr = dynamic_cast<PurchaseBoard *>(getGUIManager()->getWidget("PurchaseBoard"));
+    auto purchaseBoardPtr = getGUIManager()->getPurchaseBoard();
 
     npcChatBoardPtr->loadXML(sdNPCXMLL.npcUID, sdNPCXMLL.eventPath.c_str(), sdNPCXMLL.xmlLayout.c_str());
     npcChatBoardPtr->setShow(true);
@@ -638,7 +638,7 @@ void ProcessRun::on_SM_NPCXMLLAYOUT(const uint8_t *buf, size_t bufSize)
 void ProcessRun::on_SM_NPCSELL(const uint8_t *buf, size_t bufSize)
 {
     auto sdNPCS = cerealf::deserialize<SDNPCSell>(buf, bufSize);
-    auto purchaseBoardPtr = dynamic_cast<PurchaseBoard *>(getGUIManager()->getWidget("PurchaseBoard"));
+    auto purchaseBoardPtr = getGUIManager()->getPurchaseBoard();
     auto npcChatBoardPtr  = getGUIManager()->getNPCChatBoard();
 
     if(npcChatBoardPtr->show()){

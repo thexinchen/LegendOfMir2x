@@ -127,9 +127,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     m_inventoryBoard.draw();
     m_playerStateBoard.draw();
 
-    if(m_purchaseBoard.show()){
-        m_purchaseBoard.drawRoot({});
-    }
+    m_purchaseBoard.draw();
 
     Widget::drawDefault(m);
 
@@ -190,7 +188,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
 
     tookEvent |= Widget::processEventDefault(event, valid && !tookEvent, m);
 
-    fnProcEventRoot(&m_purchaseBoard);
+    tookEvent |= valid && !tookEvent && m_purchaseBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_mainUI.processEvent(event);
     tookEvent |= valid && !tookEvent && m_acutionBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_horseBoard.processEvent(event);
@@ -211,11 +209,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
 
 Widget *GUIManager::getWidget(const std::string_view &name)
 {
-    if(name == "PurchaseBoard"){
-        return &m_purchaseBoard;
-    }
-
-    else if(name == "RuntimeConfigBoard"){
+    if(name == "RuntimeConfigBoard"){
         return &m_runtimeConfigBoard;
     }
 

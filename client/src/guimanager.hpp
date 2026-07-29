@@ -8,7 +8,7 @@
 #include "ImGuildBoard.hpp"
 #include "gui/ImNPCChatBoard.hpp"
 #include "gui/ImFriendChatBoard.hpp"
-#include "gui/purchaseboard.hpp"
+#include "gui/ImPurchaseBoard.hpp"
 #include "ImTeamStateBoard.hpp"
 #include "ImInventoryBoard.hpp"
 #include "ImQuestStateBoard.hpp"
@@ -36,7 +36,7 @@ class GUIManager: public Widget
         ImGuildBoard m_guildBoard;
         ImMiniMapBoard m_miniMapBoard;
         ImAcutionBoard m_acutionBoard;
-        PurchaseBoard m_purchaseBoard;
+        ImPurchaseBoard m_purchaseBoard;
         ImTeamStateBoard m_teamStateBoard;
         ImInventoryBoard m_inventoryBoard;
         ImQuestStateBoard m_questStateBoard;
@@ -97,6 +97,11 @@ class GUIManager: public Widget
         auto getSkillBoard(this auto &&self)
         {
             return std::addressof(self.m_skillBoard);
+        }
+
+        auto getPurchaseBoard(this auto &&self)
+        {
+            return std::addressof(self.m_purchaseBoard);
         }
 
     public:
