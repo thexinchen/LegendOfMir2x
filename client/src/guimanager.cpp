@@ -70,10 +70,7 @@ GUIManager::GUIManager(ProcessRun *argProc)
 
     , m_teamStateBoard
       {
-          g_glDevice->getRendererWidth()  / 2 - 129,
-          g_glDevice->getRendererHeight() / 2 - 122,
           argProc,
-          this,
       }
 
     , m_inventoryBoard
@@ -138,6 +135,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     m_guildBoard.draw();
     m_inputStringBoard.draw();
     m_questStateBoard.draw();
+    m_teamStateBoard.draw();
 
     if(m_purchaseBoard.show()){
         m_purchaseBoard.drawRoot({});
@@ -160,6 +158,7 @@ void GUIManager::updateDefault(double fUpdateTime)
     m_guildBoard.update(fUpdateTime);
     m_inputStringBoard.update(fUpdateTime);
     m_questStateBoard.update(fUpdateTime);
+    m_teamStateBoard.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
@@ -202,6 +201,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_guildBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_inputStringBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_questStateBoard.processEvent(event);
+    tookEvent |= valid && !tookEvent && m_teamStateBoard.processEvent(event);
     fnProcEventRoot(&m_NPCChatBoard);
     fnProcEventRoot(&m_miniMapBoard);
 
@@ -228,10 +228,6 @@ Widget *GUIManager::getWidget(const std::string_view &name)
 
     else if(name == "MiniMapBoard"){
         return &m_miniMapBoard;
-    }
-
-    else if(name == "TeamStateBoard"){
-        return &m_teamStateBoard;
     }
 
     else if(name == "PlayerStateBoard"){
@@ -267,6 +263,10 @@ void GUIManager::flipBoard(std::string_view name)
     }
     if(name == "QuestStateBoard"){
         m_questStateBoard.flipShow();
+        return;
+    }
+    if(name == "TeamStateBoard"){
+        m_teamStateBoard.flipShow();
         return;
     }
     getWidget(name)->flipShow();

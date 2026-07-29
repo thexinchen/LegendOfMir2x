@@ -17,7 +17,6 @@
 #include "minimapboard.hpp"
 #include "processrun.hpp"
 #include "strf.hpp"
-#include "teamstateboard.hpp"
 #include "totype.hpp"
 #include "uidf.hpp"
 
@@ -384,7 +383,7 @@ void ImMainUI::drawHUD() const
                     blinkVisible(button.name))){
             stopButtonBlink(button.name);
             if(std::string_view(button.name) == "Team"){
-                auto teamBoard = dynamic_cast<TeamStateBoard *>(m_processRun->getWidget(button.board));
+                auto teamBoard = m_processRun->getTeamStateBoard();
                 if(hero && hero->hasTeam()){
                     teamBoard->flipShow();
                     if(teamBoard->show()){

@@ -9,7 +9,7 @@
 #include "gui/npcchatboard.hpp"
 #include "gui/friendchatboard.hpp"
 #include "gui/purchaseboard.hpp"
-#include "teamstateboard.hpp"
+#include "ImTeamStateBoard.hpp"
 #include "inventoryboard.hpp"
 #include "ImQuestStateBoard.hpp"
 #include "playerstateboard.hpp"
@@ -37,7 +37,7 @@ class GUIManager: public Widget
         MiniMapBoard m_miniMapBoard;
         ImAcutionBoard m_acutionBoard;
         PurchaseBoard m_purchaseBoard;
-        TeamStateBoard m_teamStateBoard;
+        ImTeamStateBoard m_teamStateBoard;
         InventoryBoard m_inventoryBoard;
         ImQuestStateBoard m_questStateBoard;
         PlayerStateBoard m_playerStateBoard;
@@ -62,6 +62,11 @@ class GUIManager: public Widget
         auto getQuestStateBoard(this auto &&self)
         {
             return std::addressof(self.m_questStateBoard);
+        }
+
+        auto getTeamStateBoard(this auto &&self)
+        {
+            return std::addressof(self.m_teamStateBoard);
         }
 
     public:

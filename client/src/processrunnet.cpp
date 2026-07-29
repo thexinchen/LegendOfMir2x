@@ -908,12 +908,12 @@ void ProcessRun::on_SM_SHOWSECUREDITEMLIST(const uint8_t *buf, size_t bufSize)
 
 void ProcessRun::on_SM_TEAMCANDIDATE(const uint8_t *buf, size_t bufSize)
 {
-    dynamic_cast<TeamStateBoard *>(getWidget("TeamStateBoard"))->addTeamCandidate(cerealf::deserialize<SDTeamCandidate>(buf, bufSize));
+    getTeamStateBoard()->addTeamCandidate(cerealf::deserialize<SDTeamCandidate>(buf, bufSize));
 }
 
 void ProcessRun::on_SM_TEAMMEMBERLIST(const uint8_t *buf, size_t bufSize)
 {
-    dynamic_cast<TeamStateBoard *>(getWidget("TeamStateBoard"))->setTeamMemberList(cerealf::deserialize<SDTeamMemberList>(buf, bufSize));
+    getTeamStateBoard()->setTeamMemberList(cerealf::deserialize<SDTeamMemberList>(buf, bufSize));
 }
 
 void ProcessRun::on_SM_QUESTDESPUPDATE(const uint8_t *buf, size_t bufSize)

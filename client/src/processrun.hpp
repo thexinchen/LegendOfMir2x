@@ -403,6 +403,11 @@ class ProcessRun: public Process
             return self.getGUIManager()->getQuestStateBoard();
         }
 
+        auto getTeamStateBoard(this auto &&self)
+        {
+            return self.getGUIManager()->getTeamStateBoard();
+        }
+
     public:
         void sendNPCEvent(uint64_t, std::string, std::string, std::optional<std::string> = {});
 
