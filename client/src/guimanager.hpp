@@ -1,5 +1,6 @@
 #pragma once
 #include "gui_core.hpp"
+#include "ImMainUI.hpp"
 #include "minimapboard.hpp"
 #include "horseboard.hpp"
 #include "gui/skillboard.hpp"
@@ -7,12 +8,10 @@
 #include "guildboard.hpp"
 #include "gui/npcchatboard.hpp"
 #include "gui/friendchatboard.hpp"
-#include "gui/controlboard.hpp"
 #include "gui/purchaseboard.hpp"
 #include "teamstateboard.hpp"
 #include "inventoryboard.hpp"
 #include "queststateboard.hpp"
-#include "gui/quickaccessboard.hpp"
 #include "playerstateboard.hpp"
 #include "inputstringboard.hpp"
 #include "gui/runtimeconfigboard.hpp"
@@ -26,7 +25,7 @@ class GUIManager: public Widget
 
     private:
         NPCChatBoard m_NPCChatBoard;
-        ControlBoard m_controlBoard;
+        ImMainUI m_mainUI;
 
     private:
         FriendChatBoard m_friendChatBoard;
@@ -41,7 +40,6 @@ class GUIManager: public Widget
         TeamStateBoard m_teamStateBoard;
         InventoryBoard m_inventoryBoard;
         QuestStateBoard m_questStateBoard;
-        QuickAccessBoard m_quickAccessBoard;
         PlayerStateBoard m_playerStateBoard;
         InputStringBoard m_inputStringBoard;
         RuntimeConfigBoard m_runtimeConfigBoard;
@@ -49,6 +47,12 @@ class GUIManager: public Widget
 
     public:
         GUIManager(ProcessRun *);
+
+    public:
+        auto getMainUI(this auto &&self)
+        {
+            return std::addressof(self.m_mainUI);
+        }
 
     public:
         void updateDefault(double) override;

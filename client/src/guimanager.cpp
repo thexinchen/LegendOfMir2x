@@ -25,10 +25,7 @@ GUIManager::GUIManager(ProcessRun *argProc)
           argProc,
       }
 
-    , m_controlBoard
-      {
-          argProc,
-      }
+    , m_mainUI(argProc)
 
     , m_friendChatBoard
       {
@@ -105,15 +102,6 @@ GUIManager::GUIManager(ProcessRun *argProc)
           this,
       }
 
-    , m_quickAccessBoard
-      {
-          DIR_UPLEFT,
-          0,
-          g_glDevice->getRendererHeight() - m_controlBoard.h() - 48,
-          argProc,
-          this,
-      }
-
     , m_playerStateBoard
       {
           g_glDevice->getRendererWidth()  / 2 - 164,
@@ -163,7 +151,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
 
     m_miniMapBoard.drawRoot({});
     m_NPCChatBoard.drawRoot({});
-    m_controlBoard.drawRoot({});
+    m_mainUI.draw();
 
     if(m_purchaseBoard.show()){
         m_purchaseBoard.drawRoot({});
@@ -180,7 +168,7 @@ void GUIManager::updateDefault(double fUpdateTime)
 {
     Widget::updateDefault(fUpdateTime);
     m_purchaseBoard.update(fUpdateTime);
-    m_controlBoard.update(fUpdateTime);
+    m_mainUI.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
@@ -217,7 +205,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= Widget::processEventDefault(event, valid && !tookEvent, m);
 
     fnProcEventRoot(&m_purchaseBoard);
-    fnProcEventRoot(&m_controlBoard);
+    tookEvent |= valid && !tookEvent && m_mainUI.processEvent(event);
     fnProcEventRoot(&m_NPCChatBoard);
     fnProcEventRoot(&m_miniMapBoard);
 
@@ -230,16 +218,8 @@ Widget *GUIManager::getWidget(const std::string_view &name)
         return &m_inventoryBoard;
     }
 
-    else if(name == "QuickAccessBoard"){
-        return &m_quickAccessBoard;
-    }
-
     else if(name == "NPCChatBoard"){
         return &m_NPCChatBoard;
-    }
-
-    else if(name == "ControlBoard"){
-        return &m_controlBoard;
     }
 
     else if(name == "FriendChatBoard"){
@@ -297,7 +277,6 @@ Widget *GUIManager::getWidget(const std::string_view &name)
 
 void GUIManager::afterResizeDefault()
 {
-    m_controlBoard.afterResize();
     m_runtimeConfigBoard.updateWindowSize({w(), h()}, true);
 
     const auto fnSetWidgetPLoc = [this](Widget *widgetPtr)
@@ -315,7 +294,6 @@ void GUIManager::afterResizeDefault()
     fnSetWidgetPLoc(&m_skillBoard);
     fnSetWidgetPLoc(&m_guildBoard);
     fnSetWidgetPLoc(&m_inventoryBoard);
-    fnSetWidgetPLoc(&m_quickAccessBoard);
     fnSetWidgetPLoc(&m_playerStateBoard);
     fnSetWidgetPLoc(&m_inputStringBoard);
     fnSetWidgetPLoc(&m_friendChatBoard);

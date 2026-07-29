@@ -420,6 +420,11 @@ class ProcessRun: public Process
             return std::addressof(self.m_guiManager);
         }
 
+        auto getMainUI(this auto &&self)
+        {
+            return self.m_guiManager.getMainUI();
+        }
+
     public:
         void flipDrawMagicKey()
         {

@@ -17,7 +17,7 @@
 #include "processrun.hpp"
 #include "cerealf.hpp"
 #include "imeboard.hpp"
-#include "gui/controlboard.hpp"
+#include "cblog.hpp"
 #include "gui/friendchatboard.hpp"
 #include "serdesmsg.hpp"
 #include "gldevice.hpp"
@@ -85,7 +85,7 @@ void ProcessRun::on_SM_CHATMESSAGELIST(const uint8_t *buf, size_t bufSize)
     for(const auto &message: cerealf::deserialize<SDChatMessageList>(buf, bufSize)){
         dynamic_cast<FriendChatBoard *>(getWidget("FriendChatBoard"))->addMessage({}, message);
     }
-    dynamic_cast<ControlBoard *>(getWidget("ControlBoard"))->getButton("FriendChat")->setBlinkTime(100, 100, 5000);
+    getMainUI()->startButtonBlink("FriendChat", 5000);
 }
 
 void ProcessRun::on_SM_PLAYERSAY(const uint8_t *buf, size_t bufSize)
@@ -704,7 +704,7 @@ void ProcessRun::on_SM_UPDATEITEM(const uint8_t *buf, size_t bufSize)
     }
 
     if(changed > 0){
-        dynamic_cast<ControlBoard *>(getWidget("ControlBoard"))->getButton("Inventory")->setBlinkTime(100, 100, 5000);
+        getMainUI()->startButtonBlink("Inventory", 5000);
     }
 }
 

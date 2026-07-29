@@ -101,7 +101,7 @@ void ProcessRun::scrollMap()
     const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
 
     const auto showWindowW = rendererW;
-    const auto showWindowH = rendererH - dynamic_cast<ControlBoard *>(getWidget("ControlBoard"))->shiftHeight();
+    const auto showWindowH = rendererH - getMainUI()->shiftHeight();
 
     const int nViewX = getMyHero()->x() * SYS_MAPGRIDXP - showWindowW / 2;
     const int nViewY = getMyHero()->y() * SYS_MAPGRIDYP - showWindowH / 2;
@@ -1508,14 +1508,14 @@ void ProcessRun::addCBLog(int logType, const char8_t *format, ...)
 {
     std::u8string logStr;
     str_format(format, logStr);
-    dynamic_cast<ControlBoard *>(getWidget("ControlBoard"))->addLog(logType, to_cstr(logStr));
+    getMainUI()->addLog(logType, to_cstr(logStr));
 }
 
 void ProcessRun::addCBParLog(const char8_t *format, ...)
 {
     std::u8string logStr;
     str_format(format, logStr);
-    dynamic_cast<ControlBoard *>(getWidget("ControlBoard"))->addParLog(to_cstr(logStr));
+    getMainUI()->addParLog(to_cstr(logStr));
 }
 
 ClientCreature *ProcessRun::findUID(uint64_t uid, bool checkVisible) const
@@ -1609,7 +1609,7 @@ void ProcessRun::centerMyHero()
         const auto [rendererWidth, rendererHeight] = g_glDevice->getRendererSize();
 
         const auto showWindowW = rendererWidth;
-        const auto showWindowH = rendererHeight - dynamic_cast<ControlBoard *>(getWidget("ControlBoard"))->shiftHeight();
+        const auto showWindowH = rendererHeight - getMainUI()->shiftHeight();
 
         switch(stepLen){
             case 0:

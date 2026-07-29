@@ -2,7 +2,6 @@
 #include "colorf.hpp"
 #include "gui_texture.hpp"
 #include "gldevice.hpp"
-#include "gui/controlboard.hpp"
 #include "inputstringboard.hpp"
 
 extern PNGTexDB *g_progUseDB;

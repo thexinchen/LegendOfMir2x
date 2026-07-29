@@ -3,7 +3,7 @@
 #include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
-#include "gui/controlboard.hpp"
+#include "cblog.hpp"
 #include "queststateboard.hpp"
 
 extern PNGTexDB *g_progUseDB;
@@ -213,7 +213,7 @@ void QuestStateBoard::updateQuestDesp(SDQuestDespUpdate sdQDU)
     }
 
     if(!show()){
-        dynamic_cast<ControlBoard *>(m_processRun->getWidget("ControlBoard"))->getButton("Quest")->setBlinkTime(100, 100);
+        m_processRun->getMainUI()->startButtonBlink("Quest");
     }
 
     loadQuestDesp();
