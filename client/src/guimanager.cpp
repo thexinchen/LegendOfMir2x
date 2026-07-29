@@ -50,10 +50,7 @@ GUIManager::GUIManager(ProcessRun *argProc)
 
     , m_guildBoard
       {
-          g_glDevice->getRendererWidth()  / 2 - 297,
-          g_glDevice->getRendererHeight() / 2 - 222,
           argProc,
-          this,
       }
 
     , m_miniMapBoard
@@ -149,6 +146,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     m_mainUI.draw();
     m_acutionBoard.draw();
     m_horseBoard.draw();
+    m_guildBoard.draw();
 
     if(m_purchaseBoard.show()){
         m_purchaseBoard.drawRoot({});
@@ -168,6 +166,7 @@ void GUIManager::updateDefault(double fUpdateTime)
     m_mainUI.update(fUpdateTime);
     m_acutionBoard.update(fUpdateTime);
     m_horseBoard.update(fUpdateTime);
+    m_guildBoard.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
@@ -207,6 +206,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_mainUI.processEvent(event);
     tookEvent |= valid && !tookEvent && m_acutionBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_horseBoard.processEvent(event);
+    tookEvent |= valid && !tookEvent && m_guildBoard.processEvent(event);
     fnProcEventRoot(&m_NPCChatBoard);
     fnProcEventRoot(&m_miniMapBoard);
 
@@ -229,10 +229,6 @@ Widget *GUIManager::getWidget(const std::string_view &name)
 
     else if(name == "SkillBoard"){
         return &m_skillBoard;
-    }
-
-    else if(name == "GuildBoard"){
-        return &m_guildBoard;
     }
 
     else if(name == "MiniMapBoard"){
@@ -278,6 +274,10 @@ void GUIManager::flipBoard(std::string_view name)
         m_horseBoard.flipShow();
         return;
     }
+    if(name == "GuildBoard"){
+        m_guildBoard.flipShow();
+        return;
+    }
     getWidget(name)->flipShow();
 }
 
@@ -297,7 +297,6 @@ void GUIManager::afterResizeDefault()
 
     fnSetWidgetPLoc(g_imeBoard);
     fnSetWidgetPLoc(&m_skillBoard);
-    fnSetWidgetPLoc(&m_guildBoard);
     fnSetWidgetPLoc(&m_inventoryBoard);
     fnSetWidgetPLoc(&m_playerStateBoard);
     fnSetWidgetPLoc(&m_inputStringBoard);
