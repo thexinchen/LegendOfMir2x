@@ -11,7 +11,7 @@
 #include "gui/purchaseboard.hpp"
 #include "teamstateboard.hpp"
 #include "inventoryboard.hpp"
-#include "queststateboard.hpp"
+#include "ImQuestStateBoard.hpp"
 #include "playerstateboard.hpp"
 #include "ImInputStringBoard.hpp"
 #include "gui/runtimeconfigboard.hpp"
@@ -39,7 +39,7 @@ class GUIManager: public Widget
         PurchaseBoard m_purchaseBoard;
         TeamStateBoard m_teamStateBoard;
         InventoryBoard m_inventoryBoard;
-        QuestStateBoard m_questStateBoard;
+        ImQuestStateBoard m_questStateBoard;
         PlayerStateBoard m_playerStateBoard;
         ImInputStringBoard m_inputStringBoard;
         RuntimeConfigBoard m_runtimeConfigBoard;
@@ -57,6 +57,11 @@ class GUIManager: public Widget
         auto getInputStringBoard(this auto &&self)
         {
             return std::addressof(self.m_inputStringBoard);
+        }
+
+        auto getQuestStateBoard(this auto &&self)
+        {
+            return std::addressof(self.m_questStateBoard);
         }
 
     public:

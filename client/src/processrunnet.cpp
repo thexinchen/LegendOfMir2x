@@ -918,12 +918,12 @@ void ProcessRun::on_SM_TEAMMEMBERLIST(const uint8_t *buf, size_t bufSize)
 
 void ProcessRun::on_SM_QUESTDESPUPDATE(const uint8_t *buf, size_t bufSize)
 {
-    dynamic_cast<QuestStateBoard *>(getWidget("QuestStateBoard"))->updateQuestDesp(cerealf::deserialize<SDQuestDespUpdate>(buf, bufSize));
+    getQuestStateBoard()->updateQuestDesp(cerealf::deserialize<SDQuestDespUpdate>(buf, bufSize));
 }
 
 void ProcessRun::on_SM_QUESTDESPLIST(const uint8_t *buf, size_t bufSize)
 {
-    dynamic_cast<QuestStateBoard *>(getWidget("QuestStateBoard"))->setQuestDesp(cerealf::deserialize<SDQuestDespList>(buf, bufSize));
+    getQuestStateBoard()->setQuestDesp(cerealf::deserialize<SDQuestDespList>(buf, bufSize));
 }
 
 void ProcessRun::on_SM_ADDFRIENDACCEPTED(const uint8_t *buf, size_t bufSize)

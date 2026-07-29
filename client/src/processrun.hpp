@@ -398,6 +398,11 @@ class ProcessRun: public Process
             return self.getGUIManager()->getInputStringBoard();
         }
 
+        auto getQuestStateBoard(this auto &&self)
+        {
+            return self.getGUIManager()->getQuestStateBoard();
+        }
+
     public:
         void sendNPCEvent(uint64_t, std::string, std::string, std::optional<std::string> = {});
 
