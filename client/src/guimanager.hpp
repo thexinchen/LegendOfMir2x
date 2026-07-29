@@ -15,7 +15,7 @@
 #include "playerstateboard.hpp"
 #include "ImInputStringBoard.hpp"
 #include "gui/runtimeconfigboard.hpp"
-#include "secureditemlistboard.hpp"
+#include "ImSecuredItemListBoard.hpp"
 
 class ProcessRun;
 class GUIManager: public Widget
@@ -43,7 +43,7 @@ class GUIManager: public Widget
         PlayerStateBoard m_playerStateBoard;
         ImInputStringBoard m_inputStringBoard;
         RuntimeConfigBoard m_runtimeConfigBoard;
-        SecuredItemListBoard m_securedItemListBoard;
+        ImSecuredItemListBoard m_securedItemListBoard;
 
     public:
         GUIManager(ProcessRun *);
@@ -67,6 +67,11 @@ class GUIManager: public Widget
         auto getTeamStateBoard(this auto &&self)
         {
             return std::addressof(self.m_teamStateBoard);
+        }
+
+        auto getSecuredItemListBoard(this auto &&self)
+        {
+            return std::addressof(self.m_securedItemListBoard);
         }
 
     public:

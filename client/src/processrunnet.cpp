@@ -717,7 +717,7 @@ void ProcessRun::on_SM_REMOVEITEM(const uint8_t *buf, size_t)
 void ProcessRun::on_SM_REMOVESECUREDITEM(const uint8_t *buf, size_t)
 {
     const auto smRI = ServerMsg::conv<SMRemoveSecuredItem>(buf);
-    dynamic_cast<SecuredItemListBoard *>(getWidget("SecuredItemListBoard"))->removeItem(smRI.itemID, smRI.seqID);
+    getSecuredItemListBoard()->removeItem(smRI.itemID, smRI.seqID);
 }
 
 void ProcessRun::on_SM_INVENTORY(const uint8_t *buf, size_t bufSize)
@@ -888,7 +888,7 @@ void ProcessRun::on_SM_STARTINPUT(const uint8_t *buf, size_t bufSize)
 void ProcessRun::on_SM_SHOWSECUREDITEMLIST(const uint8_t *buf, size_t bufSize)
 {
     auto chatBoardPtr = dynamic_cast<NPCChatBoard *>(getWidget("NPCChatBoard"));
-    auto itemBoardPtr = dynamic_cast<SecuredItemListBoard *>(getWidget("SecuredItemListBoard"));
+    auto itemBoardPtr = getSecuredItemListBoard();
 
     if(chatBoardPtr->show()){
         // itemBoardPtr->moveTo(chatBoardPtr->x(), chatBoardPtr->y() + chatBoardPtr->h());

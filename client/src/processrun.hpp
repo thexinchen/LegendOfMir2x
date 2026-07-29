@@ -408,6 +408,11 @@ class ProcessRun: public Process
             return self.getGUIManager()->getTeamStateBoard();
         }
 
+        auto getSecuredItemListBoard(this auto &&self)
+        {
+            return self.getGUIManager()->getSecuredItemListBoard();
+        }
+
     public:
         void sendNPCEvent(uint64_t, std::string, std::string, std::optional<std::string> = {});
 

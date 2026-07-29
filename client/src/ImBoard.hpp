@@ -39,4 +39,9 @@ class ImBoard
     public:
         ImVec2 position() const { return m_position; }
         ImVec2 size() const { return m_size; }
+        void moveTo(float x, float y) const
+        {
+            m_position = {x, y};
+            m_positioned = true;
+        }
 };

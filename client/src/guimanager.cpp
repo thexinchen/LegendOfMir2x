@@ -111,10 +111,7 @@ GUIManager::GUIManager(ProcessRun *argProc)
 
     , m_securedItemListBoard
       {
-          0,
-          0,
           m_processRun,
-          this,
       }
 {
     fflassert(m_processRun);
@@ -136,6 +133,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     m_inputStringBoard.draw();
     m_questStateBoard.draw();
     m_teamStateBoard.draw();
+    m_securedItemListBoard.draw();
 
     if(m_purchaseBoard.show()){
         m_purchaseBoard.drawRoot({});
@@ -159,6 +157,7 @@ void GUIManager::updateDefault(double fUpdateTime)
     m_inputStringBoard.update(fUpdateTime);
     m_questStateBoard.update(fUpdateTime);
     m_teamStateBoard.update(fUpdateTime);
+    m_securedItemListBoard.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
@@ -202,6 +201,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_inputStringBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_questStateBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_teamStateBoard.processEvent(event);
+    tookEvent |= valid && !tookEvent && m_securedItemListBoard.processEvent(event);
     fnProcEventRoot(&m_NPCChatBoard);
     fnProcEventRoot(&m_miniMapBoard);
 
@@ -240,10 +240,6 @@ Widget *GUIManager::getWidget(const std::string_view &name)
 
     else if(name == "RuntimeConfigBoard"){
         return &m_runtimeConfigBoard;
-    }
-
-    else if(name == "SecuredItemListBoard"){
-        return &m_securedItemListBoard;
     }
 
     else{
