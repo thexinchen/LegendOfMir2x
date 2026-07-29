@@ -395,8 +395,8 @@ void ImMainUI::drawHUD() const
                     m_processRun->setCursor(ProcessRun::CURSOR_TEAMFLAG);
                 }
             }
-            else if(auto board = m_processRun->getWidget(button.board)){
-                board->flipShow();
+            else{
+                m_processRun->getGUIManager()->flipBoard(button.board);
             }
         }
     }

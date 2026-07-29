@@ -37,11 +37,7 @@ GUIManager::GUIManager(ProcessRun *argProc)
 
     , m_horseBoard
       {
-          DIR_UPLEFT,
-          g_glDevice->getRendererWidth()  / 2 - 128,
-          g_glDevice->getRendererHeight() / 2 - 161,
           argProc,
-          this,
       }
 
     , m_skillBoard
@@ -152,6 +148,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     m_NPCChatBoard.drawRoot({});
     m_mainUI.draw();
     m_acutionBoard.draw();
+    m_horseBoard.draw();
 
     if(m_purchaseBoard.show()){
         m_purchaseBoard.drawRoot({});
@@ -170,6 +167,7 @@ void GUIManager::updateDefault(double fUpdateTime)
     m_purchaseBoard.update(fUpdateTime);
     m_mainUI.update(fUpdateTime);
     m_acutionBoard.update(fUpdateTime);
+    m_horseBoard.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
@@ -208,6 +206,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     fnProcEventRoot(&m_purchaseBoard);
     tookEvent |= valid && !tookEvent && m_mainUI.processEvent(event);
     tookEvent |= valid && !tookEvent && m_acutionBoard.processEvent(event);
+    tookEvent |= valid && !tookEvent && m_horseBoard.processEvent(event);
     fnProcEventRoot(&m_NPCChatBoard);
     fnProcEventRoot(&m_miniMapBoard);
 
@@ -226,10 +225,6 @@ Widget *GUIManager::getWidget(const std::string_view &name)
 
     else if(name == "FriendChatBoard"){
         return &m_friendChatBoard;
-    }
-
-    else if(name == "HorseBoard"){
-        return &m_horseBoard;
     }
 
     else if(name == "SkillBoard"){
@@ -277,6 +272,15 @@ Widget *GUIManager::getWidget(const std::string_view &name)
     }
 }
 
+void GUIManager::flipBoard(std::string_view name)
+{
+    if(name == "HorseBoard"){
+        m_horseBoard.flipShow();
+        return;
+    }
+    getWidget(name)->flipShow();
+}
+
 void GUIManager::afterResizeDefault()
 {
     m_runtimeConfigBoard.updateWindowSize({w(), h()}, true);
@@ -292,7 +296,6 @@ void GUIManager::afterResizeDefault()
     };
 
     fnSetWidgetPLoc(g_imeBoard);
-    fnSetWidgetPLoc(&m_horseBoard);
     fnSetWidgetPLoc(&m_skillBoard);
     fnSetWidgetPLoc(&m_guildBoard);
     fnSetWidgetPLoc(&m_inventoryBoard);

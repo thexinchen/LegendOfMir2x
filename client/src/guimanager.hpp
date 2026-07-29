@@ -2,7 +2,7 @@
 #include "gui_core.hpp"
 #include "ImMainUI.hpp"
 #include "minimapboard.hpp"
-#include "horseboard.hpp"
+#include "ImHorseBoard.hpp"
 #include "gui/skillboard.hpp"
 #include "gui/ImAcutionBoard.hpp"
 #include "guildboard.hpp"
@@ -31,7 +31,7 @@ class GUIManager: public Widget
         FriendChatBoard m_friendChatBoard;
 
     private:
-        HorseBoard m_horseBoard;
+        ImHorseBoard m_horseBoard;
         SkillBoard m_skillBoard;
         GuildBoard m_guildBoard;
         MiniMapBoard m_miniMapBoard;
@@ -65,6 +65,9 @@ class GUIManager: public Widget
 
     public:
         Widget *getWidget(const std::string_view &);
+
+    public:
+        void flipBoard(std::string_view);
 
     public:
         const Widget *getWidget(const std::string_view &name) const
