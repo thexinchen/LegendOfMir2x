@@ -23,7 +23,6 @@
 #include "clientluamodule.hpp"
 #include "clientpathfinder.hpp"
 #include "messagestackboard.hpp"
-#include "gui/npcchatboard.hpp"
 #include "modalstringboard.hpp"
 #include "fflerror.hpp"
 #include "totype.hpp"

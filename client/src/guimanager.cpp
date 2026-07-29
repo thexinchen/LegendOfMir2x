@@ -19,9 +19,6 @@ GUIManager::GUIManager(ProcessRun *argProc)
     , m_processRun(argProc)
     , m_NPCChatBoard
       {
-          DIR_UPLEFT,
-          0,
-          0,
           argProc,
       }
 
@@ -118,7 +115,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     }
 
     m_miniMapBoard.draw();
-    m_NPCChatBoard.drawRoot({});
+    m_NPCChatBoard.draw();
     m_mainUI.draw();
     m_acutionBoard.draw();
     m_horseBoard.draw();
@@ -202,7 +199,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_securedItemListBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_inventoryBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_playerStateBoard.processEvent(event);
-    fnProcEventRoot(&m_NPCChatBoard);
+    tookEvent |= valid && !tookEvent && m_NPCChatBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_miniMapBoard.processEvent(event);
 
     return tookEvent;
@@ -210,11 +207,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
 
 Widget *GUIManager::getWidget(const std::string_view &name)
 {
-    if(name == "NPCChatBoard"){
-        return &m_NPCChatBoard;
-    }
-
-    else if(name == "FriendChatBoard"){
+    if(name == "FriendChatBoard"){
         return &m_friendChatBoard;
     }
 

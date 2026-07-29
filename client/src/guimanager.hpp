@@ -6,7 +6,7 @@
 #include "gui/skillboard.hpp"
 #include "gui/ImAcutionBoard.hpp"
 #include "ImGuildBoard.hpp"
-#include "gui/npcchatboard.hpp"
+#include "gui/ImNPCChatBoard.hpp"
 #include "gui/friendchatboard.hpp"
 #include "gui/purchaseboard.hpp"
 #include "ImTeamStateBoard.hpp"
@@ -24,7 +24,7 @@ class GUIManager: public Widget
         ProcessRun *m_processRun;
 
     private:
-        NPCChatBoard m_NPCChatBoard;
+        ImNPCChatBoard m_NPCChatBoard;
         ImMainUI m_mainUI;
 
     private:
@@ -82,6 +82,11 @@ class GUIManager: public Widget
         auto getMiniMapBoard(this auto &&self)
         {
             return std::addressof(self.m_miniMapBoard);
+        }
+
+        auto getNPCChatBoard(this auto &&self)
+        {
+            return std::addressof(self.m_NPCChatBoard);
         }
 
     public:

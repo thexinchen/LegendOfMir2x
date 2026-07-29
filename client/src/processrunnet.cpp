@@ -626,7 +626,7 @@ void ProcessRun::on_SM_INVOPCOST(const uint8_t *buf, size_t)
 void ProcessRun::on_SM_NPCXMLLAYOUT(const uint8_t *buf, size_t bufSize)
 {
     const auto sdNPCXMLL = cerealf::deserialize<SDNPCXMLLayout>(buf, bufSize);
-    auto npcChatBoardPtr  = dynamic_cast<NPCChatBoard  *>(getGUIManager()->getWidget("NPCChatBoard"));
+    auto npcChatBoardPtr  = getGUIManager()->getNPCChatBoard();
     auto purchaseBoardPtr = dynamic_cast<PurchaseBoard *>(getGUIManager()->getWidget("PurchaseBoard"));
 
     npcChatBoardPtr->loadXML(sdNPCXMLL.npcUID, sdNPCXMLL.eventPath.c_str(), sdNPCXMLL.xmlLayout.c_str());
@@ -638,11 +638,11 @@ void ProcessRun::on_SM_NPCSELL(const uint8_t *buf, size_t bufSize)
 {
     auto sdNPCS = cerealf::deserialize<SDNPCSell>(buf, bufSize);
     auto purchaseBoardPtr = dynamic_cast<PurchaseBoard *>(getGUIManager()->getWidget("PurchaseBoard"));
-    auto npcChatBoardPtr  = dynamic_cast<NPCChatBoard  *>(getGUIManager()->getWidget("NPCChatBoard"));
+    auto npcChatBoardPtr  = getGUIManager()->getNPCChatBoard();
 
     if(npcChatBoardPtr->show()){
         // purchaseBoardPtr->moveTo(npcChatBoardPtr->x(), npcChatBoardPtr->y() + npcChatBoardPtr->h());
-        purchaseBoardPtr->moveTo(0, 0 + npcChatBoardPtr->h());
+        purchaseBoardPtr->moveTo(0, to_dround(npcChatBoardPtr->height()));
     }
     else{
         purchaseBoardPtr->moveTo(0, 0);
@@ -887,12 +887,12 @@ void ProcessRun::on_SM_STARTINPUT(const uint8_t *buf, size_t bufSize)
 
 void ProcessRun::on_SM_SHOWSECUREDITEMLIST(const uint8_t *buf, size_t bufSize)
 {
-    auto chatBoardPtr = dynamic_cast<NPCChatBoard *>(getWidget("NPCChatBoard"));
+    auto chatBoardPtr = getGUIManager()->getNPCChatBoard();
     auto itemBoardPtr = getSecuredItemListBoard();
 
     if(chatBoardPtr->show()){
         // itemBoardPtr->moveTo(chatBoardPtr->x(), chatBoardPtr->y() + chatBoardPtr->h());
-        itemBoardPtr->moveTo(0, 0 + chatBoardPtr->h());
+        itemBoardPtr->moveTo(0, to_dround(chatBoardPtr->height()));
     }
     else{
         itemBoardPtr->moveTo(0, 0);
