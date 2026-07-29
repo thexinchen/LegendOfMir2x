@@ -12,7 +12,7 @@
 #include "ImTeamStateBoard.hpp"
 #include "ImInventoryBoard.hpp"
 #include "ImQuestStateBoard.hpp"
-#include "playerstateboard.hpp"
+#include "ImPlayerStateBoard.hpp"
 #include "ImInputStringBoard.hpp"
 #include "gui/runtimeconfigboard.hpp"
 #include "ImSecuredItemListBoard.hpp"
@@ -40,7 +40,7 @@ class GUIManager: public Widget
         ImTeamStateBoard m_teamStateBoard;
         ImInventoryBoard m_inventoryBoard;
         ImQuestStateBoard m_questStateBoard;
-        PlayerStateBoard m_playerStateBoard;
+        ImPlayerStateBoard m_playerStateBoard;
         ImInputStringBoard m_inputStringBoard;
         RuntimeConfigBoard m_runtimeConfigBoard;
         ImSecuredItemListBoard m_securedItemListBoard;
