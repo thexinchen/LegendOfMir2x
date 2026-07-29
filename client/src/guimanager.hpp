@@ -3,7 +3,7 @@
 #include "ImMainUI.hpp"
 #include "ImMiniMapBoard.hpp"
 #include "ImHorseBoard.hpp"
-#include "gui/skillboard.hpp"
+#include "gui/ImSkillBoard.hpp"
 #include "gui/ImAcutionBoard.hpp"
 #include "ImGuildBoard.hpp"
 #include "gui/ImNPCChatBoard.hpp"
@@ -32,7 +32,7 @@ class GUIManager: public Widget
 
     private:
         ImHorseBoard m_horseBoard;
-        SkillBoard m_skillBoard;
+        ImSkillBoard m_skillBoard;
         ImGuildBoard m_guildBoard;
         ImMiniMapBoard m_miniMapBoard;
         ImAcutionBoard m_acutionBoard;
@@ -92,6 +92,11 @@ class GUIManager: public Widget
         auto getFriendChatBoard(this auto &&self)
         {
             return std::addressof(self.m_friendChatBoard);
+        }
+
+        auto getSkillBoard(this auto &&self)
+        {
+            return std::addressof(self.m_skillBoard);
         }
 
     public:

@@ -454,7 +454,7 @@ void ProcessRun::draw() const
 
     if(m_drawMagicKey){
         int magicKeyOffX = 0;
-        for(const auto &[magicID, magicKey]: dynamic_cast<const SkillBoard *>(this->getWidget("SkillBoard"))->getConfig().getMagicKeyList()){
+        for(const auto &[magicID, magicKey]: getGUIManager()->getSkillBoard()->getConfig().getMagicKeyList()){
             if(const auto iconGfx = SkillBoard::getMagicIconGfx(magicID); iconGfx && iconGfx->magicIcon != SYS_U32NIL){
                 if(auto texPtr = g_progUseDB->retrieve(iconGfx->magicIcon + to_u32(0X00001000))){
                     g_glDevice->drawTexture(texPtr, magicKeyOffX, 0);
@@ -2156,7 +2156,7 @@ void ProcessRun::checkMagicSpell(const MirEvent &event)
         return;
     }
 
-    const auto magicID = dynamic_cast<SkillBoard *>(getWidget("SkillBoard"))->getConfig().key2MagicID(key);
+    const auto magicID = getGUIManager()->getSkillBoard()->getConfig().key2MagicID(key);
     if(!magicID){
         return;
     }

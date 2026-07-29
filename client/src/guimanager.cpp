@@ -41,7 +41,6 @@ GUIManager::GUIManager(ProcessRun *argProc)
           g_glDevice->getRendererWidth()  / 2 - 180,
           g_glDevice->getRendererHeight() / 2 - 224,
           argProc,
-          this,
       }
 
     , m_guildBoard
@@ -116,6 +115,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     m_miniMapBoard.draw();
     m_NPCChatBoard.draw();
     m_friendChatBoard.draw();
+    m_skillBoard.draw();
     m_mainUI.draw();
     m_acutionBoard.draw();
     m_horseBoard.draw();
@@ -155,6 +155,7 @@ void GUIManager::updateDefault(double fUpdateTime)
     m_miniMapBoard.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
     m_friendChatBoard.update(fUpdateTime);
+    m_skillBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
 
@@ -202,6 +203,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_playerStateBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_NPCChatBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_friendChatBoard.processEvent(event);
+    tookEvent |= valid && !tookEvent && m_skillBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_miniMapBoard.processEvent(event);
 
     return tookEvent;
@@ -209,11 +211,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
 
 Widget *GUIManager::getWidget(const std::string_view &name)
 {
-    if(name == "SkillBoard"){
-        return &m_skillBoard;
-    }
-
-    else if(name == "PurchaseBoard"){
+    if(name == "PurchaseBoard"){
         return &m_purchaseBoard;
     }
 
@@ -256,6 +254,10 @@ void GUIManager::flipBoard(std::string_view name)
         m_friendChatBoard.flipShow();
         return;
     }
+    if(name == "SkillBoard"){
+        m_skillBoard.flipShow();
+        return;
+    }
     getWidget(name)->flipShow();
 }
 
@@ -274,5 +276,4 @@ void GUIManager::afterResizeDefault()
     };
 
     fnSetWidgetPLoc(g_imeBoard);
-    fnSetWidgetPLoc(&m_skillBoard);
 }

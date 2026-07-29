@@ -19,6 +19,7 @@
 #include "imeboard.hpp"
 #include "cblog.hpp"
 #include "gui/friendchatboard.hpp"
+#include "gui/skillboard.hpp"
 #include "serdesmsg.hpp"
 #include "gldevice.hpp"
 
@@ -70,7 +71,7 @@ void ProcessRun::on_SM_PLAYERCONFIG(const uint8_t *buf, size_t bufSize)
     dynamic_cast<RuntimeConfigBoard *>(getWidget("RuntimeConfigBoard"))->setConfig(sdPC.runtimeConfig);
 
     for(const auto &[magicID, key]: sdPC.magicKeyList.keyList){
-        dynamic_cast<SkillBoard *>(getWidget("SkillBoard"))->getConfig().setMagicKey(magicID, key);
+        getGUIManager()->getSkillBoard()->getConfig().setMagicKey(magicID, key);
     }
 }
 
@@ -115,7 +116,7 @@ void ProcessRun::on_SM_LEARNEDMAGICLIST(const uint8_t *buf, size_t bufSize)
 {
     const auto sdLML = cerealf::deserialize<SDLearnedMagicList>(buf, bufSize);
     for(const auto &magic: sdLML.magicList){
-        dynamic_cast<SkillBoard *>(getWidget("SkillBoard"))->getConfig().setMagicLevel(magic.magicID, 1);
+        getGUIManager()->getSkillBoard()->getConfig().setMagicLevel(magic.magicID, 1);
     }
 }
 
