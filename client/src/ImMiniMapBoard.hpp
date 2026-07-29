@@ -15,6 +15,7 @@ class ImMiniMapBoard final: public ImBoard
         mutable bool m_alphaOn = false;
         mutable bool m_extended = false;
         mutable bool m_autoCenter = true;
+        mutable bool m_autoCenterActive = false;
         mutable bool m_configActive = false;
         mutable bool m_dragStarted = false;
 

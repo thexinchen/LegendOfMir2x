@@ -132,7 +132,7 @@ void ImMiniMapBoard::draw() const
         {{
             g_progUseDB->retrieve(m_alphaOn       ? 0X09000011 : 0X09000010),
             g_progUseDB->retrieve(m_extended      ? 0X09000021 : 0X09000020),
-            g_progUseDB->retrieve(m_autoCenter    ? 0X09000031 : 0X09000030),
+            g_progUseDB->retrieve(m_autoCenterActive ? 0X09000031 : 0X09000030),
             g_progUseDB->retrieve(m_configActive  ? 0X09000041 : 0X09000040),
         }};
 
@@ -149,7 +149,13 @@ void ImMiniMapBoard::draw() const
         float itemX = toolbarPos.x;
         if(zoomTexture){
             drawList->AddRectFilled({itemX, end.y - zoomTexture.h}, {itemX + zoomTexture.w + 4, end.y}, IM_COL32(0, 0, 0, 255));
-            drawList->AddImage(zoomTexture, {itemX + 2, end.y - zoomTexture.h}, {itemX + 2 + zoomTexture.w, end.y});
+            drawList->AddImage(
+                zoomTexture,
+                {itemX + 2, end.y - zoomTexture.h},
+                {itemX + 2 + zoomTexture.w, end.y},
+                {0, 0},
+                {1, 1},
+                IM_COL32(255, 255, 0, 255));
             itemX += zoomTexture.w + 4;
         }
 
@@ -169,7 +175,10 @@ void ImMiniMapBoard::draw() const
 
         if(drawButton(0, "##minimap-alpha")){ flipAlpha(); }
         if(drawButton(1, "##minimap-extend")){ flipExtended(); }
-        if(drawButton(2, "##minimap-center")){ flipAutoCenter(); }
+        if(drawButton(2, "##minimap-center")){
+            flipAutoCenter();
+            m_autoCenterActive = m_autoCenter;
+        }
         if(drawButton(3, "##minimap-config")){ m_configActive = m_autoCenter; }
 
         const bool onCanvas = inRect(mouse, pos, end);
