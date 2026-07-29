@@ -2836,7 +2836,7 @@ FriendChatBoard::FriendChatBoard(Widget::VarInt argX, Widget::VarInt argY, Proce
                                       throw fflpanic("selected too many friends, max {}", CMCreateChatGroup().list.capacity());
                                   }
 
-                                  auto inputBoardPtr = dynamic_cast<InputStringBoard *>(m_processRun->getWidget("InputStringBoard"));
+                                  auto inputBoardPtr = m_processRun->getInputStringBoard();
 
                                   inputBoardPtr->waitInput(u8"<layout><par>请输入你要建立的群名称</par></layout>", false, [dbidList, this](std::u8string inputString)
                                   {

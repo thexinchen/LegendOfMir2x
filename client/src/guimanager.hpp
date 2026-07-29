@@ -13,7 +13,7 @@
 #include "inventoryboard.hpp"
 #include "queststateboard.hpp"
 #include "playerstateboard.hpp"
-#include "inputstringboard.hpp"
+#include "ImInputStringBoard.hpp"
 #include "gui/runtimeconfigboard.hpp"
 #include "secureditemlistboard.hpp"
 
@@ -41,7 +41,7 @@ class GUIManager: public Widget
         InventoryBoard m_inventoryBoard;
         QuestStateBoard m_questStateBoard;
         PlayerStateBoard m_playerStateBoard;
-        InputStringBoard m_inputStringBoard;
+        ImInputStringBoard m_inputStringBoard;
         RuntimeConfigBoard m_runtimeConfigBoard;
         SecuredItemListBoard m_securedItemListBoard;
 
@@ -52,6 +52,11 @@ class GUIManager: public Widget
         auto getMainUI(this auto &&self)
         {
             return std::addressof(self.m_mainUI);
+        }
+
+        auto getInputStringBoard(this auto &&self)
+        {
+            return std::addressof(self.m_inputStringBoard);
         }
 
     public:

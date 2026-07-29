@@ -2,7 +2,6 @@
 #include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
-#include "inputstringboard.hpp"
 
 extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;

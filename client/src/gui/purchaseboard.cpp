@@ -7,7 +7,7 @@
 #include "gldevice.hpp"
 #include "processrun.hpp"
 #include "gui_widgets.hpp"
-#include "inputstringboard.hpp"
+#include "ImInputStringBoard.hpp"
 
 extern Client *g_client;
 extern PNGTexDB *g_itemDB;
@@ -197,7 +197,7 @@ PurchaseBoard::PurchaseBoard(ProcessRun *argProc, Widget *argParent, bool argAut
                   throw fflpanic("unexpected seqID = {}", seqID);
               }
 
-              auto inputBoardPtr = dynamic_cast<InputStringBoard *>(m_processRun->getWidget("InputStringBoard"));
+              auto inputBoardPtr = m_processRun->getInputStringBoard();
               const auto headerString = str_printf(u8"<layout><par>请输入你要购买<t color=\"red\">%s</t>的数量</par></layout>", to_cstr(DBCOM_ITEMRECORD(itemID).name));
 
               inputBoardPtr->waitInput(headerString, false, [itemID, npcUID = m_npcUID, this](std::u8string inputString)
@@ -325,7 +325,7 @@ bool PurchaseBoard::processEventDefault(const MirEvent &event, bool valid, Widge
                 }
 
                 if(m_buttonExt2Select.processEventParent(event, valid, m)){
-                    if(m_processRun->getWidget("InputStringBoard")->focus()){
+                    if(m_processRun->getInputStringBoard()->focus()){
                         setFocus(false);
                     }
                     return false;

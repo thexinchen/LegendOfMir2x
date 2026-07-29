@@ -102,14 +102,7 @@ GUIManager::GUIManager(ProcessRun *argProc)
           this,
       }
 
-    , m_inputStringBoard
-      {
-          DIR_UPLEFT,
-          g_glDevice->getRendererWidth()  / 2 - 179,
-          g_glDevice->getRendererHeight() / 2 - 134,
-          false,
-          this,
-      }
+    , m_inputStringBoard {}
 
     , m_runtimeConfigBoard
       {
@@ -147,6 +140,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     m_acutionBoard.draw();
     m_horseBoard.draw();
     m_guildBoard.draw();
+    m_inputStringBoard.draw();
 
     if(m_purchaseBoard.show()){
         m_purchaseBoard.drawRoot({});
@@ -167,6 +161,7 @@ void GUIManager::updateDefault(double fUpdateTime)
     m_acutionBoard.update(fUpdateTime);
     m_horseBoard.update(fUpdateTime);
     m_guildBoard.update(fUpdateTime);
+    m_inputStringBoard.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
@@ -207,6 +202,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_acutionBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_horseBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_guildBoard.processEvent(event);
+    tookEvent |= valid && !tookEvent && m_inputStringBoard.processEvent(event);
     fnProcEventRoot(&m_NPCChatBoard);
     fnProcEventRoot(&m_miniMapBoard);
 
@@ -249,10 +245,6 @@ Widget *GUIManager::getWidget(const std::string_view &name)
 
     else if(name == "PurchaseBoard"){
         return &m_purchaseBoard;
-    }
-
-    else if(name == "InputStringBoard"){
-        return &m_inputStringBoard;
     }
 
     else if(name == "RuntimeConfigBoard"){
@@ -299,6 +291,5 @@ void GUIManager::afterResizeDefault()
     fnSetWidgetPLoc(&m_skillBoard);
     fnSetWidgetPLoc(&m_inventoryBoard);
     fnSetWidgetPLoc(&m_playerStateBoard);
-    fnSetWidgetPLoc(&m_inputStringBoard);
     fnSetWidgetPLoc(&m_friendChatBoard);
 }

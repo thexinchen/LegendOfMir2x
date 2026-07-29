@@ -393,6 +393,11 @@ class ProcessRun: public Process
             return self.getGUIManager()->getWidget(widgetName);
         }
 
+        auto getInputStringBoard(this auto &&self)
+        {
+            return self.getGUIManager()->getInputStringBoard();
+        }
+
     public:
         void sendNPCEvent(uint64_t, std::string, std::string, std::optional<std::string> = {});
 
