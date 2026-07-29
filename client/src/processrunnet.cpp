@@ -598,10 +598,10 @@ void ProcessRun::on_SM_STARTINVOP(const uint8_t *buf, size_t size)
 {
     fflassert(buf);
     fflassert(size > 0);
-    auto invBoardPtr = dynamic_cast<InventoryBoard *>(getWidget("InventoryBoard"));
+    auto invBoardPtr = getInventoryBoard();
 
     invBoardPtr->setShow(true);
-    invBoardPtr->moveAt(DIR_UPRIGHT, g_glDevice->getRendererWidth() - 1, 0);
+    invBoardPtr->moveToUpperRight();
     invBoardPtr->startInvOp(cerealf::deserialize<SDStartInvOp>(buf, size));
 }
 
@@ -620,7 +620,7 @@ void ProcessRun::on_SM_GOLD(const uint8_t *buf, size_t)
 void ProcessRun::on_SM_INVOPCOST(const uint8_t *buf, size_t)
 {
     const auto smIOPC = ServerMsg::conv<SMInvOpCost>(buf);
-    dynamic_cast<InventoryBoard *>(getWidget("InventoryBoard"))->setInvOpCost(smIOPC.invOp, smIOPC.itemID, smIOPC.seqID, smIOPC.cost);
+    getInventoryBoard()->setInvOpCost(smIOPC.invOp, smIOPC.itemID, smIOPC.seqID, smIOPC.cost);
 }
 
 void ProcessRun::on_SM_NPCXMLLAYOUT(const uint8_t *buf, size_t bufSize)
@@ -711,7 +711,7 @@ void ProcessRun::on_SM_UPDATEITEM(const uint8_t *buf, size_t bufSize)
 void ProcessRun::on_SM_REMOVEITEM(const uint8_t *buf, size_t)
 {
     const auto smRI = ServerMsg::conv<SMRemoveItem>(buf);
-    dynamic_cast<InventoryBoard *>(getWidget("InventoryBoard"))->removeItem(smRI.itemID, smRI.seqID, smRI.count);
+    getInventoryBoard()->removeItem(smRI.itemID, smRI.seqID, smRI.count);
 }
 
 void ProcessRun::on_SM_REMOVESECUREDITEM(const uint8_t *buf, size_t)
@@ -901,9 +901,9 @@ void ProcessRun::on_SM_SHOWSECUREDITEMLIST(const uint8_t *buf, size_t bufSize)
     itemBoardPtr->setItemList(std::move(cerealf::deserialize<SDShowSecuredItemList>(buf, bufSize).itemList));
     itemBoardPtr->setShow(true);
 
-    auto invBoardPtr = dynamic_cast<InventoryBoard *>(getWidget("InventoryBoard"));
+    auto invBoardPtr = getInventoryBoard();
     invBoardPtr->setShow(true);
-    invBoardPtr->moveAt(DIR_UPRIGHT, g_glDevice->getRendererWidth() - 1, 0);
+    invBoardPtr->moveToUpperRight();
 }
 
 void ProcessRun::on_SM_TEAMCANDIDATE(const uint8_t *buf, size_t bufSize)

@@ -10,7 +10,7 @@
 #include "gui/friendchatboard.hpp"
 #include "gui/purchaseboard.hpp"
 #include "ImTeamStateBoard.hpp"
-#include "inventoryboard.hpp"
+#include "ImInventoryBoard.hpp"
 #include "ImQuestStateBoard.hpp"
 #include "playerstateboard.hpp"
 #include "ImInputStringBoard.hpp"
@@ -38,7 +38,7 @@ class GUIManager: public Widget
         ImAcutionBoard m_acutionBoard;
         PurchaseBoard m_purchaseBoard;
         ImTeamStateBoard m_teamStateBoard;
-        InventoryBoard m_inventoryBoard;
+        ImInventoryBoard m_inventoryBoard;
         ImQuestStateBoard m_questStateBoard;
         PlayerStateBoard m_playerStateBoard;
         ImInputStringBoard m_inputStringBoard;
@@ -72,6 +72,11 @@ class GUIManager: public Widget
         auto getSecuredItemListBoard(this auto &&self)
         {
             return std::addressof(self.m_securedItemListBoard);
+        }
+
+        auto getInventoryBoard(this auto &&self)
+        {
+            return std::addressof(self.m_inventoryBoard);
         }
 
     public:

@@ -256,7 +256,6 @@ MenuPage::MenuPage(
 #include "gui_widgets.hpp"
 #include "soundeffectdb.hpp"
 #include "processrun.hpp"
-#include "inventoryboard.hpp"
 #include "gui_font.hpp"
 
 extern Client *g_client;

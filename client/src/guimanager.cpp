@@ -74,13 +74,9 @@ GUIManager::GUIManager(ProcessRun *argProc)
       }
 
     , m_inventoryBoard
-      {{
-          .x = g_glDevice->getRendererWidth()  / 2 - 141,
-          .y = g_glDevice->getRendererHeight() / 2 - 233,
-
-          .runProc = argProc,
-          .parent{this},
-      }}
+      {
+          argProc,
+      }
 
     , m_questStateBoard
       {
@@ -134,6 +130,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     m_questStateBoard.draw();
     m_teamStateBoard.draw();
     m_securedItemListBoard.draw();
+    m_inventoryBoard.draw();
 
     if(m_purchaseBoard.show()){
         m_purchaseBoard.drawRoot({});
@@ -158,6 +155,7 @@ void GUIManager::updateDefault(double fUpdateTime)
     m_questStateBoard.update(fUpdateTime);
     m_teamStateBoard.update(fUpdateTime);
     m_securedItemListBoard.update(fUpdateTime);
+    m_inventoryBoard.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
@@ -202,6 +200,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_questStateBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_teamStateBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_securedItemListBoard.processEvent(event);
+    tookEvent |= valid && !tookEvent && m_inventoryBoard.processEvent(event);
     fnProcEventRoot(&m_NPCChatBoard);
     fnProcEventRoot(&m_miniMapBoard);
 
@@ -210,11 +209,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
 
 Widget *GUIManager::getWidget(const std::string_view &name)
 {
-    if(name == "InventoryBoard"){
-        return &m_inventoryBoard;
-    }
-
-    else if(name == "NPCChatBoard"){
+    if(name == "NPCChatBoard"){
         return &m_NPCChatBoard;
     }
 
@@ -265,6 +260,10 @@ void GUIManager::flipBoard(std::string_view name)
         m_teamStateBoard.flipShow();
         return;
     }
+    if(name == "InventoryBoard"){
+        m_inventoryBoard.flipShow();
+        return;
+    }
     getWidget(name)->flipShow();
 }
 
@@ -284,7 +283,6 @@ void GUIManager::afterResizeDefault()
 
     fnSetWidgetPLoc(g_imeBoard);
     fnSetWidgetPLoc(&m_skillBoard);
-    fnSetWidgetPLoc(&m_inventoryBoard);
     fnSetWidgetPLoc(&m_playerStateBoard);
     fnSetWidgetPLoc(&m_friendChatBoard);
 }

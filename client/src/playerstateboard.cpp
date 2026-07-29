@@ -7,7 +7,6 @@
 #include "processrun.hpp"
 #include "gui_texture.hpp"
 #include "soundeffectdb.hpp"
-#include "inventoryboard.hpp"
 #include "clientargparser.hpp"
 
 extern PNGTexDB *g_itemDB;
