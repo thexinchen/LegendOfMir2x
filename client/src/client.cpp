@@ -13,7 +13,7 @@
 #include "gldevice.hpp"
 #include "servermsg.hpp"
 #include "processrun.hpp"
-#include "Login.hpp"
+#include "ImLogin.hpp"
 #include "gui_texture.hpp"
 #include "messagestackboard.hpp"
 #include "buildconfig.hpp"

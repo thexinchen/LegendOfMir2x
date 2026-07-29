@@ -417,6 +417,8 @@ void GLDevice::initImGui()
 
     static const char *const cjkFontPathList[] =
     {
+        "C:/Windows/Fonts/msyh.ttc",
+        "C:/Windows/Fonts/simhei.ttf",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
         "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
