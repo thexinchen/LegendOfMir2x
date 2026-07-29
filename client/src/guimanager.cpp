@@ -68,7 +68,6 @@ GUIManager::GUIManager(ProcessRun *argProc)
     , m_acutionBoard
       {
           argProc,
-          this,
       }
 
     , m_purchaseBoard
@@ -152,6 +151,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     m_miniMapBoard.drawRoot({});
     m_NPCChatBoard.drawRoot({});
     m_mainUI.draw();
+    m_acutionBoard.draw();
 
     if(m_purchaseBoard.show()){
         m_purchaseBoard.drawRoot({});
@@ -169,6 +169,7 @@ void GUIManager::updateDefault(double fUpdateTime)
     Widget::updateDefault(fUpdateTime);
     m_purchaseBoard.update(fUpdateTime);
     m_mainUI.update(fUpdateTime);
+    m_acutionBoard.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
@@ -206,6 +207,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
 
     fnProcEventRoot(&m_purchaseBoard);
     tookEvent |= valid && !tookEvent && m_mainUI.processEvent(event);
+    tookEvent |= valid && !tookEvent && m_acutionBoard.processEvent(event);
     fnProcEventRoot(&m_NPCChatBoard);
     fnProcEventRoot(&m_miniMapBoard);
 
