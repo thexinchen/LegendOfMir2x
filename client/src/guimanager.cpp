@@ -29,7 +29,6 @@ GUIManager::GUIManager(ProcessRun *argProc)
           g_glDevice->getRendererWidth()  / 2 - 250,
           g_glDevice->getRendererHeight() / 2 - 250,
           argProc,
-          this,
       }
 
     , m_horseBoard
@@ -116,6 +115,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
 
     m_miniMapBoard.draw();
     m_NPCChatBoard.draw();
+    m_friendChatBoard.draw();
     m_mainUI.draw();
     m_acutionBoard.draw();
     m_horseBoard.draw();
@@ -154,6 +154,7 @@ void GUIManager::updateDefault(double fUpdateTime)
     m_playerStateBoard.update(fUpdateTime);
     m_miniMapBoard.update(fUpdateTime);
     m_NPCChatBoard.update(fUpdateTime);
+    m_friendChatBoard.update(fUpdateTime);
     g_imeBoard->update(fUpdateTime);
 }
 
@@ -200,6 +201,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     tookEvent |= valid && !tookEvent && m_inventoryBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_playerStateBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_NPCChatBoard.processEvent(event);
+    tookEvent |= valid && !tookEvent && m_friendChatBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_miniMapBoard.processEvent(event);
 
     return tookEvent;
@@ -207,11 +209,7 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
 
 Widget *GUIManager::getWidget(const std::string_view &name)
 {
-    if(name == "FriendChatBoard"){
-        return &m_friendChatBoard;
-    }
-
-    else if(name == "SkillBoard"){
+    if(name == "SkillBoard"){
         return &m_skillBoard;
     }
 
@@ -254,6 +252,10 @@ void GUIManager::flipBoard(std::string_view name)
         m_playerStateBoard.flipShow();
         return;
     }
+    if(name == "FriendChatBoard"){
+        m_friendChatBoard.flipShow();
+        return;
+    }
     getWidget(name)->flipShow();
 }
 
@@ -273,5 +275,4 @@ void GUIManager::afterResizeDefault()
 
     fnSetWidgetPLoc(g_imeBoard);
     fnSetWidgetPLoc(&m_skillBoard);
-    fnSetWidgetPLoc(&m_friendChatBoard);
 }

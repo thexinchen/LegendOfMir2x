@@ -77,13 +77,13 @@ void ProcessRun::on_SM_PLAYERCONFIG(const uint8_t *buf, size_t bufSize)
 void ProcessRun::on_SM_FRIENDLIST(const uint8_t *buf, size_t bufSize)
 {
     const auto sdFL = cerealf::deserialize<SDFriendList>(buf, bufSize);
-    dynamic_cast<FriendChatBoard *>(getWidget("FriendChatBoard"))->setFriendList(sdFL);
+    getGUIManager()->getFriendChatBoard()->setFriendList(sdFL);
 }
 
 void ProcessRun::on_SM_CHATMESSAGELIST(const uint8_t *buf, size_t bufSize)
 {
     for(const auto &message: cerealf::deserialize<SDChatMessageList>(buf, bufSize)){
-        dynamic_cast<FriendChatBoard *>(getWidget("FriendChatBoard"))->addMessage({}, message);
+        getGUIManager()->getFriendChatBoard()->addMessage({}, message);
     }
     getMainUI()->startButtonBlink("FriendChat", 5000);
 }
@@ -871,7 +871,7 @@ void ProcessRun::on_SM_GRABBELTERROR(const uint8_t *buf, size_t)
 void ProcessRun::on_SM_CREATECHATGROUP(const uint8_t *buf, size_t size)
 {
     const auto sdCP = cerealf::deserialize<SDChatPeer>(buf, size);
-    dynamic_cast<FriendChatBoard *>(getWidget("FriendChatBoard"))->addGroup(sdCP);
+    getGUIManager()->getFriendChatBoard()->addGroup(sdCP);
 }
 
 void ProcessRun::on_SM_STARTINPUT(const uint8_t *buf, size_t bufSize)
@@ -928,10 +928,10 @@ void ProcessRun::on_SM_QUESTDESPLIST(const uint8_t *buf, size_t bufSize)
 
 void ProcessRun::on_SM_ADDFRIENDACCEPTED(const uint8_t *buf, size_t bufSize)
 {
-    dynamic_cast<FriendChatBoard *>(getWidget("FriendChatBoard"))->onAddFriendAccepted(cerealf::deserialize<SDChatPeer>(buf, bufSize));
+    getGUIManager()->getFriendChatBoard()->onAddFriendAccepted(cerealf::deserialize<SDChatPeer>(buf, bufSize));
 }
 
 void ProcessRun::on_SM_ADDFRIENDREJECTED(const uint8_t *buf, size_t bufSize)
 {
-    dynamic_cast<FriendChatBoard *>(getWidget("FriendChatBoard"))->onAddFriendRejected(cerealf::deserialize<SDChatPeer>(buf, bufSize));
+    getGUIManager()->getFriendChatBoard()->onAddFriendRejected(cerealf::deserialize<SDChatPeer>(buf, bufSize));
 }

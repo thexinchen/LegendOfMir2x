@@ -7,7 +7,7 @@
 #include "gui/ImAcutionBoard.hpp"
 #include "ImGuildBoard.hpp"
 #include "gui/ImNPCChatBoard.hpp"
-#include "gui/friendchatboard.hpp"
+#include "gui/ImFriendChatBoard.hpp"
 #include "gui/purchaseboard.hpp"
 #include "ImTeamStateBoard.hpp"
 #include "ImInventoryBoard.hpp"
@@ -28,7 +28,7 @@ class GUIManager: public Widget
         ImMainUI m_mainUI;
 
     private:
-        FriendChatBoard m_friendChatBoard;
+        ImFriendChatBoard m_friendChatBoard;
 
     private:
         ImHorseBoard m_horseBoard;
@@ -87,6 +87,11 @@ class GUIManager: public Widget
         auto getNPCChatBoard(this auto &&self)
         {
             return std::addressof(self.m_NPCChatBoard);
+        }
+
+        auto getFriendChatBoard(this auto &&self)
+        {
+            return std::addressof(self.m_friendChatBoard);
         }
 
     public:
