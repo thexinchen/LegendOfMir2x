@@ -760,6 +760,7 @@ void ProcessRun::loadMap(uint64_t newMapUID, int centerGX, int centerGY)
     fflassert(uidf::isMap(newMapUID));
 
     const auto lastMapUID = mapUID();
+    const auto mapAlreadyLoaded = (uidf::getMapID(lastMapUID) == uidf::getMapID(newMapUID));
     ModalStringBoard loadStringBoard;
 
     const auto fnUpdateLoadRatio = [&loadStringBoard, newMapUID](int ratio)
@@ -834,8 +835,13 @@ void ProcessRun::loadMap(uint64_t newMapUID, int centerGX, int centerGY)
         }
     }
 
-    const auto lastBGMIDOpt = DBCOM_MAPRECORD(uidf::isMap(lastMapUID) ? uidf::getMapID(lastMapUID): 0).bgmID;
-    const auto  newBGMIDOpt = DBCOM_MAPRECORD(                          uidf::getMapID( newMapUID)   ).bgmID;
+    // When mapAlreadyLoaded is true, preloadMapBin in the ProcessRun constructor
+    // already set m_mapUID before loadMap() ran, so lastMapUID == newMapUID and
+    // the BGM comparison would skip playback. Use mapAlreadyLoaded to detect this
+    // case: if the map was already loaded (preloadMapBin ran), we still need to
+    // play the BGM because ProcessSelectChar::~ProcessSelectChar stopped it.
+    const auto lastBGMIDOpt = (!mapAlreadyLoaded && uidf::isMap(lastMapUID)) ? DBCOM_MAPRECORD(uidf::getMapID(lastMapUID)).bgmID : std::optional<uint32_t>{};
+    const auto  newBGMIDOpt = DBCOM_MAPRECORD(uidf::getMapID( newMapUID)   ).bgmID;
 
     if(lastBGMIDOpt != newBGMIDOpt){
         g_audioDevice->stopBGM();
