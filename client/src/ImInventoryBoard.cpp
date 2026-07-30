@@ -316,8 +316,9 @@ void ImInventoryBoard::draw() const
             }
         }
 
-        if(hoveredIndex >= 0){
-            const auto lines = plainLayoutLines(bins.at(hoveredIndex).item.getXMLLayout());
+        const int tooltipIndex = gridHovered ? getPackBinIndex(localX, localY) : -1;
+        if(tooltipIndex >= 0){
+            const auto lines = plainLayoutLines(bins.at(tooltipIndex).item.getXMLLayout());
             const float tooltipH = std::max(40.0f, 20.0f + lines.size() * 15.0f);
             const ImVec2 tooltipPos
             {
