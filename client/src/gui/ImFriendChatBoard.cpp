@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdio>
 #include <cstring>
 #include <list>
 #include <string>
@@ -190,6 +191,7 @@ struct ImFriendChatBoard::Impl
     std::array<char, 128> searchInput {};
     std::string lastSearch;
     std::vector<SDChatPeer> searchResults;
+    bool searchShowCandidates = false;
     std::unordered_set<uint64_t> selectedGroupPeers;
 
     uint64_t nextPendingID = 1;
@@ -393,12 +395,29 @@ void ImFriendChatBoard::draw() const
             wheelScroll(peers.size() * rowH);
         }
         else if(m_impl->page == pageSearch){
-            ImGui::SetCursorScreenPos(contentMin);
-            ImGui::SetNextItemWidth(contentW - 48);
-            if(ImGui::InputTextWithHint("##friend-search-input", "输入用户ID或角色名", m_impl->searchInput.data(), m_impl->searchInput.size())){
+            constexpr float inputH = 30.0f;
+            constexpr float clearGap = 10.0f;
+            const float inputW = contentW - 60.0f;
+            const auto inputFrame = g_progUseDB->retrieve(0X00000460);
+            drawNineSlice(list, inputFrame, contentMin, {inputW, inputH}, 3, 3, inputFrame ? inputFrame.w - 6.0f : 0.0f, 2);
+            drawTexture(list, g_progUseDB->retrieve(0X00001200), {contentMin.x + 8, contentMin.y + 5}, {20, 20});
+
+            ImGui::SetCursorScreenPos({contentMin.x + 33, contentMin.y + 3});
+            ImGui::SetNextItemWidth(inputW - 36);
+            const bool enterPressed = ImGui::InputText(
+                "##friend-search-input",
+                m_impl->searchInput.data(),
+                m_impl->searchInput.size(),
+                ImGuiInputTextFlags_EnterReturnsTrue);
+            const bool inputChanged = ImGui::IsItemEdited();
+            if(m_impl->searchInput.front() == '\0' && !ImGui::IsItemActive()){
+                drawText(list, {contentMin.x + 33, contentMin.y + 8}, "输入用户ID或角色名", 14, IM_COL32(128,128,128,255));
+            }
+            if(inputChanged){
                 const std::string query = m_impl->searchInput.data();
                 m_impl->lastSearch = query;
                 m_impl->searchResults.clear();
+                m_impl->searchShowCandidates = false;
                 if(!query.empty()){
                     CMQueryChatPeerList message {};
                     message.input.assign(query);
@@ -407,38 +426,90 @@ void ImFriendChatBoard::draw() const
                         if(headCode == SM_OK && query == m_impl->lastSearch){
                             m_impl->searchResults = cerealf::deserialize<SDChatPeerList>(data, size);
                         }
+                        else if(headCode != SM_OK){
+                            throw fflpanic("query failed in server");
+                        }
                     });
                 }
             }
-            ImGui::SetCursorScreenPos({contentMax.x - 42, contentMin.y});
-            if(ImGui::Button("清空##friend-search-clear")){
+            if(enterPressed && m_impl->searchInput.front() != '\0'){
+                m_impl->searchShowCandidates = true;
+            }
+
+            const auto clearText = g_fontexDB->retrieve(1, 15, 0, "清空");
+            const ImVec2 clearPos {contentMin.x + inputW + clearGap, contentMin.y + 7};
+            ImGui::SetCursorScreenPos({clearPos.x, contentMin.y});
+            if(ImGui::InvisibleButton("##friend-search-clear", {contentMax.x - clearPos.x, inputH})){
                 m_impl->searchInput.fill(0);
                 m_impl->lastSearch.clear();
                 m_impl->searchResults.clear();
+                m_impl->searchShowCandidates = false;
+            }
+            if(clearText){
+                list->AddImage(clearText, clearPos, {clearPos.x + clearText.w, clearPos.y + clearText.h});
             }
 
-            constexpr float rowH = 52;
+            const float rowH = m_impl->searchShowCandidates ? 52.0f : 30.0f;
             for(size_t i = 0; i < m_impl->searchResults.size(); ++i){
                 const auto &peer = m_impl->searchResults[i];
-                const ImVec2 rowPos {contentMin.x, contentMin.y + 30 + i * rowH - scroll};
+                const ImVec2 rowPos {contentMin.x, contentMin.y + inputH + i * rowH - scroll};
                 ImGui::PushID(to_d(peer.cpid().asU64()));
                 ImGui::SetCursorScreenPos(rowPos);
                 ImGui::InvisibleButton("##friend-search-row", {contentW, rowH});
                 const bool hovered = ImGui::IsItemHovered();
+                const bool clicked = ImGui::IsItemClicked();
                 ImGui::PopID();
+                list->AddRectFilled(
+                    rowPos,
+                    {rowPos.x + contentW, rowPos.y + rowH},
+                    hovered ? IM_COL32(231,231,189,64) : IM_COL32(128,128,128,64));
                 list->AddRect(rowPos, {rowPos.x + contentW, rowPos.y + rowH}, IM_COL32(231,231,189, hovered ? 64 : 32));
-                drawTexture(list, peerAvatar(peer), {rowPos.x + 4, rowPos.y + 4}, {40, 44});
-                drawText(list, {rowPos.x + 52, rowPos.y + 10}, str_printf("%s（%llu）", peer.name.c_str(), to_llu(peer.id)), 14);
-                if(peer.id != m_impl->processRun->getMyHeroDBID()){
-                    ImGui::PushID(to_d(peer.cpid().asU64()));
-                    ImGui::SetCursorScreenPos({rowPos.x + contentW - 48, rowPos.y + 17});
-                    if(ImGui::SmallButton("添加")){
-                        requestAddFriend(peer, true);
+
+                if(m_impl->searchShowCandidates){
+                    drawTexture(list, peerAvatar(peer), {rowPos.x + 4, rowPos.y + 4}, {40, 44});
+                    drawText(list, {rowPos.x + 52, rowPos.y + 10}, str_printf("%s（%llu）", peer.name.c_str(), to_llu(peer.id)), 14);
+                    if(peer.id != m_impl->processRun->getMyHeroDBID()){
+                        ImGui::PushID(to_d(peer.cpid().asU64()));
+                        ImGui::SetCursorScreenPos({rowPos.x + contentW - 48, rowPos.y + 17});
+                        if(ImGui::SmallButton("添加")){
+                            requestAddFriend(peer, true);
+                        }
+                        ImGui::PopID();
                     }
-                    ImGui::PopID();
+                }
+                else{
+                    drawTexture(list, g_progUseDB->retrieve(0X00001200), {rowPos.x + 8, rowPos.y + 5}, {20, 20});
+                    const auto query = m_impl->lastSearch;
+                    const bool byID = query == std::to_string(peer.id);
+                    std::string prefix;
+                    std::string match;
+                    std::string suffix;
+                    if(byID){
+                        prefix = peer.name + "（";
+                        match = std::to_string(peer.id);
+                        suffix = "）";
+                    }
+                    else if(const auto matchPos = peer.name.find(query); matchPos != std::string::npos){
+                        prefix = peer.name.substr(0, matchPos);
+                        match = query;
+                        suffix = peer.name.substr(matchPos + query.size()) + str_printf("（%llu）", to_llu(peer.id));
+                    }
+                    else{
+                        prefix = str_printf("%s（%llu）", peer.name.c_str(), to_llu(peer.id));
+                    }
+                    ImVec2 labelPos {rowPos.x + 33, rowPos.y + 8};
+                    labelPos.x += drawText(list, labelPos, prefix, 14).x;
+                    labelPos.x += drawText(list, labelPos, match, 14, IM_COL32(255,0,0,255)).x;
+                    drawText(list, labelPos, suffix, 14);
+                    if(clicked){
+                        const auto selectedInput = byID ? std::to_string(peer.id) : peer.name;
+                        std::snprintf(m_impl->searchInput.data(), m_impl->searchInput.size(), "%s", selectedInput.c_str());
+                        m_impl->searchShowCandidates = true;
+                        scroll = 0.0f;
+                    }
                 }
             }
-            wheelScroll(30 + m_impl->searchResults.size() * rowH);
+            wheelScroll(inputH + m_impl->searchResults.size() * rowH);
         }
         else if(m_impl->page == pageChat){
             const float inputH = 82;
