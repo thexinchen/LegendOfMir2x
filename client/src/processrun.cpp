@@ -515,16 +515,6 @@ void ProcessRun::draw() const
     }
 
     m_mainUI.draw();
-    if(const auto selectedItemID = getMyHero()->getInvPack().getGrabbedItem().itemID){
-        if(const auto &ir = DBCOM_ITEMRECORD(selectedItemID)){
-            if(auto texPtr = g_itemDB->retrieve(ir.pkgGfxID | 0X01000000)){
-                const auto [texW, texH] = GLDeviceHelper::getTextureSize(texPtr);
-                const auto [ptrX, ptrY] = GLDeviceHelper::getMousePLoc();
-                g_glDevice->drawTexture(texPtr, ptrX - texW / 2, ptrY - texH / 2);
-            }
-        }
-    }
-
     switch(m_cursorState){
         case CURSOR_TEAMFLAG:
             {

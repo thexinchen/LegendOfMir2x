@@ -271,6 +271,22 @@ void ImMainUI::draw() const
     if(g_imeBoard->show()){
         g_imeBoard->draw();
     }
+
+    if(const auto selectedItemID = m_processRun->getMyHero()->getInvPack().getGrabbedItem().itemID){
+        if(const auto &ir = DBCOM_ITEMRECORD(selectedItemID)){
+            if(const auto texture = g_itemDB->retrieve(ir.pkgGfxID | 0X01000000); texture){
+                const auto mousePos = ImGui::GetMousePos();
+                const ImVec2 itemPos {
+                    mousePos.x - texture.w * 0.5f,
+                    mousePos.y - texture.h * 0.5f,
+                };
+                ImGui::GetForegroundDrawList()->AddImage(
+                    texture,
+                    itemPos,
+                    {itemPos.x + texture.w, itemPos.y + texture.h});
+            }
+        }
+    }
 }
 
 void ImMainUI::drawHUD() const
