@@ -46,7 +46,7 @@ namespace imlogin
         public:
             explicit Notice(size_t limit = 10): m_limit(limit) {}
             void update(double);
-            void draw() const;
+            void draw(bool = true) const;
             void show(std::string, double = 5000.0);
             void clear();
     };

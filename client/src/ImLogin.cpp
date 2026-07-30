@@ -235,7 +235,7 @@ void imlogin::Notice::update(double deltaMS)
     }
 }
 
-void imlogin::Notice::draw() const
+void imlogin::Notice::draw(bool drawBackground) const
 {
     if(m_entries.empty()){
         return;
@@ -250,8 +250,10 @@ void imlogin::Notice::draw() const
     const ImVec2 min {(screenSize.x - maxWidth) * 0.5f - 10.0f, (screenSize.y - height) * 0.5f - 10.0f};
     const ImVec2 max {min.x + maxWidth + 20.0f, min.y + height + 20.0f};
     auto *drawList = ImGui::GetForegroundDrawList();
-    drawList->AddRectFilled(min, max, IM_COL32(0, 0, 0, 128), 8.0f);
-    drawList->AddRect(min, max, IM_COL32(0, 0, 255, 128), 8.0f);
+    if(drawBackground){
+        drawList->AddRectFilled(min, max, IM_COL32(0, 0, 0, 128), 8.0f);
+        drawList->AddRect(min, max, IM_COL32(0, 0, 255, 128), 8.0f);
+    }
     float y = min.y + 10.0f;
     for(const auto &entry: m_entries){
         const auto width = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, entry.text.c_str()).x;
@@ -573,7 +575,7 @@ void ProcessSelectChar::draw() const
         }
     }
     endScreen();
-    m_notice.draw();
+    m_notice.draw(false);
 }
 
 uint32_t ProcessSelectChar::characterFrameCount() const
