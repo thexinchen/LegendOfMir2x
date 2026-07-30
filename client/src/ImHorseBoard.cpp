@@ -48,6 +48,10 @@ void ImHorseBoard::draw() const
         const auto pos = ImGui::GetWindowPos();
         auto *drawList = ImGui::GetWindowDrawList();
         drawList->AddRectFilled(pos, {pos.x + boardSize.x, pos.y + boardSize.y}, IM_COL32(128, 128, 128, 255));
+        drawList->AddRectFilled(
+            {pos.x + 15, pos.y + 39},
+            {pos.x + 242, pos.y + 227},
+            IM_COL32_BLACK);
         if(const auto background = g_progUseDB->retrieve(0X00000700); background){
             drawList->AddImage(background, pos, {pos.x + background.w, pos.y + background.h});
         }
