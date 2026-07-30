@@ -222,11 +222,15 @@ void ImMainUI::drawHUD() const
 
     if(!m_minimize){
         drawTextureCrop(0X00000012, {0, baseY}, {leftWidth, textureHeight}, {0, 0}, {leftWidth, textureHeight});
-        background()->AddRectFilled({leftWidth, panelTop}, {screenW - rightWidth, screenH}, IM_COL32_BLACK);
         if(m_expand){
+            background()->AddRectFilled(
+                {leftWidth, panelTop},
+                {screenW - rightWidth, screenH},
+                IM_COL32(0, 0, 0, 220));
             drawTextureNineSlice(0X00000027, {leftWidth, panelTop}, {middleW, expandedPanelH}, 50, 47, 287, 196);
         }
         else{
+            background()->AddRectFilled({leftWidth, panelTop}, {screenW - rightWidth, screenH}, IM_COL32_BLACK);
             drawTextureNineSlice(0X00000013, {leftWidth, baseY}, {middleW, 131.0f}, 50, 0, 287, 131);
         }
         drawTextureCrop(
