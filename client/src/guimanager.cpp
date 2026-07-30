@@ -132,7 +132,7 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
     Widget::drawDefault(m);
 
     if(g_imeBoard->show()){
-        g_imeBoard->drawRoot({});
+        g_imeBoard->draw();
     }
 }
 
@@ -177,14 +177,9 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     }
 
     bool tookEvent = false;
-    const auto fnProcEventRoot = [&event, valid, &tookEvent](Widget *widget)
-    {
-        if(widget->show()){
-            tookEvent |= widget->processEventRoot(event, valid && !tookEvent, {});
-        }
-    };
-
-    fnProcEventRoot(g_imeBoard);
+    if(g_imeBoard->show()){
+        tookEvent |= valid && g_imeBoard->processEvent(event);
+    }
 
     tookEvent |= Widget::processEventDefault(event, valid && !tookEvent, m);
 
@@ -253,15 +248,4 @@ void GUIManager::afterResizeDefault()
 {
     m_runtimeConfigBoard.updateWindowSize({w(), h()}, true);
 
-    const auto fnSetWidgetPLoc = [this](Widget *widgetPtr)
-    {
-        const auto moveDX = std::max<int>(widgetPtr->dx() - (w() - widgetPtr->w()), 0);
-        const auto moveDY = std::max<int>(widgetPtr->dy() - (h() - widgetPtr->h()), 0);
-
-        // move upper-left
-        //
-        widgetPtr->moveBy(-moveDX, -moveDY);
-    };
-
-    fnSetWidgetPLoc(g_imeBoard);
 }

@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
         g_seffDB       = new SoundEffectDB(128);
         g_audioDevice  = new AudioDevice(!g_clientArgParser->disableAudio);
         g_client       = new Client();       // loads fontex resource
-        g_imeBoard     = new IMEBoard{{}};
+        g_imeBoard     = new IMEBoard();
         g_notifyBoard  = new MessageStackBoard
         {{
             .dir = DIR_UPLEFT,

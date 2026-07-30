@@ -1,98 +1,191 @@
-#include <algorithm>
-#include "gldevice.hpp"
-#include "gui_texture.hpp"
 #include "imeboard.hpp"
 
+#include <algorithm>
+#include <array>
+
+#include "colorf.hpp"
+#include "gldevice.hpp"
+#include "gui_core.hpp"
+#include "gui_font.hpp"
+#include "gui_texture.hpp"
+#include "strf.hpp"
+#include "totype.hpp"
+
 extern PNGTexDB *g_progUseDB;
+extern FontexDB *g_fontexDB;
 extern GLDevice *g_glDevice;
 
-IMEBoard::IMEBoard(IMEBoard::InitArgs args)
-    : Widget
-      {{
-          .dir = std::move(args.dir),
-
-          .x = std::move(args.x),
-          .y = std::move(args.y),
-
-          .parent = std::move(args.parent),
-      }}
-
-    , m_font(std::move(args.font))
-
-    , m_fontColorHover  (std::move(args.fontColorHover  ))
-    , m_fontColorPressed(std::move(args.fontColorPressed))
-    , m_separatorColor  (std::move(args.separatorColor  ))
-
-    , m_fontTokenHeight([this]() -> size_t
-      {
-          return LabelBoard{{.label = u8" ", .font{m_font}}}.h();
-      }())
-
-    , m_inputWidget(nullptr)
-    , m_onCommit   (nullptr)
-
-    , m_upLeftCorner
-      {{
-          .texLoadFunc = []{ return g_progUseDB->retrieve(0X09000006); },
-          .parent{this},
-      }}
-
-    , m_downRightCorner
-      {{
-          .dir = DIR_DOWNRIGHT,
-          .x = [this]{ return w() - 1; },
-          .y = [this]{ return h() - 1; },
-
-          .texLoadFunc = []{ return g_progUseDB->retrieve(0X09000009); },
-          .parent{this},
-      }}
-
-    , m_bgImg
-      {{
-          .texLoadFunc = []{ return g_progUseDB->retrieve(0X09000100); }, // size: 338 x 53
-      }}
-
-    , m_bg
-      {{
-          .getter = &m_bgImg,
-          .vr
-          {
-              m_upLeftCorner.w(),
-              10,
-              m_bgImg.w() - m_upLeftCorner.w() - m_downRightCorner.w(),
-              m_bgImg.h() - 10 * 2,
-          },
-
-          .resize
-          {
-              [this]{ return w() - m_upLeftCorner.w() - m_downRightCorner.w(); },
-              [this]{ return h() - 10 * 2; },
-          },
-
-          .fgDrawFunc = [this](int drawDstX, int drawDstY)
-          {
-              g_glDevice->drawLine(Widget::evalU32(m_separatorColor, this),
-                      drawDstX          , drawDstY + m_startY + m_fontTokenHeight + m_separatorSpace / 2,
-                      drawDstX + w() - 1, drawDstY + m_startY + m_fontTokenHeight + m_separatorSpace / 2);
-          },
-
-          .parent{this},
-      }}
+namespace
 {
-    dropFocus();
-    setSize([this]{ return std::max<int>(m_bgImg.w(), m_startX * 2 + totalLabelWidth()); },
-            [this]{ return std::max<int>(m_bgImg.h(), m_startY * 2 + m_fontTokenHeight + m_separatorSpace + m_fontTokenHeight); });
+    constexpr uint8_t fontID = 11;
+    constexpr uint8_t fontSize = 15;
+
+    void drawNineSlice(
+            ImDrawList *drawList,
+            const GLTexID texture,
+            const ImVec2 pos,
+            const ImVec2 size,
+            const float left,
+            const float top,
+            const float centerW,
+            const float centerH)
+    {
+        if(!texture){
+            return;
+        }
+
+        const float right = texture.w - left - centerW;
+        const float bottom = texture.h - top - centerH;
+        const std::array<float, 4> sourceX {{0, left, left + centerW, to_f(texture.w)}};
+        const std::array<float, 4> sourceY {{0, top, top + centerH, to_f(texture.h)}};
+        const std::array<float, 4> targetX {{pos.x, pos.x + left, pos.x + size.x - right, pos.x + size.x}};
+        const std::array<float, 4> targetY {{pos.y, pos.y + top, pos.y + size.y - bottom, pos.y + size.y}};
+        for(int y = 0; y < 3; ++y){
+            for(int x = 0; x < 3; ++x){
+                if(targetX[x + 1] <= targetX[x] || targetY[y + 1] <= targetY[y]){
+                    continue;
+                }
+                drawList->AddImage(
+                    texture,
+                    {targetX[x], targetY[y]},
+                    {targetX[x + 1], targetY[y + 1]},
+                    {sourceX[x] / texture.w, sourceY[y] / texture.h},
+                    {sourceX[x + 1] / texture.w, sourceY[y + 1] / texture.h});
+            }
+        }
+    }
+
+    void drawText(ImDrawList *drawList, const ImVec2 pos, const std::string &text, const ImU32 color)
+    {
+        if(const auto texture = g_fontexDB->retrieve(fontID, fontSize, 0, text.c_str()); texture){
+            drawList->AddImage(texture, pos, {pos.x + texture.w, pos.y + texture.h}, {0, 0}, {1, 1}, color);
+        }
+    }
 }
 
-void IMEBoard::updateDefault(double)
+IMEBoard::IMEBoard()
+    : ImBoard("##embedded-ime-board")
 {
-    // in processEventDefault we only post request to IME
-    // all IME changes need to be polled in update(), or we can do it by callback
+    moveTo(0.0f, 0.0f);
+}
 
-    // problem of callback is not by IME, it's by SDL
-    // SDL texture creation is not thread-safe, if we add callback like onCandidateListChanged, we can't allocate texture inside
+int IMEBoard::fontHeight() const
+{
+    if(const auto texture = g_fontexDB->retrieve(fontID, fontSize, 0, " "); texture){
+        return texture.h;
+    }
+    return fontSize;
+}
 
-    if(const auto currCandidateList = m_ime.candidates(); currCandidateList == m_candidateList){
+int IMEBoard::candidateWidth(const size_t index) const
+{
+    if(index >= m_candidateList.size()){
+        return 0;
+    }
+    const auto label = str_printf("%zu. %s", index + 1 - m_startIndex, m_candidateList[index].c_str());
+    if(const auto texture = g_fontexDB->retrieve(fontID, fontSize, 0, label.c_str()); texture){
+        return texture.w;
+    }
+    return 0;
+}
+
+int IMEBoard::totalCandidateWidth() const
+{
+    int width = 0;
+    for(size_t i = m_startIndex; i < std::min(m_startIndex + 9, m_candidateList.size()); ++i){
+        if(width){
+            width += candidateSpace;
+        }
+        width += candidateWidth(i);
+    }
+    return width;
+}
+
+void IMEBoard::draw() const
+{
+    if(!show()){
+        return;
+    }
+
+    const auto background = g_progUseDB->retrieve(0X09000100);
+    const auto upperLeft = g_progUseDB->retrieve(0X09000006);
+    const auto lowerRight = g_progUseDB->retrieve(0X09000009);
+    const int tokenHeight = fontHeight();
+    m_boardSize =
+    {
+        to_f(std::max<int>(background ? background.w : 338, startX * 2 + totalCandidateWidth())),
+        to_f(std::max<int>(background ? background.h : 53, startY * 2 + tokenHeight * 2 + separatorSpace)),
+    };
+
+    if(beginWindow(m_boardSize)){
+        const auto pos = ImGui::GetWindowPos();
+        auto drawList = ImGui::GetWindowDrawList();
+
+        const float left = upperLeft ? upperLeft.w : 12.0f;
+        const float right = lowerRight ? lowerRight.w : 12.0f;
+        drawNineSlice(
+            drawList,
+            background,
+            pos,
+            m_boardSize,
+            left,
+            10,
+            std::max(1.0f, background ? background.w - left - right : 314.0f),
+            std::max(1.0f, background ? background.h - 20.0f : 33.0f));
+        if(upperLeft){
+            drawList->AddImage(upperLeft, pos, {pos.x + upperLeft.w, pos.y + upperLeft.h});
+        }
+        if(lowerRight){
+            drawList->AddImage(
+                lowerRight,
+                {pos.x + m_boardSize.x - lowerRight.w, pos.y + m_boardSize.y - lowerRight.h},
+                {pos.x + m_boardSize.x, pos.y + m_boardSize.y});
+        }
+
+        drawList->AddLine(
+            {pos.x, pos.y + startY + tokenHeight + separatorSpace * 0.5f},
+            {pos.x + m_boardSize.x - 1, pos.y + startY + tokenHeight + separatorSpace * 0.5f},
+            IM_COL32(255, 255, 0, 48));
+        drawText(drawList, {pos.x + startX, pos.y + startY}, m_ime.result(), IM_COL32(255, 255, 0, 255));
+
+        float candidateX = pos.x + startX;
+        const float candidateY = pos.y + startY + tokenHeight + separatorSpace;
+        for(size_t i = m_startIndex; i < std::min(m_startIndex + 9, m_candidateList.size()); ++i){
+            const auto label = str_printf("%zu. %s", i + 1 - m_startIndex, m_candidateList[i].c_str());
+            const int width = candidateWidth(i);
+            ImGui::PushID(to_d(i));
+            ImGui::SetCursorScreenPos({candidateX, candidateY});
+            if(ImGui::InvisibleButton("##ime-candidate", {to_f(width), to_f(tokenHeight)})){
+                selectCandidate(i);
+            }
+            const auto color = ImGui::IsItemActive() ? IM_COL32(0, 0, 255, 255)
+                             : ImGui::IsItemHovered() ? IM_COL32(255, 0, 0, 255)
+                                                     : IM_COL32(255, 255, 0, 255);
+            drawText(drawList, {candidateX, candidateY}, label, color);
+            candidateX += width + candidateSpace;
+            ImGui::PopID();
+        }
+
+        if(ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered()){
+            m_dragging = true;
+        }
+        if(!ImGui::IsMouseDown(ImGuiMouseButton_Left)){
+            m_dragging = false;
+        }
+        if(m_dragging){
+            const auto delta = ImGui::GetIO().MouseDelta;
+            moveTo(
+                std::clamp(pos.x + delta.x, 0.0f, std::max(0.0f, to_f(g_glDevice->getRendererWidth()) - m_boardSize.x)),
+                std::clamp(pos.y + delta.y, 0.0f, std::max(0.0f, to_f(g_glDevice->getRendererHeight()) - m_boardSize.y)));
+        }
+    }
+    endWindow();
+}
+
+void IMEBoard::update(const double)
+{
+    const auto candidates = m_ime.candidates();
+    if(candidates == m_candidateList){
         if(m_ime.empty()){
             dropFocus();
         }
@@ -102,72 +195,16 @@ void IMEBoard::updateDefault(double)
             }
             dropFocus();
         }
+        return;
     }
-    else{
-        for(auto &p: m_boardList){
-            this->removeChild(p->id(), false);
-        }
 
-        m_boardList.clear();
-        m_candidateList = currCandidateList;
-
-        m_startIndex = 0;
-        prepareLabelBoardList();
-    }
+    m_candidateList = candidates;
+    m_startIndex = 0;
 }
 
-void IMEBoard::prepareLabelBoardList()
+bool IMEBoard::processEvent(const MirEvent &event) const
 {
-    /**/  int startX = m_startX;
-    const int startY = m_startY + m_fontTokenHeight + m_separatorSpace;
-
-    for(size_t i = m_startIndex; i < std::min<size_t>(m_startIndex + 9, m_candidateList.size()); ++i){
-        if(i >= m_boardList.size()){
-            m_boardList.resize(i + 1);
-        }
-
-        if(!m_boardList[i]){
-            m_boardList[i] = std::unique_ptr<LabelBoard>(new LabelBoard
-            {{
-                .label = str_printf(u8"%zu. %s", i + 1 - m_startIndex, m_candidateList[i].c_str()).c_str(),
-                .font = m_font,
-                .parent{this},
-            }});
-        }
-
-        m_boardList[i]->moveTo(startX, startY);
-        startX += m_boardList[i]->w() + m_candidateSpace;
-    }
-}
-
-size_t IMEBoard::totalLabelWidth() const
-{
-    if(m_startIndex >= m_candidateList.size()){
-        return 0;
-    }
-
-    size_t totalWidth = m_boardList[m_startIndex]->w();
-    for(size_t i = m_startIndex + 1; i < std::min<size_t>(m_startIndex + 9, m_candidateList.size()); ++i){
-        totalWidth += (m_candidateSpace + m_boardList[i]->w());
-    }
-
-    return totalWidth;
-}
-
-bool IMEBoard::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
-{
-    if(!m.calibrate(this)){
-        return false;
-    }
-
-    if(!valid){
-        if(focus()){
-            dropFocus();
-        }
-        return false;
-    }
-
-    if(!focus()){
+    if(!show()){
         return false;
     }
 
@@ -179,14 +216,8 @@ bool IMEBoard::processEventDefault(const MirEvent &event, bool valid, Widget::RO
                     case MIRK_LEFT:
                     case MIRK_PAGEUP:
                         {
-                            if(m_startIndex >= 9){
-                                m_startIndex -= 9;
-                            }
-                            else{
-                                m_startIndex = 0;
-                            }
-
-                            prepareLabelBoardList();
+                            auto self = const_cast<IMEBoard *>(this);
+                            self->m_startIndex = m_startIndex >= 9 ? m_startIndex - 9 : 0;
                             return true;
                         }
                     case MIRK_DOWN:
@@ -194,10 +225,8 @@ bool IMEBoard::processEventDefault(const MirEvent &event, bool valid, Widget::RO
                     case MIRK_PAGEDOWN:
                         {
                             if(m_startIndex + 9 < m_candidateList.size()){
-                                m_startIndex += 9;
+                                const_cast<IMEBoard *>(this)->m_startIndex += 9;
                             }
-
-                            prepareLabelBoardList();
                             return true;
                         }
                     case MIRK_RETURN:
@@ -205,8 +234,7 @@ bool IMEBoard::processEventDefault(const MirEvent &event, bool valid, Widget::RO
                             if(m_onCommit){
                                 m_onCommit(m_ime.result());
                             }
-
-                            dropFocus();
+                            const_cast<IMEBoard *>(this)->dropFocus();
                             return true;
                         }
                     case MIRK_BACKSPACE:
@@ -216,87 +244,45 @@ bool IMEBoard::processEventDefault(const MirEvent &event, bool valid, Widget::RO
                         }
                     case MIRK_ESCAPE:
                         {
-                            dropFocus();
+                            const_cast<IMEBoard *>(this)->dropFocus();
                             return true;
                         }
                     case MIRK_SPACE:
                         {
-                            m_ime.select(m_startIndex);
+                            selectCandidate(m_startIndex);
                             return true;
                         }
                     default:
                         {
-                            if(const char keyChar = GLDeviceHelper::getKeyChar(event, true); keyChar >= 'a' && keyChar <= 'z'){
+                            const char keyChar = GLDeviceHelper::getKeyChar(event, true);
+                            if(keyChar >= 'a' && keyChar <= 'z'){
                                 m_ime.feed(keyChar);
                             }
                             else if(keyChar >= '1' && keyChar <= '9'){
-                                m_ime.select(m_startIndex + keyChar - '1');
+                                selectCandidate(m_startIndex + keyChar - '1');
                             }
                             else if(keyChar != '\0'){
                                 if(m_onCommit){
                                     m_onCommit(m_ime.result());
                                     m_onCommit(str_printf("%c", keyChar));
                                 }
-                                dropFocus();
+                                const_cast<IMEBoard *>(this)->dropFocus();
                             }
                             return true;
                         }
                 }
             }
-        case MIR_EVENT_MOUSE_BUTTON_UP:
-            {
-                if(event.button.button == MIR_BUTTON_LEFT){
-                    for(size_t i = m_startIndex; i < std::min<size_t>(m_startIndex + 9, m_candidateList.size()); ++i){
-                        m_boardList[i]->setFontColor(Widget::evalU32(m_font.color, this));
-                        if(m.create(m_boardList.at(i)->roi()).in(to_d(event.button.x), to_d(event.button.y))){
-                            m_ime.select(i);
-                        }
-                    }
-                }
-                return true;
-            }
         case MIR_EVENT_MOUSE_BUTTON_DOWN:
             {
-                if(!m.in(to_d(event.button.x), to_d(event.button.y))){
-                    dropFocus();
-                    return true;
-                }
-
-                for(size_t i = m_startIndex; i < std::min<size_t>(m_startIndex + 9, m_candidateList.size()); ++i){
-                    if(m.create(m_boardList.at(i)->roi()).in(to_d(event.button.x), to_d(event.button.y))){
-                        m_boardList.at(i)->setFontColor(Widget::evalU32(m_fontColorPressed, this));
-                    }
-                    else{
-                        m_boardList.at(i)->setFontColor(Widget::evalU32(m_font.color, this));
-                    }
+                if(event.button.x < position().x || event.button.x >= position().x + m_boardSize.x
+                || event.button.y < position().y || event.button.y >= position().y + m_boardSize.y){
+                    const_cast<IMEBoard *>(this)->dropFocus();
                 }
                 return true;
             }
+        case MIR_EVENT_MOUSE_BUTTON_UP:
         case MIR_EVENT_MOUSE_MOTION:
             {
-                if(event.motion.state & MIR_BUTTON_LMASK){
-                    const auto remapXDiff = m.x - m.ro->x;
-                    const auto remapYDiff = m.y - m.ro->y;
-
-                    const auto [rendererW, rendererH] = g_glDevice->getRendererSize();
-                    const int maxX = rendererW - w();
-                    const int maxY = rendererH - h();
-
-                    const int newX = std::max<int>(0, std::min<int>(maxX, remapXDiff + to_d(event.motion.xrel)));
-                    const int newY = std::max<int>(0, std::min<int>(maxY, remapYDiff + to_d(event.motion.yrel)));
-
-                    moveBy(newX - remapXDiff, newY - remapYDiff);
-                }
-                else if(m.in(to_d(event.motion.x), to_d(event.motion.y))){
-                    for(size_t i = m_startIndex; i < std::min<size_t>(m_startIndex + 9, m_candidateList.size()); ++i){
-                        if(m.create(m_boardList.at(i)->roi()).in(to_d(event.motion.x), to_d(event.motion.y))){
-                            m_boardList.at(i)->setFontColor(Widget::evalU32(m_fontColorHover, this));
-                        }
-                        else{
-                            m_boardList.at(i)->setFontColor(Widget::evalU32(m_font.color, this));
-                        }
-                    }
-                }
                 return true;
             }
         default:
@@ -306,91 +292,35 @@ bool IMEBoard::processEventDefault(const MirEvent &event, bool valid, Widget::RO
     }
 }
 
-void IMEBoard::drawDefault(Widget::ROIMap m) const
+void IMEBoard::gainFocus(std::string prefix, std::string input, Widget *inputWidget, std::function<void(std::string)> onCommit)
 {
-    //        +---------------------------------------------------------------------------------- m_startX
-    //        |
-    //        |                                                                  +--------------- w - m_startX
-    //        |                                                                  |
-    //        v                                                                  v
-    // +-----------+---------------------------------------------------------------------+
-    // |           |                                                                     |
-    // |   +-------+                                                                     |
-    // |   |  +---------------+                                                          | <----- m_startY
-    // |   |  |你好woshinidaye|                                                          |
-    // +---+  +---------------+                                                          | ------
-    // |                                                                                 |   ^
-    // +---------------------------------------------------------------------------------+   |    m_separatorSpace
-    // |                                                                                 |   v
-    // |      +------+ +------+ +------+ +----+ +----+ +----+ +----+ +----+ +----+       | ------
-    // |      |1.我是| |2.我司| |3.我市| |4.我| |5.恶| |6.额| |7.俄| |8.鳄| |9.娥|   +---+
-    // |      +------+ +------+ +------+ +----+ +----+ +----+ +----+ +----+ +----+   |   |
-    // |                                                                      +------+   |
-    // |                                                                      |          |
-    // +----------------------------------------------------------------------+----------+
-    //            -->| |<-- m_candidateSpace
-
-    if(!m.calibrate(this)){
-        return;
-    }
-
-    drawChild(&m_bg, m);
-
-    const LabelBoard imeResult
-    {{
-        .label = to_u8rawstr(m_ime.result()).c_str(),
-        .font = m_font,
-    }};
-
-    drawAsChild(&imeResult, DIR_UPLEFT, m_startX, m_startY, m);
-    for(size_t i = m_startIndex; i < std::min<size_t>(m_startIndex + 9, m_candidateList.size()); ++i){
-        drawChild(m_boardList.at(i).get(), m);
-    }
-
-    drawChild(&m_upLeftCorner   , m);
-    drawChild(&m_downRightCorner, m);
-}
-
-void IMEBoard::gainFocus(std::string prefix, std::string input, Widget *pwidget, std::function<void(std::string)> onCommit)
-{
-    for(auto &p: m_boardList){
-        this->removeChild(p->id(), false);
-    }
-
-    m_boardList.clear();
     m_candidateList.clear();
-
-    m_ime.assign(prefix, input);
-
-    m_inputWidget = pwidget;
+    m_startIndex = 0;
+    m_ime.assign(std::move(prefix), std::move(input));
+    m_inputWidget = inputWidget;
     m_onCommit = std::move(onCommit);
-
     if(m_inputWidget){
         m_inputWidget->setFocus(false);
     }
-
     setShow(true);
-    setFocus(true);
 }
 
 void IMEBoard::dropFocus()
 {
-    for(auto &p: m_boardList){
-        this->removeChild(p->id(), false);
-    }
-
-    m_boardList.clear();
     m_candidateList.clear();
-
+    m_startIndex = 0;
     m_ime.clear();
-
     if(m_inputWidget){
         m_inputWidget->setFocus(true);
     }
-
     m_inputWidget = nullptr;
     m_onCommit = nullptr;
-
     setShow(false);
-    setFocus(false);
+}
+
+void IMEBoard::selectCandidate(const size_t index) const
+{
+    if(index < m_candidateList.size()){
+        m_ime.select(index);
+    }
 }
