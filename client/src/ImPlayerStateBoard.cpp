@@ -6,6 +6,7 @@
 
 #include "dbcomid.hpp"
 #include "fflerror.hpp"
+#include "gldevice.hpp"
 #include "gui_font.hpp"
 #include "gui_texture.hpp"
 #include "invpack.hpp"
@@ -17,6 +18,7 @@ extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;
 extern PNGTexOffDB *g_equipDB;
 extern FontexDB *g_fontexDB;
+extern GLDevice *g_glDevice;
 
 namespace
 {
@@ -83,7 +85,11 @@ ImPlayerStateBoard::ImPlayerStateBoard(ProcessRun *processRun)
           grids[WLG_CHARM]    = {128, 265};
           return grids;
       }())
-{}
+{
+    moveTo(
+        to_f(g_glDevice->getRendererWidth()  / 2 - 164),
+        to_f(g_glDevice->getRendererHeight() / 2 - 233));
+}
 
 void ImPlayerStateBoard::draw() const
 {
