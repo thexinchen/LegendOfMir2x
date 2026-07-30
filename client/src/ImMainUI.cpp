@@ -341,8 +341,8 @@ void ImMainUI::drawHUD() const
                 face = g_progUseDB->retrieve(0X010007CF);
             }
             if(face){
-                const float faceW = to_f(std::max(0, face.w - 7));
-                const float faceH = to_f(std::max(0, face.h - 11));
+                const float faceW = to_f(std::max(0, face.w - 2));
+                const float faceH = to_f(face.h);
                 background()->AddImage(
                     face,
                     {faceX, faceY + 3},
