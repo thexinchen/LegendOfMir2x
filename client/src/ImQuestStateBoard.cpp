@@ -6,6 +6,7 @@
 
 #include "cblog.hpp"
 #include "fflerror.hpp"
+#include "gldevice.hpp"
 #include "gui_font.hpp"
 #include "gui_texture.hpp"
 #include "processrun.hpp"
@@ -14,6 +15,7 @@
 
 extern PNGTexDB *g_progUseDB;
 extern FontexDB *g_fontexDB;
+extern GLDevice *g_glDevice;
 
 namespace
 {
@@ -101,7 +103,11 @@ namespace
 ImQuestStateBoard::ImQuestStateBoard(ProcessRun *processRun)
     : ImBoard("##quest-state-board")
     , m_processRun(fflcheck(processRun))
-{}
+{
+    moveTo(
+        to_f(g_glDevice->getRendererWidth()  / 2 - 145),
+        to_f(g_glDevice->getRendererHeight() / 2 - 223));
+}
 
 void ImQuestStateBoard::draw() const
 {
