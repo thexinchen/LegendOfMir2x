@@ -3,9 +3,11 @@
 #include <algorithm>
 
 #include "fflerror.hpp"
+#include "gldevice.hpp"
 #include "gui_texture.hpp"
 #include "processrun.hpp"
 
+extern GLDevice *g_glDevice;
 extern PNGTexDB *g_progUseDB;
 
 namespace
@@ -31,7 +33,11 @@ namespace
 ImGuildBoard::ImGuildBoard(ProcessRun *processRun)
     : ImBoard("##guild-board")
     , m_processRun(fflcheck(processRun))
-{}
+{
+    moveTo(
+        static_cast<float>(g_glDevice->getRendererWidth()  / 2 - 297),
+        static_cast<float>(g_glDevice->getRendererHeight() / 2 - 222));
+}
 
 void ImGuildBoard::draw() const
 {
