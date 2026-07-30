@@ -137,11 +137,18 @@ namespace
                           ImVec2 pos,
                           float width,
                           float fontSize,
-                          bool password = false)
+                          bool password = false,
+                          float height = 0.0f)
     {
+        float paddingY = 0.0f;
+        if(height > 0.0f){
+            pos.y -= height * 0.5f;
+            const float lineHeight = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, "M").y;
+            paddingY = std::max(0.0f, (height - lineHeight) * 0.5f);
+        }
         ImGui::SetCursorScreenPos(pos);
         ImGui::SetNextItemWidth(width);
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, paddingY});
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
         ImGui::PushStyleColor(ImGuiCol_FrameBg, {0, 0, 0, 0});
         ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, {0, 0, 0, 0});
@@ -161,6 +168,12 @@ namespace
     void drawText(ImVec2 pos, const char *text, float size, ImU32 color = IM_COL32_WHITE)
     {
         ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), size, pos, color, text);
+    }
+
+    void drawCenteredText(ImVec2 pos, const char *text, float size, ImU32 color = IM_COL32_WHITE)
+    {
+        const float height = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, text).y;
+        drawText({pos.x, pos.y - height * 0.5f}, text, size, color);
     }
 
     void drawCheck(ImVec2 pos, const std::string &value, bool valid)
@@ -434,12 +447,12 @@ void ProcessCreateAccount::draw() const
     drawTexture(0X0A000000, {180, 145});
     if(beginScreen()){
         if(!m_status.active()){
-            const bool idEnter = transparentInput("##account-id", m_id.data.data(), m_id.data.size(), {315, 230}, 186, 15);
-            const bool passwordEnter = transparentInput("##account-password", m_password.data.data(), m_password.data.size(), {315, 288}, 186, 15, true);
-            const bool confirmEnter = transparentInput("##account-confirm", m_confirm.data.data(), m_confirm.data.size(), {315, 343}, 186, 15, true);
-            drawText({258, 230}, "账号", 15);
-            drawText({258, 288}, "密码", 15);
-            drawText({228, 343}, "确认密码", 15);
+            const bool idEnter = transparentInput("##account-id", m_id.data.data(), m_id.data.size(), {315, 230}, 186, 15, false, 28);
+            const bool passwordEnter = transparentInput("##account-password", m_password.data.data(), m_password.data.size(), {315, 288}, 186, 15, true, 28);
+            const bool confirmEnter = transparentInput("##account-confirm", m_confirm.data.data(), m_confirm.data.size(), {315, 343}, 186, 15, true, 28);
+            drawCenteredText({258, 230}, "账号", 15);
+            drawCenteredText({258, 288}, "密码", 15);
+            drawCenteredText({228, 343}, "确认密码", 15);
             drawCheck({511, 230}, m_id.str(), idstrf::isEmail(m_id.data.data()));
             drawCheck({511, 288}, m_password.str(), idstrf::isPassword(m_password.data.data()));
             drawCheck({511, 343}, m_confirm.str(), idstrf::isPassword(m_confirm.data.data()) && m_password.str() == m_confirm.str());
