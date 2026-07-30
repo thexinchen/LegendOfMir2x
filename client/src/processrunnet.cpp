@@ -18,7 +18,6 @@
 #include "cerealf.hpp"
 #include "imeboard.hpp"
 #include "cblog.hpp"
-#include "gui/friendchatboard.hpp"
 #include "gui/skillboard.hpp"
 #include "serdesmsg.hpp"
 #include "gldevice.hpp"
