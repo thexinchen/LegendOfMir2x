@@ -9,6 +9,7 @@
 #include <imgui.h>
 
 #include "client.hpp"
+#include "clientmonster.hpp"
 #include "clientmsg.hpp"
 #include "gldevice.hpp"
 #include "gui_font.hpp"
@@ -46,13 +47,6 @@ namespace
         }
     }
 
-    void drawTextureSized(uint32_t textureID, ImVec2 pos, ImVec2 size, ImU32 tint = IM_COL32_WHITE)
-    {
-        if(const auto texture = g_progUseDB->retrieve(textureID); texture){
-            background()->AddImage(texture, pos, {pos.x + size.x, pos.y + size.y}, {0, 0}, {1, 1}, tint);
-        }
-    }
-
     void drawTextureCrop(uint32_t textureID, ImVec2 pos, ImVec2 size, ImVec2 srcPos, ImVec2 srcSize, ImU32 tint = IM_COL32_WHITE)
     {
         if(const auto texture = g_progUseDB->retrieve(textureID); texture){
@@ -63,6 +57,41 @@ namespace
                 {srcPos.x / texture.w, srcPos.y / texture.h},
                 {(srcPos.x + srcSize.x) / texture.w, (srcPos.y + srcSize.y) / texture.h},
                 tint);
+        }
+    }
+
+    void drawTextureNineSlice(
+            const uint32_t textureID,
+            const ImVec2 pos,
+            const ImVec2 size,
+            const float left,
+            const float top,
+            const float centerW,
+            const float centerH)
+    {
+        const auto texture = g_progUseDB->retrieve(textureID);
+        if(!texture){
+            return;
+        }
+
+        const float right = texture.w - left - centerW;
+        const float bottom = texture.h - top - centerH;
+        const std::array<float, 4> sx {{0, left, left + centerW, to_f(texture.w)}};
+        const std::array<float, 4> sy {{0, top, top + centerH, to_f(texture.h)}};
+        const std::array<float, 4> dx {{pos.x, pos.x + left, pos.x + size.x - right, pos.x + size.x}};
+        const std::array<float, 4> dy {{pos.y, pos.y + top, pos.y + size.y - bottom, pos.y + size.y}};
+        for(int y = 0; y < 3; ++y){
+            for(int x = 0; x < 3; ++x){
+                if(dx[x + 1] <= dx[x] || dy[y + 1] <= dy[y]){
+                    continue;
+                }
+                background()->AddImage(
+                    texture,
+                    {dx[x], dy[y]},
+                    {dx[x + 1], dy[y + 1]},
+                    {sx[x] / texture.w, sy[y] / texture.h},
+                    {sx[x + 1] / texture.w, sy[y + 1] / texture.h});
+            }
         }
     }
 
@@ -219,10 +248,10 @@ void ImMainUI::drawHUD() const
         drawTextureCrop(0X00000012, {0, baseY}, {leftWidth, textureHeight}, {0, 0}, {leftWidth, textureHeight});
         background()->AddRectFilled({leftWidth, panelTop}, {screenW - rightWidth, screenH}, IM_COL32_BLACK);
         if(m_expand){
-            drawTextureSized(0X00000027, {leftWidth, panelTop}, {middleW, expandedPanelH});
+            drawTextureNineSlice(0X00000027, {leftWidth, panelTop}, {middleW, expandedPanelH}, 50, 47, 287, 196);
         }
         else{
-            drawTextureSized(0X00000013, {leftWidth, baseY}, {middleW, 131.0f});
+            drawTextureNineSlice(0X00000013, {leftWidth, baseY}, {middleW, 131.0f}, 50, 0, 287, 131);
         }
         drawTextureCrop(
             0X00000012,
@@ -281,9 +310,27 @@ void ImMainUI::drawHUD() const
         }
 
         if(!m_expand){
-            const float faceX = middleX + middleW - 96.0f;
-            const float faceY = localBaseY + 18.0f;
-            auto face = g_progUseDB->retrieve(hero->faceGfxID());
+            const auto focusCreature = m_processRun->findUID(m_processRun->getFocusUID(FOCUS_MOUSE));
+            const auto faceCreature = focusCreature && (focusCreature->type() == UID_PLY || focusCreature->type() == UID_MON)
+                                    ? focusCreature
+                                    : hero;
+            const uint32_t faceTextureID = [&]() -> uint32_t
+            {
+                if(faceCreature->type() == UID_PLY){
+                    return dynamic_cast<const Hero *>(faceCreature)->faceGfxID();
+                }
+                if(faceCreature->type() == UID_MON){
+                    if(const auto lookID = dynamic_cast<const ClientMonster *>(faceCreature)->lookID(); lookID >= 0){
+                        return UINT32_C(0X01000000) + (lookID - LID_BEGIN);
+                    }
+                    return SYS_U32NIL;
+                }
+                return hero->faceGfxID();
+            }();
+
+            const float faceX = middleX + middleW - 101.0f;
+            const float faceY = localBaseY + 14.0f;
+            auto face = g_progUseDB->retrieve(faceTextureID);
             if(!face){
                 face = g_progUseDB->retrieve(0X010007CF);
             }
@@ -297,8 +344,8 @@ void ImMainUI::drawHUD() const
                     {0, 0},
                     {faceW / face.w, faceH / face.h});
                 background()->AddRectFilled(
-                    {faceX - 5.0f, faceY - 1.0f},
-                    {faceX - 5.0f + 82.0f * to_f(hero->getHealthRatio().at(0)), faceY + 2.0f},
+                    {faceX, faceY},
+                    {faceX + 82.0f * to_f(faceCreature->getHealthRatio().at(0)), faceY + 3.0f},
                     IM_COL32(255, 0, 0, 255));
             }
         }
