@@ -5,19 +5,24 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 #include <imgui.h>
 
 #include "client.hpp"
 #include "clientmonster.hpp"
 #include "clientmsg.hpp"
+#include "colorf.hpp"
+#include "dbcomid.hpp"
 #include "gldevice.hpp"
 #include "gui_font.hpp"
+#include "gui_textengine.hpp"
 #include "gui_texture.hpp"
 #include "log.hpp"
 #include "ImMiniMapBoard.hpp"
 #include "processrun.hpp"
 #include "strf.hpp"
+#include "tinyxml2.h"
 #include "totype.hpp"
 #include "uidf.hpp"
 
@@ -151,35 +156,6 @@ namespace
         return clicked;
     }
 
-    std::string plainText(const char *xml)
-    {
-        std::string result;
-        bool inTag = false;
-        for(const char *p = xml; p && *p; ++p){
-            if(*p == '<'){
-                inTag = true;
-            }
-            else if(*p == '>'){
-                inTag = false;
-            }
-            else if(!inTag){
-                result.push_back(*p);
-            }
-        }
-
-        const auto replaceAll = [&result](std::string_view from, std::string_view to)
-        {
-            for(size_t pos = 0; (pos = result.find(from, pos)) != std::string::npos; pos += to.size()){
-                result.replace(pos, from.size(), to);
-            }
-        };
-        replaceAll("&lt;", "<");
-        replaceAll("&gt;", ">");
-        replaceAll("&amp;", "&");
-        replaceAll("&quot;", "\"");
-        return result;
-    }
-
     bool beginOverlay(const char *name, ImVec2 pos, ImVec2 size)
     {
         ImGui::SetNextWindowPos(pos);
@@ -261,6 +237,32 @@ void ImMainUI::drawHUD() const
             {rightWidth, textureHeight});
     }
     drawTexture(0X00000022, {leftWidth + (middleW - 127.0f) * 0.5f, hudTop});
+    {
+        const auto titleX = leftWidth + (middleW - 127.0f) * 0.5f;
+        const auto decimalFrame = m_accuTimeMS / 1000.0;
+        const auto currentFrame = to_d(std::floor(decimalFrame)) % 4;
+        const auto nextFrame = (currentFrame + 1) % 4;
+        const auto alpha = to_u8(std::clamp(to_dround(255.0 * (decimalFrame - std::floor(decimalFrame))), 0, 255));
+        const ImVec2 arcPos {titleX + 46.0f, hudTop + 8.0f};
+        if(const auto texture = g_progUseDB->retrieve(0X04000000 + currentFrame); texture){
+            background()->AddImage(
+                texture,
+                arcPos,
+                {arcPos.x + texture.w, arcPos.y + texture.h},
+                {0, 0},
+                {1, 1},
+                IM_COL32(255,255,255,255 - alpha));
+        }
+        if(const auto texture = g_progUseDB->retrieve(0X04000000 + nextFrame); texture){
+            background()->AddImage(
+                texture,
+                arcPos,
+                {arcPos.x + texture.w, arcPos.y + texture.h},
+                {0, 0},
+                {1, 1},
+                IM_COL32(255,255,255,alpha));
+        }
+    }
 
     if(!beginOverlay("##game-main-hud", {0, hudTop}, {screenW, hudH})){
         endOverlay();
@@ -347,6 +349,30 @@ void ImMainUI::drawHUD() const
                     {faceX, faceY},
                     {faceX + 82.0f * to_f(faceCreature->getHealthRatio().at(0)), faceY + 3.0f},
                     IM_COL32(255, 0, 0, 255));
+            }
+
+            if(const auto &buffList = faceCreature->getSDBuffIDListOpt(); buffList){
+                int drawCount = 0;
+                for(const auto id: buffList->idList){
+                    const auto &record = DBCOM_BUFFRECORD(id);
+                    if(!record || record.icon.gfxID == SYS_U32NIL){
+                        continue;
+                    }
+                    const auto icon = g_progUseDB->retrieve(record.icon.gfxID);
+                    if(!icon){
+                        continue;
+                    }
+                    const ImVec2 iconPos {
+                        faceX + 20.0f + (drawCount % 5) * 16.0f,
+                        faceY + 79.0f - (drawCount / 5) * 16.0f,
+                    };
+                    background()->AddImage(icon, iconPos, {iconPos.x + 16.0f, iconPos.y + 16.0f});
+                    const auto color = record.favor > 0 ? IM_COL32(0,255,0,255)
+                                     : record.favor == 0 ? IM_COL32(255,255,0,255)
+                                                        : IM_COL32(255,0,0,255);
+                    background()->AddRect(iconPos, {iconPos.x + 16.0f, iconPos.y + 16.0f}, color);
+                    ++drawCount;
+                }
             }
         }
 
@@ -477,16 +503,82 @@ void ImMainUI::drawHUD() const
     const float logY = panelTop + 15.0f;
     const float logW = std::max(20.0f, middleW - (m_expand ? 24.0f : 112.0f));
     const float logH = m_expand ? std::max(84.0f, expandedPanelH - 70.0f) : 84.0f;
-    background()->PushClipRect({logX, logY}, {logX + logW, logY + logH}, true);
+
+    struct DrawLogLine
+    {
+        const LogLine *line = nullptr;
+        float y = 0.0f;
+        float h = 15.0f;
+    };
+    std::vector<DrawLogLine> drawLines;
+    drawLines.reserve(m_logList.size());
+    float totalLogH = 0.0f;
+    for(const auto &line: m_logList){
+        float height = 15.0f;
+        if(!line.xml.empty()){
+            const int layoutWidth = std::max(1, to_d(logW));
+            if(!line.layout || line.layoutWidth != layoutWidth){
+                line.layout = std::make_shared<XMLTypeset>(
+                    layoutWidth,
+                    LALIGN_JUSTIFY,
+                    true,
+                    false,
+                    11,
+                    15,
+                    0,
+                    colorf::WHITE_A255);
+                line.layout->loadXML(line.xml.c_str());
+                line.layoutWidth = layoutWidth;
+            }
+            height = to_f(std::max(line.layout->ph(), line.layout->getDefaultFontHeight()));
+        }
+        drawLines.push_back({std::addressof(line), totalLogH, height});
+        totalLogH += height;
+    }
+
     const float lineH = 15.0f;
-    const int visibleLines = std::max(1, to_d(logH / lineH));
-    const int first = std::max(0, to_d(m_logList.size()) - visibleLines);
-    float textY = logY;
-    for(int i = first; i < to_d(m_logList.size()); ++i, textY += lineH){
-        const auto &line = m_logList.at(i);
-        drawGameText({logX, textY}, line.text.c_str(), 11, 15, line.color);
+    const float logReach = std::max(0.0f, totalLogH - logH);
+    if(ImGui::IsMouseHoveringRect({logX, logY}, {logX + logW, logY + logH}) && ImGui::GetIO().MouseWheel != 0.0f && logReach > 0.0f){
+        m_logScroll = std::clamp(m_logScroll - ImGui::GetIO().MouseWheel * lineH * 3.0f / logReach, 0.0f, 1.0f);
+    }
+    background()->PushClipRect({logX, logY}, {logX + logW, logY + logH}, true);
+    for(const auto &drawLine: drawLines){
+        const float textY = logY + drawLine.y - m_logScroll * logReach;
+        if(textY + drawLine.h < logY || textY >= logY + logH){
+            continue;
+        }
+        if(drawLine.line->layout){
+            drawLine.line->layout->drawImGui(background(), to_d(logX), to_d(textY));
+        }
+        else{
+            drawGameText({logX, textY}, drawLine.line->text.c_str(), 11, 15, drawLine.line->color);
+        }
     }
     background()->PopClipRect();
+
+    {
+        const float barX = middleX + middleW - 10.0f;
+        const float barY = panelTop + 40.0f;
+        const float barH = m_expand ? std::max(1.0f, expandedPanelH - 75.0f) : 60.0f;
+        ImGui::SetCursorScreenPos({barX - 9.0f, barY - 10.0f});
+        ImGui::InvisibleButton("##hud-log-slider", {18.0f, barH + 20.0f});
+        if(logReach > 0.0f && ImGui::IsItemActive()){
+            m_logScroll = std::clamp((ImGui::GetIO().MousePos.y - barY) / std::max(1.0f, barH - 1.0f), 0.0f, 1.0f);
+        }
+        if(const auto slider = g_progUseDB->retrieve(0X00000088); slider){
+            const ImVec2 sliderPos {
+                barX - 4.5f,
+                barY - 8.0f + m_logScroll * (barH - 1.0f),
+            };
+            background()->AddImage(
+                slider,
+                sliderPos,
+                {sliderPos.x + slider.w, sliderPos.y + slider.h},
+                {0, 0},
+                {1, 1},
+                ImGui::IsItemActive() ? IM_COL32_WHITE : IM_COL32(128,128,128,255));
+        }
+    }
 
     const float inputY = m_expand ? screenH - 50.0f : localBaseY + 106.0f;
     ImGui::SetCursorScreenPos({logX, inputY});
@@ -664,6 +756,25 @@ bool ImMainUI::processEvent(const MirEvent &event)
 
 void ImMainUI::addXMLLog(const char *log)
 {
+    if(!(log && *log)){
+        return;
+    }
+
+    tinyxml2::XMLDocument document(true, tinyxml2::PEDANTIC_WHITESPACE);
+    if(document.Parse(log) != tinyxml2::XML_SUCCESS){
+        addLog(0, log);
+        return;
+    }
+
+    const auto root = document.RootElement();
+    if(root && to_sv(root->Name()) == "layout"){
+        for(auto paragraph = root->FirstChildElement("par"); paragraph; paragraph = paragraph->NextSiblingElement("par")){
+            tinyxml2::XMLPrinter printer;
+            paragraph->Accept(&printer);
+            addParLog(printer.CStr());
+        }
+        return;
+    }
     addParLog(log);
 }
 
@@ -672,7 +783,8 @@ void ImMainUI::addParLog(const char *log)
     if(!(log && *log)){
         return;
     }
-    m_logList.push_back({plainText(log), IM_COL32_WHITE});
+    m_logList.push_back({.xml = log});
+    m_logScroll = 1.0f;
     while(m_logList.size() > 200){
         m_logList.pop_front();
     }
@@ -692,7 +804,8 @@ void ImMainUI::addLog(int logType, const char *log)
             default: return IM_COL32_WHITE;
         }
     }();
-    m_logList.push_back({log, color});
+    m_logList.push_back({.text = log, .color = color});
+    m_logScroll = 1.0f;
     while(m_logList.size() > 200){
         m_logList.pop_front();
     }

@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <deque>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -11,6 +12,7 @@
 #include "mirevent.hpp"
 
 class ProcessRun;
+class XMLTypeset;
 
 class ImMainUI final
 {
@@ -19,6 +21,9 @@ class ImMainUI final
         {
             std::string text;
             uint32_t color = 0XFFFFFFFF;
+            std::string xml;
+            mutable int layoutWidth = -1;
+            mutable std::shared_ptr<XMLTypeset> layout;
         };
 
         struct BlinkState
@@ -41,6 +46,7 @@ class ImMainUI final
 
         mutable float m_quickX = 0.0f;
         mutable float m_quickY = -1.0f;
+        mutable float m_logScroll = 1.0f;
         mutable std::array<char, 512> m_command {};
 
         double m_accuTimeMS = 0.0;
