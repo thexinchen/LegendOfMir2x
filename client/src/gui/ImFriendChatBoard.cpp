@@ -234,7 +234,7 @@ void ImFriendChatBoard::draw() const
         return;
     }
 
-    if(beginWindow(m_impl->boardSize)){
+    if(beginWindow(m_impl->boardSize, false)){
         const auto pos = ImGui::GetWindowPos();
         auto *list = ImGui::GetWindowDrawList();
         drawNineSlice(list, g_progUseDB->retrieve(0X00000810), pos, m_impl->boardSize, 0, 0, 510, 187, IM_COL32(160,160,160,255));

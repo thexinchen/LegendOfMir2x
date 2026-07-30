@@ -105,7 +105,7 @@ void ImSkillBoard::draw() const
         return;
     }
 
-    if(beginWindow({to_f(background.w), to_f(background.h)})){
+    if(beginWindow({to_f(background.w), to_f(background.h)}, false)){
         const ImVec2 pos = ImGui::GetWindowPos();
         auto *drawList = ImGui::GetWindowDrawList();
         drawTexture(drawList, background, pos);

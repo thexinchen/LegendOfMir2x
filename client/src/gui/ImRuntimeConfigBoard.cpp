@@ -188,7 +188,7 @@ void ImRuntimeConfigBoard::draw() const
     if(!show()){
         return;
     }
-    if(beginWindow(m_boardSize)){
+    if(beginWindow(m_boardSize, false)){
         const auto pos = ImGui::GetWindowPos();
         auto *list = ImGui::GetWindowDrawList();
         drawFrame(list, pos, m_boardSize);

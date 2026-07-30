@@ -13,6 +13,7 @@ class ImBoard
 
         mutable bool m_show = false;
         mutable bool m_positioned = false;
+        mutable bool m_positionPending = false;
         mutable ImVec2 m_position {};
         mutable ImVec2 m_size {};
 
@@ -20,7 +21,7 @@ class ImBoard
         explicit ImBoard(std::string, bool = false);
 
     protected:
-        bool beginWindow(ImVec2) const;
+        bool beginWindow(ImVec2, bool = true) const;
         void endWindow() const;
 
     public:
@@ -43,5 +44,6 @@ class ImBoard
         {
             m_position = {x, y};
             m_positioned = true;
+            m_positionPending = true;
         }
 };

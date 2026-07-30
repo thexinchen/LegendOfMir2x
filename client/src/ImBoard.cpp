@@ -12,7 +12,7 @@ ImBoard::ImBoard(std::string windowID, bool initialShow)
     , m_show(initialShow)
 {}
 
-bool ImBoard::beginWindow(ImVec2 windowSize) const
+bool ImBoard::beginWindow(ImVec2 windowSize, bool allowMove) const
 {
     if(!m_positioned){
         m_position =
@@ -21,12 +21,16 @@ bool ImBoard::beginWindow(ImVec2 windowSize) const
             std::max(0.0f, (to_f(g_glDevice->getRendererHeight()) - windowSize.y) * 0.5f),
         };
         m_positioned = true;
+        m_positionPending = true;
     }
 
     m_position.x = std::clamp(m_position.x, 0.0f, std::max(0.0f, to_f(g_glDevice->getRendererWidth()) - windowSize.x));
     m_position.y = std::clamp(m_position.y, 0.0f, std::max(0.0f, to_f(g_glDevice->getRendererHeight()) - windowSize.y));
 
-    ImGui::SetNextWindowPos(m_position, ImGuiCond_Always);
+    if(m_positionPending){
+        ImGui::SetNextWindowPos(m_position, ImGuiCond_Always);
+        m_positionPending = false;
+    }
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0, 0});
     const bool open = ImGui::Begin(
@@ -34,8 +38,18 @@ bool ImBoard::beginWindow(ImVec2 windowSize) const
         nullptr,
         ImGuiWindowFlags_NoDecoration |
         ImGuiWindowFlags_NoSavedSettings |
-        ImGuiWindowFlags_NoBackground);
-    m_position = ImGui::GetWindowPos();
+        ImGuiWindowFlags_NoBackground |
+        (allowMove ? ImGuiWindowFlags_None : ImGuiWindowFlags_NoMove));
+
+    const auto windowPos = ImGui::GetWindowPos();
+    m_position =
+    {
+        std::clamp(windowPos.x, 0.0f, std::max(0.0f, to_f(g_glDevice->getRendererWidth()) - windowSize.x)),
+        std::clamp(windowPos.y, 0.0f, std::max(0.0f, to_f(g_glDevice->getRendererHeight()) - windowSize.y)),
+    };
+    if(m_position.x != windowPos.x || m_position.y != windowPos.y){
+        ImGui::SetWindowPos(m_position, ImGuiCond_Always);
+    }
     m_size = ImGui::GetWindowSize();
     return open;
 }
