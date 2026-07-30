@@ -104,7 +104,11 @@ namespace
 ImInventoryBoard::ImInventoryBoard(ProcessRun *processRun)
     : ImBoard("##inventory-board")
     , m_processRun(fflcheck(processRun))
-{}
+{
+    moveTo(
+        to_f(g_glDevice->getRendererWidth()  / 2 - 141),
+        to_f(g_glDevice->getRendererHeight() / 2 - 233));
+}
 
 void ImInventoryBoard::update(double delta)
 {
