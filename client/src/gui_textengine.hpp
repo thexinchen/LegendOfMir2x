@@ -354,6 +354,8 @@ class XMLParagraph
 #include "bevent.hpp"
 #include "gui_core.hpp" // Widget::VarXXX
 
+struct ImDrawList;
+
 class XMLTypeset // means XMLParagraph typeset
 {
     private:
@@ -662,6 +664,7 @@ class XMLTypeset // means XMLParagraph typeset
 
     public:
         void draw(Widget::ROIMap) const;
+        void drawImGui(ImDrawList *, int, int) const;
 
     public:
         void setFont(uint8_t font)

@@ -2234,6 +2234,85 @@ void XMLTypeset::draw(Widget::ROIMap m) const
     }
 }
 
+void XMLTypeset::drawImGui(ImDrawList *drawList, const int dstX, const int dstY) const
+{
+    fflassert(drawList);
+
+    uint32_t foreground = 0;
+    uint32_t background = 0;
+    int lastLeaf = -1;
+    for(int line = 0; line < lineCount(); ++line){
+        for(int token = 0; token < lineTokenCount(line); ++token){
+            const auto tokenPtr = getToken(token, line);
+            const auto &leaf = m_paragraph->leaf(tokenPtr->leaf);
+            const auto &leafInfo = m_leafInfoList.at(tokenPtr->leaf);
+
+            if(lastLeaf != tokenPtr->leaf){
+                foreground = leaf.color().value_or(color());
+                background = leaf.bgColor().value_or(bgColor());
+                lastLeaf = tokenPtr->leaf;
+            }
+
+            if(colorf::A(background)){
+                const int x = tokenPtr->box.state.x - tokenPtr->box.state.w1;
+                const int y = tokenPtr->box.state.y + tokenPtr->box.state.h1 - leafInfo.maxH1;
+                const int w = tokenPtr->box.info.w + tokenPtr->box.state.w1 + tokenPtr->box.state.w2;
+                const int h = leafInfo.maxH1 + leafInfo.maxH2;
+                drawList->AddRectFilled(
+                    {to_f(dstX + x), to_f(dstY + y)},
+                    {to_f(dstX + x + w), to_f(dstY + y + h)},
+                    background);
+            }
+
+            const int boxX = tokenPtr->box.state.x;
+            const int boxY = tokenPtr->box.state.y;
+            const int boxW = tokenPtr->box.info.w;
+            const int boxH = tokenPtr->box.info.h;
+            switch(leaf.type()){
+                case LEAF_UTF8STR:
+                    {
+                        if(const auto texture = g_fontexDB->retrieve(tokenPtr->utf8char.key); texture){
+                            drawList->AddImage(
+                                texture,
+                                {to_f(dstX + boxX), to_f(dstY + boxY)},
+                                {to_f(dstX + boxX + boxW), to_f(dstY + boxY + boxH)},
+                                {0.0f, 0.0f},
+                                {to_f(boxW) / texture.w, to_f(boxH) / texture.h},
+                                foreground);
+                        }
+                        break;
+                    }
+                case LEAF_IMAGE:
+                    {
+                        break;
+                    }
+                case LEAF_EMOJI:
+                    {
+                        const auto emojiKey = tokenPtr->emoji.frameCount && tokenPtr->emoji.fps
+                                            ? (tokenPtr->emoji.key & 0XFFFFFF00) + tokenPtr->emoji.frame % tokenPtr->emoji.frameCount
+                                            : tokenPtr->emoji.key & 0XFFFFFF00;
+                        int textureX = 0;
+                        int textureY = 0;
+                        if(const auto texture = g_emojiDB->retrieve(emojiKey, &textureX, &textureY, 0, 0, 0, 0, 0); texture){
+                            drawList->AddImage(
+                                texture,
+                                {to_f(dstX + boxX), to_f(dstY + boxY)},
+                                {to_f(dstX + boxX + boxW), to_f(dstY + boxY + boxH)},
+                                {to_f(textureX) / texture.w, to_f(textureY) / texture.h},
+                                {to_f(textureX + boxW) / texture.w, to_f(textureY + boxH) / texture.h},
+                                Widget::evalU32(m_imageMaskColor, nullptr, this));
+                        }
+                        break;
+                    }
+                default:
+                    {
+                        throw fflpanic("invalid leaf type: {}", leaf.type());
+                    }
+            }
+        }
+    }
+}
+
 void XMLTypeset::update(double fMS)
 {
     for(int leafIndex = 0; leafIndex < m_paragraph->leafCount(); ++leafIndex){
