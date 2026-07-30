@@ -122,14 +122,25 @@ namespace
         const std::array<float, 4> dy {{pos.y, pos.y + top, pos.y + size.y - bottom, pos.y + size.y}};
         for(int y = 0; y < 3; ++y){
             for(int x = 0; x < 3; ++x){
-                if(dx[x + 1] > dx[x] && dy[y + 1] > dy[y]){
-                    list->AddImage(
-                        texture,
-                        {dx[x], dy[y]},
-                        {dx[x + 1], dy[y + 1]},
-                        {sx[x] / texture.w, sy[y] / texture.h},
-                        {sx[x + 1] / texture.w, sy[y + 1] / texture.h},
-                        tint);
+                const float srcW = sx[x + 1] - sx[x];
+                const float srcH = sy[y + 1] - sy[y];
+                const float dstW = dx[x + 1] - dx[x];
+                const float dstH = dy[y + 1] - dy[y];
+                if(srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0){
+                    continue;
+                }
+                for(float tileY = 0; tileY < dstH; tileY += srcH){
+                    const float tileH = std::min(srcH, dstH - tileY);
+                    for(float tileX = 0; tileX < dstW; tileX += srcW){
+                        const float tileW = std::min(srcW, dstW - tileX);
+                        list->AddImage(
+                            texture,
+                            {dx[x] + tileX, dy[y] + tileY},
+                            {dx[x] + tileX + tileW, dy[y] + tileY + tileH},
+                            {sx[x] / texture.w, sy[y] / texture.h},
+                            {(sx[x] + tileW) / texture.w, (sy[y] + tileH) / texture.h},
+                            tint);
+                    }
                 }
             }
         }
@@ -227,6 +238,7 @@ void ImFriendChatBoard::draw() const
         const auto pos = ImGui::GetWindowPos();
         auto *list = ImGui::GetWindowDrawList();
         drawNineSlice(list, g_progUseDB->retrieve(0X00000810), pos, m_impl->boardSize, 0, 0, 510, 187, IM_COL32(160,160,160,255));
+        drawNineSlice(list, g_progUseDB->retrieve(0X00000800), pos, m_impl->boardSize, 55, 95, 230, 250);
 
         const ImVec2 contentMin {pos.x + borderLeft + 4, pos.y + borderTop + 4};
         const ImVec2 contentMax {pos.x + m_impl->boardSize.x - borderRight - 4, pos.y + m_impl->boardSize.y - borderBottom - 4};
@@ -684,8 +696,6 @@ void ImFriendChatBoard::draw() const
             }
         }
         list->PopClipRect();
-
-        drawNineSlice(list, g_progUseDB->retrieve(0X00000800), pos, m_impl->boardSize, 55, 95, 230, 250);
 
         {
             const float barX = pos.x + m_impl->boardSize.x - 30;
