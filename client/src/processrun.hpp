@@ -16,6 +16,8 @@
 #include "guimanager.hpp"
 #include "wilanitimer.hpp"
 #include "framecounter.hpp"
+#include "fpsmonitor.hpp"
+#include "gldevice.hpp"
 #include "delaycommand.hpp"
 #include "lochashtable.hpp"
 #include "mir2xmapdata.hpp"
@@ -123,9 +125,6 @@ class ProcessRun: public Process
         std::set<uint64_t> m_actionBlocker;
 
     private:
-        LabelBoard m_mousePixlLoc;
-        LabelBoard m_mouseGridLoc;
-
     private:
         std::list<std::shared_ptr<AscendStr>> m_ascendStrList;
 

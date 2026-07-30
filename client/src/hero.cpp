@@ -7,6 +7,7 @@
 #include "mathf.hpp"
 #include "sysconst.hpp"
 #include "soundeffectdb.hpp"
+#include "gui_font.hpp"
 #include "gui_texture.hpp"
 #include "gldevice.hpp"
 #include "processrun.hpp"
@@ -18,6 +19,7 @@
 extern Log *g_mir2xLog;
 extern Client *g_client;
 extern GLDevice *g_glDevice;
+extern FontexDB *g_fontexDB;
 extern PNGTexDB *g_progUseDB;
 extern PNGTexOffDB *g_heroDB;
 extern PNGTexOffDB *g_hairDB;
@@ -38,7 +40,6 @@ Hero::Hero(uint64_t uid, bool argGender, int argJob, ProcessRun *proc, const Act
           .corner = 3,
           .showTime = 5000,
           .entryLimit = 10,
-          .align = ItemAlign::UPLEFT,
           .margin{2, 2, 2, 2},
           .bgColor = colorf::RGBA(0, 0, 0, 128),
       }}
@@ -280,14 +281,16 @@ void Hero::drawFrame(int viewX, int viewY, int, int frame, bool)
     }
 
     if(isTeamLeader()){
-        LabelBoard amLeader{{.label = u8"我是队长", .font{.color = colorf::RGBA(0XFF, 0XFF, 0X00, 0XFF)}}};
-        amLeader.draw({.x=startX, .y=startY, .ro{0, 0, amLeader.w(), amLeader.h()}});
+        if(const auto texture = g_fontexDB->retrieve(11, 15, 0, to_cstr(u8"我是队长")); texture){
+            const GLDeviceHelper::EnableTextureModColor modColor(texture, colorf::RGBA(0XFF, 0XFF, 0X00, 0XFF));
+            g_glDevice->drawTexture(texture, startX, startY);
+        }
     }
 
     if(!m_playerSayBoard.empty()){
         const int boardX = startX + 24 - m_playerSayBoard.w() / 2;
         const int boardY = startY - 70 - m_playerSayBoard.h();
-        m_playerSayBoard.drawRoot({.x = boardX, .y = boardY});
+        m_playerSayBoard.draw(boardX, boardY);
     }
 }
 

@@ -87,9 +87,6 @@ int main(int argc, char *argv[])
         g_imeBoard     = new IMEBoard();
         g_notifyBoard  = new MessageStackBoard
         {{
-            .dir = DIR_UPLEFT,
-            .x = 0,
-            .y = 0,
             .width = 400,
             .font
             {

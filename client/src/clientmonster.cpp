@@ -8,6 +8,7 @@
 #include "uidf.hpp"
 #include "mathf.hpp"
 #include "fflerror.hpp"
+#include "gui_font.hpp"
 #include "gui_texture.hpp"
 #include "processrun.hpp"
 #include "protocoldef.hpp"
@@ -20,6 +21,7 @@
 extern Log *g_mir2xLog;
 extern PNGTexDB *g_progUseDB;
 extern GLDevice *g_glDevice;
+extern FontexDB *g_fontexDB;
 extern PNGTexOffDB *g_monsterDB;
 extern ClientArgParser *g_clientArgParser;
 
@@ -63,10 +65,10 @@ ClientMonster::ClientMonster(uint64_t uid, ProcessRun *proc)
 {
     fflassert(uidf::getUIDType(uid) == UID_MON, uidf::getUIDString(uid));
     if(g_clientArgParser->drawUID){
-        m_nameBoard.setText(u8"%s(%llu)", DBCOM_MONSTERRECORD(monsterID()).name, to_llu(UID()));
+        m_nameBoard = str_printf(u8"%s(%llu)", DBCOM_MONSTERRECORD(monsterID()).name, to_llu(UID()));
     }
     else{
-        m_nameBoard.setText(u8"%s", DBCOM_MONSTERRECORD(monsterID()).name);
+        m_nameBoard = str_printf(u8"%s", DBCOM_MONSTERRECORD(monsterID()).name);
     }
 }
 
@@ -356,11 +358,11 @@ void ClientMonster::drawFrame(int viewX, int viewY, int focusMask, int frame, bo
             }
 
             if(g_clientArgParser->alwaysDrawName || (focusMask & (1 << FOCUS_MOUSE))){
-                const int nLW = m_nameBoard.w();
-                const int nLH = m_nameBoard.h();
-                const int nDrawNameXP = drawBarXP + nBarW / 2 - nLW / 2;
-                const int nDrawNameYP = drawBarYP + 20;
-                m_nameBoard.draw({.x=nDrawNameXP, .y=nDrawNameYP, .ro{0, 0, nLW, nLH}});
+                if(const auto nameTexture = g_fontexDB->retrieve(11, 15, 0, to_cstr(m_nameBoard.c_str())); nameTexture){
+                    const int nDrawNameXP = drawBarXP + nBarW / 2 - nameTexture.w / 2;
+                    const int nDrawNameYP = drawBarYP + 20;
+                    g_glDevice->drawTexture(nameTexture, nDrawNameXP, nDrawNameYP);
+                }
             }
         }
     }

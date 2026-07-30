@@ -9,6 +9,7 @@
 #include <optional>
 #include <concepts>
 #include <optional>
+#include <string>
 #include "mirevent.hpp"
 
 #include "uidf.hpp"
@@ -19,7 +20,6 @@
 #include "focustype.hpp"
 #include "serdesmsg.hpp"
 #include "actionnode.hpp"
-#include "gui_widgets.hpp"
 #include "motionnode.hpp"
 #include "protocoldef.hpp"
 #include "attachmagic.hpp"
@@ -52,7 +52,7 @@ class ClientCreature
         double m_accuUpdateTime = 0.0;
 
     protected:
-        LabelBoard m_nameBoard;
+        std::u8string m_nameBoard;
 
     protected:
         ClientCreature(uint64_t uid, ProcessRun *pRun)
@@ -60,7 +60,7 @@ class ClientCreature
             , m_processRun(pRun)
             , m_lastActive(0)
             , m_lastQuerySelf(0)
-            , m_nameBoard{{.label=u8"ClientCreature"}}
+            , m_nameBoard(u8"ClientCreature")
         {
             if(!(m_UID && m_processRun)){
                 throw fflpanic("invalid argument: UID = {}, processRun = {:p}", m_UID, to_cvptr(m_processRun));

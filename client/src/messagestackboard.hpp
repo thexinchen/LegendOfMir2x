@@ -1,37 +1,44 @@
 #pragma once
+#include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <string>
-#include "gui_widgets.hpp"
-#include "lalign.hpp"
-#include "raiitimer.hpp"
-#include "gui_textengine.hpp"
 
-class MessageStackBoard: public Widget
+#include "colorf.hpp"
+#include "gui_textengine.hpp"
+#include "raiitimer.hpp"
+
+class MessageStackBoard
 {
     public:
+        struct Margin final
+        {
+            int top = 0;
+            int bottom = 0;
+            int left = 0;
+            int right = 0;
+        };
+
+        struct FontConfig final
+        {
+            uint8_t id = 11;
+            uint8_t size = 15;
+            uint8_t style = 0;
+            uint32_t color = colorf::WHITE_A255;
+        };
+
         struct InitArgs final
         {
-            Widget::VarDir dir = DIR_UPLEFT;
-            Widget::VarInt x = 0;
-            Widget::VarInt y = 0;
-
             int width = 0;
             int corner = 0;
-
-            Widget::FontConfig font {};
-
+            FontConfig font {};
             uint64_t showTime = 0;
             size_t entryLimit = 0;
-
-            ItemAlign align = ItemAlign::UPLEFT;
-            Widget::VarSize itemSpace = 0;
-            Widget::VarMargin margin {};
-
-            Widget::VarU32 bgColor = 0U;
-            Widget::VarU32 borderColor = 0U;
-
-            Widget::WADPair parent {};
+            int itemSpace = 0;
+            Margin margin {};
+            uint32_t bgColor = 0;
+            uint32_t borderColor = 0;
         };
 
     private:
@@ -39,53 +46,32 @@ class MessageStackBoard: public Widget
         {
             hres_timer timer;
             std::unique_ptr<XMLTypeset> typeset;
-            std::unique_ptr<MarginWrapper> wrapper;
         };
 
     private:
-        ItemFlex m_itemFlex;
-
-    private:
-        int m_width;
-        int m_corner;
-
-    private:
-        Widget::FontConfig m_font;
-
-    private:
-        uint64_t m_showTime;
-        size_t m_entryLimit;
-
-    private:
-        Widget::VarMargin m_margin;
-
-    private:
-        Widget::VarU32 m_bgColor;
-        Widget::VarU32 m_borderColor;
-
-    private:
+        int m_width = 0;
+        int m_corner = 0;
+        FontConfig m_font {};
+        uint64_t m_showTime = 0;
+        size_t m_entryLimit = 0;
+        int m_itemSpace = 0;
+        Margin m_margin {};
+        uint32_t m_bgColor = 0;
+        uint32_t m_borderColor = 0;
         std::deque<std::unique_ptr<Message>> m_messageList;
 
     public:
-        explicit MessageStackBoard(MessageStackBoard::InitArgs);
+        explicit MessageStackBoard(InitArgs);
 
     public:
         void addMessage(const std::u8string &);
         void addXMLMessage(const std::u8string &);
         void clear();
+        void update(double);
 
     public:
         bool empty() const;
-
-    public:
-        void setFont(uint8_t);
-        void setFontSize(uint8_t);
-        void setFontStyle(uint8_t);
-        void setFontColor(Widget::VarU32);
-
-    protected:
-        void updateDefault(double) override;
-
-    private:
-        void removeFrontMessage();
+        int w() const;
+        int h() const;
+        void draw(int, int) const;
 };

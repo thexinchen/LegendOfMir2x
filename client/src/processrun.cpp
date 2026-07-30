@@ -18,6 +18,7 @@
 #include "bgmusicdb.hpp"
 #include "soundeffectdb.hpp"
 #include "gldevice.hpp"
+#include "gui_font.hpp"
 #include "clientargparser.hpp"
 #include "processrun.hpp"
 #include "clientluamodule.hpp"
@@ -39,6 +40,7 @@ extern PNGTexDB *g_progUseDB;
 extern BGMusicDB *g_bgmDB;
 extern SoundEffectDB *g_seffDB;
 extern PNGTexDB *g_itemDB;
+extern FontexDB *g_fontexDB;
 extern MessageStackBoard *g_notifyBoard;
 extern ClientArgParser *g_clientArgParser;
 
@@ -86,8 +88,6 @@ ProcessRun::ProcessRun(const SMOnlineOK &smOOK)
           return coList;
       }())
 
-    , m_mousePixlLoc{{.font{.id = 0, .size = 15, .color = colorf::RGBA(0XFF, 0X00, 0X00, 0X00)}}}
-    , m_mouseGridLoc{{.font{.id = 0, .size = 15, .color = colorf::RGBA(0XFF, 0X00, 0X00, 0X00)}}}
     , m_teamFlag(5)
     , m_guiManager(this)
 {
@@ -550,7 +550,7 @@ void ProcessRun::draw() const
 
         g_glDevice->fillRectangle(colorf::GREEN + colorf::A_SHF(180), x, y, w, h);
         g_glDevice->drawRectangle(colorf::BLUE  + colorf::A_SHF(255), x, y, w, h);
-        g_notifyBoard->draw({.x=x, .y=y});
+        g_notifyBoard->draw(x, y);
     }
 
     if(g_clientArgParser->drawMouseLocation){
@@ -1990,10 +1990,12 @@ void ProcessRun::drawGroundItem(int x0, int y0, int x1, int y1) const
             }
 
             if(mouseOver){
-                LabelBoard itemName{{.label = ir.name, .font{.color = colorf::RGBA(0XFF, 0XFF, 0X00, 0XFF)}}};
-                const int drawNameX = x * SYS_MAPGRIDXP - m_viewX + SYS_MAPGRIDXP / 2 - itemName.w() / 2;
-                const int drawNameY = y * SYS_MAPGRIDYP - m_viewY + SYS_MAPGRIDYP / 2 - itemName.h() / 2 - 20;
-                itemName.draw({.x=drawNameX, .y=drawNameY});
+                if(const auto nameTexture = g_fontexDB->retrieve(11, 15, 0, to_cstr(ir.name)); nameTexture){
+                    const int drawNameX = x * SYS_MAPGRIDXP - m_viewX + SYS_MAPGRIDXP / 2 - nameTexture.w / 2;
+                    const int drawNameY = y * SYS_MAPGRIDYP - m_viewY + SYS_MAPGRIDYP / 2 - nameTexture.h / 2 - 20;
+                    const GLDeviceHelper::EnableTextureModColor modColor(nameTexture, colorf::RGBA(0XFF, 0XFF, 0X00, 0XFF));
+                    g_glDevice->drawTexture(nameTexture, drawNameX, drawNameY);
+                }
             }
         }
     }
@@ -2129,24 +2131,28 @@ void ProcessRun::drawMouseLocation() const
     const auto locPixel = str_printf(u8"Pixel: %d, %d", mouseX, mouseY);
     const auto locGrid  = str_printf(u8"Grid: %d, %d", (mouseX + m_viewX) / SYS_MAPGRIDXP, (mouseY + m_viewY) / SYS_MAPGRIDYP);
 
-    LabelBoard locPixelBoard{{.x = 10, .y = 10, .label = locPixel.c_str(), .font{.color = colorf::RGBA(0XFF, 0XFF, 0X00, 0X00)}}};
-    LabelBoard locGridBoard {{.x = 10, .y = 30, .label = locGrid .c_str(), .font{.color = colorf::RGBA(0XFF, 0XFF, 0X00, 0X00)}}};
-
-    locPixelBoard.drawRoot({});
-    locGridBoard .drawRoot({});
+    for(const auto &[text, y]: std::array
+    {
+        std::pair {locPixel.c_str(), 10},
+        std::pair {locGrid.c_str(), 30},
+    }){
+        if(const auto texture = g_fontexDB->retrieve(11, 15, 0, to_cstr(text)); texture){
+            const GLDeviceHelper::EnableTextureModColor modColor(texture, colorf::RGBA(0XFF, 0XFF, 0X00, 0X00));
+            g_glDevice->drawTexture(texture, 10, y);
+        }
+    }
 }
 
 void ProcessRun::drawFPS() const
 {
     const auto fpsStr = std::to_string(g_glDevice->getFPS());
-    LabelBoard fpsBoard{{.label = to_u8rawstr(fpsStr).c_str(), .font{.color = colorf::RGBA(0XFF, 0XFF, 0X00, 0XFF)}}};
-
-    const int winWidth = g_glDevice->getRendererWidth();
-    fpsBoard.moveTo(winWidth - fpsBoard.w(), 0);
-
-    g_glDevice->fillRectangle(colorf::BLACK + colorf::A_SHF(200), fpsBoard.dx() - 1, fpsBoard.dy(), fpsBoard.w() + 1, fpsBoard.h());
-    g_glDevice->drawRectangle(colorf::BLUE  + colorf::A_SHF(255), fpsBoard.dx() - 1, fpsBoard.dy(), fpsBoard.w() + 1, fpsBoard.h());
-    fpsBoard.drawRoot({});
+    if(const auto texture = g_fontexDB->retrieve(11, 15, 0, fpsStr.c_str()); texture){
+        const int drawX = g_glDevice->getRendererWidth() - texture.w;
+        g_glDevice->fillRectangle(colorf::BLACK + colorf::A_SHF(200), drawX - 1, 0, texture.w + 1, texture.h);
+        g_glDevice->drawRectangle(colorf::BLUE  + colorf::A_SHF(255), drawX - 1, 0, texture.w + 1, texture.h);
+        const GLDeviceHelper::EnableTextureModColor modColor(texture, colorf::RGBA(0XFF, 0XFF, 0X00, 0XFF));
+        g_glDevice->drawTexture(texture, drawX, 0);
+    }
 }
 
 void ProcessRun::checkMagicSpell(const MirEvent &event)
