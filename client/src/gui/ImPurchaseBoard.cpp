@@ -87,7 +87,9 @@ namespace
 ImPurchaseBoard::ImPurchaseBoard(ProcessRun *processRun)
     : ImBoard("##purchase-board")
     , m_processRun(fflcheck(processRun))
-{}
+{
+    moveTo(0.0f, 0.0f);
+}
 
 void ImPurchaseBoard::draw() const
 {
