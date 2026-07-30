@@ -10,7 +10,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "cblog.hpp"
 #include "client.hpp"
 #include "fflerror.hpp"
 #include "gldevice.hpp"

@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "cblog.hpp"
 #include "dbcomid.hpp"
 #include "fflerror.hpp"
 #include "gldevice.hpp"

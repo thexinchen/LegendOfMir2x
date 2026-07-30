@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "cblog.hpp"
 #include "fflerror.hpp"
 #include "gldevice.hpp"
 #include "gui_font.hpp"

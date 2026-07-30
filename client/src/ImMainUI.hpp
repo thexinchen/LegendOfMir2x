@@ -8,7 +8,6 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "cblog.hpp"
 #include "mirevent.hpp"
 #include "ImMiniMapBoard.hpp"
 #include "ImHorseBoard.hpp"
@@ -28,6 +27,14 @@
 
 class ProcessRun;
 class XMLTypeset;
+
+enum
+{
+    CBLOG_DEF = 0,
+    CBLOG_SYS,
+    CBLOG_DBG,
+    CBLOG_ERR,
+};
 
 class ImMainUI final
 {
