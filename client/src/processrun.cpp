@@ -455,7 +455,7 @@ void ProcessRun::draw() const
     if(m_drawMagicKey){
         int magicKeyOffX = 0;
         for(const auto &[magicID, magicKey]: getGUIManager()->getSkillBoard()->getConfig().getMagicKeyList()){
-            if(const auto iconGfx = SkillBoard::getMagicIconGfx(magicID); iconGfx && iconGfx->magicIcon != SYS_U32NIL){
+            if(const auto iconGfx = SkillBoardData::getMagicIconGfx(magicID); iconGfx && iconGfx->magicIcon != SYS_U32NIL){
                 if(auto texPtr = g_progUseDB->retrieve(iconGfx->magicIcon + to_u32(0X00001000))){
                     g_glDevice->drawTexture(texPtr, magicKeyOffX, 0);
                     const auto coolDownAngle = getMyHero()->getMagicCoolDownAngle(magicID);

@@ -60,26 +60,13 @@ class SkillBoardConfig final
         }
 };
 
-// ===== merged from skillboard/skillboard.hpp =====
-#include <list>
-#include <array>
 #include <memory>
-#include "strf.hpp"
-#include "mathf.hpp"
-#include "raiitimer.hpp"
 #include "dbcomid.hpp"
-#include "gui_core.hpp"
+#include "fflerror.hpp"
 #include "magicrecord.hpp"
-#include "gui_widgets.hpp"
 
-class SkillPage;
-class ProcessRun;
-
-class SkillBoard: public Widget
+class SkillBoardData final
 {
-    public:
-        friend class SkillPage;
-
     public:
         struct MagicIconGfx
         {
@@ -177,50 +164,6 @@ class SkillBoard: public Widget
             {DBCOM_MAGICID(u8"空拳刀法"  ), 0X05001022, 4, 3, false},
         };
 
-    private:
-        ProcessRun *m_processRun;
-
-    private:
-        int m_selectedTabIndex =  0;
-        int m_cursorOnTabIndex = -1;
-
-    private:
-        SkillBoardConfig m_config;
-
-    private:
-        ImageBoard m_bg;
-
-    private:
-        Widget m_pageCanvas;
-
-    private:
-        std::vector<SkillPage *> m_skillPageList;
-
-    private:
-        std::vector<TritexButton *> m_tabButtonList;
-
-    private:
-        TexSlider m_slider;
-
-    private:
-        TritexButton m_closeButton;
-
-    public:
-        SkillBoard(int, int, ProcessRun *, Widget * = nullptr, bool = false);
-
-    public:
-        void drawTabName(Widget::ROIMap) const;
-        void drawDefault(Widget::ROIMap) const override;
-
-    public:
-        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
-
-    private:
-        static Widget::ROI getPageRectange()
-        {
-            return {18, 44, 304, 329};
-        }
-
     public:
         static int tabElem(int tabIndex)
         {
@@ -235,46 +178,6 @@ class SkillBoard: public Widget
             }
         }
 
-        int selectedElem() const
-        {
-            return tabElem(m_selectedTabIndex);
-        }
-
-        int cursorOnElem() const
-        {
-            return tabElem(m_cursorOnTabIndex);
-        }
-
-    public:
-        auto & getConfig(this auto && self)
-        {
-            return self.m_config;
-        }
-
-    private:
-        static int getSkillPageIndex(uint32_t magicID)
-        {
-            if(!magicID){
-                return -1;
-            }
-
-            const auto &mr = DBCOM_MAGICRECORD(magicID);
-            if(!mr){
-                return -1;
-            }
-
-            const int elemID = magicElemID(mr.elem);
-            if(elemID == MET_NONE){
-                return 7;
-            }
-            else if(elemID >= MET_BEGIN && elemID < MET_END){
-                return elemID - MET_BEGIN;
-            }
-            else{
-                return -1;
-            }
-        }
-
     public:
         static const MagicIconGfx *getMagicIconGfx(uint32_t magicID)
         {
@@ -284,113 +187,5 @@ class SkillBoard: public Widget
                 }
             }
             return nullptr;
-        }
-};
-
-// ===== merged from skillboard/magiciconbutton.hpp =====
-#include <cstdint>
-#include "gui_core.hpp"
-
-class ProcessRun;
-class SkillBoardConfig;
-class MagicIconButton: public Widget
-{
-    // +-+-----+
-    // |A|     |
-    // +-+     |
-    // |       |
-    // +-------+-+
-    //         |1|
-    //         +-+
-
-    private:
-        struct InitArgs final
-        {
-            uint32_t magicID = 0;
-
-            SkillBoardConfig *config = nullptr;
-            ProcessRun       *proc   = nullptr;
-
-            Widget::WADPair parent {};
-        };
-
-    private:
-        const uint32_t m_magicID;
-
-    private:
-        SkillBoardConfig * const m_config;
-        ProcessRun       * const m_processRun;
-
-    private:
-        TritexButton m_icon;
-
-    public:
-        MagicIconButton(MagicIconButton::InitArgs);
-
-    public:
-        void drawDefault(Widget::ROIMap) const override;
-
-    public:
-        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
-
-    public:
-        bool cursorOn() const
-        {
-            return m_icon.getState() != BEVENT_OFF;
-        }
-
-    public:
-        uint32_t magicID() const
-        {
-            return m_magicID;
-        }
-};
-
-// ===== merged from skillboard/skillpage.hpp =====
-#include <cstdint>
-#include <vector>
-#include <span>
-#include "processrun.hpp"
-#include "gui_core.hpp"
-
-class MagicIconButton;
-class SkillBoardConfig;
-class SkillPage: public Widget
-{
-    private:
-        struct InitArgs final
-        {
-            Widget::VarDir dir = DIR_UPLEFT;
-            Widget::VarInt x = 0;
-            Widget::VarInt y = 0;
-
-            uint32_t pageTexID = SYS_U32NIL;
-
-            SkillBoardConfig *config = nullptr;
-            ProcessRun       *proc   = nullptr;
-
-            Widget::WADPair parent {};
-        };
-
-    private:
-        SkillBoardConfig * const m_config;
-        ProcessRun       * const m_processRun;
-
-    private:
-        std::vector<MagicIconButton *> m_magicIconButtonList;
-
-    private:
-        ImageBoard m_bg;
-
-    public:
-        SkillPage(SkillPage::InitArgs);
-
-    public:
-        void addIcon(uint32_t);
-
-    public:
-        const auto & getMagicIconButtonList() const
-        {
-            return m_magicIconButtonList;
         }
 };

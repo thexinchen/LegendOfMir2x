@@ -128,7 +128,7 @@ void ImSkillBoard::draw() const
 
         const auto pageTexture = g_progUseDB->retrieve(0X05000010 + to_u32(m_impl->selectedTab));
         float maxButtonReachY = 0.0f;
-        for(const auto &gfx: SkillBoard::m_iconGfxList){
+        for(const auto &gfx: SkillBoardData::m_iconGfxList){
             if(pageIndex(gfx.magicID) == m_impl->selectedTab){
                 if(const auto icon = g_progUseDB->retrieve(gfx.magicIcon); icon){
                     maxButtonReachY = std::max(maxButtonReachY, to_f(gfx.y * 65 + 13 + icon.h + 8));
@@ -149,7 +149,7 @@ void ImSkillBoard::draw() const
         drawTexture(drawList, pageTexture, {clipMin.x, clipMin.y + pageOffsetY});
 
         m_impl->hoveredMagicID = 0;
-        for(const auto &gfx: SkillBoard::m_iconGfxList){
+        for(const auto &gfx: SkillBoardData::m_iconGfxList){
             if(pageIndex(gfx.magicID) != m_impl->selectedTab){
                 continue;
             }
@@ -216,7 +216,7 @@ void ImSkillBoard::draw() const
 
         std::string tabName;
         if(m_impl->hoveredTab >= 0){
-            tabName = str_printf("元素【%s】", to_cstr(magicElemName(SkillBoard::tabElem(m_impl->hoveredTab))));
+            tabName = str_printf("元素【%s】", to_cstr(magicElemName(SkillBoardData::tabElem(m_impl->hoveredTab))));
         }
         else if(m_impl->hoveredMagicID){
             if(const auto &record = DBCOM_MAGICRECORD(m_impl->hoveredMagicID)){
@@ -224,7 +224,7 @@ void ImSkillBoard::draw() const
             }
         }
         if(tabName.empty()){
-            tabName = str_printf("元素【%s】", to_cstr(magicElemName(SkillBoard::tabElem(m_impl->selectedTab))));
+            tabName = str_printf("元素【%s】", to_cstr(magicElemName(SkillBoardData::tabElem(m_impl->selectedTab))));
         }
         drawText(drawList, {pos.x + 30.0f, pos.y + 400.0f}, tabName, 1, 12, IM_COL32_WHITE);
 
@@ -261,7 +261,7 @@ bool ImSkillBoard::processEvent(const MirEvent &event) const
         const char key = GLDeviceHelper::getKeyChar(event, false);
         if((key >= '0' && key <= '9') || (key >= 'a' && key <= 'z')){
             if(m_impl->config.hasMagicID(m_impl->hoveredMagicID)){
-                const auto gfx = SkillBoard::getMagicIconGfx(m_impl->hoveredMagicID);
+                const auto gfx = SkillBoardData::getMagicIconGfx(m_impl->hoveredMagicID);
                 if(gfx && gfx->passive){
                     m_impl->processRun->addCBLog(
                         CBLOG_SYS,
