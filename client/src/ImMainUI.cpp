@@ -18,6 +18,7 @@
 #include "gui_font.hpp"
 #include "gui_textengine.hpp"
 #include "gui_texture.hpp"
+#include "imeboard.hpp"
 #include "log.hpp"
 #include "ImMiniMapBoard.hpp"
 #include "processrun.hpp"
@@ -32,6 +33,7 @@ extern GLDevice *g_glDevice;
 extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;
 extern FontexDB *g_fontexDB;
+extern IMEBoard *g_imeBoard;
 
 namespace
 {
@@ -180,8 +182,35 @@ namespace
 
 ImMainUI::ImMainUI(ProcessRun *processRun)
     : m_processRun(processRun)
+    , m_NPCChatBoard(processRun)
+    , m_friendChatBoard(
+        g_glDevice->getRendererWidth()  / 2 - 250,
+        g_glDevice->getRendererHeight() / 2 - 250,
+        processRun)
+    , m_horseBoard(processRun)
+    , m_skillBoard(
+        g_glDevice->getRendererWidth()  / 2 - 180,
+        g_glDevice->getRendererHeight() / 2 - 224,
+        processRun)
+    , m_guildBoard(processRun)
+    , m_miniMapBoard(processRun)
+    , m_acutionBoard(processRun)
+    , m_purchaseBoard(processRun)
+    , m_teamStateBoard(processRun)
+    , m_inventoryBoard(processRun)
+    , m_questStateBoard(processRun)
+    , m_playerStateBoard(processRun)
+    , m_inputStringBoard {}
+    , m_runtimeConfigBoard(
+        g_glDevice->getRendererWidth()  / 2 - 255,
+        g_glDevice->getRendererHeight() / 2 - 234,
+        600,
+        480,
+        processRun)
+    , m_securedItemListBoard(processRun)
 {
     fflassert(m_processRun);
+    g_imeBoard->dropFocus();
 }
 
 void ImMainUI::update(double deltaMS)
@@ -199,13 +228,48 @@ void ImMainUI::update(double deltaMS)
             }
         }
     }
+
+    m_purchaseBoard.update(deltaMS);
+    m_acutionBoard.update(deltaMS);
+    m_horseBoard.update(deltaMS);
+    m_guildBoard.update(deltaMS);
+    m_inputStringBoard.update(deltaMS);
+    m_questStateBoard.update(deltaMS);
+    m_teamStateBoard.update(deltaMS);
+    m_securedItemListBoard.update(deltaMS);
+    m_inventoryBoard.update(deltaMS);
+    m_playerStateBoard.update(deltaMS);
+    m_miniMapBoard.update(deltaMS);
+    m_NPCChatBoard.update(deltaMS);
+    m_friendChatBoard.update(deltaMS);
+    m_skillBoard.update(deltaMS);
+    g_imeBoard->update(deltaMS);
 }
 
 void ImMainUI::draw() const
 {
+    m_miniMapBoard.draw();
+    m_NPCChatBoard.draw();
+    m_friendChatBoard.draw();
+    m_skillBoard.draw();
     drawHUD();
     if(m_quickAccessShown){
         drawQuickAccess();
+    }
+    m_acutionBoard.draw();
+    m_horseBoard.draw();
+    m_guildBoard.draw();
+    m_inputStringBoard.draw();
+    m_runtimeConfigBoard.draw();
+    m_questStateBoard.draw();
+    m_teamStateBoard.draw();
+    m_securedItemListBoard.draw();
+    m_inventoryBoard.draw();
+    m_playerStateBoard.draw();
+    m_purchaseBoard.draw();
+
+    if(g_imeBoard->show()){
+        g_imeBoard->draw();
     }
 }
 
@@ -416,7 +480,7 @@ void ImMainUI::drawHUD() const
         const_cast<ImMainUI *>(this)->addLog(0, "exchange doesn't implemented yet");
     }
     if(overlayButton("##hud-minimap", 0X00000043, 0X00000043, {rightX + 4, localBaseY + 40})){
-        auto map = m_processRun->getGUIManager()->getMiniMapBoard();
+        auto map = getMiniMapBoard();
         if(map && map->getMiniMapTexture()){
             map->flipShow();
         }
@@ -472,7 +536,7 @@ void ImMainUI::drawHUD() const
                 }
             }
             else{
-                m_processRun->getGUIManager()->flipBoard(button.board);
+                const_cast<ImMainUI *>(this)->flipBoard(button.board);
             }
         }
     }
@@ -703,6 +767,44 @@ void ImMainUI::drawQuickAccess() const
 bool ImMainUI::processEvent(const MirEvent &event)
 {
     switch(event.type){
+        case MIR_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+        case MIR_EVENT_WINDOW_RESIZED:
+            {
+                afterResize();
+                return true;
+            }
+        default:
+            {
+                break;
+            }
+    }
+
+    bool tookEvent = false;
+    if(g_imeBoard->show()){
+        tookEvent |= g_imeBoard->processEvent(event);
+    }
+    tookEvent |= !tookEvent && m_purchaseBoard.processEvent(event);
+    tookEvent |= !tookEvent && processHUDEvent(event);
+    tookEvent |= !tookEvent && m_acutionBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_horseBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_guildBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_inputStringBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_runtimeConfigBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_questStateBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_teamStateBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_securedItemListBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_inventoryBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_playerStateBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_NPCChatBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_friendChatBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_skillBoard.processEvent(event);
+    tookEvent |= !tookEvent && m_miniMapBoard.processEvent(event);
+    return tookEvent;
+}
+
+bool ImMainUI::processHUDEvent(const MirEvent &event)
+{
+    switch(event.type){
         case MIR_EVENT_KEY_DOWN:
             {
                 if(event.key.key == MIRK_RETURN){
@@ -756,6 +858,28 @@ bool ImMainUI::processEvent(const MirEvent &event)
             }
     }
     return false;
+}
+
+void ImMainUI::flipBoard(std::string_view name)
+{
+    if(name == "HorseBoard"){ m_horseBoard.flipShow(); return; }
+    if(name == "GuildBoard"){ m_guildBoard.flipShow(); return; }
+    if(name == "QuestStateBoard"){ m_questStateBoard.flipShow(); return; }
+    if(name == "TeamStateBoard"){ m_teamStateBoard.flipShow(); return; }
+    if(name == "InventoryBoard"){ m_inventoryBoard.flipShow(); return; }
+    if(name == "PlayerStateBoard"){ m_playerStateBoard.flipShow(); return; }
+    if(name == "FriendChatBoard"){ m_friendChatBoard.flipShow(); return; }
+    if(name == "SkillBoard"){ m_skillBoard.flipShow(); return; }
+    if(name == "RuntimeConfigBoard"){ m_runtimeConfigBoard.flipShow(); return; }
+    throw fflvalue(name);
+}
+
+void ImMainUI::afterResize()
+{
+    m_runtimeConfigBoard.updateWindowSize({
+        to_f(g_glDevice->getRendererWidth()),
+        to_f(g_glDevice->getRendererHeight()),
+    }, true);
 }
 
 void ImMainUI::addXMLLog(const char *log)

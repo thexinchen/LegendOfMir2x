@@ -13,7 +13,7 @@
 #include "message.hpp"
 #include "focustype.hpp"
 #include "ascendstr.hpp"
-#include "guimanager.hpp"
+#include "ImMainUI.hpp"
 #include "wilanitimer.hpp"
 #include "framecounter.hpp"
 #include "fpsmonitor.hpp"
@@ -143,7 +143,7 @@ class ProcessRun: public Process
         int m_cursorState = CURSOR_DEFAULT;
 
     private:
-        GUIManager m_guiManager;
+        ImMainUI m_mainUI;
 
     public:
         ProcessRun(const SMOnlineOK &);
@@ -389,27 +389,27 @@ class ProcessRun: public Process
     public:
         auto getInputStringBoard(this auto &&self)
         {
-            return self.getGUIManager()->getInputStringBoard();
+            return self.getMainUI()->getInputStringBoard();
         }
 
         auto getQuestStateBoard(this auto &&self)
         {
-            return self.getGUIManager()->getQuestStateBoard();
+            return self.getMainUI()->getQuestStateBoard();
         }
 
         auto getTeamStateBoard(this auto &&self)
         {
-            return self.getGUIManager()->getTeamStateBoard();
+            return self.getMainUI()->getTeamStateBoard();
         }
 
         auto getSecuredItemListBoard(this auto &&self)
         {
-            return self.getGUIManager()->getSecuredItemListBoard();
+            return self.getMainUI()->getSecuredItemListBoard();
         }
 
         auto getInventoryBoard(this auto &&self)
         {
-            return self.getGUIManager()->getInventoryBoard();
+            return self.getMainUI()->getInventoryBoard();
         }
 
     public:
@@ -434,14 +434,9 @@ class ProcessRun: public Process
         std::tuple<int, int> getACNum(const std::string &) const;
 
     public:
-        auto getGUIManager(this auto && self)
-        {
-            return std::addressof(self.m_guiManager);
-        }
-
         auto getMainUI(this auto &&self)
         {
-            return self.m_guiManager.getMainUI();
+            return std::addressof(self.m_mainUI);
         }
 
     public:
@@ -522,6 +517,6 @@ class ProcessRun: public Process
     public:
         template<int CfgIndex> auto getRuntimeConfig(this auto && self)
         {
-            return SDRuntimeConfig_getConfig<CfgIndex>(self.getGUIManager()->getRuntimeConfigBoard()->getConfig());
+            return SDRuntimeConfig_getConfig<CfgIndex>(self.getMainUI()->getRuntimeConfigBoard()->getConfig());
         }
 };

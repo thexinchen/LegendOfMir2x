@@ -89,7 +89,7 @@ ProcessRun::ProcessRun(const SMOnlineOK &smOOK)
       }())
 
     , m_teamFlag(5)
-    , m_guiManager(this)
+    , m_mainUI(this)
 {
     loadMap(smOOK.mapUID, smOOK.action.x, smOOK.action.y);
     RegisterUserCommand();
@@ -136,7 +136,7 @@ void ProcessRun::update(double fUpdateTime)
     m_aniTimer.update(std::lround(fUpdateTime));
 
     scrollMap();
-    m_guiManager.update(fUpdateTime);
+    m_mainUI.update(fUpdateTime);
     m_delayCmdQ.exec();
 
     for(auto p = m_strikeGridList.begin(); p != m_strikeGridList.end();){
@@ -454,7 +454,7 @@ void ProcessRun::draw() const
 
     if(m_drawMagicKey){
         int magicKeyOffX = 0;
-        for(const auto &[magicID, magicKey]: getGUIManager()->getSkillBoard()->getConfig().getMagicKeyList()){
+        for(const auto &[magicID, magicKey]: getMainUI()->getSkillBoard()->getConfig().getMagicKeyList()){
             if(const auto iconGfx = SkillBoardData::getMagicIconGfx(magicID); iconGfx && iconGfx->magicIcon != SYS_U32NIL){
                 if(auto texPtr = g_progUseDB->retrieve(iconGfx->magicIcon + to_u32(0X00001000))){
                     g_glDevice->drawTexture(texPtr, magicKeyOffX, 0);
@@ -483,7 +483,7 @@ void ProcessRun::draw() const
         constexpr int buffIconDrawH = 30;
         int buffIconOffX = g_glDevice->getRendererWidth() - buffIconDrawW;
 
-        if(auto boardPtr = getGUIManager()->getMiniMapBoard(); boardPtr->show() && boardPtr->getMiniMapTexture()){
+        if(auto boardPtr = getMainUI()->getMiniMapBoard(); boardPtr->show() && boardPtr->getMiniMapTexture()){
             buffIconOffX -= to_dround(boardPtr->size().x);
         }
 
@@ -514,7 +514,7 @@ void ProcessRun::draw() const
         g_glDevice->fillRectangle(colorf::RGBA(128, 0, 0, 64), 0, 0, winW, winH);
     }
 
-    m_guiManager.draw();
+    m_mainUI.draw();
     if(const auto selectedItemID = getMyHero()->getInvPack().getGrabbedItem().itemID){
         if(const auto &ir = DBCOM_ITEMRECORD(selectedItemID)){
             if(auto texPtr = g_itemDB->retrieve(ir.pkgGfxID | 0X01000000)){
@@ -564,7 +564,7 @@ void ProcessRun::draw() const
 
 void ProcessRun::processEvent(const MirEvent &event)
 {
-    const bool tookEvent = m_guiManager.processEvent(event);
+    const bool tookEvent = m_mainUI.processEvent(event);
 
     if(tookEvent){
         return;
@@ -838,7 +838,7 @@ void ProcessRun::loadMap(uint64_t newMapUID, int centerGX, int centerGY)
     }
 
     fnUpdateLoadRatio(100);
-    if(auto boardPtr = getGUIManager()->getMiniMapBoard()){
+    if(auto boardPtr = getMainUI()->getMiniMapBoard()){
         if(!boardPtr->getMiniMapTexture()){
             addCBLog(CBLOG_ERR, u8"没有可用的地图"); // don't need to flip minimap show explicitly
         }
@@ -2161,7 +2161,7 @@ void ProcessRun::checkMagicSpell(const MirEvent &event)
         return;
     }
 
-    const auto magicID = getGUIManager()->getSkillBoard()->getConfig().key2MagicID(key);
+    const auto magicID = getMainUI()->getSkillBoard()->getConfig().key2MagicID(key);
     if(!magicID){
         return;
     }

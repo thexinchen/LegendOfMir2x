@@ -67,23 +67,23 @@ void ProcessRun::on_SM_STARTGAMESCENE(const uint8_t *buf, size_t bufSize)
 void ProcessRun::on_SM_PLAYERCONFIG(const uint8_t *buf, size_t bufSize)
 {
     const auto sdPC = cerealf::deserialize<SDPlayerConfig>(buf, bufSize);
-    getGUIManager()->getRuntimeConfigBoard()->setConfig(sdPC.runtimeConfig);
+    getMainUI()->getRuntimeConfigBoard()->setConfig(sdPC.runtimeConfig);
 
     for(const auto &[magicID, key]: sdPC.magicKeyList.keyList){
-        getGUIManager()->getSkillBoard()->getConfig().setMagicKey(magicID, key);
+        getMainUI()->getSkillBoard()->getConfig().setMagicKey(magicID, key);
     }
 }
 
 void ProcessRun::on_SM_FRIENDLIST(const uint8_t *buf, size_t bufSize)
 {
     const auto sdFL = cerealf::deserialize<SDFriendList>(buf, bufSize);
-    getGUIManager()->getFriendChatBoard()->setFriendList(sdFL);
+    getMainUI()->getFriendChatBoard()->setFriendList(sdFL);
 }
 
 void ProcessRun::on_SM_CHATMESSAGELIST(const uint8_t *buf, size_t bufSize)
 {
     for(const auto &message: cerealf::deserialize<SDChatMessageList>(buf, bufSize)){
-        getGUIManager()->getFriendChatBoard()->addMessage({}, message);
+        getMainUI()->getFriendChatBoard()->addMessage({}, message);
     }
     getMainUI()->startButtonBlink("FriendChat", 5000);
 }
@@ -115,14 +115,14 @@ void ProcessRun::on_SM_LEARNEDMAGICLIST(const uint8_t *buf, size_t bufSize)
 {
     const auto sdLML = cerealf::deserialize<SDLearnedMagicList>(buf, bufSize);
     for(const auto &magic: sdLML.magicList){
-        getGUIManager()->getSkillBoard()->getConfig().setMagicLevel(magic.magicID, 1);
+        getMainUI()->getSkillBoard()->getConfig().setMagicLevel(magic.magicID, 1);
     }
 }
 
 void ProcessRun::on_SM_SELLITEMLIST(const uint8_t *buf, size_t bufSize)
 {
     auto sdSIL = cerealf::deserialize<SDSellItemList>(buf, bufSize);
-    auto purchaseBoardPtr = getGUIManager()->getPurchaseBoard();
+    auto purchaseBoardPtr = getMainUI()->getPurchaseBoard();
     purchaseBoardPtr->setSellItemList(std::move(sdSIL));
 }
 
@@ -420,7 +420,7 @@ void ProcessRun::on_SM_BUYERROR(const uint8_t *buf, size_t bufSize)
 void ProcessRun::on_SM_BUYSUCCEED(const uint8_t *buf, size_t)
 {
     const auto smBS = ServerMsg::conv<SMBuySucceed>(buf);
-    getGUIManager()->getPurchaseBoard()->onBuySucceed(smBS.npcUID, smBS.itemID, smBS.seqID);
+    getMainUI()->getPurchaseBoard()->onBuySucceed(smBS.npcUID, smBS.itemID, smBS.seqID);
 }
 
 void ProcessRun::on_SM_GROUNDITEMIDLIST(const uint8_t *buf, size_t bufSize)
@@ -626,8 +626,8 @@ void ProcessRun::on_SM_INVOPCOST(const uint8_t *buf, size_t)
 void ProcessRun::on_SM_NPCXMLLAYOUT(const uint8_t *buf, size_t bufSize)
 {
     const auto sdNPCXMLL = cerealf::deserialize<SDNPCXMLLayout>(buf, bufSize);
-    auto npcChatBoardPtr  = getGUIManager()->getNPCChatBoard();
-    auto purchaseBoardPtr = getGUIManager()->getPurchaseBoard();
+    auto npcChatBoardPtr  = getMainUI()->getNPCChatBoard();
+    auto purchaseBoardPtr = getMainUI()->getPurchaseBoard();
 
     npcChatBoardPtr->loadXML(sdNPCXMLL.npcUID, sdNPCXMLL.eventPath.c_str(), sdNPCXMLL.xmlLayout.c_str());
     npcChatBoardPtr->setShow(true);
@@ -637,8 +637,8 @@ void ProcessRun::on_SM_NPCXMLLAYOUT(const uint8_t *buf, size_t bufSize)
 void ProcessRun::on_SM_NPCSELL(const uint8_t *buf, size_t bufSize)
 {
     auto sdNPCS = cerealf::deserialize<SDNPCSell>(buf, bufSize);
-    auto purchaseBoardPtr = getGUIManager()->getPurchaseBoard();
-    auto npcChatBoardPtr  = getGUIManager()->getNPCChatBoard();
+    auto purchaseBoardPtr = getMainUI()->getPurchaseBoard();
+    auto npcChatBoardPtr  = getMainUI()->getNPCChatBoard();
 
     if(npcChatBoardPtr->show()){
         // purchaseBoardPtr->moveTo(npcChatBoardPtr->x(), npcChatBoardPtr->y() + npcChatBoardPtr->h());
@@ -871,7 +871,7 @@ void ProcessRun::on_SM_GRABBELTERROR(const uint8_t *buf, size_t)
 void ProcessRun::on_SM_CREATECHATGROUP(const uint8_t *buf, size_t size)
 {
     const auto sdCP = cerealf::deserialize<SDChatPeer>(buf, size);
-    getGUIManager()->getFriendChatBoard()->addGroup(sdCP);
+    getMainUI()->getFriendChatBoard()->addGroup(sdCP);
 }
 
 void ProcessRun::on_SM_STARTINPUT(const uint8_t *buf, size_t bufSize)
@@ -887,7 +887,7 @@ void ProcessRun::on_SM_STARTINPUT(const uint8_t *buf, size_t bufSize)
 
 void ProcessRun::on_SM_SHOWSECUREDITEMLIST(const uint8_t *buf, size_t bufSize)
 {
-    auto chatBoardPtr = getGUIManager()->getNPCChatBoard();
+    auto chatBoardPtr = getMainUI()->getNPCChatBoard();
     auto itemBoardPtr = getSecuredItemListBoard();
 
     if(chatBoardPtr->show()){
@@ -928,10 +928,10 @@ void ProcessRun::on_SM_QUESTDESPLIST(const uint8_t *buf, size_t bufSize)
 
 void ProcessRun::on_SM_ADDFRIENDACCEPTED(const uint8_t *buf, size_t bufSize)
 {
-    getGUIManager()->getFriendChatBoard()->onAddFriendAccepted(cerealf::deserialize<SDChatPeer>(buf, bufSize));
+    getMainUI()->getFriendChatBoard()->onAddFriendAccepted(cerealf::deserialize<SDChatPeer>(buf, bufSize));
 }
 
 void ProcessRun::on_SM_ADDFRIENDREJECTED(const uint8_t *buf, size_t bufSize)
 {
-    getGUIManager()->getFriendChatBoard()->onAddFriendRejected(cerealf::deserialize<SDChatPeer>(buf, bufSize));
+    getMainUI()->getFriendChatBoard()->onAddFriendRejected(cerealf::deserialize<SDChatPeer>(buf, bufSize));
 }
