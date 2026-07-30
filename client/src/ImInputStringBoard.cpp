@@ -4,12 +4,14 @@
 #include <cctype>
 #include <string>
 
+#include "gldevice.hpp"
 #include "gui_font.hpp"
 #include "gui_texture.hpp"
 #include "totype.hpp"
 
 extern PNGTexDB *g_progUseDB;
 extern FontexDB *g_fontexDB;
+extern GLDevice *g_glDevice;
 
 namespace
 {
@@ -79,7 +81,11 @@ namespace
 
 ImInputStringBoard::ImInputStringBoard()
     : ImBoard("##input-string-board")
-{}
+{
+    moveTo(
+        to_f(g_glDevice->getRendererWidth()  / 2 - 179),
+        to_f(g_glDevice->getRendererHeight() / 2 - 134));
+}
 
 void ImInputStringBoard::draw() const
 {
