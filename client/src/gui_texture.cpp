@@ -123,3 +123,64 @@ void EmojiDB::freeResource(EmojiElement &element)
         element.texture = nullptr;
     }
 }
+
+// ===== game text drawing utilities =====
+#include "gui_font.hpp"
+
+GameTextResult drawGameText(
+    ImDrawList    *drawList,
+    ImVec2         pos,
+    const char    *text,
+    uint8_t        font,
+    uint8_t        size,
+    ImU32          color,
+    int            align)
+{
+    if(!(drawList && text && *text)){
+        return {};
+    }
+
+    const auto texture = g_fontexDB->retrieve(font, size, 0, text);
+    if(!texture){
+        return {};
+    }
+
+    if(align & GTEXT_ALIGN_HCENTER){
+        pos.x -= texture.w * 0.5f;
+    }
+    else if(align & GTEXT_ALIGN_RIGHT){
+        pos.x -= texture.w;
+    }
+    if(align & GTEXT_ALIGN_VCENTER){
+        pos.y -= texture.h * 0.5f;
+    }
+
+    drawList->AddImage(texture, pos, {pos.x + texture.w, pos.y + texture.h}, {0, 0}, {1, 1}, color);
+    return {to_f(texture.w), to_f(texture.h)};
+}
+
+GameTextResult drawGameText(
+    ImDrawList        *drawList,
+    ImVec2             pos,
+    const std::string &text,
+    uint8_t            font,
+    uint8_t            size,
+    ImU32              color,
+    int                align)
+{
+    return drawGameText(drawList, pos, text.c_str(), font, size, color, align);
+}
+
+// ===== button click sound =====
+#include "audiodevice.hpp"
+#include "soundeffectdb.hpp"
+
+extern AudioDevice *g_audioDevice;
+extern SoundEffectDB *g_seffDB;
+
+void playButtonClickSound()
+{
+    if(g_audioDevice && g_seffDB){
+        g_audioDevice->playSoundEffect(g_seffDB->retrieve(0X01020000 + 105));
+    }
+}

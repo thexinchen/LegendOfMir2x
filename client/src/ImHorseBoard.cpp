@@ -24,6 +24,7 @@ namespace
             const auto shown = ImGui::IsItemActive() && down ? down : hover;
             ImGui::GetWindowDrawList()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
         }
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 }

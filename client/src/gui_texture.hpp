@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <tuple>
 #include <imgui.h>
 #include "totype.hpp"
@@ -249,3 +250,58 @@ class EmojiDB: public innDB<uint32_t, EmojiElement>
     public:
         void freeResource(EmojiElement &) override;
 };
+
+// ===== game text drawing utilities =====
+//
+// Shared text-drawing helpers used by all ImGui-based boards/panels.
+//
+// The old SDL/KGUI widget system rendered text per-character via XMLTypeset,
+// where each glyph was positioned relative to the font baseline. The new ImGui
+// code renders the entire string as one fontex texture (long-text mode). These
+// helpers provide a consistent API that matches the old positioning semantics.
+//
+// pos semantics:
+//   - default (align=0): pos is the top-left corner of the text texture
+//   - hcenter: pos.x is the horizontal center of the text
+//   - vcenter: pos.y is the vertical center of the text texture
+//   - center:  pos is the center of the text texture (hcenter + vcenter)
+//   - right:   pos.x is the right edge of the text texture
+
+enum GameTextAlign : int
+{
+    GTEXT_ALIGN_NONE    = 0,
+    GTEXT_ALIGN_HCENTER = 1,
+    GTEXT_ALIGN_VCENTER = 2,
+    GTEXT_ALIGN_CENTER  = 3,
+    GTEXT_ALIGN_RIGHT   = 4,
+};
+
+struct GameTextResult
+{
+    float w = 0.0f;
+    float h = 0.0f;
+};
+
+class FontexDB;
+extern FontexDB *g_fontexDB;
+
+GameTextResult drawGameText(
+    ImDrawList    *drawList,
+    ImVec2         pos,
+    const char    *text,
+    uint8_t        font    = 1,
+    uint8_t        size    = 12,
+    ImU32          color   = IM_COL32_WHITE,
+    int            align   = GTEXT_ALIGN_NONE);
+
+GameTextResult drawGameText(
+    ImDrawList        *drawList,
+    ImVec2             pos,
+    const std::string &text,
+    uint8_t            font    = 1,
+    uint8_t            size    = 12,
+    ImU32              color   = IM_COL32_WHITE,
+    int                align   = GTEXT_ALIGN_NONE);
+
+// play the default button click sound effect (0X01020000 + 105)
+void playButtonClickSound();

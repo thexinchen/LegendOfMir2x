@@ -167,6 +167,7 @@ namespace
             const auto down = g_progUseDB->retrieve(downID);
             drawTexture(ImGui::GetWindowDrawList(), ImGui::IsItemActive() && down ? down : hover, pos);
         }
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 }

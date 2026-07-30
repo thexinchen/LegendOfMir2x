@@ -445,6 +445,11 @@ class ProcessRun: public Process
             m_drawMagicKey = !m_drawMagicKey;
         }
 
+        bool drawMagicKey() const
+        {
+            return m_drawMagicKey;
+        }
+
     public:
         struct uidPixelLocation
         {

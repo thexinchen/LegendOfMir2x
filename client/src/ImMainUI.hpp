@@ -127,6 +127,7 @@ class ImMainUI final
     private:
         void drawHUD() const;
         void drawQuickAccess() const;
+        void drawSkillAndBuffHUD() const;
         void submitCommand() const;
         void consumeQuickSlot(int) const;
         bool blinkVisible(std::string_view) const;

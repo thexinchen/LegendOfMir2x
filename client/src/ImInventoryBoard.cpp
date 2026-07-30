@@ -19,7 +19,6 @@
 extern GLDevice *g_glDevice;
 extern PNGTexDB *g_progUseDB;
 extern PNGTexDB *g_itemDB;
-extern FontexDB *g_fontexDB;
 
 namespace
 {
@@ -27,16 +26,6 @@ namespace
     constexpr float gridY = 59.0f;
     constexpr float gridW = SYS_INVGRIDGW * SYS_INVGRIDPW;
     constexpr float gridH = SYS_INVGRIDGH * SYS_INVGRIDPH;
-
-    void drawGameText(ImDrawList *list, ImVec2 pos, const std::string &text, uint8_t size, ImU32 color, bool centered = false)
-    {
-        if(const auto texture = g_fontexDB->retrieve(1, size, 0, text.c_str()); texture){
-            if(centered){
-                pos.x -= texture.w * 0.5f;
-            }
-            list->AddImage(texture, pos, {pos.x + texture.w, pos.y + texture.h}, {0, 0}, {1, 1}, color);
-        }
-    }
 
     bool overlayButton(const char *id, uint32_t hoverID, uint32_t downID, ImVec2 pos)
     {
@@ -50,6 +39,9 @@ namespace
             const auto down = g_progUseDB->retrieve(downID);
             const auto shown = ImGui::IsItemActive() && down ? down : hover;
             ImGui::GetWindowDrawList()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
+        }
+        if(clicked){
+            playButtonClickSound();
         }
         return clicked;
     }
@@ -65,6 +57,9 @@ namespace
         const auto down = g_progUseDB->retrieve(downID);
         const auto shown = ImGui::IsItemActive() && down ? down : off;
         ImGui::GetWindowDrawList()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
+        if(clicked){
+            playButtonClickSound();
+        }
         return clicked;
     }
 
@@ -178,8 +173,8 @@ void ImInventoryBoard::draw() const
             case INVOP_REPAIR: title = "【请选择修理物品】"; break;
             default: break;
         }
-        drawGameText(drawList, {pos.x + 238, pos.y + 25}, title, 12, IM_COL32_WHITE, true);
-        drawGameText(drawList, {pos.x + 132, pos.y + 486}, str_ksep(hero->getGold(), ','), 12, IM_COL32(255, 255, 0, 255), true);
+        drawGameText(drawList, {pos.x + 238, pos.y + 25}, title, 1, 12, IM_COL32_WHITE, GTEXT_ALIGN_HCENTER);
+        drawGameText(drawList, {pos.x + 132, pos.y + 480}, str_ksep(hero->getGold(), ','), 1, 12, IM_COL32(255, 255, 0, 255), GTEXT_ALIGN_HCENTER);
 
         if(overlayButton("##inventory-close", 0X0000001C, 0X0000001D, {pos.x + 394, pos.y + 498})){
             setShow(false);
@@ -249,9 +244,10 @@ void ImInventoryBoard::draw() const
                         drawList,
                         {cellPos.x + bin.w * SYS_INVGRIDPW, cellPos.y - 2},
                         std::to_string(bin.item.count),
+                        1,
                         10,
                         IM_COL32(255, 255, 0, 255),
-                        true);
+                        GTEXT_ALIGN_HCENTER);
             }
             if(i == hoveredIndex){
                 drawList->AddRectFilled(cellPos, {cellPos.x + bin.w * SYS_INVGRIDPW, cellPos.y + bin.h * SYS_INVGRIDPH}, IM_COL32(255, 255, 255, 48));
@@ -312,7 +308,7 @@ void ImInventoryBoard::draw() const
                 commitInvOp();
             }
             if(m_invOpCost >= 0){
-                drawGameText(drawList, {pos.x + 132, pos.y + 503}, str_ksep(m_invOpCost, ','), 12, IM_COL32(255, 255, 0, 255), true);
+                drawGameText(drawList, {pos.x + 132, pos.y + 503}, str_ksep(m_invOpCost, ','), 1, 12, IM_COL32(255, 255, 0, 255), GTEXT_ALIGN_CENTER);
             }
         }
 
@@ -329,7 +325,7 @@ void ImInventoryBoard::draw() const
             foreground->AddRectFilled(tooltipPos, {tooltipPos.x + 220, tooltipPos.y + tooltipH}, IM_COL32(0, 0, 0, 200), 5);
             foreground->AddRect(tooltipPos, {tooltipPos.x + 220, tooltipPos.y + tooltipH}, IM_COL32(231, 231, 189, 200), 5);
             for(size_t i = 0; i < lines.size(); ++i){
-                drawGameText(foreground, {tooltipPos.x + 10, tooltipPos.y + 10 + i * 15}, lines.at(i), 12, IM_COL32_WHITE);
+                drawGameText(foreground, {tooltipPos.x + 10, tooltipPos.y + 10 + i * 15}, lines.at(i), 1, 12, IM_COL32_WHITE);
             }
         }
     }

@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <ranges>
 #include <vector>
 
 #include <imgui.h>
@@ -117,11 +118,8 @@ namespace
             uint8_t size = 15,
             ImU32 color = IM_COL32_WHITE)
     {
-        if(const auto texture = gameTextTexture(text, font, size); texture){
-            background()->AddImage(texture, pos, {pos.x + texture.w, pos.y + texture.h}, {0, 0}, {1, 1}, color);
-            return {to_f(texture.w), to_f(texture.h)};
-        }
-        return {};
+        const auto result = ::drawGameText(background(), pos, text, font, size, color, GTEXT_ALIGN_NONE);
+        return {result.w, result.h};
     }
 
     bool textureButton(const char *id, uint32_t offID, uint32_t downID, ImVec2 pos, bool visible = true)
@@ -138,6 +136,7 @@ namespace
             const auto shown = ImGui::IsItemActive() && down ? down : off;
             background()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
         }
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 
@@ -155,6 +154,7 @@ namespace
             const auto shown = ImGui::IsItemActive() && down ? down : hover;
             background()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
         }
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 
@@ -252,6 +252,7 @@ void ImMainUI::draw() const
     m_NPCChatBoard.draw();
     m_friendChatBoard.draw();
     m_skillBoard.draw();
+    drawSkillAndBuffHUD();
     drawHUD();
     if(m_quickAccessShown){
         drawQuickAccess();
@@ -778,6 +779,84 @@ void ImMainUI::drawQuickAccess() const
         m_quickAccessShown = false;
     }
     endOverlay();
+}
+
+void ImMainUI::drawSkillAndBuffHUD() const
+{
+    auto *drawList = ImGui::GetBackgroundDrawList();
+    const auto hero = m_processRun->getMyHero();
+
+    if(m_processRun->drawMagicKey()){
+        int magicKeyOffX = 0;
+        // TEMP: force draw a test icon to verify HUD rendering
+        if(const auto testTex = g_progUseDB->retrieve(0X00001000)){
+            drawList->AddImage(
+                testTex,
+                ImVec2(to_f(magicKeyOffX), 0.0f),
+                ImVec2(to_f(magicKeyOffX + testTex.w), to_f(testTex.h)));
+            magicKeyOffX += testTex.w;
+        }
+        for(const auto &[magicID, magicKey]: m_skillBoard.getConfig().getMagicKeyList()){
+            if(const auto iconGfx = SkillBoardData::getMagicIconGfx(magicID); iconGfx && iconGfx->magicIcon != SYS_U32NIL){
+                if(auto texPtr = g_progUseDB->retrieve(iconGfx->magicIcon + to_u32(0X00001000))){
+                    drawList->AddImage(
+                        texPtr,
+                        ImVec2(to_f(magicKeyOffX), 0.0f),
+                        ImVec2(to_f(magicKeyOffX + texPtr.w), to_f(texPtr.h)));
+
+                    const auto coolDownAngle = hero->getMagicCoolDownAngle(magicID);
+                    const auto colorRatio = [coolDownAngle]() -> float
+                    {
+                        const float r = to_f(coolDownAngle) / 360.0f;
+                        return r * r * r * r;
+                    }();
+
+                    const auto texW = texPtr.w;
+                    const auto coverTexW = std::lround(1.41421356237309504880 * texW);
+                    auto coverTexPtr = g_glDevice->getCover(coverTexW / 2, coolDownAngle);
+                    const auto tintColor = colorf::fadeRGBA(colorf::RGBA(255, 51, 51, 255), colorf::GREEN + colorf::A_SHF(80), colorRatio);
+
+                    const auto offCoverX = (coverTexW - texW) / 2;
+                    drawList->AddImage(
+                        coverTexPtr,
+                        ImVec2(to_f(magicKeyOffX), 0.0f),
+                        ImVec2(to_f(magicKeyOffX + texW), to_f(texW)),
+                        ImVec2(to_f(offCoverX) / to_f(coverTexPtr.w), to_f(offCoverX) / to_f(coverTexPtr.h)),
+                        ImVec2(to_f(offCoverX + texW) / to_f(coverTexPtr.w), to_f(offCoverX + texW) / to_f(coverTexPtr.h)),
+                        static_cast<ImU32>(tintColor));
+                    magicKeyOffX += texW;
+                }
+            }
+        }
+    }
+
+    if(hero->getSDBuffIDListOpt().has_value()){
+        constexpr int buffIconDrawW = 30;
+        constexpr int buffIconDrawH = 30;
+        int buffIconOffX = g_glDevice->getRendererWidth() - buffIconDrawW;
+
+        if(m_miniMapBoard.show() && m_miniMapBoard.getMiniMapTexture()){
+            buffIconOffX -= to_dround(m_miniMapBoard.size().x);
+        }
+
+        for(const auto id: hero->getSDBuffIDListOpt().value().idList | std::views::reverse){
+            const auto &br = DBCOM_BUFFRECORD(id);
+            fflassert(br);
+
+            if(br.icon.gfxID != SYS_U32NIL){
+                if(auto iconTexPtr = g_progUseDB->retrieve(br.icon.gfxID)){
+                    const auto [texW, texH] = GLDeviceHelper::getTextureSize(iconTexPtr);
+                    drawList->AddImage(
+                        iconTexPtr,
+                        ImVec2(to_f(buffIconOffX), 0.0f),
+                        ImVec2(to_f(buffIconOffX + buffIconDrawW), to_f(buffIconDrawH)),
+                        ImVec2(0, 0),
+                        ImVec2(to_f(texW) / to_f(iconTexPtr.w), to_f(texH) / to_f(iconTexPtr.h)));
+                    buffIconOffX -= buffIconDrawW;
+                }
+            }
+        }
+    }
 }
 
 bool ImMainUI::processEvent(const MirEvent &event)

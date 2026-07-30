@@ -53,6 +53,7 @@ namespace
                          ? (down ? down : hover)
                          : (ImGui::IsItemHovered() ? hover : GLTexID {});
         drawTexture(ImGui::GetWindowDrawList(), shown, pos);
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 

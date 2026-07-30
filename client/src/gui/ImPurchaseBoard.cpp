@@ -49,6 +49,7 @@ namespace
         if(ImGui::IsItemHovered() || ImGui::IsItemActive()){
             drawTexture(ImGui::GetWindowDrawList(), ImGui::IsItemActive() && down ? down : hover, pos);
         }
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 

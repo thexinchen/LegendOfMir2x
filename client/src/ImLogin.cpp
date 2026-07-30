@@ -92,6 +92,7 @@ namespace
         const auto texture = g_progUseDB->retrieve(state);
         const auto shown = texture ? texture : off;
         ImGui::GetWindowDrawList()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 
@@ -108,6 +109,7 @@ namespace
             const auto shown = texture ? texture : hover;
             ImGui::GetWindowDrawList()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
         }
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 
@@ -170,10 +172,9 @@ namespace
         ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), size, pos, color, text);
     }
 
-    void drawRightCenteredText(ImVec2 pos, const char *text, float size, ImU32 color = IM_COL32_WHITE)
+    void drawGameTextRightCentered(ImVec2 pos, const char *text, uint8_t font, uint8_t size, ImU32 color = IM_COL32_WHITE)
     {
-        const auto textSize = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, text);
-        drawText({pos.x - textSize.x, pos.y - textSize.y * 0.5f}, text, size, color);
+        ::drawGameText(ImGui::GetWindowDrawList(), pos, text, font, size, color, GTEXT_ALIGN_RIGHT | GTEXT_ALIGN_VCENTER);
     }
 
     void drawCheck(ImVec2 pos, const std::string &value, bool valid)
@@ -447,9 +448,9 @@ void ProcessCreateAccount::draw() const
     drawFormBackground();
     drawTexture(0X0A000000, {180, 145});
     if(beginScreen()){
-        drawRightCenteredText({299, 230}, "账号", 15);
-        drawRightCenteredText({299, 288}, "密码", 15);
-        drawRightCenteredText({299, 343}, "确认密码", 15);
+        drawGameTextRightCentered({299, 230}, "账号", 1, 15);
+        drawGameTextRightCentered({299, 288}, "密码", 1, 15);
+        drawGameTextRightCentered({299, 343}, "确认密码", 1, 15);
         if(!m_status.active()){
             const bool idEnter = transparentInput("##account-id", m_id.data.data(), m_id.data.size(), {315, 230}, 186, 15, false, 28);
             const bool passwordEnter = transparentInput("##account-password", m_password.data.data(), m_password.data.size(), {315, 288}, 186, 15, true, 28);
@@ -876,10 +877,10 @@ void ProcessChangePassword::draw() const
     drawFormBackground();
     drawTexture(0X0A000001, {180, 145});
     if(beginScreen()){
-        drawRightCenteredText({299, 224}, "账号", 15);
-        drawRightCenteredText({299, 271}, "密码", 15);
-        drawRightCenteredText({299, 318}, "新密码", 15);
-        drawRightCenteredText({299, 365}, "确认密码", 15);
+        drawGameTextRightCentered({299, 224}, "账号", 1, 15);
+        drawGameTextRightCentered({299, 271}, "密码", 1, 15);
+        drawGameTextRightCentered({299, 318}, "新密码", 1, 15);
+        drawGameTextRightCentered({299, 365}, "确认密码", 1, 15);
         if(!m_status.active()){
             const bool idEnter = transparentInput("##change-id", m_id.data.data(), m_id.data.size(), {315, 224}, 186, 15, false, 28);
             const bool oldEnter = transparentInput("##change-old", m_password.data.data(), m_password.data.size(), {315, 271}, 186, 15, true, 28);

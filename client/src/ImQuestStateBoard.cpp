@@ -79,6 +79,7 @@ namespace
         const auto down = g_progUseDB->retrieve(downID);
         const auto shown = ImGui::IsItemActive() && down ? down : off;
         ImGui::GetWindowDrawList()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 
@@ -95,6 +96,7 @@ namespace
             const auto shown = ImGui::IsItemActive() && down ? down : hover;
             ImGui::GetWindowDrawList()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
         }
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 }

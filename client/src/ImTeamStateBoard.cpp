@@ -13,7 +13,6 @@
 #include "uidf.hpp"
 
 extern PNGTexDB *g_progUseDB;
-extern FontexDB *g_fontexDB;
 extern GLDevice *g_glDevice;
 
 namespace
@@ -45,6 +44,7 @@ namespace
                 {0, 0},
                 {1, 1},
                 active ? IM_COL32_WHITE : IM_COL32(128, 128, 128, 255));
+        if(active && clicked){ playButtonClickSound(); }
         return active && clicked;
     }
 
@@ -61,22 +61,8 @@ namespace
             const auto shown = ImGui::IsItemActive() && down ? down : hover;
             ImGui::GetWindowDrawList()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
         }
+        if(clicked){ playButtonClickSound(); }
         return clicked;
-    }
-
-    void drawGameText(ImDrawList *drawList, ImVec2 pos, const std::string &text, ImU32 color = IM_COL32_WHITE)
-    {
-        if(const auto texture = g_fontexDB->retrieve(1, 12, 0, text.c_str()); texture){
-            drawList->AddImage(texture, pos, {pos.x + texture.w, pos.y + texture.h}, {0, 0}, {1, 1}, color);
-        }
-    }
-
-    void drawCenteredGameText(ImDrawList *drawList, ImVec2 center, const char *text, ImU32 color)
-    {
-        if(const auto texture = g_fontexDB->retrieve(1, 12, 0, text); texture){
-            const ImVec2 pos {center.x - texture.w * 0.5f, center.y};
-            drawList->AddImage(texture, pos, {pos.x + texture.w, pos.y + texture.h}, {0, 0}, {1, 1}, color);
-        }
     }
 }
 
@@ -146,11 +132,14 @@ void ImTeamStateBoard::draw() const
                 {to_f(background.w), to_f(background.h - repeatEndY)},
                 {0, to_f(repeatEndY)});
 
-        drawCenteredGameText(
+        drawGameText(
                 drawList,
                 {pos.x + background.w * 0.5f, pos.y + 57.0f},
                 m_showCandidateList ? "申请加入" : "当前队伍",
-                IM_COL32(255, 255, 0, 255));
+                1,
+                12,
+                IM_COL32(255, 255, 0, 255),
+                GTEXT_ALIGN_HCENTER);
 
         overlayButton("##team-enable", 0X00000200, 0X00000201, {pos.x + 24, pos.y + 47});
 
@@ -181,7 +170,7 @@ void ImTeamStateBoard::draw() const
 
             const auto &player = getSDTeamPlayer(itemIndex);
             const auto name = player.name.empty() ? uidf::getUIDString(player.uid) : player.name;
-            drawGameText(drawList, {linePos.x + 5.0f, linePos.y + 2.0f}, str_printf("%d %s", itemIndex, name.c_str()));
+            drawGameText(drawList, {linePos.x + 5.0f, linePos.y + 2.0f}, str_printf("%d %s", itemIndex, name.c_str()), 1, 12, IM_COL32_WHITE);
         }
 
         const int buttonY = uidRegionY + visibleCount * lineH + 14;

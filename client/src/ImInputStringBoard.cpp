@@ -41,19 +41,6 @@ namespace
         return result;
     }
 
-    GLTexID gameTextTexture(const char *text, uint8_t font, uint8_t size)
-    {
-        return text && *text ? g_fontexDB->retrieve(font, size, 0, text) : nullptr;
-    }
-
-    void drawCenteredGameText(ImDrawList *drawList, ImVec2 center, const char *text, uint8_t font, uint8_t size)
-    {
-        if(const auto texture = gameTextTexture(text, font, size); texture){
-            const ImVec2 pos {center.x - texture.w * 0.5f, center.y};
-            drawList->AddImage(texture, pos, {pos.x + texture.w, pos.y + texture.h});
-        }
-    }
-
     bool overlayButton(const char *id, uint32_t offID, uint32_t hoverID, uint32_t downID, ImVec2 pos)
     {
         const auto off = g_progUseDB->retrieve(offID);
@@ -75,6 +62,7 @@ namespace
             }
         }
         ImGui::GetWindowDrawList()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 }
@@ -104,7 +92,7 @@ void ImInputStringBoard::draw() const
         drawList->AddImage(background, pos, {pos.x + background.w, pos.y + background.h});
 
         const auto title = plainLayoutText(m_title);
-        drawCenteredGameText(drawList, {pos.x + background.w * 0.5f, pos.y + 120.0f}, title.c_str(), 1, 12);
+        drawGameText(drawList, {pos.x + background.w * 0.5f, pos.y + 120.0f}, title.c_str(), 1, 12, IM_COL32_WHITE, GTEXT_ALIGN_HCENTER);
 
         const ImVec2 inputPos {pos.x + 22.0f, pos.y + 225.0f};
         constexpr ImVec2 inputSize {315.0f, 23.0f};
@@ -141,7 +129,7 @@ void ImInputStringBoard::draw() const
         else{
             displayText = m_input.data();
         }
-        if(const auto text = gameTextTexture(displayText.c_str(), 1, 14); text){
+        if(const auto text = g_fontexDB->retrieve(1, 14, 0, displayText.c_str()); text){
             drawList->PushClipRect(inputPos, {inputPos.x + inputSize.x, inputPos.y + inputSize.y}, true);
             drawList->AddImage(text, inputPos, {inputPos.x + text.w, inputPos.y + text.h});
             drawList->PopClipRect();

@@ -155,6 +155,7 @@ namespace
         const bool clicked = ImGui::InvisibleButton(id, {to_f(off.w), to_f(off.h)});
         const auto down = g_progUseDB->retrieve(downID);
         drawTexture(list, ImGui::IsItemActive() && down ? down : off, pos);
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 

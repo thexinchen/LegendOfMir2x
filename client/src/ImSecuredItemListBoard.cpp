@@ -13,7 +13,6 @@
 
 extern PNGTexDB *g_itemDB;
 extern PNGTexDB *g_progUseDB;
-extern FontexDB *g_fontexDB;
 
 namespace
 {
@@ -23,21 +22,6 @@ namespace
     constexpr float boxH = 38.0f;
     constexpr float startX = 23.0f;
     constexpr float startY = 41.0f;
-
-    void drawGameText(ImDrawList *drawList, ImVec2 pos, const std::string &text, uint8_t size, ImU32 color)
-    {
-        if(const auto texture = g_fontexDB->retrieve(1, size, 0, text.c_str()); texture){
-            drawList->AddImage(texture, pos, {pos.x + texture.w, pos.y + texture.h}, {0, 0}, {1, 1}, color);
-        }
-    }
-
-    void drawCenteredGameText(ImDrawList *drawList, ImVec2 center, const std::string &text)
-    {
-        if(const auto texture = g_fontexDB->retrieve(1, 12, 0, text.c_str()); texture){
-            const ImVec2 pos {center.x - texture.w * 0.5f, center.y};
-            drawList->AddImage(texture, pos, {pos.x + texture.w, pos.y + texture.h}, {0, 0}, {1, 1}, IM_COL32(255, 255, 0, 255));
-        }
-    }
 
     bool overlayButton(const char *id, uint32_t hoverID, uint32_t downID, ImVec2 pos)
     {
@@ -52,6 +36,7 @@ namespace
             const auto shown = ImGui::IsItemActive() && down ? down : hover;
             ImGui::GetWindowDrawList()->AddImage(shown, pos, {pos.x + shown.w, pos.y + shown.h});
         }
+        if(clicked){ playButtonClickSound(); }
         return clicked;
     }
 }
@@ -92,11 +77,11 @@ void ImSecuredItemListBoard::draw() const
         const auto pages = pageCount();
         if(pages > 0){
             m_page = std::min(m_page, pages - 1);
-            drawCenteredGameText(drawList, {pos.x + 99.0f, pos.y + 18.0f}, str_printf("第%zu/%zu页", m_page + 1, pages));
+            drawGameText(drawList, {pos.x + 99.0f, pos.y + 18.0f}, str_printf("第%zu/%zu页", m_page + 1, pages), 1, 12, IM_COL32(255, 255, 0, 255), GTEXT_ALIGN_HCENTER);
         }
         else{
             m_page = 0;
-            drawCenteredGameText(drawList, {pos.x + 99.0f, pos.y + 18.0f}, "（空）");
+            drawGameText(drawList, {pos.x + 99.0f, pos.y + 18.0f}, "（空）", 1, 12, IM_COL32(255, 255, 0, 255), GTEXT_ALIGN_HCENTER);
         }
 
         if(overlayButton("##secured-left", 0X08000007, 0X08000008, {pos.x + 25, pos.y + 163}) && m_page > 0){
@@ -150,7 +135,7 @@ void ImSecuredItemListBoard::draw() const
                     drawList->AddImage(itemTexture, itemPos, {itemPos.x + itemTexture.w, itemPos.y + itemTexture.h});
                 }
                 if(record.packable() && item.count > 0){
-                    drawGameText(drawList, gridPos, str_ksep(item.count), 10, IM_COL32(255, 255, 0, 255));
+                    drawGameText(drawList, gridPos, str_ksep(item.count), 1, 10, IM_COL32(255, 255, 0, 255));
                 }
                 if(m_selectedItem == index){
                     drawList->AddRectFilled(gridPos, {gridPos.x + boxW, gridPos.y + boxH}, IM_COL32(0, 0, 255, 96));
@@ -167,11 +152,12 @@ void ImSecuredItemListBoard::draw() const
             constexpr ImVec2 tooltipSize {240, 60};
             auto *tooltipDrawList = ImGui::GetForegroundDrawList();
             tooltipDrawList->AddRectFilled(mouse, {mouse.x + tooltipSize.x, mouse.y + tooltipSize.y}, IM_COL32(0, 0, 0, 200));
-            drawGameText(tooltipDrawList, {mouse.x + 20, mouse.y + 12}, to_cstr(record.name), 12, IM_COL32_WHITE);
+            drawGameText(tooltipDrawList, {mouse.x + 20, mouse.y + 12}, to_cstr(record.name), 1, 12, IM_COL32_WHITE);
             drawGameText(
                     tooltipDrawList,
                     {mouse.x + 20, mouse.y + 31},
                     str_haschar(record.description) ? to_cstr(record.description) : "暂无描述",
+                    1,
                     12,
                     IM_COL32_WHITE);
         }
