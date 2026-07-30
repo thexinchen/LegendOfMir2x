@@ -4,6 +4,7 @@
 #include <string>
 
 #include "fflerror.hpp"
+#include "gldevice.hpp"
 #include "gui_font.hpp"
 #include "gui_texture.hpp"
 #include "processrun.hpp"
@@ -13,6 +14,7 @@
 
 extern PNGTexDB *g_progUseDB;
 extern FontexDB *g_fontexDB;
+extern GLDevice *g_glDevice;
 
 namespace
 {
@@ -81,7 +83,11 @@ namespace
 ImTeamStateBoard::ImTeamStateBoard(ProcessRun *processRun)
     : ImBoard("##team-state-board")
     , m_processRun(fflcheck(processRun))
-{}
+{
+    moveTo(
+        to_f(g_glDevice->getRendererWidth()  / 2 - 129),
+        to_f(g_glDevice->getRendererHeight() / 2 - 122));
+}
 
 size_t ImTeamStateBoard::lineCount() const
 {
