@@ -1,9 +1,11 @@
 #include "ImHorseBoard.hpp"
 
 #include "fflerror.hpp"
+#include "gldevice.hpp"
 #include "gui_texture.hpp"
 #include "processrun.hpp"
 
+extern GLDevice *g_glDevice;
 extern PNGTexDB *g_progUseDB;
 
 namespace
@@ -29,7 +31,11 @@ namespace
 ImHorseBoard::ImHorseBoard(ProcessRun *processRun)
     : ImBoard("##horse-board")
     , m_processRun(fflcheck(processRun))
-{}
+{
+    moveTo(
+        static_cast<float>(g_glDevice->getRendererWidth()  / 2 - 128),
+        static_cast<float>(g_glDevice->getRendererHeight() / 2 - 161));
+}
 
 void ImHorseBoard::draw() const
 {
