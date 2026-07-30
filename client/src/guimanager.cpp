@@ -10,13 +10,7 @@ extern GLDevice *g_glDevice;
 extern ClientArgParser *g_clientArgParser;
 
 GUIManager::GUIManager(ProcessRun *argProc)
-    : Widget
-      {{
-          .w = []{ return g_glDevice->getRendererWidth();  },
-          .h = []{ return g_glDevice->getRendererHeight(); },
-      }}
-
-    , m_processRun(argProc)
+    : m_processRun(argProc)
     , m_NPCChatBoard
       {
           argProc,
@@ -105,12 +99,8 @@ GUIManager::GUIManager(ProcessRun *argProc)
     g_imeBoard->dropFocus();
 }
 
-void GUIManager::drawDefault(Widget::ROIMap m) const
+void GUIManager::draw() const
 {
-    if(!m.calibrate(this)){
-        return;
-    }
-
     m_miniMapBoard.draw();
     m_NPCChatBoard.draw();
     m_friendChatBoard.draw();
@@ -129,16 +119,13 @@ void GUIManager::drawDefault(Widget::ROIMap m) const
 
     m_purchaseBoard.draw();
 
-    Widget::drawDefault(m);
-
     if(g_imeBoard->show()){
         g_imeBoard->draw();
     }
 }
 
-void GUIManager::updateDefault(double fUpdateTime)
+void GUIManager::update(double fUpdateTime)
 {
-    Widget::updateDefault(fUpdateTime);
     m_purchaseBoard.update(fUpdateTime);
     m_mainUI.update(fUpdateTime);
     m_acutionBoard.update(fUpdateTime);
@@ -157,12 +144,8 @@ void GUIManager::updateDefault(double fUpdateTime)
     g_imeBoard->update(fUpdateTime);
 }
 
-bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::ROIMap m)
+bool GUIManager::processEvent(const MirEvent &event, bool valid)
 {
-    if(!m.calibrate(this)){
-        return false;
-    }
-
     switch(event.type){
         case MIR_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
         case MIR_EVENT_WINDOW_RESIZED:
@@ -180,8 +163,6 @@ bool GUIManager::processEventDefault(const MirEvent &event, bool valid, Widget::
     if(g_imeBoard->show()){
         tookEvent |= valid && g_imeBoard->processEvent(event);
     }
-
-    tookEvent |= Widget::processEventDefault(event, valid && !tookEvent, m);
 
     tookEvent |= valid && !tookEvent && m_purchaseBoard.processEvent(event);
     tookEvent |= valid && !tookEvent && m_mainUI.processEvent(event);
@@ -244,8 +225,10 @@ void GUIManager::flipBoard(std::string_view name)
     throw fflvalue(name);
 }
 
-void GUIManager::afterResizeDefault()
+void GUIManager::afterResize()
 {
-    m_runtimeConfigBoard.updateWindowSize({w(), h()}, true);
-
+    m_runtimeConfigBoard.updateWindowSize({
+        to_f(g_glDevice->getRendererWidth()),
+        to_f(g_glDevice->getRendererHeight()),
+    }, true);
 }

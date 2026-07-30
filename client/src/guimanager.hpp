@@ -1,5 +1,4 @@
 #pragma once
-#include "gui_core.hpp"
 #include "ImMainUI.hpp"
 #include "ImMiniMapBoard.hpp"
 #include "ImHorseBoard.hpp"
@@ -18,7 +17,7 @@
 #include "ImSecuredItemListBoard.hpp"
 
 class ProcessRun;
-class GUIManager: public Widget
+class GUIManager
 {
     private:
         ProcessRun *m_processRun;
@@ -110,17 +109,17 @@ class GUIManager: public Widget
         }
 
     public:
-        void updateDefault(double) override;
+        void update(double);
 
     public:
-        void drawDefault(Widget::ROIMap) const override;
+        void draw() const;
 
     public:
-        bool processEventDefault(const MirEvent &, bool, Widget::ROIMap) override;
+        bool processEvent(const MirEvent &, bool = true);
 
     public:
         void flipBoard(std::string_view);
 
     private:
-        void afterResizeDefault() override;
+        void afterResize();
 };

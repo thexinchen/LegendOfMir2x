@@ -2121,119 +2121,6 @@ void XMLTypeset::join(const XMLTypeset &input, bool append)
     buildTypeset(0, startLine);
 }
 
-void XMLTypeset::draw(Widget::ROIMap m) const
-{
-    int dstX = m.x;
-    int dstY = m.y;
-    int srcX = m.ro->x;
-    int srcY = m.ro->y;
-    int srcW = m.ro->w;
-    int srcH = m.ro->h;
-
-    if(!mathf::rectangleOverlap<int>(srcX, srcY, srcW, srcH, px(), py(), pw(), ph())){
-        return;
-    }
-
-    const int dstDX = dstX - srcX;
-    const int dstDY = dstY - srcY;
-
-    uint32_t fgColorVal = 0;
-    uint32_t bgColorVal = 0;
-
-    int lastLeaf = -1;
-    for(int line = 0; line < lineCount(); ++line){
-        for(int token = 0; token < lineTokenCount(line); ++token){
-            const auto tokenPtr = getToken(token, line);
-            const auto &leaf = m_paragraph->leaf(tokenPtr->leaf);
-            const auto &leafInfo = m_leafInfoList.at(tokenPtr->leaf);
-
-            if(lastLeaf != tokenPtr->leaf){
-                fgColorVal  = leaf.  color().value_or(  color());
-                bgColorVal  = leaf.bgColor().value_or(bgColor());
-                lastLeaf    = tokenPtr->leaf;
-            }
-
-            // draw bgColor
-            // background can be bigger than tokenbox by W1/W2
-
-            if(colorf::A(bgColorVal)){
-                int bgBoxX = tokenPtr->box.state.x - tokenPtr->box.state.w1;
-                int bgBoxY = tokenPtr->box.state.y + tokenPtr->box.state.h1 - leafInfo.maxH1;
-                int bgBoxW = tokenPtr->box.info.w + tokenPtr->box.state.w1 + tokenPtr->box.state.w2;
-                int bgBoxH = leafInfo.maxH1 + leafInfo.maxH2;
-
-                if(mathf::rectangleOverlapRegion(srcX, srcY, srcW, srcH, bgBoxX, bgBoxY, bgBoxW, bgBoxH)){
-                    g_glDevice->fillRectangle(bgColorVal, bgBoxX + dstDX, bgBoxY + dstDY, bgBoxW, bgBoxH);
-                }
-            }
-
-            int boxX = tokenPtr->box.state.x;
-            int boxY = tokenPtr->box.state.y;
-            int boxW = tokenPtr->box.info.w;
-            int boxH = tokenPtr->box.info.h;
-
-            if(!mathf::rectangleOverlapRegion(srcX, srcY, srcW, srcH, boxX, boxY, boxW, boxH)){
-                continue;
-            }
-
-            const int drawDstX = boxX + dstDX;
-            const int drawDstY = boxY + dstDY;
-
-            const int dx = boxX - tokenPtr->box.state.x;
-            const int dy = boxY - tokenPtr->box.state.y;
-
-            switch(leaf.type()){
-                case LEAF_UTF8STR:
-                    {
-                        if(auto texPtr = g_fontexDB->retrieve(tokenPtr->utf8char.key)){
-                            GLDeviceHelper::EnableTextureModColor enableMod(texPtr, fgColorVal);
-                            g_glDevice->drawTexture(texPtr, drawDstX, drawDstY, dx, dy, boxW, boxH);
-                        }
-                        else{
-                            g_glDevice->drawRectangle(colorf::compColor(bgColorVal), drawDstX, drawDstY, boxW, boxH);
-                        }
-
-                        if(g_clientArgParser->drawTokenFrame){
-                            g_glDevice->drawRectangle(colorf::MAGENTA + colorf::A_SHF(255), drawDstX, drawDstY, boxW, boxH);
-                        }
-                        break;
-                    }
-                case LEAF_IMAGE:
-                    {
-                        break;
-                    }
-                case LEAF_EMOJI:
-                    {
-                        const auto emojiKey = [tokenPtr]() -> uint32_t
-                        {
-                            if(tokenPtr->emoji.frameCount && tokenPtr->emoji.fps){
-                                return (tokenPtr->emoji.key & 0XFFFFFF00) + tokenPtr->emoji.frame % tokenPtr->emoji.frameCount;
-                            }
-                            return tokenPtr->emoji.key & 0XFFFFFF00;
-                        }();
-
-                        int xOnTex = 0;
-                        int yOnTex = 0;
-
-                        if(auto texPtr = g_emojiDB->retrieve(emojiKey, &xOnTex, &yOnTex, 0, 0, 0, 0, 0)){
-                            GLDeviceHelper::EnableTextureModColor enableMod(texPtr, Widget::evalU32(m_imageMaskColor, nullptr, this));
-                            g_glDevice->drawTexture(texPtr, drawDstX, drawDstY, xOnTex + dx, yOnTex + dy, boxW, boxH);
-                        }
-                        else{
-                            g_glDevice->drawRectangle(colorf::compColor(bgColorVal), drawDstX, drawDstY, boxW, boxH);
-                        }
-                        break;
-                    }
-            }
-
-        }
-    }
-
-    if(g_clientArgParser->drawBoardFrame){
-        g_glDevice->drawRectangle(colorf::YELLOW + colorf::A_SHF(255), dstX, dstY, srcW, srcH);
-    }
-}
-
 void XMLTypeset::drawImGui(ImDrawList *drawList, const int dstX, const int dstY) const
 {
     fflassert(drawList);
@@ -2300,7 +2187,7 @@ void XMLTypeset::drawImGui(ImDrawList *drawList, const int dstX, const int dstY)
                                 {to_f(dstX + boxX + boxW), to_f(dstY + boxY + boxH)},
                                 {to_f(textureX) / texture.w, to_f(textureY) / texture.h},
                                 {to_f(textureX + boxW) / texture.w, to_f(textureY + boxH) / texture.h},
-                                Widget::evalU32(m_imageMaskColor, nullptr, this));
+                                m_imageMaskColor);
                         }
                         break;
                     }

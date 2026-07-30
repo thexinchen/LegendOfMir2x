@@ -352,7 +352,6 @@ class XMLParagraph
 #include "lalign.hpp"
 #include "colorf.hpp"
 #include "bevent.hpp"
-#include "gui_core.hpp" // Widget::VarXXX
 
 struct ImDrawList;
 
@@ -403,9 +402,9 @@ class XMLTypeset // means XMLParagraph typeset
         uint8_t m_fontSize;
         uint8_t m_fontStyle;
 
-        Widget::VarU32 m_fontColor;
-        Widget::VarU32 m_fontBGColor;
-        Widget::VarU32 m_imageMaskColor;
+        uint32_t m_fontColor;
+        uint32_t m_fontBGColor;
+        uint32_t m_imageMaskColor;
 
     private:
         int m_px = 0;
@@ -434,9 +433,9 @@ class XMLTypeset // means XMLParagraph typeset
                 uint8_t defaultFontSize  = 8,
                 uint8_t defaultFontStyle = 0,
 
-                Widget::VarU32 defaultFontColor      = colorf::WHITE_A255,
-                Widget::VarU32 defaultFontBGColor    = 0U,
-                Widget::VarU32 defaultImageMaskColor = colorf::WHITE_A255,
+                uint32_t defaultFontColor      = colorf::WHITE_A255,
+                uint32_t defaultFontBGColor    = 0U,
+                uint32_t defaultImageMaskColor = colorf::WHITE_A255,
 
                 int lineSpace = 0,
                 int wordSpace = 0)
@@ -663,7 +662,6 @@ class XMLTypeset // means XMLParagraph typeset
         }
 
     public:
-        void draw(Widget::ROIMap) const;
         void drawImGui(ImDrawList *, int, int) const;
 
     public:
@@ -682,17 +680,17 @@ class XMLTypeset // means XMLParagraph typeset
             m_fontStyle = fontStyle;
         }
 
-        void setFontColor(Widget::VarU32 fontColor)
+        void setFontColor(uint32_t fontColor)
         {
             m_fontColor = std::move(fontColor);
         }
 
-        void setFontBGColor(Widget::VarU32 fontBGColor)
+        void setFontBGColor(uint32_t fontBGColor)
         {
             m_fontBGColor = std::move(fontBGColor);
         }
 
-        void setImageMaskColor(Widget::VarU32 imageMaskColor)
+        void setImageMaskColor(uint32_t imageMaskColor)
         {
             m_imageMaskColor = std::move(imageMaskColor);
         }
@@ -854,12 +852,12 @@ class XMLTypeset // means XMLParagraph typeset
     public:
         uint32_t color() const
         {
-            return Widget::evalU32(m_fontColor, nullptr, this);
+            return m_fontColor;
         }
 
         uint32_t bgColor() const
         {
-            return Widget::evalU32(m_fontBGColor, nullptr, this);
+            return m_fontBGColor;
         }
 
     public:

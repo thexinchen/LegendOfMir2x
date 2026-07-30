@@ -514,7 +514,7 @@ void ProcessRun::draw() const
         g_glDevice->fillRectangle(colorf::RGBA(128, 0, 0, 64), 0, 0, winW, winH);
     }
 
-    m_guiManager.drawRoot({});
+    m_guiManager.draw();
     if(const auto selectedItemID = getMyHero()->getInvPack().getGrabbedItem().itemID){
         if(const auto &ir = DBCOM_ITEMRECORD(selectedItemID)){
             if(auto texPtr = g_itemDB->retrieve(ir.pkgGfxID | 0X01000000)){
@@ -564,8 +564,7 @@ void ProcessRun::draw() const
 
 void ProcessRun::processEvent(const MirEvent &event)
 {
-    const bool tookEvent = m_guiManager.processEventRoot(event, true, {});
-    m_guiManager.purge();
+    const bool tookEvent = m_guiManager.processEvent(event);
 
     if(tookEvent){
         return;

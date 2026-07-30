@@ -8,7 +8,6 @@
 #include "ime.hpp"
 #include "protocoldef.hpp"
 
-class Widget;
 class IMEBoard final: public ImBoard
 {
     private:
@@ -18,7 +17,6 @@ class IMEBoard final: public ImBoard
         size_t m_startIndex = 0;
         std::vector<std::string> m_candidateList;
 
-        Widget *m_inputWidget = nullptr;
         std::function<void(std::string)> m_onCommit;
 
         mutable bool m_dragging = false;
@@ -40,7 +38,7 @@ class IMEBoard final: public ImBoard
 
     public:
         bool active() const noexcept { return m_active; }
-        void gainFocus(std::string, std::string, Widget *, std::function<void(std::string)>);
+        void gainFocus(std::string, std::string, std::function<void(std::string)>);
         void dropFocus();
 
     private:

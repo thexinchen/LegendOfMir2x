@@ -5,7 +5,6 @@
 
 #include "colorf.hpp"
 #include "gldevice.hpp"
-#include "gui_core.hpp"
 #include "gui_font.hpp"
 #include "gui_texture.hpp"
 #include "strf.hpp"
@@ -292,16 +291,12 @@ bool IMEBoard::processEvent(const MirEvent &event) const
     }
 }
 
-void IMEBoard::gainFocus(std::string prefix, std::string input, Widget *inputWidget, std::function<void(std::string)> onCommit)
+void IMEBoard::gainFocus(std::string prefix, std::string input, std::function<void(std::string)> onCommit)
 {
     m_candidateList.clear();
     m_startIndex = 0;
     m_ime.assign(std::move(prefix), std::move(input));
-    m_inputWidget = inputWidget;
     m_onCommit = std::move(onCommit);
-    if(m_inputWidget){
-        m_inputWidget->setFocus(false);
-    }
     setShow(true);
 }
 
@@ -310,10 +305,6 @@ void IMEBoard::dropFocus()
     m_candidateList.clear();
     m_startIndex = 0;
     m_ime.clear();
-    if(m_inputWidget){
-        m_inputWidget->setFocus(true);
-    }
-    m_inputWidget = nullptr;
     m_onCommit = nullptr;
     setShow(false);
 }
