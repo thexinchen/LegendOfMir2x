@@ -170,10 +170,10 @@ namespace
         ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), size, pos, color, text);
     }
 
-    void drawCenteredText(ImVec2 pos, const char *text, float size, ImU32 color = IM_COL32_WHITE)
+    void drawRightCenteredText(ImVec2 pos, const char *text, float size, ImU32 color = IM_COL32_WHITE)
     {
-        const float height = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, text).y;
-        drawText({pos.x, pos.y - height * 0.5f}, text, size, color);
+        const auto textSize = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, text);
+        drawText({pos.x - textSize.x, pos.y - textSize.y * 0.5f}, text, size, color);
     }
 
     void drawCheck(ImVec2 pos, const std::string &value, bool valid)
@@ -452,9 +452,9 @@ void ProcessCreateAccount::draw() const
             const bool idEnter = transparentInput("##account-id", m_id.data.data(), m_id.data.size(), {315, 230}, 186, 15, false, 28);
             const bool passwordEnter = transparentInput("##account-password", m_password.data.data(), m_password.data.size(), {315, 288}, 186, 15, true, 28);
             const bool confirmEnter = transparentInput("##account-confirm", m_confirm.data.data(), m_confirm.data.size(), {315, 343}, 186, 15, true, 28);
-            drawCenteredText({258, 230}, "账号", 15);
-            drawCenteredText({258, 288}, "密码", 15);
-            drawCenteredText({228, 343}, "确认密码", 15);
+            drawRightCenteredText({299, 230}, "账号", 15);
+            drawRightCenteredText({299, 288}, "密码", 15);
+            drawRightCenteredText({299, 343}, "确认密码", 15);
             drawCheck({511, 230}, m_id.str(), idstrf::isEmail(m_id.data.data()));
             drawCheck({511, 288}, m_password.str(), idstrf::isPassword(m_password.data.data()));
             drawCheck({511, 343}, m_confirm.str(), idstrf::isPassword(m_confirm.data.data()) && m_password.str() == m_confirm.str());
@@ -882,10 +882,10 @@ void ProcessChangePassword::draw() const
             const bool oldEnter = transparentInput("##change-old", m_password.data.data(), m_password.data.size(), {315, 271}, 186, 15, true, 28);
             const bool newEnter = transparentInput("##change-new", m_newPassword.data.data(), m_newPassword.data.size(), {315, 318}, 186, 15, true, 28);
             const bool confirmEnter = transparentInput("##change-confirm", m_confirm.data.data(), m_confirm.data.size(), {315, 365}, 186, 15, true, 28);
-            drawCenteredText({258, 224}, "账号", 15);
-            drawCenteredText({258, 271}, "密码", 15);
-            drawCenteredText({243, 318}, "新密码", 15);
-            drawCenteredText({228, 365}, "确认密码", 15);
+            drawRightCenteredText({299, 224}, "账号", 15);
+            drawRightCenteredText({299, 271}, "密码", 15);
+            drawRightCenteredText({299, 318}, "新密码", 15);
+            drawRightCenteredText({299, 365}, "确认密码", 15);
             drawCheck({511, 224}, m_id.str(), idstrf::isEmail(m_id.data.data()));
             drawCheck({511, 271}, m_password.str(), idstrf::isPassword(m_password.data.data()));
             drawCheck({511, 318}, m_newPassword.str(), idstrf::isPassword(m_newPassword.data.data()));
