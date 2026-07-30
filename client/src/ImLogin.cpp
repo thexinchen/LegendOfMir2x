@@ -206,7 +206,6 @@ namespace
             return;
         }
         auto *drawList = ImGui::GetForegroundDrawList();
-        drawList->AddRectFilled({0, 75}, {800, 525}, IM_COL32(0, 0, 255, 32));
         const auto size = ImGui::CalcTextSize(status.text().c_str());
         drawList->AddText(
             {(800.0f - size.x) * 0.5f, 190.0f},
