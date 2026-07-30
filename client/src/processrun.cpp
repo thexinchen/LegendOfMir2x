@@ -27,7 +27,7 @@
 #include "modalstringboard.hpp"
 #include "fflerror.hpp"
 #include "totype.hpp"
-#include "gui/skillboard.hpp"
+#include "gui/ImSkillBoard.hpp"
 #include "lochashtable.hpp"
 
 extern Log *g_mir2xLog;

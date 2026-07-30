@@ -12,7 +12,6 @@
 #include "gui_texture.hpp"
 #include "magicrecord.hpp"
 #include "processrun.hpp"
-#include "skillboard.hpp"
 #include "strf.hpp"
 #include "totype.hpp"
 
@@ -291,4 +290,56 @@ SkillBoardConfig &ImSkillBoard::getConfig()
 const SkillBoardConfig &ImSkillBoard::getConfig() const
 {
     return m_impl->config;
+}
+
+std::optional<char> SkillBoardConfig::getMagicKey(uint32_t magicID) const
+{
+    if(auto p = m_learnedMagicList.find(magicID); p != m_learnedMagicList.end()){
+        return p->second.key;
+    }
+    return {};
+}
+
+std::optional<int> SkillBoardConfig::getMagicLevel(uint32_t magicID) const
+{
+    if(auto p = m_learnedMagicList.find(magicID); p != m_learnedMagicList.end()){
+        return p->second.level;
+    }
+    return {};
+}
+
+void SkillBoardConfig::setMagicLevel(uint32_t magicID, int level)
+{
+    fflassert(DBCOM_MAGICRECORD(magicID));
+    fflassert(SkillBoardData::getMagicIconGfx(magicID));
+
+    fflassert(level >= 1);
+    fflassert(level <= 3);
+
+    if(auto p = m_learnedMagicList.find(magicID); p != m_learnedMagicList.end()){
+        fflassert(level >= p->second.level);
+        p->second.level = level;
+    }
+    else{
+        m_learnedMagicList[magicID].level = level;
+    }
+}
+
+void SkillBoardConfig::setMagicKey(uint32_t magicID, std::optional<char> key)
+{
+    fflassert(DBCOM_MAGICRECORD(magicID));
+    fflassert(SkillBoardData::getMagicIconGfx(magicID));
+
+    fflassert(hasMagicID(magicID));
+    fflassert(!SkillBoardData::getMagicIconGfx(magicID)->passive);
+    fflassert(!key.has_value() || (key.value() >= 'a' && key.value() <= 'z') || (key.value() >= '0' && key.value() <= '9'));
+
+    m_learnedMagicList[magicID].key = key;
+    if(key.has_value()){
+        for(auto &p: m_learnedMagicList){
+            if((p.first != magicID) && p.second.key == key){
+                p.second.key.reset();
+            }
+        }
+    }
 }
