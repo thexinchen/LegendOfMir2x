@@ -876,14 +876,14 @@ void ProcessChangePassword::draw() const
     drawTexture(0X0A000001, {180, 145});
     if(beginScreen()){
         if(!m_status.active()){
-            const bool idEnter = transparentInput("##change-id", m_id.data.data(), m_id.data.size(), {315, 224}, 186, 15);
-            const bool oldEnter = transparentInput("##change-old", m_password.data.data(), m_password.data.size(), {315, 271}, 186, 15, true);
-            const bool newEnter = transparentInput("##change-new", m_newPassword.data.data(), m_newPassword.data.size(), {315, 318}, 186, 15, true);
-            const bool confirmEnter = transparentInput("##change-confirm", m_confirm.data.data(), m_confirm.data.size(), {315, 365}, 186, 15, true);
-            drawText({258, 224}, "账号", 15);
-            drawText({258, 271}, "密码", 15);
-            drawText({243, 318}, "新密码", 15);
-            drawText({228, 365}, "确认密码", 15);
+            const bool idEnter = transparentInput("##change-id", m_id.data.data(), m_id.data.size(), {315, 224}, 186, 15, false, 28);
+            const bool oldEnter = transparentInput("##change-old", m_password.data.data(), m_password.data.size(), {315, 271}, 186, 15, true, 28);
+            const bool newEnter = transparentInput("##change-new", m_newPassword.data.data(), m_newPassword.data.size(), {315, 318}, 186, 15, true, 28);
+            const bool confirmEnter = transparentInput("##change-confirm", m_confirm.data.data(), m_confirm.data.size(), {315, 365}, 186, 15, true, 28);
+            drawCenteredText({258, 224}, "账号", 15);
+            drawCenteredText({258, 271}, "密码", 15);
+            drawCenteredText({243, 318}, "新密码", 15);
+            drawCenteredText({228, 365}, "确认密码", 15);
             drawCheck({511, 224}, m_id.str(), idstrf::isEmail(m_id.data.data()));
             drawCheck({511, 271}, m_password.str(), idstrf::isPassword(m_password.data.data()));
             drawCheck({511, 318}, m_newPassword.str(), idstrf::isPassword(m_newPassword.data.data()));
