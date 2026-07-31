@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3]
+[gd_scene load_steps=37 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/control_panel.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000012.png" id="2_base"]
@@ -7,8 +7,11 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000019.png" id="5_mana"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000022.png" id="6_title"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000001e.png" id="7_close"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000001f.png" id="7b_close_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000020.png" id="8_minimize"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000021.png" id="8b_minimize_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0b000000.png" id="9_quick"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0b000001.png" id="9b_quick_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000030.png" id="10_inventory"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000033.png" id="11_state"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000035.png" id="12_skill"]
@@ -16,13 +19,18 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000038.png" id="14_team"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003a.png" id="15_quest"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003c.png" id="16_horse"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003d.png" id="16b_horse_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003e.png" id="17_config"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003f.png" id="17b_config_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000040.png" id="18_friend"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000041.png" id="18b_friend_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000042.png" id="19_exchange"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000043.png" id="20_minimap"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000044.png" id="21_magic"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000046.png" id="22_ac"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000048.png" id="22b_ma"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000047.png" id="23_dc"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000049.png" id="23b_mc"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000028.png" id="24_expand"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000031.png" id="25_inventory_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000032.png" id="26_state_down"]
@@ -88,9 +96,9 @@ texture = ExtResource("2_base")
 [node name="Health" type="TextureProgressBar" parent="Body"]
 layout_mode = 0
 offset_left = 33.0
-offset_top = 38.0
+offset_top = 26.0
 offset_right = 69.0
-offset_bottom = 126.0
+offset_bottom = 114.0
 mouse_filter = 2
 value = 82.0
 fill_mode = 3
@@ -99,9 +107,9 @@ texture_progress = ExtResource("4_health")
 [node name="Mana" type="TextureProgressBar" parent="Body"]
 layout_mode = 0
 offset_left = 73.0
-offset_top = 38.0
+offset_top = 26.0
 offset_right = 109.0
-offset_bottom = 126.0
+offset_bottom = 114.0
 mouse_filter = 2
 value = 67.0
 fill_mode = 3
@@ -112,10 +120,10 @@ unique_name_in_owner = true
 layout_mode = 0
 offset_left = 185.0
 offset_top = 34.0
-offset_right = 612.0
+offset_right = 529.0
 offset_bottom = 118.0
-theme_override_colors/font_color = Color(0.84, 0.85, 0.65, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 15
 text = ""
 vertical_alignment = 2
 
@@ -124,12 +132,11 @@ unique_name_in_owner = true
 layout_mode = 0
 offset_left = 185.0
 offset_top = 124.0
-offset_right = 614.0
+offset_right = 529.0
 offset_bottom = 148.0
-theme_override_colors/font_color = Color(0.9, 0.9, 0.76, 1)
-theme_override_colors/caret_color = Color(1, 1, 0.5, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/caret_color = Color(1, 1, 1, 1)
 theme_override_styles/normal = null
-placeholder_text = "输入聊天内容或命令"
 flat = true
 
 [node name="QuickButton" type="TextureButton" parent="Body"]
@@ -139,6 +146,7 @@ offset_top = 21.0
 offset_right = 172.0
 offset_bottom = 37.0
 texture_normal = ExtResource("9_quick")
+texture_pressed = ExtResource("9b_quick_down")
 ignore_texture_size = true
 tooltip_text = "快捷栏"
 
@@ -149,6 +157,7 @@ offset_top = 91.0
 offset_right = 32.0
 offset_bottom = 115.0
 texture_normal = ExtResource("7_close")
+texture_pressed = ExtResource("7b_close_down")
 ignore_texture_size = true
 tooltip_text = "退出游戏"
 
@@ -234,6 +243,7 @@ offset_top = 61.0
 offset_right = 76.0
 offset_bottom = 89.0
 texture_normal = ExtResource("16_horse")
+texture_pressed = ExtResource("16b_horse_down")
 ignore_texture_size = true
 tooltip_text = "坐骑"
 
@@ -244,6 +254,7 @@ offset_top = 72.0
 offset_right = 112.0
 offset_bottom = 92.0
 texture_normal = ExtResource("17_config")
+texture_pressed = ExtResource("17b_config_down")
 ignore_texture_size = true
 tooltip_text = "设置"
 
@@ -254,6 +265,7 @@ offset_top = 61.0
 offset_right = 144.0
 offset_bottom = 89.0
 texture_normal = ExtResource("18_friend")
+texture_pressed = ExtResource("18b_friend_down")
 ignore_texture_size = true
 tooltip_text = "好友"
 
@@ -287,7 +299,18 @@ texture_normal = ExtResource("21_magic")
 ignore_texture_size = true
 tooltip_text = "技能快捷键"
 
+[node name="ACButton" type="Button" parent="Body"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 635.0
+offset_top = 124.0
+offset_right = 717.0
+offset_bottom = 148.0
+mouse_filter = 1
+flat = true
+
 [node name="ACIcon" type="TextureRect" parent="Body"]
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 635.0
 offset_top = 124.0
@@ -297,32 +320,47 @@ mouse_filter = 2
 texture = ExtResource("22_ac")
 
 [node name="ACValue" type="Label" parent="Body"]
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 667.0
 offset_top = 121.0
 offset_right = 713.0
 offset_bottom = 146.0
-theme_override_colors/font_color = Color(1, 0.86, 0.25, 1)
-theme_override_font_sizes/font_size = 12
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_font_sizes/font_size = 15
 text = "6-12"
 
-[node name="DCIcon" type="TextureRect" parent="Body"]
+[node name="DCButton" type="Button" parent="Body"]
+unique_name_in_owner = true
 layout_mode = 0
-offset_left = 719.0
+offset_left = 718.0
 offset_top = 124.0
-offset_right = 748.0
+offset_right = 800.0
+offset_bottom = 148.0
+mouse_filter = 1
+flat = true
+
+[node name="DCIcon" type="TextureRect" parent="Body"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 718.0
+offset_top = 124.0
+offset_right = 747.0
 offset_bottom = 142.0
 mouse_filter = 2
 texture = ExtResource("23_dc")
 
 [node name="DCValue" type="Label" parent="Body"]
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 751.0
 offset_top = 121.0
 offset_right = 798.0
 offset_bottom = 146.0
-theme_override_colors/font_color = Color(1, 0.86, 0.25, 1)
-theme_override_font_sizes/font_size = 12
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_font_sizes/font_size = 15
 text = "3-8"
 
 [node name="ExpandButton" type="TextureButton" parent="Body"]
@@ -362,6 +400,7 @@ offset_top = 91.0
 offset_right = 133.0
 offset_bottom = 115.0
 texture_normal = ExtResource("8_minimize")
+texture_pressed = ExtResource("8b_minimize_down")
 ignore_texture_size = true
 tooltip_text = "收起控制面板"
 
@@ -369,5 +408,7 @@ tooltip_text = "收起控制面板"
 [connection signal="pressed" from="Body/ExitButton" to="." method="_on_exit_pressed"]
 [connection signal="pressed" from="Body/MiniMap" to="." method="_on_minimap_pressed"]
 [connection signal="pressed" from="Body/ExpandButton" to="." method="_on_expand_pressed"]
+[connection signal="pressed" from="Body/ACButton" to="." method="_on_ac_pressed"]
+[connection signal="pressed" from="Body/DCButton" to="." method="_on_dc_pressed"]
 [connection signal="text_submitted" from="Body/Command" to="." method="_on_command_submitted"]
 [connection signal="pressed" from="MinimizeButton" to="." method="_on_minimize_pressed"]

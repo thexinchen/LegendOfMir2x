@@ -17,18 +17,47 @@ func _ready() -> void:
 
 
 func _on_submit_pressed() -> void:
+	_submit()
+
+
+func _on_account_text_submitted(_text: String) -> void:
+	_submit()
+
+
+func _on_old_password_text_submitted(_text: String) -> void:
+	_submit()
+
+
+func _on_new_password_text_submitted(_text: String) -> void:
+	_submit()
+
+
+func _on_confirm_text_submitted(_text: String) -> void:
+	_submit()
+
+
+func _submit() -> void:
 	if not account_input.text.contains("@"):
 		_show_status("无效账号")
-	elif old_password_input.text.is_empty():
+	elif not _is_valid_password(old_password_input.text):
 		_show_status("无效密码")
+		old_password_input.clear()
+		new_password_input.clear()
+		confirm_input.clear()
 	elif not _is_valid_password(new_password_input.text):
 		_show_status("无效新密码")
+		new_password_input.clear()
+		confirm_input.clear()
 	elif new_password_input.text != confirm_input.text:
 		_show_status("新密码两次输入不一致")
+		new_password_input.clear()
+		confirm_input.clear()
 	elif old_password_input.text == new_password_input.text:
 		_show_status("新旧密码相同")
+		new_password_input.clear()
+		confirm_input.clear()
 	else:
-		_show_status("正在提交")
+		_show_status("提交中")
 		var error := NetworkClient.change_password(
 			account_input.text,
 			old_password_input.text,

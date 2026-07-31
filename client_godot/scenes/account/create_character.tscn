@@ -203,5 +203,6 @@ vertical_alignment = 1
 [connection signal="pressed" from="WarriorButton" to="." method="_on_warrior_pressed"]
 [connection signal="pressed" from="WizardButton" to="." method="_on_wizard_pressed"]
 [connection signal="pressed" from="TaoistButton" to="." method="_on_taoist_pressed"]
+[connection signal="text_submitted" from="NameInput" to="." method="_on_submit_pressed" unbinds=1]
 [connection signal="pressed" from="SubmitButton" to="." method="_on_submit_pressed"]
 [connection signal="pressed" from="ExitButton" to="." method="_on_exit_pressed"]

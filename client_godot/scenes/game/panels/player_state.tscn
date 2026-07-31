@@ -34,8 +34,8 @@ offset_left = 36.0
 offset_top = 26.0
 offset_right = 292.0
 offset_bottom = 50.0
-theme_override_colors/font_color = Color(1, 0.83, 0.3, 1)
-theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 12
 text = ""
 horizontal_alignment = 1
 
@@ -44,8 +44,8 @@ offset_left = 244.0
 offset_top = 89.0
 offset_right = 316.0
 offset_bottom = 306.0
-theme_override_colors/font_color = Color(0.95, 0.86, 0.55, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 12
 text = ""
 horizontal_alignment = 1
 
@@ -55,7 +55,7 @@ offset_top = 311.0
 offset_right = 312.0
 offset_bottom = 363.0
 theme_override_colors/font_color = Color(0.86, 0.8, 0.61, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 15
 text = ""
 
 [node name="Elements" type="Control" parent="."]

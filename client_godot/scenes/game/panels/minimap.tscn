@@ -19,7 +19,7 @@ script = ExtResource("1")
 offset_right = 280.0
 offset_bottom = 230.0
 mouse_filter = 2
-color = Color(0, 0, 0, 0.86)
+color = Color(0, 0, 0, 1)
 
 [node name="MapTexture" type="TextureRect" parent="."]
 offset_left = 10.0
@@ -84,7 +84,7 @@ offset_bottom = 224.0
 texture_hover = ExtResource("7")
 ignore_texture_size = true
 
-[node name="CloseButton" type="TextureButton" parent="."]
+[node name="ConfigButton" type="TextureButton" parent="."]
 offset_left = 249.0
 offset_top = 195.0
 offset_right = 275.0

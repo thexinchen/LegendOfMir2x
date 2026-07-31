@@ -16,14 +16,34 @@ func _ready() -> void:
 
 
 func _on_submit_pressed() -> void:
+	_submit()
+
+
+func _on_account_text_submitted(_text: String) -> void:
+	_submit()
+
+
+func _on_password_text_submitted(_text: String) -> void:
+	_submit()
+
+
+func _on_confirm_text_submitted(_text: String) -> void:
+	_submit()
+
+
+func _submit() -> void:
 	if not account_input.text.contains("@"):
 		_show_status("无效账号")
 	elif not _is_valid_password(password_input.text):
 		_show_status("无效密码")
+		password_input.clear()
+		confirm_input.clear()
 	elif password_input.text != confirm_input.text:
 		_show_status("两次密码输入不一致")
+		password_input.clear()
+		confirm_input.clear()
 	else:
-		_show_status("正在提交")
+		_show_status("提交中")
 		var error := NetworkClient.create_account(account_input.text, password_input.text)
 		if error != OK:
 			_show_status("服务器尚未连接")

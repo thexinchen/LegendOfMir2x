@@ -25,7 +25,7 @@ patch_margin_bottom = 20
 offset_left = 30.0
 offset_top = 30.0
 offset_right = 110.0
-offset_bottom = 450.0
+offset_bottom = 420.0
 
 [node name="Menu" type="VBoxContainer" parent="."]
 offset_left = 48.0
@@ -36,27 +36,27 @@ theme_override_constants/separation = 4
 
 [node name="System" type="Button" parent="Menu"]
 layout_mode = 2
-text = "系统"
+text = "系 统"
 flat = true
 
 [node name="Social" type="Button" parent="Menu"]
 layout_mode = 2
-text = "社交"
+text = "社 交"
 flat = true
 
 [node name="Network" type="Button" parent="Menu"]
 layout_mode = 2
-text = "网络"
+text = "网 络"
 flat = true
 
 [node name="Game" type="Button" parent="Menu"]
 layout_mode = 2
-text = "游戏"
+text = "游 戏"
 flat = true
 
 [node name="Help" type="Button" parent="Menu"]
 layout_mode = 2
-text = "帮助"
+text = "帮 助"
 flat = true
 
 [node name="SystemPage" type="Control" parent="."]

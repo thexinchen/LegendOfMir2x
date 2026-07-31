@@ -75,7 +75,7 @@ func _on_submit_pressed() -> void:
 	if error != OK:
 		_show_notice("服务器尚未连接")
 	else:
-		_show_notice("正在提交")
+		_show_notice("提交中")
 
 
 func _on_exit_pressed() -> void:

@@ -22,9 +22,12 @@ func open() -> void:
 
 
 func _on_yes_pressed() -> void:
-	if not password_input.text.is_empty():
-		confirmed.emit(password_input.text)
-		hide()
+	confirmed.emit(password_input.text)
+	hide()
+
+
+func _on_password_text_submitted(_text: String) -> void:
+	_on_yes_pressed()
 
 
 func _on_no_pressed() -> void:

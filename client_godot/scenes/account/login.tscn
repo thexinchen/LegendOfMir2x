@@ -100,9 +100,9 @@ expand_mode = 1
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 159.0
-offset_top = 535.0
+offset_top = 540.0
 offset_right = 305.0
-offset_bottom = 563.0
+offset_bottom = 568.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_selected_color = Color(1, 1, 1, 1)
 theme_override_colors/caret_color = Color(1, 1, 1, 1)
@@ -118,7 +118,7 @@ flat = true
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 409.0
-offset_top = 535.0
+offset_top = 540.0
 offset_right = 555.0
 offset_bottom = 563.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -156,6 +156,27 @@ theme_override_font_sizes/font_size = 15
 text = "无效的账号或密码"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="NoticeBackground" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 250.0
+offset_top = 282.0
+offset_right = 550.0
+offset_bottom = 318.0
+mouse_filter = 2
+
+[node name="BuildVersion" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 400.0
+offset_bottom = 20.0
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_font_sizes/font_size = 14
+text = "编译版本号:"
 
 [connection signal="pressed" from="CreateAccountButton" to="." method="_on_create_account_pressed"]
 [connection signal="pressed" from="ChangePasswordButton" to="." method="_on_change_password_pressed"]

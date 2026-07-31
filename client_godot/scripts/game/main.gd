@@ -4,6 +4,7 @@ extends Control
 @onready var player_state_panel: Control = %PlayerStatePanel
 @onready var skill_panel: Control = %SkillPanel
 @onready var quick_bar: Control = %QuickBar
+@onready var location_label: Label = $Location
 
 const EXTRA_PANELS := {
 	KEY_H: "res://scenes/game/panels/horse.tscn",
@@ -28,6 +29,12 @@ func _ready() -> void:
 	player_state_panel.hide()
 	skill_panel.hide()
 	quick_bar.hide()
+	# C++ location format: "mapName: x y", font 10 size 15, white, at {4, localBaseY+110}
+	# localBaseY = screenH - 133 = 600 - 133 = 467, so y = 467 + 110 = 577
+	location_label.position = Vector2(4, 577)
+	location_label.add_theme_font_size_override("font_size", 15)
+	location_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+	location_label.text = "边境城市: 335 271"
 	if OS.has_environment("MIR2X_CONTROL_PANEL_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(
@@ -45,7 +52,25 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
-	if event.keycode == KEY_B:
+	# C++ key bindings: ESC=center hero, TAB=pickup, Alt+E=exit, Alt+F=fullscreen, Enter=focus command
+	# Other keys are magic hotkeys via checkMagicSpell
+	if event.keycode == KEY_ESCAPE:
+		# center hero - no-op in placeholder
+		pass
+	elif event.keycode == KEY_TAB:
+		# pickup - no-op in placeholder
+		pass
+	elif event is InputEventKey and (event.alt_pressed):
+		if event.keycode == KEY_E:
+			get_tree().quit()
+		elif event.keycode == KEY_F:
+			# toggle fullscreen
+			var mode := DisplayServer.window_get_mode()
+			if mode == DisplayServer.WINDOW_MODE_FULLSCREEN:
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			else:
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	elif event.keycode == KEY_B:
 		_toggle_panel(inventory_panel)
 	elif event.keycode == KEY_C:
 		_toggle_panel(player_state_panel)

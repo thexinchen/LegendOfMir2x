@@ -37,7 +37,7 @@ offset_right = 525.0
 offset_bottom = 350.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 12
-text = "删除的角色将无法还原，请谨慎操作。如果确定删除，请输入游戏密码，并点击 YES。"
+text = "删除的角色将无法还原，请谨慎操作。如果确定删除，请输入游戏密码，并点击YES。"
 autowrap_mode = 2
 
 [node name="YesButton" type="TextureButton" parent="."]
@@ -77,4 +77,5 @@ max_length = 63
 flat = true
 
 [connection signal="pressed" from="YesButton" to="." method="_on_yes_pressed"]
+[connection signal="text_submitted" from="PasswordInput" to="." method="_on_password_text_submitted" unbinds=1]
 [connection signal="pressed" from="NoButton" to="." method="_on_no_pressed"]

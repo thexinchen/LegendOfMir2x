@@ -29,7 +29,7 @@ window/handheld/orientation=1
 
 [network]
 
-server_host="10.0.15.150"
+server_host="127.0.0.1"
 server_port=7000
 
 [rendering]

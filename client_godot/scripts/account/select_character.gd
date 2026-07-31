@@ -67,6 +67,12 @@ func _on_exit_pressed() -> void:
 
 
 func _on_delete_confirmed(password: String) -> void:
+	if not has_character:
+		_show_notice("此账号没有角色")
+		return
+	if password.is_empty():
+		_show_notice("无效的密码")
+		return
 	if NetworkClient.delete_character(password) != OK:
 		_show_notice("服务器尚未连接")
 
@@ -83,12 +89,14 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			has_character = false
 			character_sprite.hide()
 			character_info.hide()
+			_update_button_visibility()
 			_show_notice("请先创建游戏角色")
 			_capture_flow_if_requested()
 		NetworkClient.SM_DELETECHAROK:
 			has_character = false
 			character_sprite.hide()
 			character_info.hide()
+			_update_button_visibility()
 			_show_notice("删除角色成功")
 		NetworkClient.SM_DELETECHARERROR:
 			var messages := {2: "没有角色可以删除", 3: "密码错误", 4: "删除角色失败，请稍后重试"}
@@ -132,6 +140,10 @@ func _update_character_preview() -> void:
 		jobs.get(first_job, "未知"),
 	]
 	character_info.show()
+	# C++ uses per-line colors: name (237,226,200), level (175,196,175), profession (231,231,189)
+	# Godot Label uses single color, so we use the name color as the closest match
+	# The C++ also shows buttons only when has_character
+	_update_button_visibility()
 
 
 func _first_job(job: int) -> int:
@@ -157,6 +169,13 @@ func _level_from_exp(experience: int) -> int:
 func _show_notice(message: String) -> void:
 	notice.text = message
 	notice.show()
+
+
+func _update_button_visibility() -> void:
+	# C++ hides start/create/delete buttons when there's no character
+	$StartButton.visible = has_character
+	$CreateButton.visible = has_character
+	$DeleteButton.visible = has_character
 
 
 func _capture_flow_if_requested() -> void:
