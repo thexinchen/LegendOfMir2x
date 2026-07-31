@@ -98,9 +98,13 @@ if (( EUID != 0 )); then
     package_manager_args+=(-c tools.system.package_manager:sudo=True)
 fi
 
+# use gcc16 to support c++26
+compiler_executables="tools.build:compiler_executables={'c': '/usr/bin/gcc-16', 'cpp': '/usr/bin/g++-16'}"
+
 conan install . \
     -s:h "build_type=${build_type}" \
     -s:h compiler.cppstd=26 \
+    -c:h "${compiler_executables}" \
     -c "tools.cmake:configure_args=['-DCMAKE_POLICY_VERSION_MINIMUM=3.5']" \
     "${package_manager_args[@]}" \
     --build=missing

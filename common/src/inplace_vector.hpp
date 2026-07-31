@@ -1,6 +1,8 @@
 #pragma once
 
-#ifdef _WIN32
+#include <version>
+
+#if !defined(__cpp_lib_inplace_vector) || __cpp_lib_inplace_vector < 202406L
 
 #include <algorithm> // for rotate...
 #include <array>

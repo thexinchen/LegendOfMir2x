@@ -30,7 +30,9 @@ if(MSVC)
     add_compile_options(/MP)  # multi-process compilation
     add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN _CRT_SECURE_NO_WARNINGS)
 else()
-    set(CMAKE_CXX_STANDARD 26)
+    if(NOT DEFINED CMAKE_CXX_STANDARD)
+        set(CMAKE_CXX_STANDARD 26)
+    endif()
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
