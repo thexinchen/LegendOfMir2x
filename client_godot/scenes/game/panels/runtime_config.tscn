@@ -1,0 +1,72 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/runtime_config/00000450.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
+
+[node name="RuntimeConfigPanel" type="Control"]
+custom_minimum_size = Vector2(510, 468)
+offset_right = 510.0
+offset_bottom = 468.0
+script = ExtResource("1")
+close_button_path = NodePath("CloseButton")
+
+[node name="Background" type="NinePatchRect" parent="."]
+offset_right = 510.0
+offset_bottom = 468.0
+mouse_filter = 2
+texture = ExtResource("2")
+patch_margin_left = 20
+patch_margin_top = 20
+patch_margin_right = 20
+patch_margin_bottom = 20
+
+[node name="Title" type="Label" parent="."]
+offset_left = 165.0
+offset_top = 26.0
+offset_right = 345.0
+offset_bottom = 58.0
+theme_override_colors/font_color = Color(1, 0.84, 0.33, 1)
+theme_override_font_sizes/font_size = 18
+text = "系统设置"
+horizontal_alignment = 1
+
+[node name="Options" type="VBoxContainer" parent="."]
+offset_left = 68.0
+offset_top = 86.0
+offset_right = 442.0
+offset_bottom = 388.0
+theme_override_constants/separation = 12
+
+[node name="Fullscreen" type="CheckBox" parent="Options"]
+layout_mode = 2
+text = "全屏显示"
+
+[node name="MusicLabel" type="Label" parent="Options"]
+layout_mode = 2
+text = "音乐音量"
+
+[node name="Music" type="HSlider" parent="Options"]
+layout_mode = 2
+value = 70.0
+
+[node name="SoundLabel" type="Label" parent="Options"]
+layout_mode = 2
+text = "音效音量"
+
+[node name="Sound" type="HSlider" parent="Options"]
+layout_mode = 2
+value = 85.0
+
+[node name="Names" type="CheckBox" parent="Options"]
+layout_mode = 2
+button_pressed = true
+text = "显示角色名称"
+
+[node name="CloseButton" type="TextureButton" parent="."]
+offset_left = 459.0
+offset_top = 415.0
+offset_right = 491.0
+offset_bottom = 449.0
+texture_normal = ExtResource("3")
+ignore_texture_size = true

@@ -1,0 +1,149 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/main.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000000.png" id="2_world"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/hud/00000060.png" id="3_quick"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/hud/04000000.png" id="4_status"]
+[ext_resource type="Texture2D" path="res://assets/characters/preview/taoist_male_idle.png" id="5_hero"]
+[ext_resource type="PackedScene" path="res://scenes/game/panels/inventory.tscn" id="6_inventory"]
+[ext_resource type="PackedScene" path="res://scenes/game/panels/player_state.tscn" id="7_player"]
+[ext_resource type="PackedScene" path="res://scenes/game/panels/skill.tscn" id="8_skill"]
+
+[sub_resource type="StyleBoxFlat" id="Style_chat"]
+bg_color = Color(0.015, 0.012, 0.008, 0.72)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.38, 0.33, 0.18, 0.8)
+
+[node name="GameMain" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="World" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_world")
+expand_mode = 1
+stretch_mode = 6
+modulate = Color(0.42, 0.48, 0.36, 1)
+
+[node name="Hero" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 383.0
+offset_top = 264.0
+offset_right = 416.0
+offset_bottom = 322.0
+mouse_filter = 2
+texture = ExtResource("5_hero")
+expand_mode = 1
+
+[node name="Location" type="Label" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 14.0
+offset_right = 240.0
+offset_bottom = 42.0
+theme_override_colors/font_color = Color(1, 0.86, 0.3, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 15
+text = "边境城市  (335, 271)"
+
+[node name="ChatLog" type="PanelContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 417.0
+offset_right = 369.0
+offset_bottom = 548.0
+theme_override_styles/panel = SubResource("Style_chat")
+
+[node name="Text" type="Label" parent="ChatLog"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.85, 0.63, 1)
+theme_override_font_sizes/font_size = 13
+text = "[系统] 欢迎进入 mir2x\n[面板] B背包 C人物 S技能 M地图 Q任务 T队伍\n[更多] G行会 H坐骑 F好友 P商店 N对话 O设置"
+vertical_alignment = 2
+
+[node name="QuickBar" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 259.0
+offset_top = 557.0
+offset_right = 541.0
+offset_bottom = 600.0
+mouse_filter = 2
+texture = ExtResource("3_quick")
+
+[node name="StatusRing" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 552.0
+offset_right = 48.0
+offset_bottom = 588.0
+mouse_filter = 2
+texture = ExtResource("4_status")
+expand_mode = 1
+
+[node name="InventoryButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 651.0
+offset_top = 557.0
+offset_right = 694.0
+offset_bottom = 588.0
+text = "背包"
+
+[node name="PlayerButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 698.0
+offset_top = 557.0
+offset_right = 741.0
+offset_bottom = 588.0
+text = "人物"
+
+[node name="SkillButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 745.0
+offset_top = 557.0
+offset_right = 788.0
+offset_bottom = 588.0
+text = "技能"
+
+[node name="InventoryPanel" parent="." instance=ExtResource("6_inventory")]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 350.0
+offset_top = 12.0
+offset_right = 784.0
+offset_bottom = 555.0
+
+[node name="PlayerStatePanel" parent="." instance=ExtResource("7_player")]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 22.0
+offset_top = 55.0
+offset_right = 350.0
+offset_bottom = 521.0
+
+[node name="SkillPanel" parent="." instance=ExtResource("8_skill")]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 222.0
+offset_top = 50.0
+offset_right = 582.0
+offset_bottom = 512.0
+
+[connection signal="pressed" from="InventoryButton" to="." method="_on_inventory_pressed"]
+[connection signal="pressed" from="PlayerButton" to="." method="_on_player_pressed"]
+[connection signal="pressed" from="SkillButton" to="." method="_on_skill_pressed"]

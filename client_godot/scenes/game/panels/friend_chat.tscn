@@ -1,0 +1,55 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000800.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
+
+[node name="FriendChatPanel" type="Control"]
+custom_minimum_size = Vector2(491, 437)
+offset_right = 491.0
+offset_bottom = 437.0
+script = ExtResource("1")
+close_button_path = NodePath("CloseButton")
+
+[node name="Background" type="NinePatchRect" parent="."]
+offset_right = 491.0
+offset_bottom = 437.0
+mouse_filter = 2
+texture = ExtResource("2")
+patch_margin_left = 55
+patch_margin_top = 95
+patch_margin_right = 206
+patch_margin_bottom = 92
+
+[node name="PeerList" type="Label" parent="."]
+offset_left = 27.0
+offset_top = 74.0
+offset_right = 161.0
+offset_bottom = 354.0
+theme_override_colors/font_color = Color(0.9, 0.83, 0.58, 1)
+theme_override_font_sizes/font_size = 14
+text = "好友\n\n● 夏娃\n● 铁匠\n○ 旅人"
+
+[node name="Messages" type="Label" parent="."]
+offset_left = 182.0
+offset_top = 81.0
+offset_right = 458.0
+offset_bottom = 345.0
+theme_override_colors/font_color = Color(0.82, 0.82, 0.7, 1)
+theme_override_font_sizes/font_size = 14
+text = "夏娃  12:31\n准备一起去矿洞吗？\n\n亚当  12:32\n好，在城门集合。"
+
+[node name="Input" type="LineEdit" parent="."]
+offset_left = 179.0
+offset_top = 351.0
+offset_right = 448.0
+offset_bottom = 386.0
+placeholder_text = "输入消息..."
+
+[node name="CloseButton" type="TextureButton" parent="."]
+offset_left = 453.0
+offset_top = 397.0
+offset_right = 485.0
+offset_bottom = 431.0
+texture_normal = ExtResource("3")
+ignore_texture_size = true

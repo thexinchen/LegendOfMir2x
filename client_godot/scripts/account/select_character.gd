@@ -97,7 +97,7 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			var messages := {2: "请勿频繁登录", 3: "先创建角色再进入游戏"}
 			_show_notice(messages.get(payload[0] if not payload.is_empty() else 0, "进入游戏失败"))
 		NetworkClient.SM_ONLINEOK:
-			_show_notice("角色已进入游戏，游戏场景迁移中")
+			get_tree().change_scene_to_file("res://scenes/game/main.tscn")
 
 
 func _apply_character(payload: PackedByteArray) -> void:

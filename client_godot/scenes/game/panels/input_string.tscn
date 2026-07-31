@@ -1,0 +1,59 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/input/07000000.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
+
+[node name="InputStringPanel" type="Control"]
+custom_minimum_size = Vector2(358, 268)
+offset_right = 358.0
+offset_bottom = 268.0
+script = ExtResource("1")
+close_button_path = NodePath("CloseButton")
+
+[node name="Background" type="TextureRect" parent="."]
+offset_right = 358.0
+offset_bottom = 268.0
+mouse_filter = 2
+texture = ExtResource("2")
+
+[node name="Prompt" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 55.0
+offset_right = 318.0
+offset_bottom = 88.0
+theme_override_colors/font_color = Color(0.92, 0.84, 0.58, 1)
+theme_override_font_sizes/font_size = 15
+text = "请输入购买数量"
+horizontal_alignment = 1
+
+[node name="Value" type="LineEdit" parent="."]
+offset_left = 67.0
+offset_top = 108.0
+offset_right = 291.0
+offset_bottom = 142.0
+theme_override_font_sizes/font_size = 16
+text = "1"
+alignment = 1
+
+[node name="ConfirmButton" type="Button" parent="."]
+offset_left = 66.0
+offset_top = 190.0
+offset_right = 146.0
+offset_bottom = 224.0
+text = "确定"
+
+[node name="CancelButton" type="Button" parent="."]
+offset_left = 212.0
+offset_top = 190.0
+offset_right = 292.0
+offset_bottom = 224.0
+text = "取消"
+
+[node name="CloseButton" type="TextureButton" parent="."]
+offset_left = 318.0
+offset_top = 226.0
+offset_right = 350.0
+offset_bottom = 260.0
+texture_normal = ExtResource("3")
+ignore_texture_size = true

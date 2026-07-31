@@ -1,0 +1,75 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000000.png" id="2_background"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3_close"]
+
+[node name="SkillPanel" type="Control"]
+custom_minimum_size = Vector2(360, 462)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 360.0
+offset_bottom = 462.0
+mouse_filter = 0
+script = ExtResource("1_script")
+close_button_path = NodePath("CloseButton")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 0
+offset_right = 360.0
+offset_bottom = 462.0
+mouse_filter = 2
+texture = ExtResource("2_background")
+
+[node name="SkillList" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 30.0
+offset_top = 61.0
+offset_right = 325.0
+offset_bottom = 349.0
+theme_override_constants/separation = 8
+
+[node name="Header" type="Label" parent="SkillList"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.84, 0.32, 1)
+theme_override_font_sizes/font_size = 16
+text = "道术技能"
+
+[node name="Skill1" type="Label" parent="SkillList"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.84, 0.65, 1)
+theme_override_font_sizes/font_size = 14
+text = "治愈术          Lv.1        F1"
+
+[node name="Skill2" type="Label" parent="SkillList"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.84, 0.65, 1)
+theme_override_font_sizes/font_size = 14
+text = "精神力战法      Lv.1        F2"
+
+[node name="Skill3" type="Label" parent="SkillList"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.5, 0.45, 1)
+theme_override_font_sizes/font_size = 14
+text = "施毒术          尚未掌握"
+
+[node name="Hint" type="Label" parent="."]
+layout_mode = 0
+offset_left = 25.0
+offset_top = 393.0
+offset_right = 320.0
+offset_bottom = 426.0
+theme_override_colors/font_color = Color(0.66, 0.61, 0.46, 1)
+theme_override_font_sizes/font_size = 12
+text = "拖动技能可设置快捷键"
+horizontal_alignment = 1
+
+[node name="CloseButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 315.0
+offset_top = 416.0
+offset_right = 347.0
+offset_bottom = 450.0
+texture_normal = ExtResource("3_close")
+ignore_texture_size = true
+tooltip_text = "关闭"

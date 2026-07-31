@@ -1,0 +1,66 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/player_state/06000000.png" id="2_background"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3_close"]
+
+[node name="PlayerStatePanel" type="Control"]
+custom_minimum_size = Vector2(328, 466)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 328.0
+offset_bottom = 466.0
+mouse_filter = 0
+script = ExtResource("1_script")
+close_button_path = NodePath("CloseButton")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 0
+offset_right = 328.0
+offset_bottom = 466.0
+mouse_filter = 2
+texture = ExtResource("2_background")
+
+[node name="Name" type="Label" parent="."]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 18.0
+offset_right = 227.0
+offset_bottom = 40.0
+theme_override_colors/font_color = Color(1, 0.83, 0.3, 1)
+theme_override_font_sizes/font_size = 15
+text = "亚当"
+horizontal_alignment = 1
+
+[node name="Summary" type="Label" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 315.0
+offset_right = 313.0
+offset_bottom = 365.0
+theme_override_colors/font_color = Color(0.86, 0.8, 0.61, 1)
+theme_override_font_sizes/font_size = 13
+text = "等级 3    职业 道士\n经验 2752    负重 18 / 42"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Stats" type="Label" parent="."]
+layout_mode = 0
+offset_left = 244.0
+offset_top = 89.0
+offset_right = 316.0
+offset_bottom = 287.0
+theme_override_colors/font_color = Color(0.95, 0.86, 0.55, 1)
+theme_override_font_sizes/font_size = 11
+text = "6 - 12\n3 - 8\n8 / 8\n42\n26\n12\n9\n7"
+horizontal_alignment = 1
+
+[node name="CloseButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 287.0
+offset_top = 12.0
+offset_right = 319.0
+offset_bottom = 44.0
+texture_normal = ExtResource("3_close")
+ignore_texture_size = true
+tooltip_text = "关闭"
