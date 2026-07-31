@@ -1,0 +1,207 @@
+[gd_scene load_steps=23 format=3]
+
+[ext_resource type="Script" path="res://scripts/account/create_character.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000000.png" id="2_background"]
+[ext_resource type="Texture2D" path="res://assets/characters/preview/warrior_male.png" id="3_male"]
+[ext_resource type="Texture2D" path="res://assets/characters/preview/warrior_female.png" id="4_female"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000002.png" id="5_floor"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000001.png" id="6_controls"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000030.png" id="7_warrior_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000031.png" id="8_warrior_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000032.png" id="9_warrior_pressed"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000040.png" id="10_wizard_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000041.png" id="11_wizard_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000042.png" id="12_wizard_pressed"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000050.png" id="13_taoist_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000051.png" id="14_taoist_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000052.png" id="15_taoist_pressed"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000010.png" id="16_submit_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000011.png" id="17_submit_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000012.png" id="18_submit_pressed"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000020.png" id="19_exit_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000021.png" id="20_exit_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000022.png" id="21_exit_pressed"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_click"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_name"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.905882, 0.905882, 0.741176, 0.4)
+
+[node name="CreateCharacter" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_background")
+expand_mode = 1
+
+[node name="MaleSprite" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 198.0
+offset_top = 288.0
+offset_right = 302.0
+offset_bottom = 548.0
+mouse_filter = 2
+texture = ExtResource("3_male")
+expand_mode = 1
+
+[node name="FemaleSprite" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 527.0
+offset_top = 303.0
+offset_right = 611.0
+offset_bottom = 543.0
+mouse_filter = 2
+modulate = Color(0.5, 0.5, 0.5, 1)
+texture = ExtResource("4_female")
+expand_mode = 1
+
+[node name="FloorGlow" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 268.0
+offset_top = 555.0
+offset_right = 524.0
+offset_bottom = 587.0
+mouse_filter = 2
+modulate = Color(1, 1, 1, 0.588235)
+texture = ExtResource("5_floor")
+expand_mode = 1
+
+[node name="Controls" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 320.0
+offset_top = 500.0
+offset_right = 484.0
+offset_bottom = 588.0
+mouse_filter = 2
+texture = ExtResource("6_controls")
+expand_mode = 1
+
+[node name="NameInput" type="LineEdit" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 355.0
+offset_top = 520.0
+offset_right = 445.0
+offset_bottom = 535.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/caret_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_name")
+theme_override_styles/focus = SubResource("StyleBoxFlat_name")
+max_length = 63
+flat = true
+
+[node name="MaleClickArea" type="Button" parent="."]
+layout_mode = 0
+offset_left = 200.0
+offset_top = 290.0
+offset_right = 290.0
+offset_bottom = 550.0
+theme_override_styles/normal = SubResource("StyleBoxEmpty_click")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_click")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_click")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_click")
+flat = true
+
+[node name="FemaleClickArea" type="Button" parent="."]
+layout_mode = 0
+offset_left = 510.0
+offset_top = 310.0
+offset_right = 600.0
+offset_bottom = 570.0
+theme_override_styles/normal = SubResource("StyleBoxEmpty_click")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_click")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_click")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_click")
+flat = true
+
+[node name="WarriorButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 339.0
+offset_top = 539.0
+offset_right = 379.0
+offset_bottom = 577.0
+texture_normal = ExtResource("7_warrior_normal")
+texture_pressed = ExtResource("9_warrior_pressed")
+texture_hover = ExtResource("8_warrior_hover")
+
+[node name="WizardButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 381.0
+offset_top = 539.0
+offset_right = 421.0
+offset_bottom = 577.0
+texture_normal = ExtResource("10_wizard_normal")
+texture_pressed = ExtResource("12_wizard_pressed")
+texture_hover = ExtResource("11_wizard_hover")
+
+[node name="TaoistButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 424.0
+offset_top = 539.0
+offset_right = 464.0
+offset_bottom = 577.0
+texture_normal = ExtResource("13_taoist_normal")
+texture_pressed = ExtResource("15_taoist_pressed")
+texture_hover = ExtResource("14_taoist_hover")
+
+[node name="SubmitButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 512.0
+offset_top = 549.0
+offset_right = 540.0
+offset_bottom = 577.0
+texture_normal = ExtResource("16_submit_normal")
+texture_pressed = ExtResource("18_submit_pressed")
+texture_hover = ExtResource("17_submit_hover")
+
+[node name="ExitButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 554.0
+offset_top = 549.0
+offset_right = 582.0
+offset_bottom = 577.0
+texture_normal = ExtResource("19_exit_normal")
+texture_pressed = ExtResource("21_exit_pressed")
+texture_hover = ExtResource("20_exit_hover")
+
+[node name="Notice" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 250.0
+offset_top = 285.0
+offset_right = 550.0
+offset_bottom = 315.0
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_font_sizes/font_size = 15
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[connection signal="pressed" from="MaleClickArea" to="." method="_on_male_pressed"]
+[connection signal="pressed" from="FemaleClickArea" to="." method="_on_female_pressed"]
+[connection signal="pressed" from="WarriorButton" to="." method="_on_warrior_pressed"]
+[connection signal="pressed" from="WizardButton" to="." method="_on_wizard_pressed"]
+[connection signal="pressed" from="TaoistButton" to="." method="_on_taoist_pressed"]
+[connection signal="pressed" from="SubmitButton" to="." method="_on_submit_pressed"]
+[connection signal="pressed" from="ExitButton" to="." method="_on_exit_pressed"]

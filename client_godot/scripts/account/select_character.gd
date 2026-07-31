@@ -1,0 +1,167 @@
+extends Control
+
+const JOB_WARRIOR := 1
+const JOB_TAOIST := 2
+const JOB_WIZARD := 4
+
+const CHARACTER_TEXTURES := {
+	Vector2i(JOB_WARRIOR, 0): preload("res://assets/characters/preview/warrior_female_idle.png"),
+	Vector2i(JOB_WARRIOR, 1): preload("res://assets/characters/preview/warrior_male_idle.png"),
+	Vector2i(JOB_WIZARD, 0): preload("res://assets/characters/preview/wizard_female_idle.png"),
+	Vector2i(JOB_WIZARD, 1): preload("res://assets/characters/preview/wizard_male_idle.png"),
+	Vector2i(JOB_TAOIST, 0): preload("res://assets/characters/preview/taoist_female_idle.png"),
+	Vector2i(JOB_TAOIST, 1): preload("res://assets/characters/preview/taoist_male_idle.png"),
+}
+
+@onready var character_sprite: TextureRect = %CharacterSprite
+@onready var character_info: Label = %CharacterInfo
+@onready var notice: Label = %Notice
+@onready var delete_dialog: Control = %DeleteCharacterDialog
+
+var has_character := true
+var character_name := "预览角色"
+var character_gender := 1
+var character_job := JOB_WARRIOR
+var character_exp := 0
+
+
+func _ready() -> void:
+	_update_character_preview()
+	if OS.has_environment("MIR2X_SCREENSHOT"):
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_SCREENSHOT"))
+		get_tree().quit()
+		return
+	NetworkClient.message_received.connect(_on_server_message)
+	delete_dialog.confirmed.connect(_on_delete_confirmed)
+	delete_dialog.canceled.connect(_on_delete_canceled)
+	delete_dialog.hide()
+	var error := NetworkClient.query_character()
+	if error != OK:
+		_show_notice("服务器尚未连接")
+	else:
+		_show_notice("正在下载游戏角色")
+
+
+func _on_start_pressed() -> void:
+	if not has_character:
+		_show_notice("请先创建游戏角色")
+	elif NetworkClient.enter_game() != OK:
+		_show_notice("服务器尚未连接")
+
+
+func _on_create_pressed() -> void:
+	if has_character:
+		_show_notice("一个账号只能创建一个游戏角色")
+	else:
+		get_tree().change_scene_to_file("res://scenes/account/create_character.tscn")
+
+
+func _on_delete_pressed() -> void:
+	if has_character:
+		delete_dialog.open()
+
+
+func _on_exit_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/account/login.tscn")
+
+
+func _on_delete_confirmed(password: String) -> void:
+	if NetworkClient.delete_character(password) != OK:
+		_show_notice("服务器尚未连接")
+
+
+func _on_delete_canceled() -> void:
+	pass
+
+
+func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
+	match head_code:
+		NetworkClient.SM_QUERYCHAROK:
+			_apply_character(payload)
+		NetworkClient.SM_QUERYCHARERROR:
+			has_character = false
+			character_sprite.hide()
+			character_info.hide()
+			_show_notice("请先创建游戏角色")
+			_capture_flow_if_requested()
+		NetworkClient.SM_DELETECHAROK:
+			has_character = false
+			character_sprite.hide()
+			character_info.hide()
+			_show_notice("删除角色成功")
+		NetworkClient.SM_DELETECHARERROR:
+			var messages := {2: "没有角色可以删除", 3: "密码错误", 4: "删除角色失败，请稍后重试"}
+			_show_notice(messages.get(payload[0] if not payload.is_empty() else 0, "删除角色失败"))
+		NetworkClient.SM_ONLINEERROR:
+			var messages := {2: "请勿频繁登录", 3: "先创建角色再进入游戏"}
+			_show_notice(messages.get(payload[0] if not payload.is_empty() else 0, "进入游戏失败"))
+		NetworkClient.SM_ONLINEOK:
+			_show_notice("角色已进入游戏，游戏场景迁移中")
+
+
+func _apply_character(payload: PackedByteArray) -> void:
+	if payload.size() < 74:
+		_show_notice("角色数据格式错误")
+		return
+	var name_size := mini(payload.decode_u16(0), 64)
+	character_name = payload.slice(2, 2 + name_size).get_string_from_utf8()
+	character_gender = payload[68]
+	character_job = payload[69]
+	character_exp = payload.decode_u32(70)
+	has_character = true
+	notice.hide()
+	_update_character_preview()
+	_capture_flow_if_requested()
+
+
+func _update_character_preview() -> void:
+	var first_job := _first_job(character_job)
+	var texture: Texture2D = CHARACTER_TEXTURES.get(
+		Vector2i(first_job, character_gender),
+		CHARACTER_TEXTURES[Vector2i(JOB_WARRIOR, 1)],
+	)
+	character_sprite.texture = texture
+	character_sprite.size = texture.get_size()
+	character_sprite.position = Vector2(462, 351)
+	character_sprite.show()
+	var jobs := {JOB_WARRIOR: "战士", JOB_WIZARD: "法师", JOB_TAOIST: "道士"}
+	character_info.text = "角色：%s\n等级：%d\n职业：%s" % [
+		character_name,
+		_level_from_exp(character_exp),
+		jobs.get(first_job, "未知"),
+	]
+	character_info.show()
+
+
+func _first_job(job: int) -> int:
+	if job & JOB_WARRIOR:
+		return JOB_WARRIOR
+	if job & JOB_TAOIST:
+		return JOB_TAOIST
+	if job & JOB_WIZARD:
+		return JOB_WIZARD
+	return 0
+
+
+func _level_from_exp(experience: int) -> int:
+	var level := 0
+	while true:
+		var sum_exp := 100 * level * level * level + 100 * level * level + 100 * level + 1000
+		if sum_exp > experience:
+			return level
+		level += 1
+	return 0
+
+
+func _show_notice(message: String) -> void:
+	notice.text = message
+	notice.show()
+
+
+func _capture_flow_if_requested() -> void:
+	if not OS.has_environment("MIR2X_FLOW_SCREENSHOT"):
+		return
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FLOW_SCREENSHOT"))
+	get_tree().quit()

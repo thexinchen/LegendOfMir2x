@@ -1,0 +1,137 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scripts/account/select_character.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000000.png" id="2_background"]
+[ext_resource type="Texture2D" path="res://assets/characters/preview/warrior_male_idle.png" id="3_character"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000030.png" id="4_start_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000031.png" id="5_start_pressed"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000010.png" id="6_create_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000011.png" id="7_create_pressed"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000020.png" id="8_delete_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000021.png" id="9_delete_pressed"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000040.png" id="10_exit_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000041.png" id="11_exit_pressed"]
+[ext_resource type="PackedScene" path="res://scenes/account/delete_character_dialog.tscn" id="12_delete_dialog"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_info"]
+bg_color = Color(0, 0, 0, 0.5)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.905882, 0.905882, 0.741176, 0.5)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="SelectCharacter" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_background")
+expand_mode = 1
+
+[node name="CharacterSprite" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 462.0
+offset_top = 351.0
+offset_right = 498.0
+offset_bottom = 455.0
+mouse_filter = 2
+texture = ExtResource("3_character")
+expand_mode = 1
+
+[node name="InfoPanel" type="PanelContainer" parent="."]
+layout_mode = 0
+offset_left = 105.0
+offset_top = 190.0
+offset_right = 285.0
+offset_bottom = 275.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_info")
+
+[node name="CharacterInfo" type="Label" parent="InfoPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.929412, 0.886275, 0.784314, 1)
+theme_override_constants/line_spacing = 3
+theme_override_font_sizes/font_size = 15
+text = "角色：预览角色\n等级：1\n职业：战士"
+vertical_alignment = 1
+
+[node name="StartButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 335.0
+offset_top = 75.0
+offset_right = 431.0
+offset_bottom = 99.0
+texture_normal = ExtResource("4_start_normal")
+texture_pressed = ExtResource("5_start_pressed")
+texture_hover = ExtResource("4_start_normal")
+
+[node name="CreateButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 565.0
+offset_top = 130.0
+offset_right = 661.0
+offset_bottom = 156.0
+texture_normal = ExtResource("6_create_normal")
+texture_pressed = ExtResource("7_create_pressed")
+texture_hover = ExtResource("6_create_normal")
+
+[node name="DeleteButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 110.0
+offset_top = 305.0
+offset_right = 206.0
+offset_bottom = 331.0
+texture_normal = ExtResource("8_delete_normal")
+texture_pressed = ExtResource("9_delete_pressed")
+texture_hover = ExtResource("8_delete_normal")
+
+[node name="ExitButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 45.0
+offset_top = 544.0
+offset_right = 93.0
+offset_bottom = 570.0
+texture_normal = ExtResource("10_exit_normal")
+texture_pressed = ExtResource("11_exit_pressed")
+texture_hover = ExtResource("10_exit_normal")
+
+[node name="Notice" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 250.0
+offset_top = 285.0
+offset_right = 550.0
+offset_bottom = 315.0
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_font_sizes/font_size = 15
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DeleteCharacterDialog" parent="." instance=ExtResource("12_delete_dialog")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[connection signal="pressed" from="StartButton" to="." method="_on_start_pressed"]
+[connection signal="pressed" from="CreateButton" to="." method="_on_create_pressed"]
+[connection signal="pressed" from="DeleteButton" to="." method="_on_delete_pressed"]
+[connection signal="pressed" from="ExitButton" to="." method="_on_exit_pressed"]

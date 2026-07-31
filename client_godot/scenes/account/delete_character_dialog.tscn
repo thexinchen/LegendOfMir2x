@@ -1,0 +1,80 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/account/delete_character_dialog.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/07000000.png" id="2_background"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/07000001.png" id="3_yes_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/07000002.png" id="4_yes_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/07000003.png" id="5_yes_pressed"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/07000004.png" id="6_no_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/07000005.png" id="7_no_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/select_character/07000006.png" id="8_no_pressed"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_input"]
+
+[node name="DeleteCharacterDialog" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 221.0
+offset_top = 166.0
+offset_right = 579.0
+offset_bottom = 434.0
+texture = ExtResource("2_background")
+expand_mode = 1
+
+[node name="Warning" type="Label" parent="."]
+layout_mode = 0
+offset_left = 275.0
+offset_top = 286.0
+offset_right = 525.0
+offset_bottom = 350.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "删除的角色将无法还原，请谨慎操作。如果确定删除，请输入游戏密码，并点击 YES。"
+autowrap_mode = 2
+
+[node name="YesButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 287.0
+offset_top = 356.0
+offset_right = 366.0
+offset_bottom = 388.0
+texture_normal = ExtResource("3_yes_normal")
+texture_pressed = ExtResource("5_yes_pressed")
+texture_hover = ExtResource("4_yes_hover")
+
+[node name="NoButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 433.0
+offset_top = 356.0
+offset_right = 512.0
+offset_bottom = 388.0
+texture_normal = ExtResource("6_no_normal")
+texture_pressed = ExtResource("8_no_pressed")
+texture_hover = ExtResource("7_no_hover")
+
+[node name="PasswordInput" type="LineEdit" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 243.0
+offset_top = 391.0
+offset_right = 558.0
+offset_bottom = 414.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/caret_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxEmpty_input")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_input")
+secret = true
+max_length = 63
+flat = true
+
+[connection signal="pressed" from="YesButton" to="." method="_on_yes_pressed"]
+[connection signal="pressed" from="NoButton" to="." method="_on_no_pressed"]

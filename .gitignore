@@ -3,6 +3,9 @@ build-conan*
 build_vs2016
 build_conan
 CMakeUserPresets.json
+.godot/
+client_godot/.godot/
+client_godot/build/
 vcpkg
 .vcpkg
 __pycache__
