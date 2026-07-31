@@ -116,7 +116,7 @@ offset_right = 612.0
 offset_bottom = 118.0
 theme_override_colors/font_color = Color(0.84, 0.85, 0.65, 1)
 theme_override_font_sizes/font_size = 13
-text = "[系统] 欢迎进入 mir2x\n[提示] 点击右侧图标打开对应面板\n亚当：新的旅程开始了。"
+text = ""
 vertical_alignment = 2
 
 [node name="Command" type="LineEdit" parent="Body"]

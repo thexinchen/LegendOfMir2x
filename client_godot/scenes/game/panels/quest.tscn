@@ -1,8 +1,11 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/quest/00000350.png" id="2"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/quest/00000300.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/quest/00000302.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/common/00000089.png" id="6"]
 
 [node name="QuestPanel" type="Control"]
 custom_minimum_size = Vector2(363, 446)
@@ -17,19 +20,38 @@ offset_bottom = 446.0
 mouse_filter = 2
 texture = ExtResource("2")
 
-[node name="QuestList" type="Label" parent="."]
-offset_left = 28.0
-offset_top = 51.0
-offset_right = 320.0
-offset_bottom = 390.0
-theme_override_colors/font_color = Color(0.9, 0.84, 0.63, 1)
-theme_override_font_sizes/font_size = 14
-text = "当前任务\n\n[主线] 初入边境城市\n  与边境村长交谈\n\n[日常] 清理半兽人\n  击败半兽人  3 / 10"
+[node name="QuestList" type="RichTextLabel" parent="."]
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 310.0
+offset_bottom = 400.0
+mouse_filter = 1
+theme_override_colors/default_color = Color(0.9, 0.84, 0.63, 1)
+theme_override_font_sizes/normal_font_size = 14
+text = ""
+
+[node name="FoldButton" type="TextureButton" parent="."]
+offset_left = 315.0
+offset_top = 76.0
+offset_right = 347.0
+offset_bottom = 108.0
+texture_normal = ExtResource("4")
+texture_pressed = ExtResource("5")
+ignore_texture_size = true
+
+[node name="Slider" type="TextureRect" parent="."]
+offset_left = 326.0
+offset_top = 160.0
+offset_right = 342.0
+offset_bottom = 374.0
+mouse_filter = 2
+texture = ExtResource("6")
+expand_mode = 1
 
 [node name="CloseButton" type="TextureButton" parent="."]
 offset_left = 316.0
 offset_top = 108.0
 offset_right = 348.0
 offset_bottom = 142.0
-texture_normal = ExtResource("3")
+texture_hover = ExtResource("3")
 ignore_texture_size = true

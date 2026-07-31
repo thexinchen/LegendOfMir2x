@@ -1,75 +1,169 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=28 format=3]
 
-[ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000000.png" id="2_background"]
-[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3_close"]
+[ext_resource type="Script" path="res://scripts/game/skill_panel.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000000.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/00000080.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000010.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000020.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000030.png" id="7"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000021.png" id="8"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000031.png" id="9"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000022.png" id="10"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000032.png" id="11"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000023.png" id="12"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000033.png" id="13"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000024.png" id="14"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000034.png" id="15"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000025.png" id="16"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000035.png" id="17"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000026.png" id="18"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000036.png" id="19"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000027.png" id="20"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000037.png" id="21"]
+
+[sub_resource type="ButtonGroup" id="TabGroup"]
 
 [node name="SkillPanel" type="Control"]
 custom_minimum_size = Vector2(360, 462)
-layout_mode = 3
-anchors_preset = 0
 offset_right = 360.0
 offset_bottom = 462.0
-mouse_filter = 0
-script = ExtResource("1_script")
+script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
 
 [node name="Background" type="TextureRect" parent="."]
-layout_mode = 0
 offset_right = 360.0
 offset_bottom = 462.0
 mouse_filter = 2
-texture = ExtResource("2_background")
+texture = ExtResource("2")
 
-[node name="SkillList" type="VBoxContainer" parent="."]
-layout_mode = 0
+[node name="PageViewport" type="Control" parent="."]
+offset_left = 18.0
+offset_top = 44.0
+offset_right = 322.0
+offset_bottom = 373.0
+clip_contents = true
+
+[node name="Page" type="TextureRect" parent="PageViewport"]
+offset_right = 304.0
+offset_bottom = 553.0
+mouse_filter = 2
+texture = ExtResource("5")
+
+[node name="LearnedSkills" type="Control" parent="PageViewport"]
+offset_right = 304.0
+offset_bottom = 553.0
+
+[node name="Tab0" type="TextureButton" parent="."]
+offset_left = 45.0
+offset_top = 10.0
+offset_right = 79.0
+offset_bottom = 44.0
+texture_normal = ExtResource("6")
+texture_pressed = ExtResource("7")
+toggle_mode = true
+button_group = SubResource("TabGroup")
+ignore_texture_size = true
+
+[node name="Tab1" type="TextureButton" parent="."]
+offset_left = 79.0
+offset_top = 10.0
+offset_right = 113.0
+offset_bottom = 44.0
+texture_normal = ExtResource("8")
+texture_pressed = ExtResource("9")
+toggle_mode = true
+button_group = SubResource("TabGroup")
+ignore_texture_size = true
+
+[node name="Tab2" type="TextureButton" parent="."]
+offset_left = 113.0
+offset_top = 10.0
+offset_right = 147.0
+offset_bottom = 44.0
+texture_normal = ExtResource("10")
+texture_pressed = ExtResource("11")
+toggle_mode = true
+button_group = SubResource("TabGroup")
+ignore_texture_size = true
+
+[node name="Tab3" type="TextureButton" parent="."]
+offset_left = 147.0
+offset_top = 10.0
+offset_right = 181.0
+offset_bottom = 44.0
+texture_normal = ExtResource("12")
+texture_pressed = ExtResource("13")
+toggle_mode = true
+button_group = SubResource("TabGroup")
+ignore_texture_size = true
+
+[node name="Tab4" type="TextureButton" parent="."]
+offset_left = 181.0
+offset_top = 10.0
+offset_right = 215.0
+offset_bottom = 44.0
+texture_normal = ExtResource("14")
+texture_pressed = ExtResource("15")
+toggle_mode = true
+button_group = SubResource("TabGroup")
+ignore_texture_size = true
+
+[node name="Tab5" type="TextureButton" parent="."]
+offset_left = 215.0
+offset_top = 10.0
+offset_right = 249.0
+offset_bottom = 44.0
+texture_normal = ExtResource("16")
+texture_pressed = ExtResource("17")
+toggle_mode = true
+button_group = SubResource("TabGroup")
+ignore_texture_size = true
+
+[node name="Tab6" type="TextureButton" parent="."]
+offset_left = 249.0
+offset_top = 10.0
+offset_right = 283.0
+offset_bottom = 44.0
+texture_normal = ExtResource("18")
+texture_pressed = ExtResource("19")
+toggle_mode = true
+button_group = SubResource("TabGroup")
+ignore_texture_size = true
+
+[node name="Tab7" type="TextureButton" parent="."]
+offset_left = 283.0
+offset_top = 10.0
+offset_right = 317.0
+offset_bottom = 44.0
+texture_normal = ExtResource("20")
+texture_pressed = ExtResource("21")
+toggle_mode = true
+button_group = SubResource("TabGroup")
+ignore_texture_size = true
+
+[node name="Slider" type="TextureRect" parent="."]
+offset_left = 326.0
+offset_top = 74.0
+offset_right = 342.0
+offset_bottom = 373.0
+mouse_filter = 2
+texture = ExtResource("4")
+expand_mode = 1
+
+[node name="SelectionLabel" type="Label" parent="."]
 offset_left = 30.0
-offset_top = 61.0
-offset_right = 325.0
-offset_bottom = 349.0
-theme_override_constants/separation = 8
-
-[node name="Header" type="Label" parent="SkillList"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.84, 0.32, 1)
-theme_override_font_sizes/font_size = 16
-text = "道术技能"
-
-[node name="Skill1" type="Label" parent="SkillList"]
-layout_mode = 2
+offset_top = 400.0
+offset_right = 315.0
+offset_bottom = 424.0
 theme_override_colors/font_color = Color(0.9, 0.84, 0.65, 1)
-theme_override_font_sizes/font_size = 14
-text = "治愈术          Lv.1        F1"
-
-[node name="Skill2" type="Label" parent="SkillList"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.84, 0.65, 1)
-theme_override_font_sizes/font_size = 14
-text = "精神力战法      Lv.1        F2"
-
-[node name="Skill3" type="Label" parent="SkillList"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.5, 0.5, 0.45, 1)
-theme_override_font_sizes/font_size = 14
-text = "施毒术          尚未掌握"
-
-[node name="Hint" type="Label" parent="."]
-layout_mode = 0
-offset_left = 25.0
-offset_top = 393.0
-offset_right = 320.0
-offset_bottom = 426.0
-theme_override_colors/font_color = Color(0.66, 0.61, 0.46, 1)
-theme_override_font_sizes/font_size = 12
-text = "拖动技能可设置快捷键"
-horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+text = ""
 
 [node name="CloseButton" type="TextureButton" parent="."]
-layout_mode = 0
-offset_left = 315.0
-offset_top = 416.0
-offset_right = 347.0
-offset_bottom = 450.0
-texture_normal = ExtResource("3_close")
+offset_left = 317.0
+offset_top = 402.0
+offset_right = 349.0
+offset_bottom = 436.0
+texture_hover = ExtResource("3")
 ignore_texture_size = true
-tooltip_text = "关闭"

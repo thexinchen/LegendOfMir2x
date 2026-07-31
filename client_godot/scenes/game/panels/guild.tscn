@@ -1,8 +1,25 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000500.png" id="2"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/common/00000089.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000510.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000511.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000520.png" id="7"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000521.png" id="8"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000530.png" id="9"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000531.png" id="10"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000540.png" id="11"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000541.png" id="12"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000550.png" id="13"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000551.png" id="14"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000560.png" id="15"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000561.png" id="16"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000570.png" id="17"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000571.png" id="18"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000580.png" id="19"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000581.png" id="20"]
 
 [node name="GuildPanel" type="Control"]
 custom_minimum_size = Vector2(594, 444)
@@ -17,19 +34,97 @@ offset_bottom = 444.0
 mouse_filter = 2
 texture = ExtResource("2")
 
-[node name="Content" type="Label" parent="."]
-offset_left = 135.0
-offset_top = 72.0
-offset_right = 548.0
-offset_bottom = 354.0
-theme_override_colors/font_color = Color(0.88, 0.82, 0.62, 1)
-theme_override_font_sizes/font_size = 14
-text = "行会：沙巴克之光\n\n公告\n欢迎各位成员共同建设行会。\n\n会长：亚当\n成员：18 / 40"
+[node name="Content" type="Control" parent="."]
+offset_left = 31.0
+offset_top = 53.0
+offset_right = 559.0
+offset_bottom = 374.0
+
+[node name="Slider" type="TextureRect" parent="."]
+offset_left = 564.0
+offset_top = 53.0
+offset_right = 580.0
+offset_bottom = 347.0
+mouse_filter = 2
+texture = ExtResource("4")
+expand_mode = 1
+
+[node name="AnnouncementButton" type="TextureButton" parent="."]
+offset_left = 40.0
+offset_top = 385.0
+offset_right = 80.0
+offset_bottom = 425.0
+texture_hover = ExtResource("5")
+texture_pressed = ExtResource("6")
+ignore_texture_size = true
+
+[node name="MembersButton" type="TextureButton" parent="."]
+offset_left = 90.0
+offset_top = 385.0
+offset_right = 130.0
+offset_bottom = 425.0
+texture_hover = ExtResource("7")
+texture_pressed = ExtResource("8")
+ignore_texture_size = true
+
+[node name="ChatButton" type="TextureButton" parent="."]
+offset_left = 140.0
+offset_top = 385.0
+offset_right = 180.0
+offset_bottom = 425.0
+texture_hover = ExtResource("9")
+texture_pressed = ExtResource("10")
+ignore_texture_size = true
+
+[node name="EditButton" type="TextureButton" parent="."]
+offset_left = 290.0
+offset_top = 385.0
+offset_right = 330.0
+offset_bottom = 425.0
+texture_hover = ExtResource("11")
+texture_pressed = ExtResource("12")
+ignore_texture_size = true
+
+[node name="RemoveButton" type="TextureButton" parent="."]
+offset_left = 340.0
+offset_top = 385.0
+offset_right = 380.0
+offset_bottom = 425.0
+texture_hover = ExtResource("13")
+texture_pressed = ExtResource("14")
+ignore_texture_size = true
+
+[node name="DisbandButton" type="TextureButton" parent="."]
+offset_left = 390.0
+offset_top = 385.0
+offset_right = 430.0
+offset_bottom = 425.0
+texture_hover = ExtResource("15")
+texture_pressed = ExtResource("16")
+ignore_texture_size = true
+
+[node name="PositionButton" type="TextureButton" parent="."]
+offset_left = 440.0
+offset_top = 385.0
+offset_right = 480.0
+offset_bottom = 425.0
+texture_hover = ExtResource("17")
+texture_pressed = ExtResource("18")
+ignore_texture_size = true
+
+[node name="CovenantButton" type="TextureButton" parent="."]
+offset_left = 490.0
+offset_top = 385.0
+offset_right = 530.0
+offset_bottom = 425.0
+texture_hover = ExtResource("19")
+texture_pressed = ExtResource("20")
+ignore_texture_size = true
 
 [node name="CloseButton" type="TextureButton" parent="."]
 offset_left = 554.0
 offset_top = 399.0
 offset_right = 586.0
 offset_bottom = 433.0
-texture_normal = ExtResource("3")
+texture_hover = ExtResource("3")
 ignore_texture_size = true

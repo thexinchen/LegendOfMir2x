@@ -1,35 +1,79 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/secured_items/08000001.png" id="2"]
-[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/secured_items/08000005.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/secured_items/08000006.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/secured_items/08000007.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/secured_items/08000008.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/secured_items/08000009.png" id="7"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/secured_items/0800000a.png" id="8"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="9"]
+
+[sub_resource type="AtlasTexture" id="Atlas_background"]
+atlas = ExtResource("2")
+region = Rect2(290, 0, 198, 204)
 
 [node name="SecuredItemsPanel" type="Control"]
-custom_minimum_size = Vector2(488, 224)
-offset_right = 488.0
-offset_bottom = 224.0
+custom_minimum_size = Vector2(198, 204)
+offset_right = 198.0
+offset_bottom = 204.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
 
 [node name="Background" type="TextureRect" parent="."]
-offset_right = 488.0
-offset_bottom = 224.0
+offset_right = 198.0
+offset_bottom = 204.0
 mouse_filter = 2
-texture = ExtResource("2")
+texture = SubResource("Atlas_background")
 
-[node name="Description" type="Label" parent="."]
-offset_left = 189.0
-offset_top = 37.0
-offset_right = 459.0
-offset_bottom = 153.0
+[node name="Page" type="Label" parent="."]
+offset_top = 7.0
+offset_right = 198.0
+offset_bottom = 30.0
 theme_override_colors/font_color = Color(0.9, 0.82, 0.58, 1)
 theme_override_font_sizes/font_size = 14
-text = "安全物品列表\n\n已保护：乌木剑\n死亡时不会掉落"
+text = "（空）"
+horizontal_alignment = 1
+
+[node name="ItemGrid" type="GridContainer" parent="."]
+offset_left = 23.0
+offset_top = 41.0
+offset_right = 175.0
+offset_bottom = 155.0
+columns = 4
+
+[node name="LeftButton" type="TextureButton" parent="."]
+offset_left = 25.0
+offset_top = 163.0
+offset_right = 59.0
+offset_bottom = 197.0
+texture_hover = ExtResource("5")
+texture_pressed = ExtResource("6")
+ignore_texture_size = true
+
+[node name="SelectButton" type="TextureButton" parent="."]
+offset_left = 67.0
+offset_top = 163.0
+offset_right = 109.0
+offset_bottom = 197.0
+texture_hover = ExtResource("3")
+texture_pressed = ExtResource("4")
+ignore_texture_size = true
+
+[node name="RightButton" type="TextureButton" parent="."]
+offset_left = 115.0
+offset_top = 163.0
+offset_right = 149.0
+offset_bottom = 197.0
+texture_hover = ExtResource("7")
+texture_pressed = ExtResource("8")
+ignore_texture_size = true
 
 [node name="CloseButton" type="TextureButton" parent="."]
-offset_left = 448.0
+offset_left = 158.0
 offset_top = 159.0
-offset_right = 480.0
+offset_right = 190.0
 offset_bottom = 193.0
-texture_normal = ExtResource("3")
+texture_hover = ExtResource("9")
 ignore_texture_size = true
