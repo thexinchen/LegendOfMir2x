@@ -124,6 +124,10 @@ class GLDevice final
         GLFWwindow *m_window = nullptr;
 
     private:
+        int m_rendererWidth  = 0;
+        int m_rendererHeight = 0;
+
+    private:
         FPSMonitor m_fpsMonitor;
 
     private:

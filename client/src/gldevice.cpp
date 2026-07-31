@@ -33,6 +33,19 @@ static GLDevice *g_glDeviceSelf = nullptr; // for static GLFW callbacks
 
 static_assert(sizeof(ImU32) == sizeof(uint32_t));
 
+static void fnWindowToRenderer(GLFWwindow *window, double &x, double &y)
+{
+    int windowW = 0;
+    int windowH = 0;
+    glfwGetWindowSize(window, &windowW, &windowH);
+
+    if(g_glDeviceSelf && windowW > 0 && windowH > 0){
+        const auto [rendererW, rendererH] = g_glDeviceSelf->getRendererSize();
+        x *= to_f(rendererW) / to_f(windowW);
+        y *= to_f(rendererH) / to_f(windowH);
+    }
+}
+
 // colorf packs 0xAABBGGRR, identical to ImU32 -- colors pass through unchanged
 static constexpr ImU32 fnColor32(uint32_t color)
 {
@@ -175,6 +188,7 @@ void GLDevice::fnMouseButtonEvent(GLFWwindow *window, int button, int action, in
 
     double x = 0, y = 0;
     glfwGetCursorPos(window, &x, &y);
+    fnWindowToRenderer(window, x, y);
     event.button.x = to_f(x);
     event.button.y = to_f(y);
 
@@ -187,6 +201,8 @@ void GLDevice::fnMouseButtonEvent(GLFWwindow *window, int button, int action, in
 
 void GLDevice::fnCursorPosEvent(GLFWwindow *window, double x, double y)
 {
+    fnWindowToRenderer(window, x, y);
+
     MirEvent event {};
     event.type = MIR_EVENT_MOUSE_MOTION;
     event.motion.x = to_f(x);
@@ -214,6 +230,7 @@ void GLDevice::fnScrollEvent(GLFWwindow *window, double, double yoffset)
 
     double x = 0, y = 0;
     glfwGetCursorPos(window, &x, &y);
+    fnWindowToRenderer(window, x, y);
     event.wheel.mouse_x = to_f(x);
     event.wheel.mouse_y = to_f(y);
 
@@ -351,6 +368,14 @@ void GLDevice::createWindow(bool initViewWindow)
         throw fflpanic("failed to create GLFW window");
     }
 
+    if(initViewWindow){
+        glfwGetWindowSize(m_window, &m_rendererWidth, &m_rendererHeight);
+    }
+    else{
+        m_rendererWidth  = SYS_WINDOW_MIN_W;
+        m_rendererHeight = SYS_WINDOW_MIN_H;
+    }
+
     glfwSetWindowUserPointer(m_window, this);
     glfwSetKeyCallback        (m_window, fnKeyEvent);
     glfwSetCharCallback       (m_window, fnCharEvent);
@@ -462,6 +487,27 @@ GLDeviceHelper::RenderNewFrame::RenderNewFrame(GLDevice *devPtr)
 {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
+
+    ImGuiIO &io = ImGui::GetIO();
+    const auto [rendererW, rendererH] = m_device->getRendererSize();
+
+    int frameW = 0;
+    int frameH = 0;
+    glfwGetFramebufferSize(m_device->m_window, &frameW, &frameH);
+
+    io.DisplaySize = ImVec2(to_f(rendererW), to_f(rendererH));
+    if(rendererW > 0 && rendererH > 0){
+        io.DisplayFramebufferScale = ImVec2(
+            to_f(frameW) / to_f(rendererW),
+            to_f(frameH) / to_f(rendererH));
+    }
+
+    double mouseX = 0;
+    double mouseY = 0;
+    glfwGetCursorPos(m_device->m_window, &mouseX, &mouseY);
+    fnWindowToRenderer(m_device->m_window, mouseX, mouseY);
+    io.AddMousePosEvent(to_f(mouseX), to_f(mouseY));
+
     ImGui::NewFrame();
 }
 
@@ -613,6 +659,7 @@ GLDeviceHelper::MirEventPLoc GLDeviceHelper::getMousePLoc()
     auto *window = glfwGetCurrentContext();
     if(window){
         glfwGetCursorPos(window, &x, &y);
+        fnWindowToRenderer(window, x, y);
     }
     return MirEventPLoc {to_d(x), to_d(y)};
 }
@@ -623,6 +670,7 @@ std::tuple<int, int, uint32_t> GLDeviceHelper::getMouseState()
     double x = 0, y = 0;
     if(window){
         glfwGetCursorPos(window, &x, &y);
+        fnWindowToRenderer(window, x, y);
     }
 
     uint32_t state = 0;
@@ -695,9 +743,7 @@ int GLDevice::getWindowHeight() { return std::get<1>(getWindowSize()); }
 
 std::pair<int, int> GLDevice::getRendererSize()
 {
-    int w = -1, h = -1;
-    glfwGetFramebufferSize(m_window, &w, &h);
-    return {w, h};
+    return {m_rendererWidth, m_rendererHeight};
 }
 
 int GLDevice::getRendererWidth () { return getRendererSize().first;  }

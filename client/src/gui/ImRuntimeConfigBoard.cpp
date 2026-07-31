@@ -180,7 +180,8 @@ ImRuntimeConfigBoard::ImRuntimeConfigBoard(const int x, const int y, const int w
     std::strncpy(m_englishPreview.data(), "The quick brown fox jumps over the lazy dog.", m_englishPreview.size() - 1);
     std::strncpy(m_chinesePreview.data(), "快速的棕色狐狸跳过了懒狗。", m_chinesePreview.size() - 1);
     moveTo(to_f(x), to_f(y));
-    updateWindowSize(g_glDevice->getRendererSize(), false);
+    const auto [windowW, windowH] = g_glDevice->getWindowSize();
+    updateWindowSize({windowW, windowH}, false);
     updateIME(IME_DISABLE, false);
 }
 
