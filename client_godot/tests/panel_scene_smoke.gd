@@ -1,6 +1,7 @@
 extends Node
 
 const PANEL_SCENES := [
+	"res://scenes/game/control_panel.tscn",
 	"res://scenes/game/panels/inventory.tscn",
 	"res://scenes/game/panels/player_state.tscn",
 	"res://scenes/game/panels/skill.tscn",

@@ -1,0 +1,373 @@
+[gd_scene load_steps=32 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/control_panel.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000012.png" id="2_base"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000013.png" id="3_middle"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000018.png" id="4_health"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000019.png" id="5_mana"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000022.png" id="6_title"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000001e.png" id="7_close"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000020.png" id="8_minimize"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0b000000.png" id="9_quick"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000030.png" id="10_inventory"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000033.png" id="11_state"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000035.png" id="12_skill"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000036.png" id="13_guild"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000038.png" id="14_team"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003a.png" id="15_quest"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003c.png" id="16_horse"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003e.png" id="17_config"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000040.png" id="18_friend"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000042.png" id="19_exchange"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000043.png" id="20_minimap"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000044.png" id="21_magic"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000046.png" id="22_ac"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000047.png" id="23_dc"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000028.png" id="24_expand"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000031.png" id="25_inventory_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000032.png" id="26_state_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000034.png" id="27_skill_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000037.png" id="28_guild_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000039.png" id="29_team_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003b.png" id="30_quest_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000027.png" id="31_expanded"]
+
+[node name="ControlPanel" type="Control"]
+custom_minimum_size = Vector2(800, 152)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 800.0
+offset_bottom = 152.0
+mouse_filter = 1
+script = ExtResource("1_script")
+
+[node name="Body" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ExpandedMiddle" type="NinePatchRect" parent="Body"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 178.0
+offset_top = -269.0
+offset_right = 634.0
+offset_bottom = 150.0
+mouse_filter = 2
+texture = ExtResource("31_expanded")
+patch_margin_left = 50
+patch_margin_top = 47
+patch_margin_right = 119
+patch_margin_bottom = 55
+
+[node name="CompactMiddle" type="NinePatchRect" parent="Body"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 178.0
+offset_top = 19.0
+offset_right = 634.0
+offset_bottom = 150.0
+mouse_filter = 2
+texture = ExtResource("3_middle")
+patch_margin_left = 50
+patch_margin_right = 119
+
+[node name="Base" type="TextureRect" parent="Body"]
+layout_mode = 0
+offset_top = 19.0
+offset_right = 800.0
+offset_bottom = 152.0
+mouse_filter = 2
+texture = ExtResource("2_base")
+
+[node name="Health" type="TextureProgressBar" parent="Body"]
+layout_mode = 0
+offset_left = 33.0
+offset_top = 38.0
+offset_right = 69.0
+offset_bottom = 126.0
+mouse_filter = 2
+value = 82.0
+fill_mode = 3
+texture_progress = ExtResource("4_health")
+
+[node name="Mana" type="TextureProgressBar" parent="Body"]
+layout_mode = 0
+offset_left = 73.0
+offset_top = 38.0
+offset_right = 109.0
+offset_bottom = 126.0
+mouse_filter = 2
+value = 67.0
+fill_mode = 3
+texture_progress = ExtResource("5_mana")
+
+[node name="ChatLog" type="Label" parent="Body"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 185.0
+offset_top = 34.0
+offset_right = 612.0
+offset_bottom = 118.0
+theme_override_colors/font_color = Color(0.84, 0.85, 0.65, 1)
+theme_override_font_sizes/font_size = 13
+text = "[系统] 欢迎进入 mir2x\n[提示] 点击右侧图标打开对应面板\n亚当：新的旅程开始了。"
+vertical_alignment = 2
+
+[node name="Command" type="LineEdit" parent="Body"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 185.0
+offset_top = 124.0
+offset_right = 614.0
+offset_bottom = 148.0
+theme_override_colors/font_color = Color(0.9, 0.9, 0.76, 1)
+theme_override_colors/caret_color = Color(1, 1, 0.5, 1)
+theme_override_styles/normal = null
+placeholder_text = "输入聊天内容或命令"
+flat = true
+
+[node name="QuickButton" type="TextureButton" parent="Body"]
+layout_mode = 0
+offset_left = 148.0
+offset_top = 21.0
+offset_right = 172.0
+offset_bottom = 37.0
+texture_normal = ExtResource("9_quick")
+ignore_texture_size = true
+tooltip_text = "快捷栏"
+
+[node name="ExitButton" type="TextureButton" parent="Body"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 91.0
+offset_right = 32.0
+offset_bottom = 115.0
+texture_normal = ExtResource("7_close")
+ignore_texture_size = true
+tooltip_text = "退出游戏"
+
+[node name="BoardButtons" type="Control" parent="Body"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 634.0
+offset_top = 19.0
+offset_right = 800.0
+offset_bottom = 152.0
+mouse_filter = 1
+
+[node name="Guild" type="TextureButton" parent="Body/BoardButtons"]
+metadata/scene_path = "res://scenes/game/panels/guild.tscn"
+offset_left = 40.0
+offset_top = 11.0
+offset_right = 76.0
+offset_bottom = 39.0
+texture_normal = ExtResource("13_guild")
+texture_pressed = ExtResource("28_guild_down")
+ignore_texture_size = true
+tooltip_text = "行会"
+
+[node name="Team" type="TextureButton" parent="Body/BoardButtons"]
+metadata/scene_path = "res://scenes/game/panels/team.tscn"
+offset_left = 72.0
+offset_top = 8.0
+offset_right = 112.0
+offset_bottom = 28.0
+texture_normal = ExtResource("14_team")
+texture_pressed = ExtResource("29_team_down")
+ignore_texture_size = true
+tooltip_text = "队伍"
+
+[node name="Quest" type="TextureButton" parent="Body/BoardButtons"]
+metadata/scene_path = "res://scenes/game/panels/quest.tscn"
+offset_left = 108.0
+offset_top = 11.0
+offset_right = 144.0
+offset_bottom = 39.0
+texture_normal = ExtResource("15_quest")
+texture_pressed = ExtResource("30_quest_down")
+ignore_texture_size = true
+tooltip_text = "任务"
+
+[node name="Inventory" type="TextureButton" parent="Body/BoardButtons"]
+metadata/scene_path = "res://scenes/game/panels/inventory.tscn"
+offset_left = 48.0
+offset_top = 33.0
+offset_right = 80.0
+offset_bottom = 67.0
+texture_normal = ExtResource("10_inventory")
+texture_pressed = ExtResource("25_inventory_down")
+ignore_texture_size = true
+tooltip_text = "背包"
+
+[node name="PlayerState" type="TextureButton" parent="Body/BoardButtons"]
+metadata/scene_path = "res://scenes/game/panels/player_state.tscn"
+offset_left = 77.0
+offset_top = 31.0
+offset_right = 109.0
+offset_bottom = 69.0
+texture_normal = ExtResource("11_state")
+texture_pressed = ExtResource("26_state_down")
+ignore_texture_size = true
+tooltip_text = "人物"
+
+[node name="Skill" type="TextureButton" parent="Body/BoardButtons"]
+metadata/scene_path = "res://scenes/game/panels/skill.tscn"
+offset_left = 105.0
+offset_top = 33.0
+offset_right = 137.0
+offset_bottom = 67.0
+texture_normal = ExtResource("12_skill")
+texture_pressed = ExtResource("27_skill_down")
+ignore_texture_size = true
+tooltip_text = "技能"
+
+[node name="Horse" type="TextureButton" parent="Body/BoardButtons"]
+metadata/scene_path = "res://scenes/game/panels/horse.tscn"
+offset_left = 40.0
+offset_top = 61.0
+offset_right = 76.0
+offset_bottom = 89.0
+texture_normal = ExtResource("16_horse")
+ignore_texture_size = true
+tooltip_text = "坐骑"
+
+[node name="Config" type="TextureButton" parent="Body/BoardButtons"]
+metadata/scene_path = "res://scenes/game/panels/runtime_config.tscn"
+offset_left = 72.0
+offset_top = 72.0
+offset_right = 112.0
+offset_bottom = 92.0
+texture_normal = ExtResource("17_config")
+ignore_texture_size = true
+tooltip_text = "设置"
+
+[node name="Friend" type="TextureButton" parent="Body/BoardButtons"]
+metadata/scene_path = "res://scenes/game/panels/friend_chat.tscn"
+offset_left = 108.0
+offset_top = 61.0
+offset_right = 144.0
+offset_bottom = 89.0
+texture_normal = ExtResource("18_friend")
+ignore_texture_size = true
+tooltip_text = "好友"
+
+[node name="Exchange" type="TextureButton" parent="Body"]
+layout_mode = 0
+offset_left = 638.0
+offset_top = 25.0
+offset_right = 662.0
+offset_bottom = 45.0
+texture_normal = ExtResource("19_exchange")
+ignore_texture_size = true
+tooltip_text = "交易"
+
+[node name="MiniMap" type="TextureButton" parent="Body"]
+layout_mode = 0
+offset_left = 638.0
+offset_top = 59.0
+offset_right = 662.0
+offset_bottom = 79.0
+texture_normal = ExtResource("20_minimap")
+ignore_texture_size = true
+tooltip_text = "小地图"
+
+[node name="MagicKey" type="TextureButton" parent="Body"]
+layout_mode = 0
+offset_left = 638.0
+offset_top = 94.0
+offset_right = 662.0
+offset_bottom = 114.0
+texture_normal = ExtResource("21_magic")
+ignore_texture_size = true
+tooltip_text = "技能快捷键"
+
+[node name="ACIcon" type="TextureRect" parent="Body"]
+layout_mode = 0
+offset_left = 635.0
+offset_top = 124.0
+offset_right = 664.0
+offset_bottom = 142.0
+mouse_filter = 2
+texture = ExtResource("22_ac")
+
+[node name="ACValue" type="Label" parent="Body"]
+layout_mode = 0
+offset_left = 667.0
+offset_top = 121.0
+offset_right = 713.0
+offset_bottom = 146.0
+theme_override_colors/font_color = Color(1, 0.86, 0.25, 1)
+theme_override_font_sizes/font_size = 12
+text = "6-12"
+
+[node name="DCIcon" type="TextureRect" parent="Body"]
+layout_mode = 0
+offset_left = 719.0
+offset_top = 124.0
+offset_right = 748.0
+offset_bottom = 142.0
+mouse_filter = 2
+texture = ExtResource("23_dc")
+
+[node name="DCValue" type="Label" parent="Body"]
+layout_mode = 0
+offset_left = 751.0
+offset_top = 121.0
+offset_right = 798.0
+offset_bottom = 146.0
+theme_override_colors/font_color = Color(1, 0.86, 0.25, 1)
+theme_override_font_sizes/font_size = 12
+text = "3-8"
+
+[node name="ExpandButton" type="TextureButton" parent="Body"]
+layout_mode = 0
+offset_left = 619.0
+offset_top = 22.0
+offset_right = 632.0
+offset_bottom = 39.0
+texture_normal = ExtResource("24_expand")
+ignore_texture_size = true
+tooltip_text = "展开聊天"
+
+[node name="Title" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 342.0
+offset_right = 469.0
+offset_bottom = 41.0
+mouse_filter = 1
+texture = ExtResource("6_title")
+
+[node name="Level" type="Label" parent="."]
+layout_mode = 0
+offset_left = 395.0
+offset_top = 17.0
+offset_right = 416.0
+offset_bottom = 38.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_font_sizes/font_size = 12
+text = "3"
+horizontal_alignment = 1
+
+[node name="MinimizeButton" type="TextureButton" parent="."]
+layout_mode = 0
+offset_left = 109.0
+offset_top = 91.0
+offset_right = 133.0
+offset_bottom = 115.0
+texture_normal = ExtResource("8_minimize")
+ignore_texture_size = true
+tooltip_text = "收起控制面板"
+
+[connection signal="pressed" from="Body/QuickButton" to="." method="_on_quick_pressed"]
+[connection signal="pressed" from="Body/ExitButton" to="." method="_on_exit_pressed"]
+[connection signal="pressed" from="Body/MiniMap" to="." method="_on_minimap_pressed"]
+[connection signal="pressed" from="Body/ExpandButton" to="." method="_on_expand_pressed"]
+[connection signal="text_submitted" from="Body/Command" to="." method="_on_command_submitted"]
+[connection signal="pressed" from="MinimizeButton" to="." method="_on_minimize_pressed"]

@@ -3,6 +3,7 @@ extends Control
 @onready var inventory_panel: Control = %InventoryPanel
 @onready var player_state_panel: Control = %PlayerStatePanel
 @onready var skill_panel: Control = %SkillPanel
+@onready var quick_bar: Control = %QuickBar
 
 const EXTRA_PANELS := {
 	KEY_H: "res://scenes/game/panels/horse.tscn",
@@ -26,6 +27,14 @@ func _ready() -> void:
 	inventory_panel.hide()
 	player_state_panel.hide()
 	skill_panel.hide()
+	quick_bar.hide()
+	if OS.has_environment("MIR2X_CONTROL_PANEL_SCREENSHOT"):
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(
+			OS.get_environment("MIR2X_CONTROL_PANEL_SCREENSHOT"),
+		)
+		get_tree().quit()
+		return
 	if OS.has_environment("MIR2X_GAME_SCREENSHOT"):
 		inventory_panel.show()
 		await RenderingServer.frame_post_draw
@@ -46,16 +55,23 @@ func _unhandled_input(event: InputEvent) -> void:
 		_toggle_extra_panel(EXTRA_PANELS[event.keycode])
 
 
-func _on_inventory_pressed() -> void:
-	_toggle_panel(inventory_panel)
+func _on_control_panel_panel_requested(scene_path: String) -> void:
+	if scene_path.ends_with("/inventory.tscn"):
+		_toggle_panel(inventory_panel)
+	elif scene_path.ends_with("/player_state.tscn"):
+		_toggle_panel(player_state_panel)
+	elif scene_path.ends_with("/skill.tscn"):
+		_toggle_panel(skill_panel)
+	else:
+		_toggle_extra_panel(scene_path)
 
 
-func _on_player_pressed() -> void:
-	_toggle_panel(player_state_panel)
+func _on_control_panel_quick_bar_toggled() -> void:
+	quick_bar.visible = not quick_bar.visible
 
 
-func _on_skill_pressed() -> void:
-	_toggle_panel(skill_panel)
+func _on_quick_bar_close_pressed() -> void:
+	quick_bar.hide()
 
 
 func _toggle_panel(panel: Control) -> void:
