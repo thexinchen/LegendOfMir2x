@@ -39,7 +39,7 @@ static void fnWindowToRenderer(GLFWwindow *window, double &x, double &y)
     int windowH = 0;
     glfwGetWindowSize(window, &windowW, &windowH);
 
-    if(g_glDeviceSelf && windowW > 0 && windowH > 0){
+    if(g_glDeviceSelf && g_glDeviceSelf->fixedRendererSize() && windowW > 0 && windowH > 0){
         const auto [rendererW, rendererH] = g_glDeviceSelf->getRendererSize();
         x *= to_f(rendererW) / to_f(windowW);
         y *= to_f(rendererH) / to_f(windowH);
@@ -488,25 +488,28 @@ GLDeviceHelper::RenderNewFrame::RenderNewFrame(GLDevice *devPtr)
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
 
-    ImGuiIO &io = ImGui::GetIO();
-    const auto [rendererW, rendererH] = m_device->getRendererSize();
+    if(m_device->fixedRendererSize()){
+        ImGuiIO &io = ImGui::GetIO();
 
-    int frameW = 0;
-    int frameH = 0;
-    glfwGetFramebufferSize(m_device->m_window, &frameW, &frameH);
+        int frameW = 0;
+        int frameH = 0;
+        glfwGetFramebufferSize(m_device->m_window, &frameW, &frameH);
 
-    io.DisplaySize = ImVec2(to_f(rendererW), to_f(rendererH));
-    if(rendererW > 0 && rendererH > 0){
-        io.DisplayFramebufferScale = ImVec2(
-            to_f(frameW) / to_f(rendererW),
-            to_f(frameH) / to_f(rendererH));
+        const float scale = std::min(
+            to_f(frameW) / to_f(m_device->m_rendererWidth),
+            to_f(frameH) / to_f(m_device->m_rendererHeight));
+
+        if(scale > 0.0f){
+            io.DisplaySize = ImVec2(to_f(frameW) / scale, to_f(frameH) / scale);
+            io.DisplayFramebufferScale = ImVec2(scale, scale);
+        }
+
+        double mouseX = 0;
+        double mouseY = 0;
+        glfwGetCursorPos(m_device->m_window, &mouseX, &mouseY);
+        fnWindowToRenderer(m_device->m_window, mouseX, mouseY);
+        io.AddMousePosEvent(to_f(mouseX), to_f(mouseY));
     }
-
-    double mouseX = 0;
-    double mouseY = 0;
-    glfwGetCursorPos(m_device->m_window, &mouseX, &mouseY);
-    fnWindowToRenderer(m_device->m_window, mouseX, mouseY);
-    io.AddMousePosEvent(to_f(mouseX), to_f(mouseY));
 
     ImGui::NewFrame();
 }
@@ -743,7 +746,25 @@ int GLDevice::getWindowHeight() { return std::get<1>(getWindowSize()); }
 
 std::pair<int, int> GLDevice::getRendererSize()
 {
-    return {m_rendererWidth, m_rendererHeight};
+    int frameW = 0;
+    int frameH = 0;
+    glfwGetFramebufferSize(m_window, &frameW, &frameH);
+
+    if(!m_fixedRendererSize || m_rendererWidth <= 0 || m_rendererHeight <= 0){
+        return {frameW, frameH};
+    }
+
+    const float scale = std::min(
+        to_f(frameW) / to_f(m_rendererWidth),
+        to_f(frameH) / to_f(m_rendererHeight));
+
+    if(scale <= 0.0f){
+        return {m_rendererWidth, m_rendererHeight};
+    }
+    return {
+        to_dround(to_f(frameW) / scale),
+        to_dround(to_f(frameH) / scale),
+    };
 }
 
 int GLDevice::getRendererWidth () { return getRendererSize().first;  }

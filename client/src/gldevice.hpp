@@ -126,6 +126,7 @@ class GLDevice final
     private:
         int m_rendererWidth  = 0;
         int m_rendererHeight = 0;
+        bool m_fixedRendererSize = true;
 
     private:
         FPSMonitor m_fpsMonitor;
@@ -272,6 +273,8 @@ class GLDevice final
 
     public:
         void setWindowResizable(bool);
+        void setFixedRendererSize(bool value) { m_fixedRendererSize = value; }
+        bool fixedRendererSize() const { return m_fixedRendererSize; }
 
     public:
         GLTexID getCover(int, int); // diameter = 2 * r - 1, r >= 1
