@@ -9,6 +9,8 @@ const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const WorldPathfinderScript = preload("res://scripts/game/world_pathfinder.gd")
 const MINIMAP_PANEL_PATH := "res://scenes/game/panels/minimap.tscn"
 const QUEST_PANEL_PATH := "res://scenes/game/panels/quest.tscn"
+const NPC_CHAT_PANEL_PATH := "res://scenes/game/panels/npc_chat.tscn"
+const SECURED_ITEMS_PANEL_PATH := "res://scenes/game/panels/secured_items.tscn"
 const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 
 @onready var world_renderer: Control = $WorldRenderer
@@ -1319,8 +1321,19 @@ func _handle_secured_items(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var items := reader.read_sd_show_secured_item_list()
 	if _reader_ok(reader, "SM_SHOWSECUREDITEMLIST"):
-		game_state.secured_items = items
-		game_state.state_changed.emit()
+		_show_secured_items(items)
+
+
+func _show_secured_items(items: Array) -> void:
+	game_state.set_secured_items(items)
+	var npc_panel := _extra_panel_nodes.get(NPC_CHAT_PANEL_PATH) as Control
+	var secured_panel := _ensure_extra_panel(SECURED_ITEMS_PANEL_PATH)
+	secured_panel.position = Vector2(0, npc_panel.size.y if npc_panel != null and npc_panel.visible else 0)
+	secured_panel.show()
+	secured_panel.move_to_front()
+	inventory_panel.position = Vector2(size.x - inventory_panel.size.x, 0)
+	inventory_panel.show()
+	inventory_panel.move_to_front()
 
 
 func _handle_team_candidate(payload: PackedByteArray) -> void:

@@ -45,6 +45,7 @@ var belt: Array = []  # 6 slots, each is SDItem or null
 var wear: Dictionary = {}  # wear location -> SDItem
 var grabbed_item: Dictionary = {}
 var secured_items: Array = []
+var secured_items_reset_serial := 0
 
 # Buffs
 var buff_list: Array = []  # list of {id, type, state}
@@ -144,6 +145,12 @@ func set_team_member_list(leader: int, members: Array) -> void:
 func set_quest_list(value: Dictionary) -> void:
 	quests = value
 	quest_reset_serial += 1
+	state_changed.emit()
+
+
+func set_secured_items(items: Array) -> void:
+	secured_items = items
+	secured_items_reset_serial += 1
 	state_changed.emit()
 
 

@@ -7,6 +7,7 @@ var _state: Node
 var _resources: RefCounted = ActorResourceScript.new()
 var _page := 0
 var _selected_index := -1
+var _last_reset_serial := -1
 
 
 func _ready() -> void:
@@ -21,6 +22,10 @@ func _ready() -> void:
 
 
 func _refresh() -> void:
+	if _last_reset_serial != _state.secured_items_reset_serial:
+		_last_reset_serial = _state.secured_items_reset_serial
+		_page = 0
+		_selected_index = -1
 	var page_count := _page_count()
 	_page = clampi(_page, 0, maxi(0, page_count - 1))
 	if _selected_index >= _state.secured_items.size():
@@ -41,13 +46,13 @@ func _refresh() -> void:
 			if not icon.is_empty():
 				cell.texture_normal = icon.texture
 			cell.tooltip_text = "%s\n%s\n数量 %d" % [_resources.item_name(item_id), _resources.item_type(item_id), item.get("count", 0)]
-			cell.pressed.connect(func(): _selected_index = index; _refresh())
+			cell.pressed.connect(_select_index.bind(index))
 			cell.gui_input.connect(_on_cell_input)
 			if _resources.item_is_packable(item_id) and int(item.get("count", 0)) > 0:
 				var count := Label.new()
 				count.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 				count.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				count.text = str(item.get("count", 0))
+				count.text = _count_text(item.get("count", 0))
 				count.add_theme_font_size_override("font_size", 10)
 				count.add_theme_color_override("font_color", Color(1, 1, 0))
 				cell.add_child(count)
@@ -57,7 +62,22 @@ func _refresh() -> void:
 				selected.mouse_filter = Control.MOUSE_FILTER_IGNORE
 				selected.color = Color(0, 0, 1, 0.38)
 				cell.add_child(selected)
+			else:
+				var hovered := ColorRect.new()
+				hovered.name = "Hover"
+				hovered.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+				hovered.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				hovered.color = Color(1, 1, 1, 0.38)
+				hovered.hide()
+				cell.add_child(hovered)
+				cell.mouse_entered.connect(hovered.show)
+				cell.mouse_exited.connect(hovered.hide)
 		$ItemGrid.add_child(cell)
+
+
+func _select_index(index: int) -> void:
+	_selected_index = index
+	_refresh()
 
 
 func _on_cell_input(event: InputEvent) -> void:
@@ -72,7 +92,6 @@ func _on_cell_input(event: InputEvent) -> void:
 func _change_page(delta: int) -> void:
 	var page_count := _page_count()
 	_page = clampi(_page + delta, 0, maxi(0, page_count - 1))
-	_selected_index = -1
 	_refresh()
 
 
@@ -85,3 +104,13 @@ func _retrieve() -> void:
 
 func _page_count() -> int:
 	return ceili(float(_state.secured_items.size()) / PAGE_SIZE)
+
+
+func _count_text(value: int) -> String:
+	var digits := str(value)
+	var result := ""
+	for index in digits.length():
+		if index > 0 and (digits.length() - index) % 3 == 0:
+			result += ","
+		result += digits.substr(index, 1)
+	return result
