@@ -88,6 +88,10 @@ func item_icon(item_id: int) -> Dictionary:
 	return frame("item", package_gfx_id | 0x01000000) if icon.is_empty() else icon
 
 
+func ground_item(item_id: int) -> Dictionary:
+	return frame("item", item_package_gfx_id(item_id))
+
+
 func skill_layout(magic_id: int) -> PackedInt32Array:
 	return skill_meta.get(magic_id, PackedInt32Array())
 

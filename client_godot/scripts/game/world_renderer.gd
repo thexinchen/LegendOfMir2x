@@ -74,13 +74,7 @@ func _draw() -> void:
 	_draw_object_depth(0, x0, y0, x1, y1, view_x, view_y)
 
 	# Ground items precede living actors in the original renderer.
-	for grid_key in game_state.ground_items:
-		var parts: PackedStringArray = grid_key.split(",")
-		var gx := int(parts[0])
-		var gy := int(parts[1])
-		var sx := gx * GRID_XP - view_x + GRID_XP / 2 - 8
-		var sy := gy * GRID_YP - view_y + GRID_YP / 2 - 8
-		draw_rect(Rect2(sx, sy, 16, 16), Color(1, 0.85, 0.3, 0.7))
+	_draw_ground_items(x0, y0, x1, y1, view_x, view_y)
 
 	# Overground objects and actors are interleaved one map row at a time.
 	var creatures_by_row: Dictionary = {}
@@ -121,6 +115,44 @@ func _draw() -> void:
 func _draw_object_depth(depth: int, x0: int, y0: int, x1: int, y1: int, view_x: int, view_y: int) -> void:
 	for y in range(y0, y1 + 1):
 		_draw_object_row(depth, y, x0, x1, view_x, view_y)
+
+
+func _draw_ground_items(x0: int, y0: int, x1: int, y1: int, view_x: int, view_y: int) -> void:
+	var mouse_grid := grid_from_screen(roundi(get_local_mouse_position().x), roundi(get_local_mouse_position().y))
+	var font := get_theme_default_font()
+	for grid_key in game_state.ground_items:
+		var parts: PackedStringArray = grid_key.split(",")
+		if parts.size() != 2:
+			continue
+		var gx := int(parts[0])
+		var gy := int(parts[1])
+		if gx < x0 or gx > x1 or gy < y0 or gy > y1:
+			continue
+		var mouse_over := mouse_grid == Vector2i(gx, gy)
+		for item_value in game_state.ground_items[grid_key]:
+			var item_id: int = item_value
+			var frame: Dictionary = actor_resource.ground_item(item_id)
+			var texture := frame.get("texture") as Texture2D
+			if texture == null:
+				continue
+			var position := Vector2(
+				gx * GRID_XP - view_x + (GRID_XP - texture.get_width()) * 0.5,
+				gy * GRID_YP - view_y + (GRID_YP - texture.get_height()) * 0.5,
+			)
+			draw_texture(texture, position + Vector2(1, -1), Color(0, 0, 0, 0.5))
+			draw_texture(texture, position, Color(1.35, 1.35, 1.35, 1) if mouse_over else Color.WHITE)
+			if mouse_over and font:
+				var item_name: String = actor_resource.item_name(item_id)
+				var text_size := font.get_string_size(item_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
+				font.draw_string(
+					get_canvas_item(),
+					Vector2(gx * GRID_XP - view_x + (GRID_XP - text_size.x) * 0.5, gy * GRID_YP - view_y - 4),
+					item_name,
+					HORIZONTAL_ALIGNMENT_LEFT,
+					-1,
+					15,
+					Color.YELLOW,
+				)
 
 
 func _draw_object_row(depth: int, y: int, x0: int, x1: int, view_x: int, view_y: int) -> void:

@@ -218,6 +218,28 @@ func remove_item(item_id: int, seq_id: int, count: int) -> void:
 		return
 
 
+func update_ground_item_grids(grids: Array) -> void:
+	for grid in grids:
+		var key := "%d,%d" % [grid.get("x", 0), grid.get("y", 0)]
+		var items: Array = grid.get("items", [])
+		if items.is_empty():
+			ground_items.erase(key)
+		else:
+			ground_items[key] = items
+	state_changed.emit()
+
+
+func remove_ground_item(x: int, y: int, item_id: int) -> void:
+	var key := "%d,%d" % [x, y]
+	if not ground_items.has(key):
+		return
+	var items: Array = ground_items[key]
+	items.erase(item_id)
+	if items.is_empty():
+		ground_items.erase(key)
+	state_changed.emit()
+
+
 func update_entity_health(data: Dictionary) -> void:
 	var uid: int = data.get("uid", 0)
 	if uid == player_uid:

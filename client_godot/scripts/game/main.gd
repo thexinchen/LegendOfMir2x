@@ -133,11 +133,18 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 			var cy: int = c.get("y", -1)
 			if cx == grid.x and cy == grid.y:
 				found_creature = true
-				_send_attack_action(uid)
+				if c.get("type", 0) == 3:
+					NetworkClient.send_npc_event(uid, "", "_RSVD_NAME_ENTER_90360178872")
+				elif c.get("type", 0) == 1:
+					_send_attack_action(uid)
 				break
 		if not found_creature:
-			# Check for ground items or pickup
-			_request_pickup()
+			var ground_key := "%d,%d" % [grid.x, grid.y]
+			if game_state.ground_items.has(ground_key):
+				if grid == Vector2i(game_state.player_x, game_state.player_y):
+					_request_pickup()
+				else:
+					_send_move_action(grid.x, grid.y)
 
 
 func _send_move_action(aim_x: int, aim_y: int) -> void:
@@ -278,12 +285,7 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 				var rx: int = payload.decode_u16(0)
 				var ry: int = payload.decode_u16(2)
 				var rid: int = payload.decode_u32(4)
-				var key := "%d,%d" % [rx, ry]
-				if game_state.ground_items.has(key):
-					var items: Array = game_state.ground_items[key]
-					items.erase(rid)
-					if items.is_empty():
-						game_state.ground_items.erase(key)
+				game_state.remove_ground_item(rx, ry, rid)
 		NetworkClient.SM_GROUNDITEMIDLIST:
 			_handle_ground_item_id_list(payload)
 		NetworkClient.SM_EQUIPWEAR:
@@ -489,14 +491,8 @@ func _handle_ground_item_id_list(payload: PackedByteArray) -> void:
 	var map_uid: int = data.get("mapUID", 0)
 	if map_uid != game_state.player_map_uid:
 		return
-	# Clear existing ground items and populate new ones
-	game_state.ground_items.clear()
-	for grid in data.get("grids", []):
-		var x: int = grid.get("x", 0)
-		var y: int = grid.get("y", 0)
-		var items: Array = grid.get("items", [])
-		if items.size() > 0:
-			game_state.ground_items["%d,%d" % [x, y]] = items
+	# The server sends incremental grid snapshots: only replace grids present in this message.
+	game_state.update_ground_item_grids(data.get("grids", []))
 
 
 func _handle_cast_magic(payload: PackedByteArray) -> void:
