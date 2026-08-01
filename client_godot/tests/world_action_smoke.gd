@@ -44,8 +44,49 @@ func _ready() -> void:
 	if GameState.chat_log.size() != 2 or resources.item_name(item_id) not in GameState.chat_log[0].text or "无法放置" not in GameState.chat_log[1].text:
 		_fail("world operation error feedback mismatch: %s" % GameState.chat_log)
 		return
-	print("WORLD ACTION PASS: physical/next strike encoding and operation feedback")
+	if not _test_death_and_map_filter(main):
+		return
+	print("WORLD ACTION PASS: attack, operation feedback, death and map filtering")
 	get_tree().quit()
+
+
+func _test_death_and_map_filter(main: Control) -> bool:
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	GameState.player_action_type = 2
+	GameState.update_creature(303, {"uid": 303, "action_type": 2})
+	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(303))
+	if GameState.get_creature(303).get("action_type", 0) != 13:
+		_fail("creature death action was not applied")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(101))
+	if GameState.player_action_type != 13:
+		_fail("player death action was not applied")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_OFFLINE, _map_message(303, 999, 16))
+	if GameState.get_creature(303).is_empty():
+		_fail("stale-map offline message removed current creature")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_DEADFADEOUT, _map_message(303, 202, 24))
+	if not GameState.get_creature(303).is_empty():
+		_fail("current-map dead fade did not remove creature")
+		return false
+	return true
+
+
+func _u64_payload(value: int) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(8)
+	payload.encode_u64(0, value)
+	return payload
+
+
+func _map_message(uid: int, map_uid: int, size: int) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(size)
+	payload.encode_u64(0, uid)
+	payload.encode_u64(8, map_uid)
+	return payload
 
 
 func _fail(message: String) -> void:

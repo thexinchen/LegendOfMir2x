@@ -254,12 +254,11 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_PLAYERBROADCAST:
 			_handle_player_broadcast(payload)
 		NetworkClient.SM_NOTIFYDEAD:
-			var uid := Protocol.decode_sm_notify_dead(payload)
-			if uid == game_state.player_uid:
-				game_state.add_chat_log("你已死亡", 3)
+			_handle_notify_dead(payload)
 		NetworkClient.SM_OFFLINE:
 			var data := Protocol.decode_sm_offline(payload)
-			game_state.remove_creature(data.get("uid", 0))
+			if data.get("mapUID", 0) == game_state.player_map_uid:
+				game_state.remove_creature(data.get("uid", 0))
 		NetworkClient.SM_PICKUPERROR:
 			_handle_pickup_error(payload)
 		NetworkClient.SM_MISS:
@@ -299,8 +298,9 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_PLAYERNAME:
 			_handle_player_name(payload)
 		NetworkClient.SM_DEADFADEOUT:
-			var uid := _decode_u64_payload(payload, 0)
-			game_state.remove_creature(uid)
+			var data := Protocol.decode_sm_dead_fade_out(payload)
+			if data.get("mapUID", 0) == game_state.player_map_uid:
+				game_state.remove_creature(data.get("uid", 0))
 		NetworkClient.SM_REMOVEITEM:
 			if payload.size() >= 10:
 				game_state.remove_item(payload.decode_u32(0), payload.decode_u32(4), payload.decode_u16(8))
@@ -686,6 +686,21 @@ func _handle_pickup_error(payload: PackedByteArray) -> void:
 		game_state.add_chat_log("无法捡起%s" % _resources.item_name(item_id), 1)
 	else:
 		game_state.add_chat_log("当前无法捡起物品，请稍后再试", 1)
+
+
+func _handle_notify_dead(payload: PackedByteArray) -> void:
+	var uid := Protocol.decode_sm_notify_dead(payload)
+	if uid == 0:
+		return
+	if uid == game_state.player_uid:
+		game_state.player_action_type = 13
+		game_state.add_chat_log("你已死亡", 3)
+		game_state.state_changed.emit()
+		return
+	var creature: Dictionary = game_state.get_creature(uid)
+	if not creature.is_empty():
+		creature["action_type"] = 13
+		game_state.update_creature(uid, creature)
 
 
 func _handle_equip_wear_error(payload: PackedByteArray) -> void:

@@ -139,6 +139,17 @@ static func decode_sm_offline(buf: PackedByteArray) -> Dictionary:
 		"mapUID": _decode_u64(buf, 8),
 	}
 
+# SMDeadFadeOut (24 bytes): uid(8) + mapUID(8) + x(4) + y(4)
+static func decode_sm_dead_fade_out(buf: PackedByteArray) -> Dictionary:
+	if buf.size() < 24:
+		return {}
+	return {
+		"uid": _decode_u64(buf, 0),
+		"mapUID": _decode_u64(buf, 8),
+		"x": buf.decode_u32(16),
+		"y": buf.decode_u32(20),
+	}
+
 # SMPing (4 bytes): tick
 static func decode_sm_ping(buf: PackedByteArray) -> int:
 	if buf.size() < 4:
