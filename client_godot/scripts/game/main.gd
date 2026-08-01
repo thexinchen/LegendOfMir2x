@@ -6,6 +6,7 @@ extends Control
 const Protocol = preload("res://scripts/network/protocol.gd")
 const CerealReader = preload("res://scripts/network/cereal_reader.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const WorldPathfinderScript = preload("res://scripts/game/world_pathfinder.gd")
 
 @onready var world_renderer: Control = $WorldRenderer
 @onready var inventory_panel: Control = %InventoryPanel
@@ -39,7 +40,15 @@ const EXTRA_PANELS := {
 var _extra_panel_nodes: Dictionary = {}
 var _pending_purchase: Dictionary = {}
 var _resources: RefCounted = ActorResourceScript.new()
+var _pathfinder: RefCounted = WorldPathfinderScript.new()
 var _next_strike := false
+var _move_path: Array[Vector2i] = []
+var _move_step_timer := 0.0
+var _chase_target_uid := 0
+
+# C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame).
+# Keep a small network margin before sending the next one-hop action.
+const MOVE_STEP_SECONDS := 0.75
 
 
 func _ready() -> void:
@@ -69,6 +78,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_process_movement(delta)
 	# Update camera
 	game_state.scroll_camera()
 	
@@ -131,8 +141,7 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 		return
 	
 	if event.button_index == MOUSE_BUTTON_RIGHT:
-		# Right click: move toward grid (C++ emplaces ActionMove)
-		_send_move_action(grid.x, grid.y)
+		_start_move_to(grid)
 	elif event.button_index == MOUSE_BUTTON_LEFT:
 		# Left click: check for creatures/items at grid
 		# C++: if monster -> attack, if NPC -> interact, if ground item -> pickup
@@ -144,9 +153,10 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 			if cx == grid.x and cy == grid.y:
 				found_creature = true
 				if c.get("type", 0) == 3:
+					_cancel_movement()
 					NetworkClient.send_npc_event(uid, "", "_RSVD_NAME_ENTER_90360178872")
 				elif c.get("type", 0) == 1:
-					_send_attack_action(uid)
+					_start_chase(uid)
 				break
 		if not found_creature:
 			var ground_key := "%d,%d" % [grid.x, grid.y]
@@ -154,7 +164,75 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 				if grid == Vector2i(game_state.player_x, game_state.player_y):
 					_request_pickup()
 				else:
-					_send_move_action(grid.x, grid.y)
+					_start_move_to(grid)
+
+
+func _start_move_to(destination: Vector2i) -> void:
+	_cancel_movement()
+	_move_path = _find_path([destination])
+
+
+func _start_chase(target_uid: int) -> void:
+	_cancel_movement()
+	_chase_target_uid = target_uid
+	_plan_chase_path()
+
+
+func _cancel_movement() -> void:
+	_move_path.clear()
+	_move_step_timer = 0.0
+	_chase_target_uid = 0
+
+
+func _plan_chase_path() -> void:
+	var creature: Dictionary = game_state.get_creature(_chase_target_uid)
+	if creature.is_empty():
+		_chase_target_uid = 0
+		_move_path.clear()
+		return
+	var target := Vector2i(creature.get("x", 0), creature.get("y", 0))
+	if _grid_distance(Vector2i(game_state.player_x, game_state.player_y), target) <= 1:
+		_move_path.clear()
+		_send_attack_action(_chase_target_uid)
+		_chase_target_uid = 0
+		return
+	var goals: Array[Vector2i] = []
+	for direction in WorldPathfinderScript.DIRECTIONS:
+		goals.append(target + direction)
+	_move_path = _find_path(goals)
+	_move_step_timer = 0.0 if not _move_path.is_empty() else 0.25
+
+
+func _find_path(goals: Array[Vector2i]) -> Array[Vector2i]:
+	var occupied := {}
+	var player_position := Vector2i(game_state.player_x, game_state.player_y)
+	for uid in game_state.creatures:
+		if int(uid) == game_state.player_uid:
+			continue
+		var creature: Dictionary = game_state.creatures[uid]
+		var creature_position := Vector2i(creature.get("x", -1), creature.get("y", -1))
+		if creature_position != player_position:
+			occupied[creature_position] = true
+	return _pathfinder.find_path(player_position, goals, world_renderer.can_walk, occupied)
+
+
+func _process_movement(delta: float) -> void:
+	if _move_path.is_empty():
+		if _chase_target_uid == 0:
+			return
+		_move_step_timer -= delta
+		if _move_step_timer > 0.0:
+			return
+		game_state.player_action_type = 2
+		game_state.state_changed.emit()
+		_plan_chase_path()
+		return
+	_move_step_timer -= delta
+	if _move_step_timer > 0.0:
+		return
+	var next: Vector2i = _move_path.pop_front()
+	_send_move_action(next.x, next.y)
+	_move_step_timer = MOVE_STEP_SECONDS
 
 
 func _send_move_action(aim_x: int, aim_y: int) -> void:
@@ -173,6 +251,15 @@ func _send_move_action(aim_x: int, aim_y: int) -> void:
 	}
 	var action_data := Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action)
 	NetworkClient.send_action(action_data)
+	game_state.player_direction = action.direction
+	game_state.player_action_type = 3
+	game_state.player_x = aim_x
+	game_state.player_y = aim_y
+	game_state.state_changed.emit()
+
+
+func _grid_distance(from: Vector2i, to: Vector2i) -> int:
+	return maxi(absi(from.x - to.x), absi(from.y - to.y))
 
 
 func _send_attack_action(target_uid: int) -> void:
@@ -387,6 +474,7 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 	if data.get("uid", 0) != game_state.player_uid or data.get("mapUID", 0) != game_state.player_map_uid:
 		push_error("SM_STARTGAMESCENE identity mismatch")
 		return
+	_cancel_movement()
 	game_state.start_game_scene(data)
 	world_renderer.load_map(game_state.player_map_id)
 	_center_hero()
@@ -412,6 +500,12 @@ func _handle_action(payload: PackedByteArray) -> void:
 		game_state.player_action_type = action_type
 		if direction >= 1:
 			game_state.player_direction = direction
+		if action_type == 2 and not _move_path.is_empty():
+			_move_path.clear()
+			_move_step_timer = 0.25
+		elif action_type == 13:
+			_move_path.clear()
+			_chase_target_uid = 0
 	else:
 		# Update or create creature
 		var creature: Dictionary = game_state.get_creature(uid)
@@ -693,6 +787,7 @@ func _handle_notify_dead(payload: PackedByteArray) -> void:
 	if uid == 0:
 		return
 	if uid == game_state.player_uid:
+		_cancel_movement()
 		game_state.player_action_type = 13
 		game_state.add_chat_log("你已死亡", 3)
 		game_state.state_changed.emit()

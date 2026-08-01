@@ -2,6 +2,7 @@ extends Node
 
 const Protocol = preload("res://scripts/network/protocol.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const WorldPathfinderScript = preload("res://scripts/game/world_pathfinder.gd")
 
 
 func _ready() -> void:
@@ -46,7 +47,11 @@ func _ready() -> void:
 		return
 	if not _test_death_and_map_filter(main):
 		return
-	print("WORLD ACTION PASS: attack, operation feedback, death and map filtering")
+	if not _test_path_decomposition():
+		return
+	if not _test_chase_retry(main):
+		return
+	print("WORLD ACTION PASS: attack, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
 
 
@@ -87,6 +92,46 @@ func _map_message(uid: int, map_uid: int, size: int) -> PackedByteArray:
 	payload.encode_u64(0, uid)
 	payload.encode_u64(8, map_uid)
 	return payload
+
+
+func _test_path_decomposition() -> bool:
+	var pathfinder: RefCounted = WorldPathfinderScript.new()
+	var goals: Array[Vector2i] = [Vector2i(4, 2)]
+	var path: Array[Vector2i] = pathfinder.find_path(Vector2i(0, 2), goals, _test_walkable, {})
+	if path.is_empty() or path.back() != goals[0]:
+		_fail("pathfinder did not reach destination: %s" % path)
+		return false
+	var previous := Vector2i(0, 2)
+	for point in path:
+		if maxi(absi(point.x - previous.x), absi(point.y - previous.y)) != 1:
+			_fail("path contains non one-hop movement: %s" % path)
+			return false
+		previous = point
+	return true
+
+
+func _test_walkable(x: int, y: int) -> bool:
+	if x < 0 or y < 0 or x > 4 or y > 4:
+		return false
+	return not (x == 2 and y in [1, 2, 3])
+
+
+func _test_chase_retry(main: Control) -> bool:
+	GameState.player_x = 0
+	GameState.player_y = 0
+	GameState.update_creature(404, {"uid": 404, "x": 5, "y": 5, "type": 1})
+	main.set("_next_strike", true)
+	main.call("_start_chase", 404)
+	main.call("_process_movement", 1.0)
+	if main.get("_chase_target_uid") != 404 or not main.get("_next_strike"):
+		_fail("blocked chase did not retain target/next strike")
+		return false
+	GameState.update_creature(404, {"uid": 404, "x": 1, "y": 0, "type": 1})
+	main.call("_process_movement", 1.0)
+	if main.get("_chase_target_uid") != 0 or main.get("_next_strike"):
+		_fail("adjacent chase did not attack and consume next strike")
+		return false
+	return true
 
 
 func _fail(message: String) -> void:
