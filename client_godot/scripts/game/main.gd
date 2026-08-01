@@ -714,6 +714,9 @@ func _action_duration(action_type: int, speed: int, creature_type: int, magic_id
 
 
 func _creature_action_duration(action_type: int, speed: int, creature: Dictionary, magic_id := 0) -> float:
+	if creature.get("type", 0) == 3 and action_type == 2 and creature.get("npc_motion", 0) == 2:
+		var npc_frames := _npc_motion_frame_count(creature.get("npc_id", 0), 2)
+		return float(npc_frames) * 0.1 if npc_frames > 0 else -1.0
 	if creature.get("type", 0) == 1 and action_type == 10:
 		var transform: Dictionary = _resources.monster_transform(creature.get("monster_id", 0))
 		if not transform.is_empty():
@@ -1067,6 +1070,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 			creature["action_type"] = stored_action_type
 			continued_monster_action = creature.get("monster_transform_continued", false)
 			creature.erase("monster_transform_continued")
+		elif creature_type == 3:
+			_configure_npc_motion(creature, action_type, action)
 		game_state.update_creature(uid, creature)
 		if not continued_monster_action:
 			var duration := _creature_action_duration(stored_action_type, action.get("speed", 100), creature, action.get("magicID", 0))
@@ -1142,6 +1147,26 @@ func _creature_stored_action_type(action_type: int, creature_type: int, monster_
 func _monster_action_flag(action: Dictionary) -> bool:
 	var ext: PackedByteArray = action.get("extParam", PackedByteArray())
 	return not ext.is_empty() and ext[0] != 0
+
+
+func _configure_npc_motion(creature: Dictionary, action_type: int, action: Dictionary) -> void:
+	if action_type == 1:
+		creature["npc_motion"] = 0
+	elif action_type == 2:
+		var ext: PackedByteArray = action.get("extParam", PackedByteArray())
+		creature["npc_motion"] = clampi(ext[0] if not ext.is_empty() else 0, 0, 2)
+	else:
+		return
+	# ClientNPC aggregate construction leaves MotionNode::speed at SYS_DEFSPEED.
+	creature["action_speed"] = 100
+
+
+func _npc_motion_frame_count(npc_id: int, motion: int) -> int:
+	if npc_id == 56:
+		return 12
+	if npc_id in [59, 64, 65]:
+		return 1
+	return 4 if motion in [0, 1] else 0
 
 
 func _configure_monster_form(creature: Dictionary, action_type: int, stored_action_type: int, action: Dictionary, constructor_state: bool, previous := {}) -> int:
@@ -1297,6 +1322,12 @@ func _finish_creature_action(uid: int, action_type: int, started_ms: int) -> voi
 		var duration := _creature_action_duration(creature.action_type, creature.action_speed, creature, creature.action_magic_id)
 		if duration > 0.0:
 			_schedule_creature_idle(uid, creature.action_type, creature.action_started_ms, duration)
+		return
+	if creature.get("type", 0) == 3 and creature.get("npc_motion", 0) == 2:
+		creature["npc_motion"] = 1
+		creature["action_type"] = 2
+		creature["action_speed"] = 100
+		game_state.update_creature(uid, creature)
 		return
 	creature["action_type"] = 2
 	game_state.update_creature(uid, creature)

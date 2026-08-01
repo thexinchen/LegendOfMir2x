@@ -55,6 +55,8 @@ func _ready() -> void:
 		return
 	if not _test_actor_record_lifecycle(main):
 		return
+	if not _test_npc_actions(main):
+		return
 	if not _test_monster_spawn_actions(main, resources):
 		return
 	if not _test_monster_transform_actions(main, resources):
@@ -575,6 +577,63 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 	GameState.remove_creature(player_uid)
 	GameState.remove_creature(new_monster_uid)
 	GameState.remove_creature(new_npc_uid)
+	return true
+
+
+func _test_npc_actions(main: Control) -> bool:
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	var renderer: Control = main.get_node("WorldRenderer")
+	var npc_uid: int = (3 << 59) | (7 << 35) | 408
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(npc_uid, 202, {
+		"type": 1, "speed": 100, "direction": 8, "x": 13, "y": 14,
+	}))
+	var npc: Dictionary = GameState.get_creature(npc_uid)
+	var sequence: Dictionary = renderer.call("_npc_render_sequence", npc)
+	if npc.get("npc_motion", -1) != 0 or sequence != {"motion": 0, "direction": 7, "count": 4}:
+		_fail("NPC spawn did not select the exact stand motion/view: npc=%s sequence=%s" % [npc, sequence])
+		return false
+	var ext_act := PackedByteArray([1, 0, 0, 0, 0, 0, 0, 0])
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(npc_uid, 202, {
+		"type": 2, "speed": 150, "direction": 4, "x": 13, "y": 14, "extParam": ext_act,
+	}))
+	npc = GameState.get_creature(npc_uid)
+	sequence = renderer.call("_npc_render_sequence", npc)
+	if npc.get("npc_motion", -1) != 1 or npc.get("action_speed", 0) != 100 or sequence != {"motion": 1, "direction": 3, "count": 4}:
+		_fail("NPC stand act did not preserve motion/view metadata: npc=%s sequence=%s" % [npc, sequence])
+		return false
+	var ext_act_ext := PackedByteArray([2, 0, 0, 0, 0, 0, 0, 0])
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(npc_uid, 202, {
+		"type": 2, "speed": 100, "direction": 1, "x": 13, "y": 14, "extParam": ext_act_ext,
+	}))
+	npc = GameState.get_creature(npc_uid)
+	sequence = renderer.call("_npc_render_sequence", npc)
+	if npc.get("npc_motion", -1) != 2 or sequence.count != 0 or main.call("_creature_action_duration", 2, 100, npc) >= 0.0:
+		_fail("normal NPC ACTEXT did not preserve the original empty sequence: npc=%s sequence=%s" % [npc, sequence])
+		return false
+	var special_uid: int = (3 << 59) | (56 << 35) | 409
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(special_uid, 202, {
+		"type": 1, "speed": 100, "direction": 1, "x": 15, "y": 16,
+	}))
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(special_uid, 202, {
+		"type": 2, "speed": 100, "direction": 1, "x": 15, "y": 16, "extParam": ext_act_ext,
+	}))
+	var special: Dictionary = GameState.get_creature(special_uid)
+	sequence = renderer.call("_npc_render_sequence", special)
+	if sequence.count != 12 or not is_equal_approx(float(main.call("_creature_action_duration", 2, 100, special)), 1.2):
+		_fail("six-face-stone NPC did not use its original twelve-frame sequence: npc=%s sequence=%s" % [special, sequence])
+		return false
+	main.call("_finish_creature_action", special_uid, 2, special.action_started_ms)
+	if GameState.get_creature(special_uid).get("npc_motion", -1) != 1:
+		_fail("completed NPC ACTEXT did not enter the original ACT idle motion")
+		return false
+	for special_id in [59, 64, 65]:
+		sequence = renderer.call("_npc_render_sequence", {"npc_id": special_id, "npc_motion": 0, "direction": 1})
+		if sequence.count != 1:
+			_fail("single-frame NPC %d did not retain its exact count: %s" % [special_id, sequence])
+			return false
+	GameState.remove_creature(npc_uid)
+	GameState.remove_creature(special_uid)
 	return true
 
 

@@ -1422,17 +1422,37 @@ func _draw_focus_overlays(body: Dictionary, start_x: int, start_y: int, uid: int
 
 
 func _draw_npc_sprite(creature: Dictionary, start_x: int, start_y: int) -> bool:
-	var npc_id: int = creature.get("npc_id", 0)
-	# NPC resources store the first/second/third available view, not eight compass directions.
-	var direction_index := clampi(creature.get("direction", 1), 1, 3) - 1
-	var frame_index := floori(float(Time.get_ticks_msec()) / 200.0) % 4
-	var body_key: int = (npc_id << 12) | (direction_index << 5) | frame_index
+	var sequence := _npc_render_sequence(creature)
+	if sequence.count <= 0:
+		# C++ deliberately has no frame sequence for normal ACTEXT. Treat it as
+		# an invisible valid motion instead of drawing the missing-resource marker.
+		return true
+	var frame_step := _motion_step(creature.get("action_started_ms", 0), creature.get("action_speed", 100))
+	var frame_index: int = mini(frame_step, sequence.count - 1) if sequence.motion == 2 else frame_step % sequence.count
+	var body_key: int = (creature.get("npc_id", 0) << 12) | (sequence.motion << 8) | (sequence.direction << 5) | frame_index
 	_draw_sprite_frame(actor_resource.frame("npc", body_key | (1 << 23)), start_x, start_y, 0.5)
 	var body: Dictionary = actor_resource.frame("npc", body_key)
 	_record_actor_target(creature.get("uid", 0), 3, creature.get("y", 0), creature.get("action_type", 2), body, start_x, start_y)
 	_draw_sprite_frame(body, start_x, start_y, 1.0)
 	_draw_focus_overlays(body, start_x, start_y, creature.get("uid", 0), 1.0)
 	return not body.is_empty()
+
+
+func _npc_render_sequence(creature: Dictionary) -> Dictionary:
+	var npc_id: int = creature.get("npc_id", 0)
+	var motion := clampi(creature.get("npc_motion", 0), 0, 2)
+	var count := 0
+	if npc_id == 56:
+		count = 12
+	elif npc_id in [59, 64, 65]:
+		count = 1
+	elif motion in [0, 1]:
+		count = 4
+	return {
+		"motion": motion,
+		"direction": (int(creature.get("direction", 1)) - 1) & 7,
+		"count": count,
+	}
 
 
 func _draw_sprite_frame(sprite: Dictionary, start_x: int, start_y: int, alpha: float) -> void:
