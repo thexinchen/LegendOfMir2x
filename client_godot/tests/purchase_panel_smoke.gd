@@ -112,6 +112,15 @@ func _ready() -> void:
 	if main_purchase.position != Vector2(0, npc_panel.size.y):
 		_fail("purchase panel did not stack below NPC chat")
 		return
+	GameState.chat_log.clear()
+	GameState.npc_sell_detail = {"npcUID": 92, "list": [
+		{"item": {"itemID": unique_id, "seqID": 33}, "costList": [{"itemID": gold_id, "count": 1234}]},
+	]}
+	GameState.state_changed.emit()
+	main.call("_on_server_message", NetworkClient.SM_BUYSUCCEED, _buy_succeed_payload(92, unique_id, 33))
+	if not GameState.npc_sell_detail.get("list", []).is_empty() or main_purchase.size != Vector2(290, 224) or not GameState.chat_log.is_empty():
+		_fail("buy confirmation did not silently remove and refresh the unique offer")
+		return
 	main.hide()
 	print("PURCHASE PANEL PASS: reset, geometry, slider, paging, prices, layouts and NPC choreography")
 	get_tree().quit()
@@ -158,6 +167,15 @@ func _append_u32(bytes: PackedByteArray, value: int) -> void:
 func _append_u64(bytes: PackedByteArray, value: int) -> void:
 	_append_u32(bytes, value & 0xFFFFFFFF)
 	_append_u32(bytes, value >> 32)
+
+
+func _buy_succeed_payload(npc_uid: int, item_id: int, seq_id: int) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(16)
+	payload.encode_u64(0, npc_uid)
+	payload.encode_u32(8, item_id)
+	payload.encode_u32(12, seq_id)
+	return payload
 
 
 func _fail(message: String) -> void:

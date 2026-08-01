@@ -1703,8 +1703,10 @@ func _handle_pickup_error(payload: PackedByteArray) -> void:
 	if payload.size() < 4:
 		return
 	var item_id := payload.decode_u32(0)
-	if item_id > 0:
+	if _resources.item_meta.has(item_id):
 		game_state.add_chat_log("无法捡起%s" % _resources.item_name(item_id), 1)
+	elif item_id > 0:
+		game_state.add_chat_log("无法捡起物品ID = %d" % item_id, 1)
 	else:
 		game_state.add_chat_log("当前无法捡起物品，请稍后再试", 1)
 
@@ -1759,7 +1761,6 @@ func _handle_equip_wear_error(payload: PackedByteArray) -> void:
 	match payload.decode_u16(8):
 		1, 2: game_state.add_chat_log("无效的物品", 3)
 		3: game_state.add_chat_log("无法放置：%s" % _resources.item_name(item_id), 3)
-		4: game_state.add_chat_log("角色属性不足，无法装备：%s" % _resources.item_name(item_id), 3)
 
 
 func _handle_grab_wear_error(payload: PackedByteArray) -> void:
@@ -1774,12 +1775,10 @@ func _handle_equip_belt_error(payload: PackedByteArray) -> void:
 	match payload.decode_u16(8):
 		1, 2: game_state.add_chat_log("无效的物品", 3)
 		3: game_state.add_chat_log("无法装备：%s" % _resources.item_name(item_id), 3)
-		4: game_state.add_chat_log("无效的快捷栏位置", 3)
 
 
-func _handle_grab_belt_error(payload: PackedByteArray) -> void:
-	if payload.size() >= 2 and payload.decode_u16(0) == 1:
-		game_state.add_chat_log("快捷栏中没有物品", 3)
+func _handle_grab_belt_error(_payload: PackedByteArray) -> void:
+	pass
 
 
 func _handle_secured_items(payload: PackedByteArray) -> void:
@@ -1891,21 +1890,22 @@ func _handle_buy_succeed(payload: PackedByteArray) -> void:
 	var npc_uid := payload.decode_u64(0)
 	var item_id := payload.decode_u32(8)
 	var seq_id := payload.decode_u32(12)
-	if game_state.npc_sell_detail.get("npcUID", 0) == npc_uid:
-		var list: Array = game_state.npc_sell_detail.get("list", [])
-		for index in range(list.size() - 1, -1, -1):
-			var item: Dictionary = list[index].get("item", {})
-			if item.get("itemID", 0) == item_id and item.get("seqID", 0) == seq_id and seq_id != 0:
-				list.remove_at(index)
-		game_state.npc_sell_detail["list"] = list
-	game_state.add_chat_log("购买成功", 1)
-	game_state.state_changed.emit()
+	if game_state.npc_sell.get("npcUID", 0) != npc_uid or game_state.npc_sell_detail.get("npcUID", 0) != npc_uid or _resources.item_is_packable(item_id):
+		return
+	var list: Array = game_state.npc_sell_detail.get("list", [])
+	for index in range(list.size()):
+		var item: Dictionary = list[index].get("item", {})
+		if item.get("itemID", 0) == item_id and item.get("seqID", 0) == seq_id:
+			list.remove_at(index)
+			game_state.npc_sell_detail["list"] = list
+			game_state.state_changed.emit()
+			return
 
 
 func _handle_buy_error(payload: PackedByteArray) -> void:
 	if payload.size() < 18:
 		return
-	game_state.add_chat_log("购买失败，错误码 %d" % payload.decode_u16(16), 3)
+	game_state.add_chat_log("金币不够" if payload.decode_u16(16) == 4 else "购买失败", 3)
 
 
 func _handle_start_input(payload: PackedByteArray) -> void:

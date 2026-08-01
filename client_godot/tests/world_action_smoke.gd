@@ -74,20 +74,7 @@ func _ready() -> void:
 	if not _test_self_action_map_transition(main):
 		return
 
-	GameState.chat_log.clear()
-	var item_id: int = resources.item_names.keys()[0]
-	var pickup_error := PackedByteArray()
-	pickup_error.resize(4)
-	pickup_error.encode_u32(0, item_id)
-	main.call("_on_server_message", NetworkClient.SM_PICKUPERROR, pickup_error)
-	var equip_error := PackedByteArray()
-	equip_error.resize(10)
-	equip_error.encode_u32(0, item_id)
-	equip_error.encode_u32(4, 1)
-	equip_error.encode_u16(8, 3)
-	main.call("_on_server_message", NetworkClient.SM_EQUIPWEARERROR, equip_error)
-	if GameState.chat_log.size() != 2 or resources.item_name(item_id) not in GameState.chat_log[0].text or "无法放置" not in GameState.chat_log[1].text:
-		_fail("world operation error feedback mismatch: %s" % GameState.chat_log)
+	if not _test_inventory_transaction_feedback(main, resources):
 		return
 	if not _test_death_and_map_filter(main, resources):
 		return
@@ -274,6 +261,86 @@ func _test_system_chat_feedback(main: Control) -> bool:
 	GameState.player_name = saved_name
 	GameState.creatures = saved_creatures
 	GameState.chat_log.clear()
+	return true
+
+
+func _test_inventory_transaction_feedback(main: Control, resources: RefCounted) -> bool:
+	var known_item_id: int = resources.item_names.keys()[0]
+	var packable_id := 0
+	var non_packable_id := 0
+	for item_id_value in resources.item_meta:
+		var item_id: int = item_id_value
+		if resources.item_is_packable(item_id) and packable_id == 0:
+			packable_id = item_id
+		elif not resources.item_is_packable(item_id) and resources.item_type(item_id) != "金币" and non_packable_id == 0:
+			non_packable_id = item_id
+		if packable_id != 0 and non_packable_id != 0:
+			break
+	if packable_id == 0 or non_packable_id == 0:
+		_fail("inventory transaction fixtures unavailable")
+		return false
+	var saved_chat := GameState.chat_log.duplicate(true)
+	var saved_sell := GameState.npc_sell.duplicate(true)
+	var saved_detail := GameState.npc_sell_detail.duplicate(true)
+	GameState.chat_log.clear()
+	main.call("_on_server_message", NetworkClient.SM_PICKUPERROR, _u32_payload(known_item_id))
+	main.call("_on_server_message", NetworkClient.SM_PICKUPERROR, _u32_payload(0xFFFFFFFE))
+	main.call("_on_server_message", NetworkClient.SM_PICKUPERROR, _u32_payload(0))
+	var pickup_expected := [
+		"无法捡起%s" % resources.item_name(known_item_id),
+		"无法捡起物品ID = 4294967294",
+		"当前无法捡起物品，请稍后再试",
+	]
+	for index in pickup_expected.size():
+		if GameState.chat_log[index].text != pickup_expected[index] or GameState.chat_log[index].type != 1:
+			_fail("pickup error feedback mismatch at %d: %s" % [index, GameState.chat_log])
+			return false
+	GameState.chat_log.clear()
+	for error in [1, 2, 3, 4]:
+		main.call("_on_server_message", NetworkClient.SM_EQUIPWEARERROR, _item_error_payload(known_item_id, 1, error))
+	main.call("_on_server_message", NetworkClient.SM_GRABWEARERROR, _u16_payload(1))
+	main.call("_on_server_message", NetworkClient.SM_GRABWEARERROR, _u16_payload(2))
+	for error in [1, 2, 3, 4]:
+		main.call("_on_server_message", NetworkClient.SM_EQUIPBELTERROR, _item_error_payload(known_item_id, 1, error))
+	main.call("_on_server_message", NetworkClient.SM_GRABBELTERROR, _u16_payload(1))
+	var equipment_expected := [
+		"无效的物品", "无效的物品", "无法放置：%s" % resources.item_name(known_item_id),
+		"无法取下装备",
+		"无效的物品", "无效的物品", "无法装备：%s" % resources.item_name(known_item_id),
+	]
+	if GameState.chat_log.size() != equipment_expected.size():
+		_fail("silent equipment error branches created feedback: %s" % GameState.chat_log)
+		return false
+	for index in equipment_expected.size():
+		if GameState.chat_log[index].text != equipment_expected[index] or GameState.chat_log[index].type != 3:
+			_fail("equipment error feedback mismatch at %d: %s" % [index, GameState.chat_log])
+			return false
+	GameState.chat_log.clear()
+	main.call("_on_server_message", NetworkClient.SM_BUYERROR, _buy_error_payload(77, known_item_id, 1, 4))
+	main.call("_on_server_message", NetworkClient.SM_BUYERROR, _buy_error_payload(77, known_item_id, 1, 2))
+	if GameState.chat_log.size() != 2 or GameState.chat_log[0].text != "金币不够" or GameState.chat_log[1].text != "购买失败" or GameState.chat_log[0].type != 3 or GameState.chat_log[1].type != 3:
+		_fail("buy error feedback mismatch: %s" % GameState.chat_log)
+		return false
+	GameState.chat_log.clear()
+	GameState.npc_sell = {"npcUID": 88, "itemList": [packable_id, non_packable_id]}
+	GameState.npc_sell_detail = {"npcUID": 77, "list": [
+		{"item": {"itemID": packable_id, "seqID": 0}},
+		{"item": {"itemID": non_packable_id, "seqID": 9}},
+		{"item": {"itemID": non_packable_id, "seqID": 10}},
+	]}
+	main.call("_on_server_message", NetworkClient.SM_BUYSUCCEED, _buy_succeed_payload(77, non_packable_id, 9))
+	if GameState.npc_sell_detail.list.size() != 3:
+		_fail("stale shop buy success changed detail list")
+		return false
+	GameState.npc_sell["npcUID"] = 77
+	main.call("_on_server_message", NetworkClient.SM_BUYSUCCEED, _buy_succeed_payload(77, packable_id, 0))
+	main.call("_on_server_message", NetworkClient.SM_BUYSUCCEED, _buy_succeed_payload(77, non_packable_id, 9))
+	if GameState.npc_sell_detail.list.size() != 2 or GameState.npc_sell_detail.list[0].item.itemID != packable_id or GameState.npc_sell_detail.list[1].item.seqID != 10 or not GameState.chat_log.is_empty():
+		_fail("buy success mutation/feedback mismatch: detail=%s log=%s" % [GameState.npc_sell_detail, GameState.chat_log])
+		return false
+	GameState.chat_log = saved_chat
+	GameState.npc_sell = saved_sell
+	GameState.npc_sell_detail = saved_detail
 	return true
 
 
@@ -695,6 +762,38 @@ func _u32_payload(value: int) -> PackedByteArray:
 	var payload := PackedByteArray()
 	payload.resize(4)
 	payload.encode_u32(0, value)
+	return payload
+
+
+func _u16_payload(value: int) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(2)
+	payload.encode_u16(0, value)
+	return payload
+
+
+func _item_error_payload(item_id: int, seq_id: int, error: int) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(10)
+	payload.encode_u32(0, item_id)
+	payload.encode_u32(4, seq_id)
+	payload.encode_u16(8, error)
+	return payload
+
+
+func _buy_succeed_payload(npc_uid: int, item_id: int, seq_id: int) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(16)
+	payload.encode_u64(0, npc_uid)
+	payload.encode_u32(8, item_id)
+	payload.encode_u32(12, seq_id)
+	return payload
+
+
+func _buy_error_payload(npc_uid: int, item_id: int, seq_id: int, error: int) -> PackedByteArray:
+	var payload := _buy_succeed_payload(npc_uid, item_id, seq_id)
+	payload.resize(18)
+	payload.encode_u16(16, error)
 	return payload
 
 
