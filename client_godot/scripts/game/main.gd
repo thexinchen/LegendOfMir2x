@@ -235,6 +235,9 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 	game_state.player_x = data.get("x", game_state.player_x)
 	game_state.player_y = data.get("y", game_state.player_y)
 	game_state.player_direction = data.get("direction", game_state.player_direction)
+	# Set placeholder map size based on known map dimensions
+	# C++ loads from mapbin.zsdb, Godot uses placeholder for now
+	world_renderer.set_map_data(100, 100)
 	_center_hero()
 
 
