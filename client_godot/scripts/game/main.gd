@@ -365,8 +365,8 @@ func _handle_health(payload: PackedByteArray) -> void:
 
 
 func _handle_text(payload: PackedByteArray) -> void:
-	var reader := CerealReader.new(payload)
-	var text := reader.read_sd_text()
+	# SM_TEXT is type-3 (variable), raw UTF-8 text bytes (not cereal)
+	var text := payload.get_string_from_utf8()
 	game_state.add_chat_log(text, 0)
 
 
@@ -409,6 +409,7 @@ func _handle_player_name(payload: PackedByteArray) -> void:
 		var c := game_state.get_creature(uid)
 		if not c.is_empty():
 			c["name"] = name
+			c["name_color"] = data.get("nameColor", 0xFFFFFFFF)
 			game_state.update_creature(uid, c)
 
 

@@ -179,11 +179,12 @@ func read_sd_buff_id_list() -> Array:
 		ids.append(read_u32())
 	return ids
 
-# SDPlayerName: uid(u64) + name(string)
+# SDPlayerName: uid(u64) + name(string) + nameColor(u32)
 func read_sd_player_name() -> Dictionary:
 	return {
 		"uid": read_u64(),
 		"name": read_string(),
+		"nameColor": read_u32(),
 	}
 
 # SDText: text content (string)
