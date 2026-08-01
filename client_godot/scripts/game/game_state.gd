@@ -485,24 +485,29 @@ func update_belt(items: Array) -> void:
 	state_changed.emit()
 
 
-func update_item(item: Dictionary) -> void:
+func update_item(item: Dictionary) -> int:
 	var item_id: int = item.get("itemID", 0)
 	var seq_id: int = item.get("seqID", 0)
-	if grabbed_item.get("itemID", 0) == item_id and grabbed_item.get("seqID", 0) == seq_id:
+	var grabbed_match: bool = grabbed_item.get("itemID", 0) == item_id and grabbed_item.get("seqID", 0) == seq_id
+	if grabbed_match:
 		grabbed_item = item if item.get("count", 0) > 0 else {}
-		state_changed.emit()
-		return
 	for index in range(inventory.size()):
 		if inventory[index].get("itemID", 0) == item_id and inventory[index].get("seqID", 0) == seq_id:
+			var changed: int = item.get("count", 0) - inventory[index].get("count", 0)
 			if item.get("count", 0) > 0:
 				inventory[index] = item
 			else:
 				inventory.remove_at(index)
 			state_changed.emit()
-			return
+			return changed
+	if grabbed_match:
+		state_changed.emit()
+		return 0
 	if item_id != 0 and item.get("count", 0) > 0:
 		inventory.append(item)
 		state_changed.emit()
+		return item.get("count", 0)
+	return 0
 
 
 func remove_item(item_id: int, seq_id: int, count: int) -> void:

@@ -49,6 +49,8 @@ func _ready() -> void:
 		return
 	if not _test_async_combat_feedback(main, resources):
 		return
+	if not _test_progression_feedback(main, resources):
+		return
 	if not await _test_action_seff(main, resources):
 		return
 	if not _test_shield_hit_action(main, resources):
@@ -531,6 +533,118 @@ func _test_async_combat_feedback(main: Control, resources: RefCounted) -> bool:
 	GameState.attached_magic_effects.clear()
 	GameState.remove_creature(target_uid)
 	return true
+
+
+func _test_progression_feedback(main: Control, resources: RefCounted) -> bool:
+	var saved_exp := GameState.player_exp
+	var saved_gold := GameState.player_gold
+	var saved_inventory := GameState.inventory.duplicate(true)
+	var saved_chat := GameState.chat_log.duplicate(true)
+	var control_panel: Control = main.get_node("ControlPanel")
+	var saved_blinks: Dictionary = control_panel.get("_button_blinks").duplicate(true)
+	GameState.chat_log.clear()
+	GameState.player_exp = 0
+	main.call("_on_server_message", NetworkClient.SM_EXP, _u32_payload(100))
+	if GameState.player_exp != 100 or not GameState.chat_log.is_empty():
+		_fail("initial experience sync produced feedback: exp=%d log=%s" % [GameState.player_exp, GameState.chat_log])
+		return false
+	main.call("_on_server_message", NetworkClient.SM_EXP, _u32_payload(145))
+	main.call("_on_server_message", NetworkClient.SM_EXP, _u32_payload(120))
+	if GameState.player_exp != 120 or GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "你获得了经验值45" or GameState.chat_log[0].type != 1:
+		_fail("experience feedback did not match C++ gain-only semantics: %s" % GameState.chat_log)
+		return false
+	GameState.chat_log.clear()
+	GameState.player_gold = 0
+	main.call("_on_server_message", NetworkClient.SM_GOLD, _u32_payload(80))
+	main.call("_on_server_message", NetworkClient.SM_GOLD, _u32_payload(80))
+	main.call("_on_server_message", NetworkClient.SM_GOLD, _u32_payload(30))
+	if GameState.player_gold != 30 or GameState.chat_log.size() != 2 or GameState.chat_log[0].text != "你获得了80金币" or GameState.chat_log[1].text != "你失去了50金币":
+		_fail("gold feedback did not match C++ change semantics: %s" % GameState.chat_log)
+		return false
+	var packable_id := 0
+	var non_packable_id := 0
+	for item_id_value in resources.item_meta:
+		var candidate_id: int = item_id_value
+		if resources.item_is_packable(candidate_id) and packable_id == 0:
+			packable_id = candidate_id
+		elif not resources.item_is_packable(candidate_id) and resources.item_type(candidate_id) != "金币" and non_packable_id == 0:
+			non_packable_id = candidate_id
+		if packable_id != 0 and non_packable_id != 0:
+			break
+	if packable_id == 0 or non_packable_id == 0:
+		_fail("item feedback fixtures unavailable")
+		return false
+	GameState.chat_log.clear()
+	GameState.inventory = [_item_record(packable_id, 71, 2)]
+	control_panel.set("_button_blinks", {})
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	main.call("_on_server_message", NetworkClient.SM_UPDATEITEM, _sd_item_payload(packable_id, 71, 5))
+	if GameState.inventory[0].count != 5 or GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "你获得了3个%s" % resources.item_name(packable_id):
+		_fail("packable item gain feedback mismatch: inventory=%s log=%s" % [GameState.inventory, GameState.chat_log])
+		return false
+	if not control_panel.get("_button_blinks").has("Inventory") or AudioService.last_seff_id != main.call("_item_update_seff", packable_id):
+		_fail("item gain did not start original blink/sound: blink=%s seff=%08X" % [control_panel.get("_button_blinks"), AudioService.last_seff_id])
+		return false
+	control_panel.set("_button_blinks", {})
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	main.call("_on_server_message", NetworkClient.SM_UPDATEITEM, _sd_item_payload(packable_id, 71, 4))
+	if GameState.chat_log.size() != 2 or GameState.chat_log[1].text != "你失去了1个%s" % resources.item_name(packable_id) or not control_panel.get("_button_blinks").is_empty() or AudioService.last_seff_id != AudioService.INVALID_SEFF_ID:
+		_fail("item loss incorrectly used gain-only notification: log=%s blink=%s seff=%08X" % [GameState.chat_log, control_panel.get("_button_blinks"), AudioService.last_seff_id])
+		return false
+	main.call("_on_server_message", NetworkClient.SM_UPDATEITEM, _sd_item_payload(non_packable_id, 72, 1))
+	if GameState.chat_log.size() != 3 or GameState.chat_log[2].text != "你获得了%s" % resources.item_name(non_packable_id):
+		_fail("non-packable item wording mismatch: %s" % GameState.chat_log)
+		return false
+	var item_count := GameState.inventory.size()
+	var log_count := GameState.chat_log.size()
+	main.call("_on_server_message", NetworkClient.SM_UPDATEITEM, _sd_item_payload(0xFFFFFFFE, 73, 1))
+	main.call("_on_server_message", NetworkClient.SM_UPDATEITEM, _sd_item_payload(packable_id, 71, 100))
+	main.call("_on_server_message", NetworkClient.SM_UPDATEITEM, _sd_item_payload(non_packable_id, 72, 2))
+	if GameState.inventory.size() != item_count or GameState.inventory[0].count != 4 or GameState.inventory[1].count != 1 or GameState.chat_log.size() != log_count:
+		_fail("invalid item update changed visible state")
+		return false
+	GameState.player_exp = saved_exp
+	GameState.player_gold = saved_gold
+	GameState.inventory = saved_inventory
+	GameState.chat_log = saved_chat
+	control_panel.set("_button_blinks", saved_blinks)
+	AudioService.stop_seff()
+	return true
+
+
+func _u32_payload(value: int) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(4)
+	payload.encode_u32(0, value)
+	return payload
+
+
+func _item_record(item_id: int, seq_id: int, count: int) -> Dictionary:
+	return {"itemID": item_id, "seqID": seq_id, "count": count, "duration": [0, 0], "extAttrList": {}}
+
+
+func _sd_item_payload(item_id: int, seq_id: int, count: int) -> PackedByteArray:
+	var payload := PackedByteArray([1])
+	_append_u32(payload, item_id)
+	_append_u32(payload, seq_id)
+	_append_u64(payload, count)
+	_append_u64(payload, 0)
+	_append_u64(payload, 0)
+	_append_u64(payload, 0)
+	payload.append(0)
+	return payload
+
+
+func _append_u32(payload: PackedByteArray, value: int) -> void:
+	var offset := payload.size()
+	payload.resize(offset + 4)
+	payload.encode_u32(offset, value)
+
+
+func _append_u64(payload: PackedByteArray, value: int) -> void:
+	var offset := payload.size()
+	payload.resize(offset + 8)
+	payload.encode_u64(offset, value)
 
 
 func _test_shield_hit_action(main: Control, resources: RefCounted) -> bool:

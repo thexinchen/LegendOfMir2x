@@ -808,9 +808,9 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_PLAYERWLDESP:
 			_handle_player_wl_desp(payload)
 		NetworkClient.SM_EXP:
-			game_state.update_exp(Protocol.decode_sm_exp(payload))
+			_handle_exp(payload)
 		NetworkClient.SM_GOLD:
-			game_state.update_gold(Protocol.decode_sm_gold(payload))
+			_handle_gold(payload)
 		NetworkClient.SM_PING:
 			pass  # Server ping echo
 		NetworkClient.SM_TEXT:
@@ -896,10 +896,7 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_GRABBELTERROR:
 			_handle_grab_belt_error(payload)
 		NetworkClient.SM_UPDATEITEM:
-			var reader := CerealReader.new(payload)
-			var item := reader.read_sd_update_item()
-			if _reader_ok(reader, "SM_UPDATEITEM"):
-				game_state.update_item(item)
+			_handle_update_item(payload)
 		NetworkClient.SM_SHOWSECUREDITEMLIST:
 			_handle_secured_items(payload)
 		NetworkClient.SM_REMOVESECUREDITEM:
@@ -1420,6 +1417,63 @@ func _handle_health(payload: PackedByteArray) -> void:
 	var data := reader.read_sd_health()
 	if _reader_ok(reader, "SM_HEALTH"):
 		game_state.update_entity_health(data)
+
+
+func _handle_exp(payload: PackedByteArray) -> void:
+	if payload.size() < 4:
+		return
+	var previous: int = game_state.player_exp
+	var current: int = Protocol.decode_sm_exp(payload)
+	game_state.update_exp(current)
+	if current > previous and previous > 0:
+		game_state.add_chat_log("你获得了经验值%d" % (current - previous), 1)
+
+
+func _handle_gold(payload: PackedByteArray) -> void:
+	if payload.size() < 4:
+		return
+	var previous: int = game_state.player_gold
+	var current: int = Protocol.decode_sm_gold(payload)
+	game_state.update_gold(current)
+	if current != previous:
+		game_state.add_chat_log("你%s了%d金币" % ["获得" if current > previous else "失去", absi(current - previous)], 1)
+
+
+func _handle_update_item(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var item := reader.read_sd_update_item()
+	if not _reader_ok(reader, "SM_UPDATEITEM"):
+		return
+	var item_id: int = item.get("itemID", 0)
+	var item_count: int = item.get("count", 0)
+	if item_id == 0 or item.get("seqID", 0) <= 0 or item_count <= 0 or not _resources.item_meta.has(item_id):
+		return
+	if _resources.item_type(item_id) != "金币" and item_count > (99 if _resources.item_is_packable(item_id) else 1):
+		return
+	var changed: int = game_state.update_item(item)
+	if changed == 0:
+		return
+	var item_name: String = _resources.item_name(item_id)
+	if _resources.item_is_packable(item_id):
+		game_state.add_chat_log("你%s了%d个%s" % ["获得" if changed > 0 else "失去", absi(changed), item_name], 1)
+	else:
+		game_state.add_chat_log("你%s了%s" % ["获得" if changed > 0 else "失去", item_name], 1)
+	if changed > 0:
+		control_panel.call("start_button_blink", "Inventory", 5000)
+		_play_seff(_item_update_seff(item_id), game_state.player_x, game_state.player_y)
+
+
+func _item_update_seff(item_id: int) -> int:
+	match _resources.item_type(item_id):
+		"恢复药水", "功能药水", "强效药水": return 0x0102006C
+		"武器": return 0x0102006F
+		"衣服": return 0x01020070
+		"戒指": return 0x01020071
+		"手镯": return 0x01020072
+		"项链": return 0x01020073
+		"头盔": return 0x01020074
+		"勋章": return 0x01020075
+		_: return 0x01020076
 
 
 func _handle_text(payload: PackedByteArray) -> void:
