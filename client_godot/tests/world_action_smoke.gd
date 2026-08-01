@@ -29,6 +29,8 @@ func _ready() -> void:
 	if main.call("_consume_attack_magic_id") != next_strike_id or main.call("_consume_attack_magic_id") != physical_id:
 		_fail("SM_NEXTSTRIKE was not consumed exactly once")
 		return
+	if not _test_magic_actions(main, resources, physical_id):
+		return
 
 	GameState.chat_log.clear()
 	var item_id: int = resources.item_names.keys()[0]
@@ -53,8 +55,52 @@ func _ready() -> void:
 		return
 	if not _test_pickup_action(main):
 		return
-	print("WORLD ACTION PASS: attack/chase, pickup, one-hop pathing, operation feedback, death and map filtering")
+	print("WORLD ACTION PASS: attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
+
+
+func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int) -> bool:
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	GameState.player_x = 10
+	GameState.player_y = 10
+	GameState.player_direction = 5
+	GameState.magic_effects.clear()
+	var firewall_id: int = resources.magic_id("火墙")
+	var shield_id: int = resources.magic_id("魔法盾")
+	var fireball_id: int = resources.magic_id("火球术")
+	var flame_sword_id: int = resources.magic_id("烈火剑法")
+	var half_moon_id: int = resources.magic_id("半月弯刀")
+	if 0 in [firewall_id, shield_id, fireball_id, flame_sword_id, half_moon_id]:
+		_fail("spell metadata unavailable")
+		return false
+	GameState.learned_magic = [{"magicID": firewall_id, "exp": 0}]
+	GameState.magic_keys = {firewall_id: 120}
+	var key_event := InputEventKey.new()
+	key_event.unicode = 120
+	key_event.keycode = KEY_X
+	if not main.call("_try_magic_key", key_event) or GameState.player_action_type != 9:
+		_fail("configured magic key did not enter ACTION_SPELL")
+		return false
+	if GameState.magic_effects.is_empty() or GameState.magic_effects.back().get("magicID", 0) != firewall_id:
+		_fail("ground spell did not create local magic effect")
+		return false
+	if not main.call("_cast_magic", shield_id, Vector2i(12, 12)) or GameState.magic_effects.back().get("aimUID", 0) != GameState.player_uid:
+		_fail("self spell did not target player UID")
+		return false
+	GameState.update_creature(505, {"uid": 505, "x": 12, "y": 10, "type": 1, "action_type": 2})
+	if not main.call("_cast_magic", fireball_id, Vector2i(12, 10)) or GameState.magic_effects.back().get("aimUID", 0) != 505:
+		_fail("target spell did not retain focused creature UID")
+		return false
+	if not main.call("_cast_magic", flame_sword_id, Vector2i.ZERO) or main.call("_consume_attack_magic_id") != flame_sword_id or main.call("_consume_attack_magic_id") != physical_id:
+		_fail("single-use swing magic was not consumed once")
+		return false
+	if not main.call("_cast_magic", half_moon_id, Vector2i.ZERO) or main.call("_consume_attack_magic_id") != half_moon_id or main.call("_consume_attack_magic_id") != half_moon_id:
+		_fail("persistent swing magic was not retained")
+		return false
+	main.set("_swing_magic", {})
+	main.call("_cancel_movement")
+	return true
 
 
 func _test_death_and_map_filter(main: Control) -> bool:

@@ -42,6 +42,8 @@ var _pending_purchase: Dictionary = {}
 var _resources: RefCounted = ActorResourceScript.new()
 var _pathfinder: RefCounted = WorldPathfinderScript.new()
 var _next_strike := false
+var _swing_magic: Dictionary = {}
+var _magic_focus_uid := 0
 var _move_path: Array[Vector2i] = []
 var _move_step_timer := 0.0
 var _chase_target_uid := 0
@@ -52,6 +54,16 @@ var _player_action_timer := -1.0
 # C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame).
 # Keep a small network margin before sending the next one-hop action.
 const MOVE_STEP_SECONDS := 0.75
+
+const SWING_MAGIC_NAMES := ["烈火剑法", "翔空剑法", "莲月剑法", "半月弯刀", "十方斩"]
+const TARGET_MAGIC_NAMES := [
+	"圣言术", "治愈术", "困魔咒", "施毒术", "云寂术", "回生术", "雷电术", "火球术", "大火球", "冰咆哮",
+	"龙卷风", "霹雳掌", "风掌", "击风", "月魂断玉", "月魂灵波", "斗转星移", "爆裂火焰", "地狱雷光", "怒神霹雳",
+	"灵魂火符", "冰月神掌", "冰月震天", "乾坤大挪移", "群体治愈术", "幽灵盾", "神圣战甲术", "强魔震法", "猛虎强势",
+	"集体隐身术", "移花接玉", "诱惑之光",
+]
+const GROUND_MAGIC_NAMES := ["火墙", "风震天", "地狱火", "冰沙掌", "魄冰刺", "疾光电影", "焰天火雨", "瞬息移动", "异形换位"]
+const SELF_MAGIC_NAMES := ["隐身术", "凝血离魂", "妙影无踪", "魔法盾", "铁布衫", "阴阳法环", "抗拒火环", "破血狂杀", "召唤骷髅", "超强召唤骷髅", "召唤神兽"]
 
 
 func _ready() -> void:
@@ -130,6 +142,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_toggle_panel(skill_panel)
 	elif EXTRA_PANELS.has(event.keycode):
 		_toggle_extra_panel(EXTRA_PANELS[event.keycode])
+	elif event is InputEventKey:
+		_try_magic_key(event)
 	
 	# Mouse click handling
 	if event is InputEventMouseButton and event.pressed:
@@ -197,6 +211,108 @@ func _cancel_movement() -> void:
 	_move_step_timer = 0.0
 	_chase_target_uid = 0
 	_pickup_target = Vector2i(-1, -1)
+
+
+func _try_magic_key(event: InputEventKey) -> bool:
+	var key := int(event.unicode)
+	if key == 0:
+		key = int(event.keycode)
+	if key >= 65 and key <= 90:
+		key += 32
+	var magic_id := 0
+	for configured_magic in game_state.magic_keys:
+		if int(game_state.magic_keys[configured_magic]) == key:
+			magic_id = int(configured_magic)
+			break
+	if magic_id <= 0 or not _has_learned_magic(magic_id):
+		return false
+	var layout: PackedInt32Array = _resources.skill_layout(magic_id)
+	if layout.size() >= 5 and (layout[4] & 1) != 0:
+		return false
+	return _cast_magic(magic_id, _mouse_grid())
+
+
+func _has_learned_magic(magic_id: int) -> bool:
+	for magic_value in game_state.learned_magic:
+		if magic_value is Dictionary and int(magic_value.get("magicID", 0)) == magic_id:
+			return true
+		if magic_value is int and int(magic_value) == magic_id:
+			return true
+	return false
+
+
+func _mouse_grid() -> Vector2i:
+	var mouse := get_viewport().get_mouse_position()
+	return world_renderer.grid_from_screen(int(mouse.x), int(mouse.y))
+
+
+func _update_magic_focus(mouse_grid: Vector2i) -> int:
+	for uid_value in game_state.creatures:
+		var creature: Dictionary = game_state.creatures[uid_value]
+		if creature.get("action_type", 0) != 13 and Vector2i(creature.get("x", -1), creature.get("y", -1)) == mouse_grid:
+			_magic_focus_uid = int(uid_value)
+			return _magic_focus_uid
+	if _magic_focus_uid != 0:
+		var focus: Dictionary = game_state.get_creature(_magic_focus_uid)
+		if focus.is_empty() or focus.get("action_type", 0) == 13:
+			_magic_focus_uid = 0
+	return _magic_focus_uid
+
+
+func _cast_magic(magic_id: int, mouse_grid: Vector2i) -> bool:
+	var magic_name: String = _resources.magic_names.get(magic_id, "")
+	if magic_name in SWING_MAGIC_NAMES:
+		_swing_magic[magic_id] = not bool(_swing_magic.get(magic_id, false))
+		game_state.add_chat_log("%s%s" % ["开启" if _swing_magic[magic_id] else "关闭", magic_name], 0)
+		return true
+	var focus_uid := _update_magic_focus(mouse_grid)
+	if magic_name == "空拳刀法":
+		return _send_spell_action(12, magic_id, mouse_grid, focus_uid)
+	if magic_name in SELF_MAGIC_NAMES:
+		return _send_spell_action(9, magic_id, Vector2i(game_state.player_x, game_state.player_y), game_state.player_uid)
+	if magic_name in GROUND_MAGIC_NAMES:
+		return _send_spell_action(9, magic_id, mouse_grid, 0)
+	if magic_name in TARGET_MAGIC_NAMES:
+		return _send_spell_action(9, magic_id, mouse_grid, focus_uid)
+	return false
+
+
+func _send_spell_action(action_type: int, magic_id: int, aim_grid: Vector2i, aim_uid: int) -> bool:
+	_cancel_movement()
+	var target_grid := aim_grid
+	if aim_uid == game_state.player_uid:
+		target_grid = Vector2i(game_state.player_x, game_state.player_y)
+	elif aim_uid != 0:
+		var target: Dictionary = game_state.get_creature(aim_uid)
+		if target.is_empty():
+			aim_uid = 0
+		else:
+			target_grid = Vector2i(target.get("x", aim_grid.x), target.get("y", aim_grid.y))
+	var direction := _direction_to(game_state.player_x, game_state.player_y, target_grid.x, target_grid.y)
+	if direction == 0:
+		direction = game_state.player_direction
+	if direction != game_state.player_direction:
+		var stand := {
+			"type": 2, "speed": 100, "direction": direction,
+			"x": game_state.player_x, "y": game_state.player_y,
+			"aimX": game_state.player_x, "aimY": game_state.player_y, "aimUID": 0,
+		}
+		NetworkClient.send_action(Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, stand))
+		game_state.player_direction = direction
+	var action := {
+		"type": action_type, "speed": 100, "direction": direction,
+		"x": game_state.player_x, "y": game_state.player_y,
+		"aimX": target_grid.x, "aimY": target_grid.y, "aimUID": aim_uid,
+		"magicID": magic_id,
+	}
+	NetworkClient.send_action(Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action))
+	if action_type == 9:
+		var effect := action.duplicate(true)
+		effect["uid"] = game_state.player_uid
+		game_state.add_magic_effect(effect, "local_action")
+	_set_player_action(action_type, action.speed)
+	_player_action_timer = _action_duration(action_type, action.speed, 2)
+	return true
 
 
 func _plan_chase_path() -> void:
@@ -321,6 +437,12 @@ func _consume_attack_magic_id() -> int:
 		var next_magic: int = _resources.magic_id("攻杀剑术")
 		if next_magic > 0:
 			return next_magic
+	for magic_name in ["莲月剑法", "翔空剑法", "烈火剑法", "十方斩", "半月弯刀"]:
+		var swing_magic: int = _resources.magic_id(magic_name)
+		if swing_magic > 0 and bool(_swing_magic.get(swing_magic, false)):
+			if magic_name in ["莲月剑法", "翔空剑法", "烈火剑法"]:
+				_swing_magic[swing_magic] = false
+			return swing_magic
 	var physical_magic: int = _resources.magic_id("物理攻击")
 	return physical_magic
 
@@ -580,9 +702,10 @@ func _handle_action(payload: PackedByteArray) -> void:
 	var action_type: int = action.get("type", 0)
 	var direction: int = action.get("direction", 0)
 	if action_type == 9 and action.get("magicID", 0) > 0:
-		var effect := action.duplicate(true)
-		effect["uid"] = uid
-		game_state.add_magic_effect(effect, "action")
+		if uid != game_state.player_uid or not _has_pending_local_magic(action.get("magicID", 0)):
+			var effect := action.duplicate(true)
+			effect["uid"] = uid
+			game_state.add_magic_effect(effect, "action")
 	
 	if uid == game_state.player_uid:
 		# Update player position and direction
@@ -636,6 +759,15 @@ func _handle_action(payload: PackedByteArray) -> void:
 		var duration := _action_duration(action_type, action.get("speed", 100), creature.get("type", 0))
 		if duration > 0.0:
 			_schedule_creature_idle(uid, action_type, creature.get("action_started_ms", 0), duration)
+
+
+func _has_pending_local_magic(magic_id: int) -> bool:
+	var now := Time.get_ticks_msec()
+	for effect_value in game_state.magic_effects:
+		var effect: Dictionary = effect_value
+		if effect.get("source", "") == "local_action" and int(effect.get("magicID", 0)) == magic_id and now - int(effect.get("start_time", 0)) < 1500:
+			return true
+	return false
 
 
 func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay: float) -> void:
