@@ -517,7 +517,8 @@ func _set_player_action(action_type: int, speed := 100, magic_id := 0) -> void:
 func _action_duration(action_type: int, speed: int, creature_type: int, magic_id := 0) -> float:
 	var frame_count := 0
 	match action_type:
-		3: frame_count = 6
+		3, 5: frame_count = 6
+		6: return 0.01
 		7:
 			if creature_type == 1:
 				frame_count = 6
@@ -530,6 +531,7 @@ func _action_duration(action_type: int, speed: int, creature_type: int, magic_id
 		9: frame_count = 10 if creature_type == 1 else 5
 		11: frame_count = 2 if creature_type == 1 else 3
 		12: frame_count = 10
+		14: frame_count = 9
 		_: return -1.0
 	return float(frame_count) * 0.1 * 100.0 / float(clampi(speed, 20, 500))
 
@@ -704,12 +706,21 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 
 func _handle_action(payload: PackedByteArray) -> void:
 	var data := Protocol.decode_sm_action(payload)
+	if data.get("mapUID", 0) != game_state.player_map_uid:
+		return
 	var uid: int = data.get("uid", 0)
 	var action: Dictionary = data.get("action", {})
 	var x: int = action.get("x", 0)
 	var y: int = action.get("y", 0)
 	var action_type: int = action.get("type", 0)
 	var direction: int = action.get("direction", 0)
+	if action_type == 6:
+		var space_magic_id: int = _resources.magic_id("瞬息移动")
+		if space_magic_id > 0:
+			var space_effect := action.duplicate(true)
+			space_effect["uid"] = uid
+			space_effect["magicID"] = space_magic_id
+			game_state.add_magic_effect(space_effect, "action")
 	if action_type == 9 and action.get("magicID", 0) > 0:
 		if uid != game_state.player_uid or not _has_pending_local_magic(action.get("magicID", 0)):
 			var effect := action.duplicate(true)
@@ -720,8 +731,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 		# Update player position and direction
 		game_state.player_action_from_x = x
 		game_state.player_action_from_y = y
-		game_state.player_x = action.get("aimX", x) if action_type == 3 else x
-		game_state.player_y = action.get("aimY", y) if action_type == 3 else y
+		game_state.player_x = action.get("aimX", x) if _action_uses_aim_position(action_type) else x
+		game_state.player_y = action.get("aimY", y) if _action_uses_aim_position(action_type) else y
 		if direction >= 1:
 			game_state.player_direction = direction
 		_set_player_action(action_type, action.get("speed", 100), action.get("magicID", 0))
@@ -739,8 +750,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 			var inferred_type := _creature_type_from_uid(uid)
 			creature = {
 				"uid": uid,
-				"x": action.get("aimX", x) if action_type == 3 else x,
-				"y": action.get("aimY", y) if action_type == 3 else y,
+				"x": action.get("aimX", x) if _action_uses_aim_position(action_type) else x,
+				"y": action.get("aimY", y) if _action_uses_aim_position(action_type) else y,
 				"action_from_x": x,
 				"action_from_y": y,
 				"type": inferred_type,
@@ -758,8 +769,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 		else:
 			creature["action_from_x"] = x
 			creature["action_from_y"] = y
-			creature["x"] = action.get("aimX", x) if action_type == 3 else x
-			creature["y"] = action.get("aimY", y) if action_type == 3 else y
+			creature["x"] = action.get("aimX", x) if _action_uses_aim_position(action_type) else x
+			creature["y"] = action.get("aimY", y) if _action_uses_aim_position(action_type) else y
 			creature["action_type"] = action_type
 			creature["action_started_ms"] = Time.get_ticks_msec()
 			creature["action_speed"] = action.get("speed", 100)
@@ -779,6 +790,10 @@ func _has_pending_local_magic(magic_id: int) -> bool:
 		if effect.get("source", "") == "local_action" and int(effect.get("magicID", 0)) == magic_id and now - int(effect.get("start_time", 0)) < 1500:
 			return true
 	return false
+
+
+func _action_uses_aim_position(action_type: int) -> bool:
+	return action_type in [3, 5, 6]
 
 
 func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay: float) -> void:
@@ -805,8 +820,8 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	if creature.is_empty():
 		creature = {
 			"uid": uid,
-			"x": action.get("aimX", action.get("x", 0)) if action.get("type", 0) == 3 else action.get("x", 0),
-			"y": action.get("aimY", action.get("y", 0)) if action.get("type", 0) == 3 else action.get("y", 0),
+			"x": action.get("aimX", action.get("x", 0)) if _action_uses_aim_position(action.get("type", 0)) else action.get("x", 0),
+			"y": action.get("aimY", action.get("y", 0)) if _action_uses_aim_position(action.get("type", 0)) else action.get("y", 0),
 			"type": c_type,
 			"name": "",
 			"action_type": action.get("type", 0),
@@ -820,8 +835,8 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	else:
 		creature["action_from_x"] = action.get("x", 0)
 		creature["action_from_y"] = action.get("y", 0)
-		creature["x"] = action.get("aimX", action.get("x", 0)) if action.get("type", 0) == 3 else action.get("x", 0)
-		creature["y"] = action.get("aimY", action.get("y", 0)) if action.get("type", 0) == 3 else action.get("y", 0)
+		creature["x"] = action.get("aimX", action.get("x", 0)) if _action_uses_aim_position(action.get("type", 0)) else action.get("x", 0)
+		creature["y"] = action.get("aimY", action.get("y", 0)) if _action_uses_aim_position(action.get("type", 0)) else action.get("y", 0)
 		creature["type"] = c_type
 		creature["action_type"] = action.get("type", 0)
 		creature["action_started_ms"] = Time.get_ticks_msec()

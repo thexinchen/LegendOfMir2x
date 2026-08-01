@@ -381,8 +381,8 @@ func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dict
 	var direction_index := clampi(direction, 1, 8) - 1
 	var motion_data := _hero_motion(action_type, magic_id, desp)
 	var frame_index := _motion_frame(action_type, motion_data[1], action_started_ms, action_speed)
-	if action_type == 7:
-		var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+	if action_type in [7, 14]:
+		var magic_name: String = actor_resource.magic_names.get(magic_id, "") if action_type == 7 else ""
 		var primary_speed := 150 if magic_name == "十方斩" else action_speed
 		var attack_step := _motion_step(action_started_ms, primary_speed)
 		if attack_step >= motion_data[1]:
@@ -431,7 +431,7 @@ func _wear_shape(wear: Dictionary, location: int) -> int:
 
 func _hero_motion(action_type: int, magic_id := 0, desp: Dictionary = {}) -> PackedInt32Array:
 	match action_type:
-		3, 4, 5: return PackedInt32Array([21, 6])
+		3, 5: return PackedInt32Array([21, 6])
 		7:
 			var magic_name: String = actor_resource.magic_names.get(magic_id, "")
 			if magic_name in ["翔空剑法", "莲月剑法"]:
@@ -447,6 +447,7 @@ func _hero_motion(action_type: int, magic_id := 0, desp: Dictionary = {}) -> Pac
 		11: return PackedInt32Array([15, 3])
 		12: return PackedInt32Array([18, 10])
 		13: return PackedInt32Array([19, 10])
+		14: return PackedInt32Array([10, 6])
 		_: return PackedInt32Array([0, 4])
 
 
@@ -491,7 +492,7 @@ func _draw_sprite_frame(sprite: Dictionary, start_x: int, start_y: int, alpha: f
 
 func _monster_motion(action_type: int) -> PackedInt32Array:
 	match action_type:
-		3, 4, 5: return PackedInt32Array([1, 6])
+		3, 5: return PackedInt32Array([1, 6])
 		7: return PackedInt32Array([2, 6])
 		11: return PackedInt32Array([3, 2])
 		13: return PackedInt32Array([4, 10])
@@ -514,7 +515,7 @@ func _motion_step(started_ms: int, speed: int) -> int:
 
 
 func _action_draw_grid(end_x: int, end_y: int, from_x: int, from_y: int, action_type: int, started_ms: int, speed: int) -> Vector2:
-	if action_type != 3 or started_ms <= 0:
+	if action_type not in [3, 5] or started_ms <= 0:
 		return Vector2(end_x, end_y)
 	var duration_ms := 600.0 * 100.0 / float(clampi(speed, 20, 500))
 	var ratio := clampf(float(Time.get_ticks_msec() - started_ms) / duration_ms, 0.0, 1.0)

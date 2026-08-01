@@ -49,6 +49,8 @@ func _ready() -> void:
 		return
 	if not _test_death_and_map_filter(main):
 		return
+	if not _test_world_displacement(main, resources):
+		return
 	if not _test_path_decomposition():
 		return
 	if not _test_chase_retry(main):
@@ -131,6 +133,59 @@ func _u64_payload(value: int) -> PackedByteArray:
 	var payload := PackedByteArray()
 	payload.resize(8)
 	payload.encode_u64(0, value)
+	return payload
+
+
+func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	GameState.player_x = 3
+	GameState.player_y = 4
+	GameState.magic_effects.clear()
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
+		"type": 6, "speed": 100, "direction": 5, "x": 3, "y": 4, "aimX": 20, "aimY": 21,
+	}))
+	if GameState.player_x != 20 or GameState.player_y != 21 or GameState.player_action_type != 6:
+		_fail("space move did not jump immediately to aim grid")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 999, {
+		"type": 6, "speed": 100, "direction": 5, "x": 20, "y": 21, "aimX": 30, "aimY": 31,
+	}))
+	if GameState.player_x != 20 or GameState.player_y != 21:
+		_fail("stale-map world action changed current player position")
+		return false
+	if GameState.magic_effects.is_empty() or GameState.magic_effects.back().get("magicID", 0) != resources.magic_id("瞬息移动"):
+		_fail("space move did not create original teleport effect")
+		return false
+	var remote_uid: int = (5 << 59) | 606
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(remote_uid, 202, {
+		"type": 5, "speed": 100, "direction": 3, "x": 6, "y": 7, "aimX": 8, "aimY": 7,
+	}))
+	var remote: Dictionary = GameState.get_creature(remote_uid)
+	if remote.get("x", 0) != 8 or remote.get("y", 0) != 7:
+		_fail("push move did not retain aim grid as logical position")
+		return false
+	var renderer: Control = main.get_node("WorldRenderer")
+	var pushed: Vector2 = renderer.call("_action_draw_grid", 8, 7, 6, 7, 5, Time.get_ticks_msec() - 1000, 100)
+	if not is_equal_approx(pushed.x, 8.0):
+		_fail("push move rendering did not interpolate to aim grid")
+		return false
+	if renderer.call("_hero_motion", 14) != PackedInt32Array([10, 6]) or not is_equal_approx(float(main.call("_action_duration", 14, 100, 2)), 0.9):
+		_fail("mine action did not use C++ two-handed swing and attack-mode timing")
+		return false
+	main.call("_process_player_action", 0.02)
+	main.call("_cancel_movement")
+	return true
+
+
+func _sm_action(uid: int, map_uid: int, action: Dictionary) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(43)
+	payload.encode_u64(0, uid)
+	payload.encode_u64(8, map_uid)
+	var encoded_action := Protocol.encode_action_node(action)
+	for index in range(encoded_action.size()):
+		payload[16 + index] = encoded_action[index]
 	return payload
 
 
