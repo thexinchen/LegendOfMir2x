@@ -350,6 +350,10 @@ func _handle_action(payload: PackedByteArray) -> void:
 	var y: int = action.get("y", 0)
 	var action_type: int = action.get("type", 0)
 	var direction: int = action.get("direction", 0)
+	if action_type == 9 and action.get("magicID", 0) > 0:
+		var effect := action.duplicate(true)
+		effect["uid"] = uid
+		game_state.add_magic_effect(effect, "action")
 	
 	if uid == game_state.player_uid:
 		# Update player position and direction
@@ -497,12 +501,9 @@ func _handle_ground_item_id_list(payload: PackedByteArray) -> void:
 
 func _handle_cast_magic(payload: PackedByteArray) -> void:
 	var data := Protocol.decode_sm_cast_magic(payload)
-	var uid: int = data.get("uid", 0)
-	var magic_id: int = data.get("magic", 0)
-	var x: int = data.get("x", 0)
-	var y: int = data.get("y", 0)
-	# Show magic effect at target location
-	game_state.add_ascend_string(x, y, "*", Color(0.5, 0.8, 1, 1))
+	if not data.is_empty() and data.get("mapUID", 0) == game_state.player_map_uid:
+		data["magicID"] = data.get("magic", 0)
+		game_state.add_magic_effect(data, "cast")
 
 
 func _handle_miss(payload: PackedByteArray) -> void:

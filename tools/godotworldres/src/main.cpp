@@ -97,6 +97,20 @@ struct BuffMetaRecord
     int8_t favor = 0;
     uint8_t reserved[3] {};
 };
+
+struct MagicEffectMetaRecord
+{
+    uint32_t magicID = 0;
+    uint32_t gfxID = 0;
+    uint32_t modColor = 0;
+    uint16_t frameCount = 0;
+    uint16_t gfxIDCount = 0;
+    uint16_t speed = 0;
+    uint8_t stage = 0;
+    uint8_t type = 0;
+    uint8_t gfxDirType = 0;
+    uint8_t flags = 0;
+};
 #pragma pack(pop)
 
 static_assert(sizeof(MapHeader) == 28);
@@ -108,6 +122,7 @@ static_assert(sizeof(MonsterMetaRecord) == 8);
 static_assert(sizeof(ItemMetaRecord) == 12);
 static_assert(sizeof(SkillMetaRecord) == 12);
 static_assert(sizeof(BuffMetaRecord) == 12);
+static_assert(sizeof(MagicEffectMetaRecord) == 22);
 
 static bool animatedTextureSet(uint32_t textureID)
 {
@@ -368,6 +383,55 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
         const SpriteHeader buffHeader {.spriteCount = to_u32(buffList.size())};
         buffFile.write(reinterpret_cast<const char *>(&buffHeader), sizeof(buffHeader));
         writeVector(buffFile, buffList);
+    }
+    if(std::strcmp(family, "magic") == 0){
+        std::vector<MagicEffectMetaRecord> metaList;
+        for(uint32_t magicID = 1; magicID < DBCOM_MAGICENDID(); ++magicID){
+            const auto &record = DBCOM_MAGICRECORD(magicID);
+            if(!record){
+                continue;
+            }
+            for(int stage = MST_BEGIN; stage < MST_END; ++stage){
+                const auto [gfxEntry, gfxRef] = DBCOM_MAGICGFXENTRY(magicID, magicStageName(stage));
+                if(!(gfxEntry && gfxEntry->gfxID != SYS_U32NIL && gfxEntry->frameCount > 0)){
+                    continue;
+                }
+                metaList.push_back({
+                    magicID,
+                    gfxEntry->gfxID,
+                    gfxRef ? gfxRef->modColor : gfxEntry->modColor,
+                    check_cast<uint16_t>(gfxEntry->frameCount),
+                    check_cast<uint16_t>(gfxEntry->gfxIDCount),
+                    check_cast<uint16_t>(gfxEntry->speed),
+                    check_cast<uint8_t>(stage),
+                    check_cast<uint8_t>(magicGfxEntryID(gfxEntry->type)),
+                    check_cast<uint8_t>(gfxEntry->gfxDirType),
+                    to_u8((gfxEntry->loop ? 1 : 0) | (gfxEntry->onGround ? 2 : 0)),
+                });
+            }
+        }
+        std::ofstream metaFile(outputDir / "sprites" / "magic.m2xmeta", std::ios::binary);
+        const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
+        metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
+        writeVector(metaFile, metaList);
+
+        std::ofstream nameFile(outputDir / "sprites" / "magic_name.m2xmeta", std::ios::binary);
+        uint32_t nameCount = 0;
+        for(uint32_t magicID = 1; magicID < DBCOM_MAGICENDID(); ++magicID){
+            nameCount += DBCOM_MAGICRECORD(magicID) ? 1 : 0;
+        }
+        const SpriteHeader nameHeader {.spriteCount = nameCount};
+        nameFile.write(reinterpret_cast<const char *>(&nameHeader), sizeof(nameHeader));
+        for(uint32_t magicID = 1; magicID < DBCOM_MAGICENDID(); ++magicID){
+            if(!DBCOM_MAGICRECORD(magicID)){
+                continue;
+            }
+            const std::string name(to_cstr(DBCOM_MAGICRECORD(magicID).name));
+            const auto length = check_cast<uint16_t>(name.size());
+            nameFile.write(reinterpret_cast<const char *>(&magicID), sizeof(magicID));
+            nameFile.write(reinterpret_cast<const char *>(&length), sizeof(length));
+            nameFile.write(name.data(), length);
+        }
     }
     std::printf("sprite family %s: %zu frames\n", family, spriteList.size());
     return spriteList.size();

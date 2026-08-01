@@ -69,6 +69,7 @@ var npc_sell: Dictionary = {}
 var npc_sell_detail: Dictionary = {}
 var pending_input: Dictionary = {}
 var firewalls: Array = []
+var magic_effects: Array = []
 
 # Camera position (pixel coordinates)
 var view_x: float = 0.0
@@ -117,6 +118,7 @@ func start_game_scene(scene_data: Dictionary) -> void:
 	player_direction = scene_data.get("direction", player_direction)
 	player_desp = scene_data.get("desp", player_desp)
 	wear = player_desp.get("wear", wear)
+	magic_effects.clear()
 	_center_camera_on_player()
 	state_changed.emit()
 
@@ -237,6 +239,14 @@ func remove_ground_item(x: int, y: int, item_id: int) -> void:
 	items.erase(item_id)
 	if items.is_empty():
 		ground_items.erase(key)
+	state_changed.emit()
+
+
+func add_magic_effect(data: Dictionary, source: String) -> void:
+	var effect := data.duplicate(true)
+	effect["source"] = source
+	effect["start_time"] = Time.get_ticks_msec()
+	magic_effects.append(effect)
 	state_changed.emit()
 
 

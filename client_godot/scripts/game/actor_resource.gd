@@ -10,19 +10,24 @@ var item_meta: Dictionary = {}
 var item_names: Dictionary = {}
 var skill_meta: Dictionary = {}
 var buff_meta: Dictionary = {}
+var magic_meta: Dictionary = {}
+var magic_names: Dictionary = {}
+var magic_ids_by_name: Dictionary = {}
 var _textures: Dictionary = {}
 
 
 func configure(path: String) -> bool:
 	base_path = path
 	var loaded := false
-	for family in ["hero", "hair", "helmet", "weapon", "monster", "npc", "item", "equip", "proguse"]:
+	for family in ["hero", "hair", "helmet", "weapon", "monster", "npc", "item", "equip", "proguse", "magic"]:
 		loaded = _load_index(family) or loaded
 	_load_monster_meta()
 	_load_item_meta()
 	_load_item_names()
 	_load_skill_meta()
 	_load_buff_meta()
+	_load_magic_meta()
+	_load_magic_names()
 	return loaded
 
 
@@ -98,6 +103,14 @@ func skill_layout(magic_id: int) -> PackedInt32Array:
 
 func buff_layout(buff_id: int) -> PackedInt32Array:
 	return buff_meta.get(buff_id, PackedInt32Array())
+
+
+func magic_layout(magic_id: int, stage: int) -> PackedInt32Array:
+	return magic_meta.get(magic_id * 8 + stage, PackedInt32Array())
+
+
+func magic_id(name: String) -> int:
+	return magic_ids_by_name.get(name, 0)
 
 
 func _load_index(family: String) -> bool:
@@ -194,3 +207,41 @@ func _load_buff_meta() -> void:
 			favor -= 0x100
 		file.get_buffer(3)
 		buff_meta[buff_id] = PackedInt32Array([icon_id, favor])
+
+
+func _load_magic_meta() -> void:
+	var file := FileAccess.open("%s/sprites/magic.m2xmeta" % base_path, FileAccess.READ)
+	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
+		return
+	if file.get_32() != 1:
+		return
+	var count := file.get_32()
+	for _index in range(count):
+		var magic_id := file.get_32()
+		var gfx_id := file.get_32()
+		var mod_color := file.get_32()
+		var frame_count := file.get_16()
+		var gfx_id_count := file.get_16()
+		var speed := file.get_16()
+		var stage := file.get_8()
+		var type := file.get_8()
+		var gfx_dir_type := file.get_8()
+		var flags := file.get_8()
+		magic_meta[magic_id * 8 + stage] = PackedInt32Array([
+			gfx_id, mod_color, frame_count, gfx_id_count, speed, type, gfx_dir_type, flags,
+		])
+
+
+func _load_magic_names() -> void:
+	var file := FileAccess.open("%s/sprites/magic_name.m2xmeta" % base_path, FileAccess.READ)
+	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
+		return
+	if file.get_32() != 1:
+		return
+	var count := file.get_32()
+	for _index in range(count):
+		var id := file.get_32()
+		var length := file.get_16()
+		var name := file.get_buffer(length).get_string_from_utf8()
+		magic_names[id] = name
+		magic_ids_by_name[name] = id

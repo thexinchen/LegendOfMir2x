@@ -18,7 +18,7 @@ static func decode_action_node(buf: PackedByteArray, offset: int = 0) -> Diction
 	if buf.size() < offset + 27:
 		return {}
 	var bf0 := buf.decode_u16(offset)
-	return {
+	var result := {
 		"type": bf0 & 0x1F,
 		"speed": (bf0 >> 5) & 0x1FF,
 		"direction": buf[offset + 2] & 0x1F,
@@ -29,6 +29,10 @@ static func decode_action_node(buf: PackedByteArray, offset: int = 0) -> Diction
 		"aimUID": _decode_u64(buf, offset + 11),
 		"extParam": buf.slice(offset + 19, offset + 27),
 	}
+	if result.type == 7 or result.type == 9:
+		result["magicID"] = buf.decode_u32(offset + 19)
+		result["modifierID"] = buf.decode_u32(offset + 23)
+	return result
 
 static func encode_action_node(action: Dictionary) -> PackedByteArray:
 	var buf := PackedByteArray()

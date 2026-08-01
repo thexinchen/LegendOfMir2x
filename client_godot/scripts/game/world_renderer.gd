@@ -13,6 +13,12 @@ const OBJMAXH := 25
 const WorldResourceScript = preload("res://scripts/game/world_resource.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const ANIMATION_DELAYS := [150, 200, 250, 300, 350, 400, 420, 450]
+const MAGIC_STAGE_SPELL := 1
+const MAGIC_STAGE_RUN := 2
+const MAGIC_STAGE_EXPLODE := 3
+const MAGIC_TYPE_FIXED := 1
+const MAGIC_TYPE_BOUND := 2
+const MAGIC_TYPE_FOLLOW := 3
 
 var game_state: Node = null
 
@@ -85,8 +91,11 @@ func _draw() -> void:
 		row_creatures.append(creature)
 		creatures_by_row[row] = row_creatures
 	var now := Time.get_ticks_msec()
+	var active_magic := _resolve_magic_effects(now)
 	for gy in range(y0, y1 + 1):
 		_draw_object_row(1, gy, x0, x1, view_x, view_y)
+		_draw_firewall_row(gy, x0, x1, view_x, view_y, now)
+		_draw_magic_row(active_magic, gy, true, view_x, view_y)
 		_draw_strike_row(gy, x0, x1, view_x, view_y, now)
 		for creature in creatures_by_row.get(gy, []):
 			_draw_creature(creature, view_x, view_y)
@@ -94,6 +103,7 @@ func _draw() -> void:
 			_draw_player(view_x, view_y)
 		_draw_object_row(2, gy, x0, x1, view_x, view_y)
 	_draw_object_depth(3, x0, y0, x1, y1, view_x, view_y)
+	_draw_magic_row(active_magic, -1, false, view_x, view_y)
 
 	# Floating combat text is a screen overlay.
 	game_state.update_ascend_strings()
@@ -189,6 +199,140 @@ func _draw_strike_row(y: int, x0: int, x1: int, view_x: int, view_y: int, now: i
 		draw_rect(Rect2(x * GRID_XP - view_x, y * GRID_YP - view_y, GRID_XP, GRID_YP), Color(1, 0.2, 0.2, alpha * 0.5))
 	for key in to_remove:
 		game_state.strike_grids.erase(key)
+
+
+func _resolve_magic_effects(now: int) -> Array:
+	var active: Array = []
+	var pending: Array = []
+	for effect_value in game_state.magic_effects:
+		var effect: Dictionary = effect_value
+		var resolved := _resolve_magic_effect(effect, now)
+		if resolved.is_empty():
+			continue
+		active.append(resolved)
+		pending.append(effect)
+	game_state.magic_effects = pending
+	return active
+
+
+func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
+	var magic_id: int = effect.get("magicID", 0)
+	if magic_id <= 0:
+		return {}
+	var stages := [MAGIC_STAGE_RUN, MAGIC_STAGE_EXPLODE] if effect.get("source", "") == "cast" else [MAGIC_STAGE_SPELL, MAGIC_STAGE_RUN, MAGIC_STAGE_EXPLODE]
+	var elapsed := maxi(0, now - int(effect.get("start_time", now)))
+	for stage in stages:
+		var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, stage)
+		if meta.is_empty():
+			continue
+		var duration := _magic_stage_duration(meta, effect)
+		if elapsed < duration:
+			return _make_resolved_magic(effect, meta, stage, elapsed, duration)
+		elapsed -= duration
+	return {}
+
+
+func _magic_stage_duration(meta: PackedInt32Array, effect: Dictionary) -> int:
+	var speed := maxi(1, meta[4])
+	var fps := 10.0 * speed / 100.0
+	var duration := maxi(100, roundi(meta[2] * 1000.0 / fps))
+	if meta[5] == MAGIC_TYPE_FOLLOW:
+		var source := Vector2(effect.get("x", 0) * GRID_XP, effect.get("y", 0) * GRID_YP)
+		var target_grid := _effect_target_grid(effect)
+		var target := Vector2(target_grid.x * GRID_XP, target_grid.y * GRID_YP)
+		duration = maxi(200, roundi(source.distance_to(target) * 5.0))
+	elif meta[7] & 1:
+		duration = 1200
+	return duration
+
+
+func _make_resolved_magic(effect: Dictionary, meta: PackedInt32Array, stage: int, elapsed: int, duration: int) -> Dictionary:
+	var source_grid := Vector2(effect.get("x", 0), effect.get("y", 0))
+	var target_grid := _effect_target_grid(effect)
+	var position := target_grid
+	if stage == MAGIC_STAGE_SPELL:
+		position = source_grid
+	elif meta[5] == MAGIC_TYPE_FOLLOW:
+		position = source_grid.lerp(target_grid, clampf(float(elapsed) / duration, 0.0, 1.0))
+	elif meta[5] == MAGIC_TYPE_BOUND and effect.get("aimUID", 0) == 0:
+		position = source_grid
+	var direction_index := _magic_direction_index(meta[6], source_grid, target_grid, effect.get("direction", 1))
+	var absolute_frame := floori(float(elapsed) / 1000.0 * 10.0 * meta[4] / 100.0)
+	var frame := absolute_frame % meta[2] if meta[7] & 1 else mini(absolute_frame, meta[2] - 1)
+	return {
+		"meta": meta,
+		"stage": stage,
+		"position": position,
+		"frame": frame,
+		"direction": direction_index,
+		"on_ground": bool(meta[7] & 2),
+	}
+
+
+func _effect_target_grid(effect: Dictionary) -> Vector2:
+	var aim_uid: int = effect.get("aimUID", 0)
+	if aim_uid == game_state.player_uid:
+		return Vector2(game_state.player_x, game_state.player_y)
+	if aim_uid != 0:
+		var creature: Dictionary = game_state.creatures.get(aim_uid, {})
+		if not creature.is_empty():
+			return Vector2(creature.get("x", effect.get("aimX", effect.get("x", 0))), creature.get("y", effect.get("aimY", effect.get("y", 0))))
+	return Vector2(effect.get("aimX", effect.get("x", 0)), effect.get("aimY", effect.get("y", 0)))
+
+
+func _magic_direction_index(dir_type: int, source: Vector2, target: Vector2, network_direction: int) -> int:
+	if dir_type <= 1:
+		return 0
+	if dir_type <= 8:
+		return clampi(network_direction, 1, dir_type) - 1
+	var delta := target - source
+	if delta == Vector2.ZERO:
+		return ((clampi(network_direction, 1, 8) - 1) * 2) % dir_type
+	var angle := fposmod(atan2(delta.x * GRID_YP, -delta.y * GRID_XP), TAU)
+	return roundi(angle / TAU * dir_type) % dir_type
+
+
+func _draw_magic_row(active: Array, y: int, on_ground: bool, view_x: int, view_y: int) -> void:
+	for magic_value in active:
+		var magic: Dictionary = magic_value
+		if magic.on_ground != on_ground:
+			continue
+		var position: Vector2 = magic.position
+		if on_ground and floori(position.y) != y:
+			continue
+		_draw_magic_frame(magic.meta, magic.frame, magic.direction, position, view_x, view_y)
+
+
+func _draw_firewall_row(y: int, x0: int, x1: int, view_x: int, view_y: int, now: int) -> void:
+	var fire_wall_id: int = actor_resource.magic_id("火墙")
+	var meta: PackedInt32Array = actor_resource.magic_layout(fire_wall_id, MAGIC_STAGE_RUN)
+	if meta.is_empty():
+		return
+	var frame_step := maxi(1, roundi(10000.0 / maxi(1, meta[4])))
+	for firewall_value in game_state.firewalls:
+		var firewall: Dictionary = firewall_value
+		var x: int = firewall.get("x", -1)
+		if firewall.get("y", -1) != y or x < x0 or x > x1:
+			continue
+		for index in range(maxi(0, firewall.get("count", 0))):
+			var frame := int(now / frame_step + index * 2) % meta[2]
+			_draw_magic_frame(meta, frame, 0, Vector2(x, y), view_x, view_y)
+
+
+func _draw_magic_frame(meta: PackedInt32Array, frame: int, direction: int, grid_position: Vector2, view_x: int, view_y: int) -> void:
+	var texture_id: int = meta[0] + direction * meta[3] + frame
+	var sprite: Dictionary = actor_resource.frame("magic", texture_id)
+	if sprite.is_empty():
+		return
+	var packed_color: int = meta[1]
+	var color := Color(
+		float(packed_color & 0xFF) / 255.0,
+		float((packed_color >> 8) & 0xFF) / 255.0,
+		float((packed_color >> 16) & 0xFF) / 255.0,
+		float((packed_color >> 24) & 0xFF) / 255.0,
+	)
+	var offset: Vector2i = sprite.offset
+	draw_texture(sprite.texture, Vector2(grid_position.x * GRID_XP - view_x + offset.x, grid_position.y * GRID_YP - view_y + offset.y), color)
 
 
 func _draw_player(view_x: int, view_y: int) -> void:
