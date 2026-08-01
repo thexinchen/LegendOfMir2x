@@ -1,4 +1,4 @@
-[gd_scene load_steps=37 format=3]
+[gd_scene load_steps=39 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/control_panel.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000012.png" id="2_base"]
@@ -39,6 +39,13 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000039.png" id="29_team_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003b.png" id="30_quest_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000027.png" id="31_expanded"]
+[ext_resource type="FontFile" path="res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf" id="32_chat_font"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_command"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
 
 [node name="ControlPanel" type="Control"]
 custom_minimum_size = Vector2(800, 152)
@@ -57,6 +64,16 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="ChatBackground" type="ColorRect" parent="Body"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 178.0
+offset_top = 19.0
+offset_right = 634.0
+offset_bottom = 152.0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
 
 [node name="ExpandedMiddle" type="NinePatchRect" parent="Body"]
 unique_name_in_owner = true
@@ -163,17 +180,19 @@ offset_right = 633.0
 offset_bottom = 129.0
 mouse_filter = 2
 
-[node name="ChatLog" type="Label" parent="Body"]
+[node name="ChatLog" type="RichTextLabel" parent="Body"]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 185.0
 offset_top = 34.0
 offset_right = 529.0
 offset_bottom = 118.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 15
-text = ""
-vertical_alignment = 2
+theme_override_fonts/normal_font = ExtResource("32_chat_font")
+theme_override_font_sizes/normal_font_size = 15
+bbcode_enabled = true
+fit_content = false
+scroll_active = true
+scroll_following = true
 
 [node name="Command" type="LineEdit" parent="Body"]
 unique_name_in_owner = true
@@ -184,7 +203,11 @@ offset_right = 529.0
 offset_bottom = 148.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/caret_color = Color(1, 1, 1, 1)
-theme_override_styles/normal = null
+theme_override_fonts/font = ExtResource("32_chat_font")
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxEmpty_command")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_command")
+theme_override_styles/read_only = SubResource("StyleBoxEmpty_command")
 flat = true
 
 [node name="QuickButton" type="TextureButton" parent="Body"]

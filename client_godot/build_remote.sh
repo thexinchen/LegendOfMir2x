@@ -27,6 +27,7 @@ fi
 mkdir -p "$project_dir/assets/font"
 cp "$resource_dir/font/01_Yahei.TTF" "$project_dir/assets/font/01_Yahei.ttf"
 cp "$resource_dir/font/0A_WenQuanYi_Bitmap_Song_15_px.TTF" "$project_dir/assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf"
+cp "$resource_dir/font/0B_WenQuanYi_Bitmap_Song_15_px.TTF" "$project_dir/assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf"
 
 "$repo_dir/build.sh" Release --mir2x-res "$resource_dir" --target godotworldres
 if [ ! -f "$repo_dir/build/Release/res/map/mapbin.zsdb" ]; then

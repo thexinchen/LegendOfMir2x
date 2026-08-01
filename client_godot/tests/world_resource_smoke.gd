@@ -15,6 +15,9 @@ func _ready() -> void:
 	if world.minimap_id != 0x19001003:
 		_fail("unexpected minimap ID: %08X" % world.minimap_id)
 		return
+	if world.map_name != "道馆":
+		_fail("unexpected map name: %s" % world.map_name)
+		return
 	var first_texture_id: int = world.tiles.values()[0]
 	if world.texture(first_texture_id) == null:
 		_fail("failed to decode map texture %08X" % first_texture_id)

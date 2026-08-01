@@ -77,6 +77,12 @@ func _verify() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 	if OS.has_environment("MIR2X_GAME_RUNTIME_SCREENSHOT"):
+		GameState.add_chat_log("普通消息", 0)
+		GameState.add_chat_log("你获得了8500金币", 1)
+		GameState.add_chat_log("广播消息", 2)
+		GameState.add_chat_log("错误消息", 3)
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_GAME_RUNTIME_SCREENSHOT"))
 	print("GAME RUNTIME PASS: name=%s hp=%d/%d inventory=%d creatures=%d" % [GameState.player_name, GameState.player_hp, GameState.player_hp_max, GameState.inventory.size(), GameState.creatures.size()])
 	NetworkClient.disconnect_from_server()

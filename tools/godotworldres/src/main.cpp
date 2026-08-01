@@ -278,8 +278,16 @@ static size_t convertMap(uint32_t mapID, ZSDB &mapDB, ZSDB &textureDB, const fs:
 
     const auto metaPath = mapDir / str_printf("%08X.m2xmeta", mapID);
     std::ofstream metaFile(metaPath, std::ios::binary);
-    const uint32_t miniMapID = DBCOM_MAPRECORD(mapID).miniMapID.value_or(UINT32_MAX);
+    const auto &mapRecord = DBCOM_MAPRECORD(mapID);
+    const uint32_t miniMapID = mapRecord.miniMapID.value_or(UINT32_MAX);
     metaFile.write(reinterpret_cast<const char *>(&miniMapID), sizeof(miniMapID));
+    std::string displayName(to_cstr(mapRecord.name));
+    if(const auto pos = displayName.find('_'); pos != std::string::npos){
+        displayName.resize(pos);
+    }
+    const auto nameLength = check_cast<uint16_t>(displayName.size());
+    metaFile.write(reinterpret_cast<const char *>(&nameLength), sizeof(nameLength));
+    metaFile.write(displayName.data(), nameLength);
     if(!metaFile){
         throw fflpanic("failed to write map metadata: {}", metaPath.string());
     }

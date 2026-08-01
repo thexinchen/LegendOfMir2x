@@ -123,6 +123,7 @@ func set_player_online(online_data: Dictionary) -> void:
 	player_action_from_x = player_x
 	player_action_from_y = player_y
 	player_map_id = _map_id_from_uid(player_map_uid)
+	player_map_name = ""
 	_center_camera_on_player()
 	state_changed.emit()
 
@@ -131,6 +132,7 @@ func start_game_scene(scene_data: Dictionary) -> void:
 	player_uid = scene_data.get("uid", player_uid)
 	player_map_uid = scene_data.get("mapUID", player_map_uid)
 	player_map_id = _map_id_from_uid(player_map_uid)
+	player_map_name = ""
 	player_name = scene_data.get("name", player_name)
 	player_x = scene_data.get("x", player_x)
 	player_y = scene_data.get("y", player_y)

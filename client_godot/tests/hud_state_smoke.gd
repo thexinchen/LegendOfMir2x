@@ -24,6 +24,11 @@ func _ready() -> void:
 	GameState.inventory = [{"itemID": weighted_item, "seqID": 1, "count": 1, "extAttrList": {}}]
 	GameState.wear = {}
 	GameState.buff_list = [resources.buff_meta.keys()[0]]
+	GameState.chat_log = []
+	GameState.add_chat_log("普通消息", 0)
+	GameState.add_chat_log("获得物品", 1)
+	GameState.add_chat_log("广播消息", 2)
+	GameState.add_chat_log("错误消息", 3)
 	var panel: Control = load("res://scenes/game/control_panel.tscn").instantiate()
 	add_child(panel)
 	await get_tree().process_frame
@@ -40,6 +45,25 @@ func _ready() -> void:
 	var expected_load := float(resources.item_weight(weighted_item)) / float(combat.load[2]) * 100.0
 	if absf(panel.get_node("%Load").value - expected_load) > 0.01:
 		_fail("load meter mismatch: panel=%s expected=%s" % [panel.get_node("%Load").value, expected_load])
+		return
+	var chat_background: ColorRect = panel.get_node("%ChatBackground")
+	var chat_log: RichTextLabel = panel.get_node("%ChatLog")
+	var command: LineEdit = panel.get_node("%Command")
+	if chat_background.color != Color.BLACK:
+		_fail("chat background mismatch: %s" % chat_background.color)
+		return
+	var parsed_chat := chat_log.get_parsed_text()
+	if parsed_chat.find("普通消息") < 0 or parsed_chat.find("获得物品") < 0 or parsed_chat.find("广播消息") < 0 or parsed_chat.find("错误消息") < 0:
+		_fail("chat messages mismatch: %s" % parsed_chat)
+		return
+	if command.get_theme_font_size("font_size") != 15:
+		_fail("command font size mismatch")
+		return
+	if chat_log.get_theme_font_size("normal_font_size") != 15 or chat_log.get_theme_font("normal_font") == null:
+		_fail("chat font mismatch")
+		return
+	if chat_log.get_v_scroll_bar().modulate.a != 0.0:
+		_fail("default chat scrollbar is visible")
 		return
 	panel.call("_on_ac_pressed")
 	panel.call("_on_dc_pressed")

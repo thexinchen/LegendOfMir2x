@@ -14,7 +14,8 @@ signal quick_bar_toggled
 @onready var command: LineEdit = %Command
 @onready var compact_middle: NinePatchRect = %CompactMiddle
 @onready var expanded_middle: NinePatchRect = %ExpandedMiddle
-@onready var chat_log: Label = %ChatLog
+@onready var chat_background: ColorRect = %ChatBackground
+@onready var chat_log: RichTextLabel = %ChatLog
 @onready var level_label: Label = %Level
 @onready var ac_value: Label = %ACValue
 @onready var dc_value: Label = %DCValue
@@ -36,9 +37,7 @@ var _dc_magic := false
 var _resources: RefCounted = ActorResourceScript.new()
 var _combat: Dictionary = {}
 
-# Chat log display
-var _chat_lines: Array = []
-const CHAT_MAX_LINES := 8
+var _chat_signature := ""
 
 
 func _ready() -> void:
@@ -54,7 +53,11 @@ func _ready() -> void:
 			button.pressed.connect(
 				panel_requested.emit.bind(str(button.get_meta("scene_path"))),
 			)
+	var chat_scroll_bar := chat_log.get_v_scroll_bar()
+	chat_scroll_bar.modulate = Color.TRANSPARENT
+	chat_scroll_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_refresh_static()
+	_update_chat_display()
 
 
 func _process(_delta: float) -> void:
@@ -121,12 +124,21 @@ func _refresh_static() -> void:
 
 
 func _update_chat_display() -> void:
-	# Show last N chat lines
-	var lines: Array = game_state.chat_log.slice(maxi(0, game_state.chat_log.size() - CHAT_MAX_LINES))
-	var text := ""
-	for line in lines:
-		text += line.get("text", "") + "\n"
-	chat_log.text = text.strip_edges(false, true)
+	var signature := ""
+	for line in game_state.chat_log:
+		signature += "%d:%s\n" % [line.get("type", 0), line.get("text", "")]
+	if signature == _chat_signature:
+		return
+	_chat_signature = signature
+	chat_log.clear()
+	for index in range(game_state.chat_log.size()):
+		var line: Dictionary = game_state.chat_log[index]
+		chat_log.push_color(line.get("color", Color.WHITE))
+		chat_log.add_text(line.get("text", ""))
+		chat_log.pop()
+		if index + 1 < game_state.chat_log.size():
+			chat_log.newline()
+	chat_log.scroll_to_line(maxi(0, chat_log.get_line_count() - 1))
 
 
 func _on_minimize_pressed() -> void:
@@ -142,6 +154,8 @@ func _on_expand_pressed() -> void:
 	_expanded = not _expanded
 	compact_middle.visible = not _expanded
 	expanded_middle.visible = _expanded
+	chat_background.offset_top = -269.0 if _expanded else 19.0
+	chat_background.color.a = 220.0 / 255.0 if _expanded else 1.0
 	chat_log.offset_top = -220.0 if _expanded else 34.0
 
 

@@ -700,7 +700,8 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 	_pickup_action_timer = -1.0
 	_player_action_timer = -1.0
 	game_state.start_game_scene(data)
-	world_renderer.load_map(game_state.player_map_id)
+	if world_renderer.load_map(game_state.player_map_id):
+		game_state.player_map_name = world_renderer.world_resource.map_name
 	_center_hero()
 
 

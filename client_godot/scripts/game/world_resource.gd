@@ -9,6 +9,7 @@ var map_id: int = 0
 var width: int = 0
 var height: int = 0
 var minimap_id: int = -1
+var map_name: String = ""
 var land: PackedByteArray = PackedByteArray()
 var tiles: Dictionary = {}
 var objects: Array[Dictionary] = [{}, {}, {}, {}]
@@ -47,6 +48,10 @@ func load_map(requested_map_id: int) -> bool:
 	var meta_file := FileAccess.open("%s/maps/%08X.m2xmeta" % [base_path, requested_map_id], FileAccess.READ)
 	if meta_file != null and meta_file.get_length() >= 4:
 		minimap_id = meta_file.get_32()
+		if meta_file.get_length() >= 6:
+			var name_length := meta_file.get_16()
+			if name_length <= meta_file.get_length() - meta_file.get_position():
+				map_name = meta_file.get_buffer(name_length).get_string_from_utf8()
 
 	land = file.get_buffer(width * height)
 	if land.size() != width * height:
@@ -79,6 +84,7 @@ func clear() -> void:
 	width = 0
 	height = 0
 	minimap_id = -1
+	map_name = ""
 	land.clear()
 	tiles.clear()
 	objects = [{}, {}, {}, {}]
