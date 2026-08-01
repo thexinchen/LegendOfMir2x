@@ -4,6 +4,17 @@
 800×600，账号流程使用原客户端纹理和原坐标，可直接在 Godot 编辑器中
 打开 `.tscn` 查看完整效果。
 
+## 原始资源准备
+
+Godot 客户端不维护第二份游戏资源。`build_remote.sh` 默认从仓库上级的
+`../mir2x_res` 复制原版字体，并用 `godotworldres` 将地图、角色、物品 ZSDB
+转换到 `client_godot/build/world_res`。可用 `MIR2X_RES_REPO_PATH` 指定其它位置；
+开发时可设置 `MIR2X_GODOT_MAP_ID=24` 只转换当前测试地图。
+
+```sh
+GODOT_BIN=/home/czx/godot MIR2X_GODOT_MAP_ID=24 ./client_godot/build_remote.sh
+```
+
 ## 场景
 
 - `scenes/startup/logo.tscn`：启动 Logo

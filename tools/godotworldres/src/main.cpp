@@ -76,6 +76,7 @@ struct ItemMetaRecord
     uint32_t itemID = 0;
     uint16_t shape = 0;
     uint16_t reserved = 0;
+    uint32_t pkgGfxID = 0;
 };
 #pragma pack(pop)
 
@@ -85,7 +86,7 @@ static_assert(sizeof(ObjectRecord) == 12);
 static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
 static_assert(sizeof(MonsterMetaRecord) == 8);
-static_assert(sizeof(ItemMetaRecord) == 8);
+static_assert(sizeof(ItemMetaRecord) == 12);
 
 static bool animatedTextureSet(uint32_t textureID)
 {
@@ -235,12 +236,13 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
     std::vector<SpriteRecord> spriteList;
     std::vector<uint8_t> pngData;
     for(const auto &entry: db.getEntryList()){
-        if(!(entry.fileName && std::strlen(entry.fileName) >= 18)){
+        if(!(entry.fileName && std::strlen(entry.fileName) >= 8)){
             continue;
         }
         const auto key = hexstr::to_hex<uint32_t, 4>(entry.fileName);
-        const int dx = (entry.fileName[8] != '0' ? 1 : -1) * to_d(hexstr::to_hex<uint32_t, 2>(entry.fileName + 10));
-        const int dy = (entry.fileName[9] != '0' ? 1 : -1) * to_d(hexstr::to_hex<uint32_t, 2>(entry.fileName + 14));
+        const bool hasOffset = std::strlen(entry.fileName) >= 18;
+        const int dx = hasOffset ? (entry.fileName[8] != '0' ? 1 : -1) * to_d(hexstr::to_hex<uint32_t, 2>(entry.fileName + 10)) : 0;
+        const int dy = hasOffset ? (entry.fileName[9] != '0' ? 1 : -1) * to_d(hexstr::to_hex<uint32_t, 2>(entry.fileName + 14)) : 0;
         spriteList.push_back({key, check_cast<int16_t>(dx), check_cast<int16_t>(dy)});
 
         const auto outputPath = spriteDir / str_printf("%08X.png", key);
@@ -280,7 +282,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
         for(uint32_t itemID = 1; itemID < DBCOM_ITEMENDID(); ++itemID){
             const auto &record = DBCOM_ITEMRECORD(itemID);
             if(record.name){
-                metaList.push_back({itemID, check_cast<uint16_t>(record.shape)});
+                metaList.push_back({itemID, check_cast<uint16_t>(record.shape), 0, check_cast<uint32_t>(record.pkgGfxID)});
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "item.m2xmeta", std::ios::binary);

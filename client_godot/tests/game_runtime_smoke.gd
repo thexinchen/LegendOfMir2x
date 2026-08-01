@@ -50,6 +50,10 @@ func _verify() -> void:
 	if GameState.player_hp_max <= 0 or GameState.inventory.size() != 6 or GameState.belt.size() != 6:
 		_fail("incomplete state hp=%d inventory=%d belt=%d" % [GameState.player_hp_max, GameState.inventory.size(), GameState.belt.size()], 6)
 		return
+	if OS.get_environment("MIR2X_TEST_PANEL") == "inventory":
+		_main.get_node("%InventoryPanel").show()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
 	if OS.has_environment("MIR2X_GAME_RUNTIME_SCREENSHOT"):
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_GAME_RUNTIME_SCREENSHOT"))
 	print("GAME RUNTIME PASS: name=%s hp=%d/%d inventory=%d creatures=%d" % [GameState.player_name, GameState.player_hp, GameState.player_hp_max, GameState.inventory.size(), GameState.creatures.size()])

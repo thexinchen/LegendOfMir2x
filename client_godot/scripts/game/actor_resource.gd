@@ -6,18 +6,32 @@ const MAGIC := "M2SP"
 var base_path: String = ""
 var offsets: Dictionary = {}
 var monster_meta: Dictionary = {}
-var item_shapes: Dictionary = {}
+var item_meta: Dictionary = {}
 var _textures: Dictionary = {}
 
 
 func configure(path: String) -> bool:
 	base_path = path
 	var loaded := false
-	for family in ["hero", "hair", "helmet", "weapon", "monster", "npc"]:
+	for family in ["hero", "hair", "helmet", "weapon", "monster", "npc", "item"]:
 		loaded = _load_index(family) or loaded
 	_load_monster_meta()
 	_load_item_meta()
 	return loaded
+
+
+func configure_default() -> bool:
+	var candidates: Array[String] = []
+	var env_path := OS.get_environment("MIR2X_WORLD_RES")
+	if not env_path.is_empty():
+		candidates.append(env_path)
+	candidates.append("res://world_res")
+	if not OS.has_feature("editor"):
+		candidates.append(OS.get_executable_path().get_base_dir().path_join("world_res"))
+	for candidate in candidates:
+		if FileAccess.file_exists("%s/sprites/item.m2xindex" % candidate):
+			return configure(candidate)
+	return false
 
 
 func frame(family: String, key: int) -> Dictionary:
@@ -47,7 +61,11 @@ func monster_has_shadow(monster_id: int) -> bool:
 
 
 func item_shape(item_id: int) -> int:
-	return item_shapes.get(item_id, 0)
+	return item_meta.get(item_id, PackedInt32Array([0, 0]))[0]
+
+
+func item_package_gfx_id(item_id: int) -> int:
+	return item_meta.get(item_id, PackedInt32Array([0, 0]))[1]
 
 
 func _load_index(family: String) -> bool:
@@ -95,4 +113,5 @@ func _load_item_meta() -> void:
 		var item_id := file.get_32()
 		var shape := file.get_16()
 		file.get_16()
-		item_shapes[item_id] = shape
+		var package_gfx_id := file.get_32()
+		item_meta[item_id] = PackedInt32Array([shape, package_gfx_id])

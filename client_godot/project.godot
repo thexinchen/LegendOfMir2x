@@ -28,6 +28,10 @@ window/size/window_height_override=600
 window/stretch/mode="canvas_items"
 window/handheld/orientation=1
 
+[gui]
+
+theme/custom="res://assets/ui/mir2x_theme.tres"
+
 [network]
 
 server_host="127.0.0.1"

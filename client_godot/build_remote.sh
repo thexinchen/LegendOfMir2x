@@ -2,12 +2,54 @@
 set -eu
 
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-godot_bin=${GODOT_BIN:-/home/ubuntu/.local/bin/godot4}
+repo_dir=$(CDPATH= cd -- "$project_dir/.." && pwd)
+resource_dir=${MIR2X_RES_REPO_PATH:-"$repo_dir/../mir2x_res"}
+godot_bin=${GODOT_BIN:-}
 
-if [ ! -x "$godot_bin" ]; then
+if [ -z "$godot_bin" ]; then
+    for candidate in /home/czx/godot /home/czx/godot_bin "$(command -v godot4 2>/dev/null || true)"; do
+        if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+            godot_bin=$candidate
+            break
+        fi
+    done
+fi
+
+if [ -z "$godot_bin" ] || [ ! -x "$godot_bin" ]; then
     echo "Godot executable not found: $godot_bin" >&2
     exit 1
 fi
+if [ ! -d "$resource_dir" ]; then
+    echo "mir2x_res not found: $resource_dir" >&2
+    exit 1
+fi
+
+mkdir -p "$project_dir/assets/font"
+cp "$resource_dir/font/01_Yahei.TTF" "$project_dir/assets/font/01_Yahei.ttf"
+cp "$resource_dir/font/0A_WenQuanYi_Bitmap_Song_15_px.TTF" "$project_dir/assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf"
+
+"$repo_dir/build.sh" Release --mir2x-res "$resource_dir" --target godotworldres
+if [ ! -f "$repo_dir/build/Release/res/map/mapbin.zsdb" ]; then
+    "$repo_dir/build.sh" Release --mir2x-res "$resource_dir" --target zsdbdeploy
+fi
+
+world_res_dir="$project_dir/build/world_res"
+map_id_args=""
+if [ -n "${MIR2X_GODOT_MAP_ID:-}" ]; then
+    map_id_args=$MIR2X_GODOT_MAP_ID
+fi
+"$repo_dir/build/Release/godotworldres" \
+    "$repo_dir/build/Release/res/map/mapbin.zsdb" \
+    "$repo_dir/build/Release/res/texture/map.zsdb" \
+    "$world_res_dir" $map_id_args
+"$repo_dir/build/Release/godotworldres" --sprites "$world_res_dir" \
+    hero "$repo_dir/build/Release/res/texture/hero.zsdb" \
+    hair "$repo_dir/build/Release/res/texture/hair.zsdb" \
+    helmet "$repo_dir/build/Release/res/texture/helmet.zsdb" \
+    weapon "$repo_dir/build/Release/res/texture/weapon.zsdb" \
+    monster "$repo_dir/build/Release/res/texture/monster.zsdb" \
+    npc "$repo_dir/build/Release/res/texture/npc.zsdb" \
+    item "$repo_dir/build/Release/res/texture/item.zsdb"
 
 mkdir -p "$project_dir/build"
 "$godot_bin" --headless --editor --path "$project_dir" --quit

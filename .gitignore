@@ -6,6 +6,7 @@ CMakeUserPresets.json
 .godot/
 client_godot/.godot/
 client_godot/build/
+client_godot/assets/font/*.ttf
 vcpkg
 .vcpkg
 __pycache__
