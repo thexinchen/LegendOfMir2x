@@ -224,6 +224,33 @@ func start_game_scene(scene_data: Dictionary) -> void:
 	state_changed.emit()
 
 
+func switch_player_map(map_uid: int, x: int, y: int) -> void:
+	player_map_uid = map_uid
+	player_map_id = _map_id_from_uid(map_uid)
+	player_map_name = ""
+	player_x = x
+	player_y = y
+	player_action_from_x = x
+	player_action_from_y = y
+	creatures.clear()
+	ground_items.clear()
+	var self_say: Array = player_say_messages.get(player_uid, [])
+	player_say_messages.clear()
+	if not self_say.is_empty():
+		player_say_messages[player_uid] = self_say
+	firewalls.clear()
+	magic_effects.clear()
+	var self_attachments: Array = []
+	for effect_value in attached_magic_effects:
+		if effect_value is Dictionary and int(effect_value.get("uid", 0)) == player_uid:
+			self_attachments.append(effect_value)
+	attached_magic_effects = self_attachments
+	strike_grids.clear()
+	ascend_strings.clear()
+	center_camera_on_player()
+	state_changed.emit()
+
+
 func update_health(hp: int, hp_max: int, mp: int, mp_max: int) -> void:
 	player_hp = hp
 	player_hp_max = hp_max

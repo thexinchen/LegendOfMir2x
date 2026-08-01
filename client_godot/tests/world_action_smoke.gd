@@ -55,6 +55,8 @@ func _ready() -> void:
 		return
 	if not _test_actor_record_lifecycle(main):
 		return
+	if not _test_self_action_map_transition(main):
+		return
 
 	GameState.chat_log.clear()
 	var item_id: int = resources.item_names.keys()[0]
@@ -570,6 +572,44 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 	return true
 
 
+func _test_self_action_map_transition(main: Control) -> bool:
+	GameState.player_uid = 101
+	GameState.player_map_uid = 25 << 35
+	GameState.player_map_id = 25
+	GameState.player_x = 10
+	GameState.player_y = 11
+	GameState.update_creature(303, {"uid": 303, "type": 1, "x": 11, "y": 11, "action_type": 2})
+	GameState.ground_items["10,11"] = [1]
+	GameState.firewalls = [{"x": 10, "y": 11}]
+	GameState.magic_effects = [{"uid": 303}]
+	GameState.attached_magic_effects = [{"uid": 303}, {"uid": 101, "kind": "self"}]
+	GameState.strike_grids["10,11"] = 1
+	GameState.ascend_strings = [{"x": 10, "y": 11, "text": "1"}]
+	GameState.player_say_messages[303] = [{"text": "old"}]
+	GameState.player_say_messages[101] = [{"text": "self"}]
+	var next_map_uid: int = 24 << 35
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(303, next_map_uid, {
+		"type": 2, "speed": 100, "direction": 5, "x": 30, "y": 31,
+	}))
+	if GameState.player_map_id != 25 or GameState.get_creature(303).is_empty():
+		_fail("foreign stale-map action changed the local world")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, next_map_uid, {
+		"type": 2, "speed": 100, "direction": 6, "x": 30, "y": 31,
+	}))
+	if GameState.player_map_uid != next_map_uid or GameState.player_map_id != 24 or GameState.player_x != 30 or GameState.player_y != 31 or GameState.player_direction != 6:
+		_fail("local different-map action did not switch and continue: %s %s %s" % [GameState.player_map_id, GameState.player_x, GameState.player_y])
+		return false
+	if not GameState.creatures.is_empty() or not GameState.ground_items.is_empty() or not GameState.firewalls.is_empty() or not GameState.magic_effects.is_empty() or GameState.attached_magic_effects.size() != 1 or GameState.attached_magic_effects[0].get("uid", 0) != 101 or not GameState.strike_grids.is_empty() or not GameState.ascend_strings.is_empty() or GameState.player_say_messages.keys() != [101]:
+		_fail("map transition retained old-world transient state")
+		return false
+	var renderer: Control = main.get_node("WorldRenderer")
+	if renderer.world_resource.map_id != 24 or renderer.map_width <= 0 or AudioService.current_bgm_id != renderer.world_resource.bgm_id:
+		_fail("map transition did not reload map resources and BGM")
+		return false
+	return true
+
+
 func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
 	GameState.player_uid = 101
 	GameState.player_map_uid = 202
@@ -582,11 +622,12 @@ func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
 	if GameState.player_x != 20 or GameState.player_y != 21 or GameState.player_action_type != 6:
 		_fail("space move did not jump immediately to aim grid")
 		return false
-	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 999, {
+	var stale_uid: int = (4 << 59) | (224 << 35) | 605
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(stale_uid, 24 << 35, {
 		"type": 6, "speed": 100, "direction": 5, "x": 20, "y": 21, "aimX": 30, "aimY": 31,
 	}))
 	if GameState.player_x != 20 or GameState.player_y != 21:
-		_fail("stale-map world action changed current player position")
+		_fail("foreign stale-map world action changed current player position")
 		return false
 	if GameState.magic_effects.is_empty() or GameState.magic_effects.back().get("magicID", 0) != resources.magic_id("瞬息移动"):
 		_fail("space move did not create original teleport effect")

@@ -949,10 +949,13 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 
 func _handle_action(payload: PackedByteArray) -> void:
 	var data := Protocol.decode_sm_action(payload)
-	if data.get("mapUID", 0) != game_state.player_map_uid:
-		return
 	var uid: int = data.get("uid", 0)
 	var action: Dictionary = data.get("action", {})
+	var action_map_uid: int = data.get("mapUID", 0)
+	if action_map_uid != game_state.player_map_uid:
+		if uid != game_state.player_uid:
+			return
+		_switch_player_map(action_map_uid, action)
 	var x: int = action.get("x", 0)
 	var y: int = action.get("y", 0)
 	var action_type: int = action.get("type", 0)
@@ -1039,6 +1042,23 @@ func _handle_action(payload: PackedByteArray) -> void:
 		if duration > 0.0:
 			_schedule_creature_idle(uid, action_type, creature.get("action_started_ms", 0), duration)
 		_play_action_seff(uid, action, creature)
+
+
+func _switch_player_map(map_uid: int, action: Dictionary) -> void:
+	_cancel_movement()
+	_pickup_action_timer = -1.0
+	_player_action_timer = -1.0
+	_magic_focus_uid = 0
+	_follow_focus_uid = 0
+	_attack_focus_uid = 0
+	AudioService.stop_seff()
+	game_state.switch_player_map(map_uid, action.get("x", 0), action.get("y", 0))
+	if world_renderer.load_map(game_state.player_map_id):
+		game_state.player_map_name = world_renderer.world_resource.map_name
+		AudioService.play_map_bgm(world_renderer.world_resource.bgm_id)
+	else:
+		AudioService.stop_bgm()
+	_center_hero()
 
 
 func _spinkick_direction(uid: int, action: Dictionary) -> int:
