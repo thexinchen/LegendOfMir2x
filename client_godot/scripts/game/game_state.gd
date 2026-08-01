@@ -60,6 +60,9 @@ var view_y: float = 0.0
 # Strike grids (recently attacked grid cells, for red flash overlay)
 var strike_grids: Dictionary = {}  # "x,y" -> timestamp_msec
 
+# Ascend strings (floating damage/heal/exp text)
+var ascend_strings: Array = []  # list of {x, y, text, color, start_time}
+
 # System constants
 const GRID_XP := 48
 const GRID_YP := 32
@@ -187,3 +190,25 @@ func scroll_camera() -> void:
 		view_x += sign(dx) * min(abs(dx), 3.0)
 	if abs(dy) > 0.5:
 		view_y += sign(dy) * min(abs(dy), 2.0)
+
+
+func add_ascend_string(grid_x: int, grid_y: int, text: String, color: Color = Color(1, 0.3, 0.3, 1)) -> void:
+	ascend_strings.append({
+		"x": grid_x * GRID_XP + GRID_XP / 2,
+		"y": grid_y * GRID_YP,
+		"text": text,
+		"color": color,
+		"start_time": Time.get_ticks_msec(),
+	})
+	if ascend_strings.size() > 50:
+		ascend_strings.pop_front()
+
+
+func update_ascend_strings() -> void:
+	var now := Time.get_ticks_msec()
+	var to_keep: Array = []
+	for s in ascend_strings:
+		var age: int = now - s.get("start_time", 0)
+		if age < 1500:  # 1.5 seconds lifetime
+			to_keep.append(s)
+	ascend_strings = to_keep

@@ -224,7 +224,7 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			var data := Protocol.decode_sm_offline(payload)
 			game_state.remove_creature(data.get("uid", 0))
 		NetworkClient.SM_MISS:
-			pass  # TODO: show miss text
+			_handle_miss(payload)
 		NetworkClient.SM_BUFF:
 			pass  # TODO: update buff
 		NetworkClient.SM_INVENTORY:
@@ -236,7 +236,7 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			# Flash grid red briefly (C++ stores timestamp, draws red overlay for 1s)
 			game_state.strike_grids["%d,%d" % [sg.get("x", 0), sg.get("y", 0)]] = Time.get_ticks_msec()
 		NetworkClient.SM_CASTMAGIC:
-			pass  # TODO: render magic effect
+			_handle_cast_magic(payload)
 		NetworkClient.SM_COREORD:
 			_handle_corecord(payload)
 		NetworkClient.SM_PLAYERNAME:
@@ -402,7 +402,22 @@ func _handle_belt(payload: PackedByteArray) -> void:
 	pass
 
 
-func _handle_player_name(payload: PackedByteArray) -> void:
+func _handle_cast_magic(payload: PackedByteArray) -> void:
+	var data := Protocol.decode_sm_cast_magic(payload)
+	var uid: int = data.get("uid", 0)
+	var magic_id: int = data.get("magic", 0)
+	var x: int = data.get("x", 0)
+	var y: int = data.get("y", 0)
+	# Show magic effect at target location
+	game_state.add_ascend_string(x, y, "*", Color(0.5, 0.8, 1, 1))
+
+
+func _handle_miss(payload: PackedByteArray) -> void:
+	var uid: int = Protocol.decode_sm_miss(payload)
+	var c: Dictionary = game_state.get_creature(uid)
+	var x: int = c.get("x", game_state.player_x)
+	var y: int = c.get("y", game_state.player_y)
+	game_state.add_ascend_string(x, y, "Miss", Color(1, 1, 1, 1))
 	var reader := CerealReader.new(payload)
 	var data := reader.read_sd_player_name()
 	var uid: int = data.get("uid", 0)

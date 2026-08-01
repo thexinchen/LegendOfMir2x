@@ -116,6 +116,22 @@ func _draw() -> void:
 		var sx := gx * GRID_XP - view_x + GRID_XP / 2 - 8
 		var sy := gy * GRID_YP - view_y + GRID_YP / 2 - 8
 		draw_rect(Rect2(sx, sy, 16, 16), Color(1, 0.85, 0.3, 0.7))
+	
+	# 5. Draw ascend strings (floating damage/heal text)
+	game_state.update_ascend_strings()
+	var font := get_theme_default_font()
+	if font:
+		for s in game_state.ascend_strings:
+			var age: int = Time.get_ticks_msec() - s.get("start_time", 0)
+			var progress: float = float(age) / 1500.0
+			var sx: int = int(s.get("x", 0)) - view_x
+			var sy: int = int(s.get("y", 0)) - view_y - int(progress * 30)
+			var alpha: float = 1.0 - progress
+			var text: String = s.get("text", "")
+			var color: Color = s.get("color", Color(1, 1, 1, 1))
+			color.a = alpha
+			var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, 13)
+			font.draw_string(get_canvas_item(), Vector2(sx - tw.x * 0.5, sy), text, HORIZONTAL_ALIGNMENT_CENTER, -1, 13, color)
 
 
 func _draw_player(view_x: int, view_y: int) -> void:
