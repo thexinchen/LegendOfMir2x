@@ -12,7 +12,9 @@ func _ready() -> void:
 	var fireball_id: int = resources.magic_id("火球术")
 	var thunder_id: int = resources.magic_id("雷电术")
 	var firewall_id: int = resources.magic_id("火墙")
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0:
+	var shield_id: int = resources.magic_id("魔法盾")
+	var ring_id: int = resources.magic_id("阴阳法环")
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0:
 		_fail("magic name metadata incomplete")
 		return
 	var fireball_run: PackedInt32Array = resources.magic_layout(fireball_id, 2)
@@ -61,30 +63,85 @@ func _ready() -> void:
 	if not spell_meta.is_empty():
 		fireball.start_time -= $WorldRenderer.call("_magic_stage_duration", spell_meta, fireball)
 	fireball.start_time -= 250
-	GameState.magic_effects = [
-		fireball,
-		{
-			"source": "cast", "magicID": thunder_id, "uid": GameState.player_uid,
-			"x": 405, "y": 120, "aimX": 409, "aimY": 120, "aimUID": target_uid,
-			"direction": 3, "start_time": now,
-		},
-	]
+	GameState.magic_effects = [fireball]
 	var active: Array = $WorldRenderer.call("_resolve_magic_effects", now)
-	if active.size() != 2 or active[0].get("stage", 0) != 2 or active[1].get("stage", 0) != 2:
+	if active.size() != 1 or active[0].get("stage", 0) != 2:
 		_fail("magic stage chain resolution mismatch: %s" % active)
 		return
-	# Restore effects because the renderer's resolver keeps only still-active source records.
-	GameState.magic_effects = [fireball, {
-		"source": "cast", "magicID": thunder_id, "uid": GameState.player_uid,
+
+	GameState.attached_magic_effects.clear()
+	var cast_data := {
+		"uid": GameState.player_uid, "mapUID": GameState.player_map_uid,
 		"x": 405, "y": 120, "aimX": 409, "aimY": 120, "aimUID": target_uid,
-		"direction": 3, "start_time": now,
-	}]
+	}
+	cast_data["magic"] = fireball_id
+	if GameState.add_cast_magic_attachment(cast_data, "火球术") or not GameState.attached_magic_effects.is_empty():
+		_fail("ordinary cast unexpectedly created an attached effect")
+		return
+	cast_data["magic"] = shield_id
+	if not GameState.add_cast_magic_attachment(cast_data, "魔法盾"):
+		_fail("magic shield attachment rejected")
+		return
+	var shield: Dictionary = GameState.attached_magic_effects.back()
+	if shield.get("target_uid", 0) != GameState.player_uid or shield.get("cycles", 0) != 2 or shield.get("kind", "") != "shield":
+		_fail("magic shield attachment metadata mismatch: %s" % shield)
+		return
+	shield.start_time = now
+	var attached: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now)
+	var player_attached: Array = attached.get(GameState.player_uid, [])
+	if player_attached.size() != 1 or not is_equal_approx(player_attached[0].get("alpha_mod", 0.0), 240.0 / 255.0):
+		_fail("magic shield alpha/layer resolution mismatch: %s" % attached)
+		return
+	var shield_meta: PackedInt32Array = resources.magic_layout(shield_id, 2)
+	var shield_duration: int = maxi(100, roundi(shield_meta[2] * 1000.0 / (10.0 * shield_meta[4] / 100.0)))
+	shield.start_time = now - shield_duration
+	attached = $WorldRenderer.call("_resolve_attached_magic", now)
+	if attached.get(GameState.player_uid, []).size() != 1:
+		_fail("magic shield second cycle missing")
+		return
+	shield.start_time = now - shield_duration * 2
+	attached = $WorldRenderer.call("_resolve_attached_magic", now)
+	if attached.has(GameState.player_uid) or not GameState.attached_magic_effects.is_empty():
+		_fail("magic shield did not expire after two cycles")
+		return
+
+	cast_data["magic"] = ring_id
+	GameState.add_cast_magic_attachment(cast_data, "阴阳法环")
+	var ring: Dictionary = GameState.attached_magic_effects.back()
+	var ring_meta: PackedInt32Array = resources.magic_layout(ring_id, 2)
+	var ring_duration: int = maxi(100, roundi(ring_meta[2] * 1000.0 / (10.0 * ring_meta[4] / 100.0)))
+	var ring_elapsed := mini(100, ring_duration - 1)
+	ring.start_time = now - ring_duration - ring_elapsed
+	attached = $WorldRenderer.call("_resolve_attached_magic", now)
+	var ring_alpha: float = attached.get(GameState.player_uid, [])[0].get("alpha_mod", 0.0)
+	var expected_ring_alpha := maxf(absf(cos(float(ring_elapsed) / 800.0)), 32.0 / 255.0)
+	if not is_equal_approx(ring_alpha, expected_ring_alpha):
+		_fail("yin-yang ring second-cycle alpha mismatch: %f" % ring_alpha)
+		return
+
+	GameState.attached_magic_effects.clear()
+	cast_data["magic"] = thunder_id
+	GameState.add_cast_magic_attachment(cast_data, "雷电术")
+	var thunder: Dictionary = GameState.attached_magic_effects.back()
+	thunder.start_time = now
+	thunder["play_seff"] = false
+	attached = $WorldRenderer.call("_resolve_attached_magic", now)
+	var target_attached: Array = attached.get(target_uid, [])
+	if target_attached.size() != 1 or not target_attached[0].get("mirror_vertical", false):
+		_fail("thunderbolt target/mirror resolution mismatch: %s" % attached)
+		return
+
+	# Restore effects because the render pass consumes expired source records.
+	GameState.magic_effects = [fireball]
+	GameState.attached_magic_effects = [shield, thunder]
+	shield.start_time = now
+	thunder.start_time = now
 	$WorldRenderer.queue_redraw()
 	await get_tree().process_frame
 	if OS.has_environment("MIR2X_MAGIC_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MAGIC_SCREENSHOT"))
-	print("MAGIC EFFECT PASS: action spell, cast attach, firewall loop and original frames")
+	print("MAGIC EFFECT PASS: action spell, original cast attachments, firewall loop and original frames")
 	get_tree().quit()
 
 

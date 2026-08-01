@@ -83,6 +83,7 @@ var inventory_operation: Dictionary = {}
 var inventory_operation_cost: Dictionary = {}
 var firewalls: Array = []
 var magic_effects: Array = []
+var attached_magic_effects: Array = []
 
 # Camera position (pixel coordinates)
 var view_x: float = 0.0
@@ -146,6 +147,7 @@ func start_game_scene(scene_data: Dictionary) -> void:
 	player_desp = scene_data.get("desp", player_desp)
 	wear = player_desp.get("wear", wear)
 	magic_effects.clear()
+	attached_magic_effects.clear()
 	_center_camera_on_player()
 	state_changed.emit()
 
@@ -420,6 +422,34 @@ func add_magic_effect(data: Dictionary, source: String) -> void:
 	effect["start_time"] = Time.get_ticks_msec()
 	magic_effects.append(effect)
 	state_changed.emit()
+
+
+func add_cast_magic_attachment(data: Dictionary, magic_name: String) -> bool:
+	var effect := data.duplicate(true)
+	effect["magicID"] = data.get("magic", data.get("magicID", 0))
+	effect["start_time"] = Time.get_ticks_msec()
+	effect["cycles"] = 1
+	effect["kind"] = ""
+	match magic_name:
+		"魔法盾":
+			effect["target_uid"] = data.get("uid", 0)
+			effect["cycles"] = 2
+			effect["kind"] = "shield"
+		"阴阳法环":
+			effect["target_uid"] = data.get("uid", 0)
+			effect["cycles"] = 2
+			effect["kind"] = "yin_yang_ring"
+		"雷电术", "沃玛教主_雷电术":
+			effect["target_uid"] = data.get("aimUID", 0)
+			effect["kind"] = "thunderbolt"
+			effect["play_seff"] = true
+		_:
+			return false
+	if effect.target_uid == 0 or effect.magicID == 0:
+		return false
+	attached_magic_effects.append(effect)
+	state_changed.emit()
+	return true
 
 
 func update_entity_health(data: Dictionary) -> void:

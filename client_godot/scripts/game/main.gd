@@ -1006,8 +1006,9 @@ func _handle_ground_item_id_list(payload: PackedByteArray) -> void:
 func _handle_cast_magic(payload: PackedByteArray) -> void:
 	var data := Protocol.decode_sm_cast_magic(payload)
 	if not data.is_empty() and data.get("mapUID", 0) == game_state.player_map_uid:
-		data["magicID"] = data.get("magic", 0)
-		game_state.add_magic_effect(data, "cast")
+		var magic_name: String = _resources.magic_names.get(data.get("magic", 0), "")
+		game_state.add_cast_magic_attachment(data, magic_name)
+		game_state.add_chat_log("使用魔法: %s" % magic_name, 0)
 
 
 func _handle_miss(payload: PackedByteArray) -> void:

@@ -27,6 +27,7 @@ var map_width: int = 0
 var map_height: int = 0
 var world_resource: RefCounted = WorldResourceScript.new()
 var actor_resource: RefCounted = ActorResourceScript.new()
+var _active_attached_magic: Dictionary = {}
 
 
 func _ready() -> void:
@@ -92,6 +93,7 @@ func _draw() -> void:
 		creatures_by_row[row] = row_creatures
 	var now := Time.get_ticks_msec()
 	var active_magic := _resolve_magic_effects(now)
+	_active_attached_magic = _resolve_attached_magic(now)
 	for gy in range(y0, y1 + 1):
 		_draw_object_row(1, gy, x0, x1, view_x, view_y)
 		_draw_firewall_row(gy, x0, x1, view_x, view_y, now)
@@ -215,6 +217,58 @@ func _resolve_magic_effects(now: int) -> Array:
 	return active
 
 
+func _resolve_attached_magic(now: int) -> Dictionary:
+	var active: Dictionary = {}
+	var pending: Array = []
+	for effect_value in game_state.attached_magic_effects:
+		var effect: Dictionary = effect_value
+		var target_uid: int = effect.get("target_uid", 0)
+		if target_uid != game_state.player_uid and not game_state.creatures.has(target_uid):
+			continue
+		var magic_id: int = effect.get("magicID", 0)
+		var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+		if meta.is_empty() or meta[2] <= 0:
+			continue
+		var speed := maxi(1, meta[4])
+		var cycle_duration := maxi(100, roundi(meta[2] * 1000.0 / (10.0 * speed / 100.0)))
+		var elapsed := maxi(0, now - int(effect.get("start_time", now)))
+		var cycles := maxi(1, effect.get("cycles", 1))
+		if elapsed >= cycle_duration * cycles:
+			continue
+		var cycle := floori(float(elapsed) / cycle_duration)
+		var cycle_elapsed := elapsed % cycle_duration
+		var absolute_frame := floori(float(cycle_elapsed) / 1000.0 * 10.0 * speed / 100.0)
+		var alpha_mod := 1.0
+		if effect.get("kind", "") == "shield":
+			alpha_mod = 240.0 / 255.0
+		elif effect.get("kind", "") == "yin_yang_ring" and cycle == 1:
+			alpha_mod = maxf(absf(cos(float(cycle_elapsed) / 800.0)), 32.0 / 255.0)
+		var resolved := {
+			"meta": meta,
+			"frame": mini(absolute_frame, meta[2] - 1),
+			"direction": 0,
+			"alpha_mod": alpha_mod,
+			"mirror_vertical": effect.get("kind", "") == "thunderbolt" and absolute_frame <= 3,
+		}
+		var target_effects: Array = active.get(target_uid, [])
+		target_effects.append(resolved)
+		active[target_uid] = target_effects
+		pending.append(effect)
+		if effect.get("play_seff", false) and not effect.get("_seff_played", false):
+			effect["_seff_played"] = true
+			var target_grid := _attached_target_grid(target_uid)
+			AudioService.play_seff_at(actor_resource.magic_seff(magic_id, MAGIC_STAGE_RUN), roundi(target_grid.x), roundi(target_grid.y), game_state.player_x, game_state.player_y)
+	game_state.attached_magic_effects = pending
+	return active
+
+
+func _attached_target_grid(uid: int) -> Vector2:
+	if uid == game_state.player_uid:
+		return Vector2(game_state.player_x, game_state.player_y)
+	var creature: Dictionary = game_state.creatures.get(uid, {})
+	return Vector2(creature.get("x", 0), creature.get("y", 0))
+
+
 func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 	var magic_id: int = effect.get("magicID", 0)
 	if magic_id <= 0:
@@ -331,7 +385,7 @@ func _draw_firewall_row(y: int, x0: int, x1: int, view_x: int, view_y: int, now:
 			_draw_magic_frame(meta, frame, 0, Vector2(x, y), view_x, view_y)
 
 
-func _draw_magic_frame(meta: PackedInt32Array, frame: int, direction: int, grid_position: Vector2, view_x: int, view_y: int) -> void:
+func _draw_magic_frame(meta: PackedInt32Array, frame: int, direction: int, grid_position: Vector2, view_x: int, view_y: int, alpha_mod := 1.0, mirror_vertical := false) -> void:
 	var texture_id: int = meta[0] + direction * meta[3] + frame
 	var sprite: Dictionary = actor_resource.frame("magic", texture_id)
 	if sprite.is_empty():
@@ -343,8 +397,20 @@ func _draw_magic_frame(meta: PackedInt32Array, frame: int, direction: int, grid_
 		float((packed_color >> 16) & 0xFF) / 255.0,
 		float((packed_color >> 24) & 0xFF) / 255.0,
 	)
+	color.a *= alpha_mod
 	var offset: Vector2i = sprite.offset
-	draw_texture(sprite.texture, Vector2(grid_position.x * GRID_XP - view_x + offset.x, grid_position.y * GRID_YP - view_y + offset.y), color)
+	var draw_position := Vector2(grid_position.x * GRID_XP - view_x + offset.x, grid_position.y * GRID_YP - view_y + offset.y)
+	draw_texture(sprite.texture, draw_position, color)
+	if mirror_vertical:
+		draw_set_transform(draw_position, 0.0, Vector2(1.0, -1.0))
+		draw_texture(sprite.texture, Vector2.ZERO, color)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_attached_magic(uid: int, start_x: int, start_y: int) -> void:
+	for magic_value in _active_attached_magic.get(uid, []):
+		var magic: Dictionary = magic_value
+		_draw_magic_frame(magic.meta, magic.frame, magic.direction, Vector2(float(start_x) / GRID_XP, float(start_y) / GRID_YP), 0, 0, magic.alpha_mod, magic.mirror_vertical)
 
 
 func _draw_player(view_x: int, view_y: int) -> void:
@@ -352,7 +418,8 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	var px: int = roundi(draw_grid.x * GRID_XP) - view_x
 	var py: int = roundi(draw_grid.y * GRID_YP) - view_y
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
-	
+
+	_draw_attached_magic(game_state.player_uid, px, py)
 	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
@@ -372,6 +439,9 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 	
 	var c_type: int = c.get("type", 0)
 	var sprite_drawn := false
+	var uid: int = c.get("uid", 0)
+	if c_type == 2:
+		_draw_attached_magic(uid, cx, cy)
 	match c_type:
 		1: sprite_drawn = _draw_monster_sprite(c, cx, cy)
 		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100), c.get("action_magic_id", 0))
@@ -379,6 +449,8 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 	if not sprite_drawn:
 		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3))
 		draw_circle(center, 12, Color(0.7, 0.2, 0.2, 0.9))
+	if c_type != 2:
+		_draw_attached_magic(uid, cx, cy)
 	
 	# Name
 	var font := get_theme_default_font()
