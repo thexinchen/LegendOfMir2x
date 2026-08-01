@@ -278,22 +278,32 @@ func _handle_action(payload: PackedByteArray) -> void:
 	var action: Dictionary = data.get("action", {})
 	var x: int = action.get("x", 0)
 	var y: int = action.get("y", 0)
+	var action_type: int = action.get("type", 0)
+	var direction: int = action.get("direction", 0)
 	
 	if uid == game_state.player_uid:
-		# Update player position
+		# Update player position and direction
 		game_state.player_x = x
 		game_state.player_y = y
-		game_state.player_direction = action.get("direction", 0)
+		game_state.player_direction = direction
 	else:
 		# Update or create creature
-		var creature := game_state.get_creature(uid)
+		var creature: Dictionary = game_state.get_creature(uid)
 		if creature.is_empty():
-			creature = {"uid": uid, "x": x, "y": y, "type": 0, "name": ""}
-			# TODO: Query creature record from server - disabled until format verified
-			# NetworkClient.send_query_corecord(uid)
+			creature = {
+				"uid": uid,
+				"x": x,
+				"y": y,
+				"type": 0,
+				"name": "",
+				"action_type": action_type,
+				"direction": direction,
+			}
 		else:
 			creature["x"] = x
 			creature["y"] = y
+			creature["action_type"] = action_type
+			creature["direction"] = direction
 		game_state.update_creature(uid, creature)
 
 

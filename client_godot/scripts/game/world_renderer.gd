@@ -176,6 +176,28 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 	draw_circle(center, 12, body_color)
 	draw_arc(center, 12, 0, TAU, 24, Color(1, 1, 1, 0.6), 1.0)
 	
+	# Direction indicator
+	var dir: int = c.get("direction", 0)
+	if dir > 0:
+		var dir_angle := 0.0
+		match dir:
+			1: dir_angle = -PI / 2    # up
+			2: dir_angle = -PI / 4    # up-right
+			3: dir_angle = 0           # right
+			4: dir_angle = PI / 4      # down-right
+			5: dir_angle = PI / 2      # down
+			6: dir_angle = 3 * PI / 4  # down-left
+			7: dir_angle = PI          # left
+			8: dir_angle = -3 * PI / 4 # up-left
+		var dir_x := center.x + cos(dir_angle) * 16
+		var dir_y := center.y + sin(dir_angle) * 16
+		draw_line(center, Vector2(dir_x, dir_y), Color(1, 1, 0.5, 0.7), 1.5)
+	
+	# Attack indicator: if action_type is ACTION_ATTACK(7), draw red flash
+	var action_type: int = c.get("action_type", 0)
+	if action_type == 7:  # ACTION_ATTACK
+		draw_arc(center, 16, 0, TAU, 24, Color(1, 0.3, 0.3, 0.8), 2.0)
+	
 	# Name
 	var font := get_theme_default_font()
 	if font:
