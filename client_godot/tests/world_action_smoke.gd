@@ -35,6 +35,8 @@ func _ready() -> void:
 		return
 	if not _test_missing_minimap_feedback(main):
 		return
+	if not _test_fps_overlay(main):
+		return
 	if not _test_team_flag_cursor(main):
 		return
 	main.call("_on_server_message", NetworkClient.SM_NEXTSTRIKE, PackedByteArray())
@@ -123,6 +125,21 @@ func _test_missing_minimap_feedback(main: Control) -> bool:
 		return false
 	if minimap.call("requested_visible") != requested_before:
 		_fail("missing minimap control changed the requested visibility state")
+		return false
+	return true
+
+
+func _test_fps_overlay(main: Control) -> bool:
+	GameState.runtime_config[6] = PackedByteArray([1, 1, 0])
+	main.call("_update_fps_overlay")
+	var fps := main.get_node("FPS") as Label
+	if not fps.visible or fps.text.is_empty() or fps.get_theme_font_size("font_size") != 15:
+		_fail("runtime FPS option did not restore the original top-right overlay")
+		return false
+	GameState.runtime_config[6] = PackedByteArray([1, 0, 0])
+	main.call("_update_fps_overlay")
+	if fps.visible:
+		_fail("runtime FPS overlay did not hide")
 		return false
 	return true
 

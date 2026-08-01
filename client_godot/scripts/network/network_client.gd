@@ -349,6 +349,16 @@ func send_runtime_int(config_type: int, value: int) -> Error:
 	return send_set_runtime_config(config_type, archive)
 
 
+func send_runtime_pair(config_type: int, first: int, second: int) -> Error:
+	var archive := PackedByteArray()
+	archive.resize(10)
+	archive[0] = 1
+	archive.encode_s32(1, first)
+	archive.encode_s32(5, second)
+	archive[9] = 0
+	return send_set_runtime_config(config_type, archive)
+
+
 func send_npc_event(uid: int, path: String, event: String, value: String = "") -> Error:
 	var payload := PackedByteArray()
 	payload.resize(410)

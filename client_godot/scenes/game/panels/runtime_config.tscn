@@ -1,8 +1,20 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/runtime_config_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/runtime_config/00000450.png" id="2"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_menu"]
+bg_color = Color(0, 0, 0, 0.501961)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.905882, 0.905882, 0.741176, 0.392157)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 
 [node name="RuntimeConfigPanel" type="Control"]
 custom_minimum_size = Vector2(600, 480)
@@ -16,162 +28,72 @@ offset_right = 600.0
 offset_bottom = 480.0
 mouse_filter = 2
 texture = ExtResource("2")
-patch_margin_left = 20
-patch_margin_top = 20
-patch_margin_right = 20
-patch_margin_bottom = 20
+patch_margin_left = 58
+patch_margin_top = 58
+patch_margin_right = 58
+patch_margin_bottom = 58
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="MenuBackground" type="Panel" parent="."]
 offset_left = 30.0
 offset_top = 30.0
 offset_right = 110.0
 offset_bottom = 420.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_menu")
 
-[node name="Menu" type="VBoxContainer" parent="."]
-offset_left = 48.0
-offset_top = 165.0
-offset_right = 100.0
-offset_bottom = 325.0
-theme_override_constants/separation = 4
+[node name="Menu" type="Control" parent="."]
+offset_left = 30.0
+offset_top = 30.0
+offset_right = 110.0
+offset_bottom = 420.0
 
 [node name="System" type="Button" parent="Menu"]
-layout_mode = 2
-text = "系 统"
+offset_left = 18.0
+offset_top = 135.0
+offset_right = 70.0
+offset_bottom = 155.0
 flat = true
+text = "系 统"
 
 [node name="Social" type="Button" parent="Menu"]
-layout_mode = 2
-text = "社 交"
+offset_left = 18.0
+offset_top = 165.0
+offset_right = 70.0
+offset_bottom = 185.0
 flat = true
+text = "社 交"
 
 [node name="Network" type="Button" parent="Menu"]
-layout_mode = 2
-text = "网 络"
+offset_left = 18.0
+offset_top = 195.0
+offset_right = 70.0
+offset_bottom = 215.0
 flat = true
+text = "网 络"
 
 [node name="Game" type="Button" parent="Menu"]
-layout_mode = 2
-text = "游 戏"
+offset_left = 18.0
+offset_top = 225.0
+offset_right = 70.0
+offset_bottom = 245.0
 flat = true
+text = "游 戏"
 
 [node name="Help" type="Button" parent="Menu"]
-layout_mode = 2
-text = "帮 助"
+offset_left = 18.0
+offset_top = 255.0
+offset_right = 70.0
+offset_bottom = 275.0
 flat = true
+text = "帮 助"
 
 [node name="SystemPage" type="Control" parent="."]
 offset_left = 140.0
 offset_top = 40.0
 offset_right = 550.0
 offset_bottom = 427.0
-
-[node name="Tabs" type="Label" parent="SystemPage"]
-offset_right = 410.0
-offset_bottom = 22.0
-theme_override_colors/font_color = Color(1, 0.84, 0.33, 1)
-theme_override_font_sizes/font_size = 13
-text = "系统    外观"
-
-[node name="Separator" type="HSeparator" parent="SystemPage"]
-offset_top = 18.0
-offset_right = 410.0
-offset_bottom = 22.0
-
-[node name="ResolutionLabel" type="Label" parent="SystemPage"]
-offset_top = 40.0
-offset_right = 60.0
-offset_bottom = 63.0
-text = "分辨率"
-
-[node name="Resolution" type="OptionButton" parent="SystemPage"]
-offset_left = 45.0
-offset_top = 35.0
-offset_right = 135.0
-offset_bottom = 65.0
-item_count = 6
-popup/item_0/text = "800×600"
-popup/item_0/id = 0
-popup/item_1/text = "960×600"
-popup/item_1/id = 1
-popup/item_2/text = "1024×768"
-popup/item_2/id = 2
-popup/item_3/text = "1280×720"
-popup/item_3/id = 3
-popup/item_4/text = "1280×768"
-popup/item_4/id = 4
-popup/item_5/text = "1280×800"
-popup/item_5/id = 5
-
-[node name="IMELabel" type="Label" parent="SystemPage"]
-offset_top = 70.0
-offset_right = 60.0
-offset_bottom = 93.0
-text = "输入法"
-
-[node name="IME" type="OptionButton" parent="SystemPage"]
-offset_left = 45.0
-offset_top = 65.0
-offset_right = 190.0
-offset_bottom = 95.0
-item_count = 3
-popup/item_0/text = "禁用"
-popup/item_0/id = 0
-popup/item_1/text = "使用内置输入法"
-popup/item_1/id = 1
-popup/item_2/text = "使用系统输入法"
-popup/item_2/id = 2
-
-[node name="Fullscreen" type="CheckBox" parent="SystemPage"]
-offset_top = 115.0
-offset_right = 140.0
-offset_bottom = 143.0
-text = "全屏显示"
-
-[node name="ShowFPS" type="CheckBox" parent="SystemPage"]
-offset_top = 140.0
-offset_right = 140.0
-offset_bottom = 168.0
-text = "显示 FPS"
-
-[node name="BGM" type="CheckBox" parent="SystemPage"]
-offset_top = 180.0
-offset_right = 140.0
-offset_bottom = 208.0
-button_pressed = true
-text = "背景音乐"
-
-[node name="BGMVolumeLabel" type="Label" parent="SystemPage"]
-offset_top = 205.0
-offset_right = 75.0
-offset_bottom = 229.0
-text = "音乐音量"
-
-[node name="BGMVolume" type="HSlider" parent="SystemPage"]
-offset_left = 65.0
-offset_top = 202.0
-offset_right = 149.0
-offset_bottom = 226.0
-value = 50.0
-
-[node name="SEFF" type="CheckBox" parent="SystemPage"]
-offset_top = 240.0
-offset_right = 140.0
-offset_bottom = 268.0
-button_pressed = true
-text = "动作声效"
-
-[node name="SEFFVolumeLabel" type="Label" parent="SystemPage"]
-offset_top = 265.0
-offset_right = 75.0
-offset_bottom = 289.0
-text = "声效音量"
-
-[node name="SEFFVolume" type="HSlider" parent="SystemPage"]
-offset_left = 65.0
-offset_top = 262.0
-offset_right = 149.0
-offset_bottom = 286.0
-value = 50.0
 
 [node name="CloseButton" type="TextureButton" parent="."]
 offset_left = 549.0

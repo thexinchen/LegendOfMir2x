@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/main.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/game/world_renderer.gd" id="2_renderer"]
@@ -12,6 +12,14 @@
 [ext_resource type="Script" path="res://scripts/game/quick_bar.gd" id="12_quick_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000062.png" id="13_quick_close_down"]
 [ext_resource type="Script" path="res://scripts/game/skill_buff_hud.gd" id="14_skill_buff_hud"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fps"]
+bg_color = Color(0, 0, 0, 0.784314)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0, 1, 1)
 
 [node name="GameMain" type="Control"]
 layout_mode = 3
@@ -64,6 +72,24 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 15
 theme_override_fonts/font = ExtResource("11_world_font")
 text = "未知地图: 0 0"
+
+[node name="FPS" type="Label" parent="."]
+visible = false
+layout_mode = 1
+z_index = 100
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -60.0
+offset_bottom = 18.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_font_sizes/font_size = 15
+theme_override_fonts/font = ExtResource("11_world_font")
+theme_override_styles/normal = SubResource("StyleBoxFlat_fps")
+horizontal_alignment = 2
+text = "0"
 
 [node name="QuickBar" type="Control" parent="."]
 unique_name_in_owner = true

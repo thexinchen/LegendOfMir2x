@@ -27,6 +27,7 @@ const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 @onready var skill_buff_hud: Control = $SkillBuffHUD
 @onready var team_flag_cursor: TextureRect = $TeamFlagCursor
 @onready var death_overlay: ColorRect = $DeathOverlay
+@onready var fps_label: Label = $FPS
 
 var game_state: Node = null
 var protocol: RefCounted = null
@@ -138,6 +139,7 @@ func _process(delta: float) -> void:
 	world_renderer.set_focus_channels(_magic_focus_uid, _follow_focus_uid, _attack_focus_uid)
 	world_renderer.queue_redraw()
 	_update_death_overlay()
+	_update_fps_overlay()
 	if grabbed_item_icon.visible:
 		grabbed_item_icon.position = get_viewport().get_mouse_position() - grabbed_item_icon.size * 0.5
 	_update_team_flag_cursor()
@@ -231,6 +233,13 @@ func _player_dead() -> bool:
 
 func _update_death_overlay() -> void:
 	death_overlay.visible = _player_dead()
+
+
+func _update_fps_overlay() -> void:
+	var data: PackedByteArray = game_state.runtime_config.get(6, PackedByteArray())
+	fps_label.visible = data.size() >= 2 and data[0] != 0 and data[1] != 0
+	if fps_label.visible:
+		fps_label.text = str(Engine.get_frames_per_second())
 
 
 func _handle_mouse_click(event: InputEventMouseButton) -> void:
