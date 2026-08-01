@@ -51,6 +51,8 @@ func _ready() -> void:
 		return
 	if not _test_async_combat_feedback(main, resources):
 		return
+	if not _test_health_feedback(main, resources):
+		return
 	if not _test_buff_transitions(main, resources):
 		return
 	if not _test_progression_feedback(main, resources):
@@ -611,13 +613,13 @@ func _test_async_combat_feedback(main: Control, resources: RefCounted) -> bool:
 		_fail("stale SM_MISS created false local-player feedback: %s" % GameState.ascend_strings)
 		return false
 	main.call("_on_server_message", NetworkClient.SM_MISS, _u64_payload(101))
-	if GameState.ascend_strings.size() != 1 or GameState.ascend_strings[0].x != 3 * 48 + 24 or GameState.ascend_strings[0].y != 4 * 32:
+	if GameState.ascend_strings.size() != 1 or GameState.ascend_strings[0].x != 3 * 48 + 24 or GameState.ascend_strings[0].y != 3 * 32 or GameState.ascend_strings[0].type != 0:
 		_fail("local-player SM_MISS did not use the existing actor position: %s" % GameState.ascend_strings)
 		return false
 	var target_uid := 303
 	GameState.update_creature(target_uid, {"uid": target_uid, "type": 1, "x": 8, "y": 9})
 	main.call("_on_server_message", NetworkClient.SM_MISS, _u64_payload(target_uid))
-	if GameState.ascend_strings.size() != 2 or GameState.ascend_strings[1].x != 8 * 48 + 24 or GameState.ascend_strings[1].y != 9 * 32:
+	if GameState.ascend_strings.size() != 2 or GameState.ascend_strings[1].x != 8 * 48 + 24 or GameState.ascend_strings[1].y != 8 * 32 or GameState.ascend_strings[1].type != 0:
 		_fail("creature SM_MISS did not use the existing actor position: %s" % GameState.ascend_strings)
 		return false
 	GameState.chat_log.clear()
@@ -639,6 +641,71 @@ func _test_async_combat_feedback(main: Control, resources: RefCounted) -> bool:
 	GameState.chat_log.clear()
 	GameState.attached_magic_effects.clear()
 	GameState.remove_creature(target_uid)
+	return true
+
+
+func _sd_health_payload(uid: int, hp: int, mp: int, max_hp: int, max_mp: int) -> PackedByteArray:
+	var payload := PackedByteArray([1])
+	_append_u64(payload, uid)
+	for value in [hp, mp, max_hp, max_mp, 0, 0]:
+		var offset := payload.size()
+		payload.resize(offset + 4)
+		payload.encode_s32(offset, value)
+	for _index in range(4):
+		_append_u64(payload, 0)
+	payload.append(0)
+	return payload
+
+
+func _test_health_feedback(main: Control, resources: RefCounted) -> bool:
+	for key in [0x03000000, 0x0300000A, 0x0300000B, 0x03000010, 0x0300001A, 0x0300001B, 0x03000020, 0x0300002A, 0x0300002B, 0x03000030]:
+		if resources.frame("proguse", key).is_empty():
+			_fail("health feedback sprite is unavailable: %08X" % key)
+			return false
+	GameState.player_uid = 101
+	GameState.player_x = 3
+	GameState.player_y = 4
+	GameState.player_health_initialized = false
+	GameState.ascend_strings.clear()
+	main.call("_on_server_message", NetworkClient.SM_HEALTH, _sd_health_payload(101, 100, 40, 120, 60))
+	if not GameState.ascend_strings.is_empty() or not GameState.player_health_initialized:
+		_fail("first local health snapshot was not silent")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_HEALTH, _sd_health_payload(101, 75, 47, 120, 60))
+	if GameState.ascend_strings.size() != 2:
+		_fail("combined HP/MP change did not create two feedback entries: %s" % GameState.ascend_strings)
+		return false
+	var hp_entry: Dictionary = GameState.ascend_strings[0]
+	var mp_entry: Dictionary = GameState.ascend_strings[1]
+	if hp_entry.type != 1 or hp_entry.value != -25 or hp_entry.x != 3 * 48 + 24 or hp_entry.y != 3 * 32:
+		_fail("HP loss feedback mismatched C++: %s" % hp_entry)
+		return false
+	if mp_entry.type != 2 or mp_entry.value != 7 or mp_entry.x != hp_entry.x or mp_entry.y != hp_entry.y - 32:
+		_fail("simultaneous MP gain feedback did not stack above HP: %s" % mp_entry)
+		return false
+	GameState.ascend_strings.clear()
+	main.call("_on_server_message", NetworkClient.SM_HEALTH, _sd_health_payload(101, 85, 42, 120, 60))
+	if GameState.ascend_strings.size() != 1 or GameState.ascend_strings[0].type != 3 or GameState.ascend_strings[0].value != 10:
+		_fail("HP gain or silent MP loss feedback mismatched C++: %s" % GameState.ascend_strings)
+		return false
+	var target_uid := 303
+	GameState.update_creature(target_uid, {"uid": target_uid, "type": 1, "x": 8, "y": 9, "hp": 999, "mp": 999})
+	GameState.ascend_strings.clear()
+	main.call("_on_server_message", NetworkClient.SM_HEALTH, _sd_health_payload(target_uid, 50, 10, 50, 20))
+	if not GameState.ascend_strings.is_empty():
+		_fail("first creature health snapshot was not silent")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_HEALTH, _sd_health_payload(target_uid, 45, 10, 50, 20))
+	if GameState.ascend_strings.size() != 1 or GameState.ascend_strings[0].type != 1 or GameState.ascend_strings[0].value != -5 or GameState.ascend_strings[0].y != 8 * 32:
+		_fail("creature health delta feedback mismatch: %s" % GameState.ascend_strings)
+		return false
+	GameState.ascend_strings.clear()
+	main.call("_on_server_message", NetworkClient.SM_HEALTH, _sd_health_payload(999, 1, 1, 1, 1))
+	if not GameState.ascend_strings.is_empty():
+		_fail("unknown health target created feedback")
+		return false
+	GameState.remove_creature(target_uid)
+	GameState.ascend_strings.clear()
 	return true
 
 

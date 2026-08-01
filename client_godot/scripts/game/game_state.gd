@@ -26,6 +26,7 @@ var player_hp: int = 0
 var player_hp_max: int = 0
 var player_mp: int = 0
 var player_mp_max: int = 0
+var player_health_initialized := false
 var player_map_uid: int = 0
 var player_map_id: int = 0
 var player_map_name: String = ""
@@ -101,7 +102,7 @@ var hud_minimized := false
 var strike_grids: Dictionary = {}  # "x,y" -> timestamp_msec
 
 # Ascend strings (floating damage/heal/exp text)
-var ascend_strings: Array = []  # list of {x, y, text, color, start_time}
+var ascend_strings: Array = []  # list of {x, y, type, value, start_time}
 
 # System constants
 const GRID_XP := 48
@@ -180,6 +181,7 @@ func update_quest_description(name: String, fsm: String, desp: Variant, main_fsm
 
 func set_player_online(online_data: Dictionary) -> void:
 	hud_minimized = false
+	player_health_initialized = false
 	player_uid = online_data.get("uid", 0)
 	player_name = online_data.get("name", "")
 	player_gender = online_data.get("gender", 0)
@@ -611,17 +613,40 @@ func trigger_shield_hit(uid: int) -> bool:
 func update_entity_health(data: Dictionary) -> void:
 	var uid: int = data.get("uid", 0)
 	if uid == player_uid:
+		var initialized := player_health_initialized
+		var previous_hp := player_hp
+		var previous_mp := player_mp
 		update_health(data.get("hp", 0), data.get("maxHP", 0), data.get("mp", 0), data.get("maxMP", 0))
+		player_health_initialized = true
+		if initialized:
+			_add_health_feedback(player_x, player_y, player_hp - previous_hp, player_mp - previous_mp)
 		return
 	var creature: Dictionary = creatures.get(uid, {})
 	if creature.is_empty():
 		return
+	var initialized: bool = creature.get("health_initialized", false)
+	var previous_hp: int = creature.get("hp", 0)
+	var previous_mp: int = creature.get("mp", 0)
 	creature["hp"] = data.get("hp", 0)
 	creature["mp"] = data.get("mp", 0)
 	creature["hp_max"] = data.get("maxHP", 0)
 	creature["mp_max"] = data.get("maxMP", 0)
+	creature["health_initialized"] = true
 	creatures[uid] = creature
+	if initialized:
+		_add_health_feedback(creature.get("x", 0), creature.get("y", 0), creature.hp - previous_hp, creature.mp - previous_mp)
 	state_changed.emit()
+
+
+func _add_health_feedback(grid_x: int, grid_y: int, diff_hp: int, diff_mp: int) -> void:
+	var pixel_x := grid_x * GRID_XP + GRID_XP / 2
+	var pixel_y := grid_y * GRID_YP - GRID_YP
+	if diff_hp > 0:
+		add_ascend_value(pixel_x, pixel_y, 3, diff_hp)
+	elif diff_hp < 0:
+		add_ascend_value(pixel_x, pixel_y, 1, diff_hp)
+	if diff_mp > 0:
+		add_ascend_value(pixel_x, pixel_y - (GRID_YP if diff_hp != 0 else 0), 2, diff_mp)
 
 
 func camera_center_y() -> int:
@@ -668,11 +693,28 @@ func scroll_camera() -> void:
 func add_ascend_string(grid_x: int, grid_y: int, text: String, color: Color = Color(1, 0.3, 0.3, 1)) -> void:
 	ascend_strings.append({
 		"x": grid_x * GRID_XP + GRID_XP / 2,
-		"y": grid_y * GRID_YP,
+		"y": grid_y * GRID_YP - GRID_YP,
+		"type": 0,
+		"value": 0,
 		"text": text,
 		"color": color,
 		"start_time": Time.get_ticks_msec(),
 	})
+	_trim_ascend_strings()
+
+
+func add_ascend_value(pixel_x: int, pixel_y: int, type: int, value: int) -> void:
+	ascend_strings.append({
+		"x": pixel_x,
+		"y": pixel_y,
+		"type": type,
+		"value": value,
+		"start_time": Time.get_ticks_msec(),
+	})
+	_trim_ascend_strings()
+
+
+func _trim_ascend_strings() -> void:
 	if ascend_strings.size() > 50:
 		ascend_strings.pop_front()
 
@@ -682,6 +724,6 @@ func update_ascend_strings() -> void:
 	var to_keep: Array = []
 	for s in ascend_strings:
 		var age: int = now - s.get("start_time", 0)
-		if age < 1500:  # 1.5 seconds lifetime
+		if age < 3000:
 			to_keep.append(s)
 	ascend_strings = to_keep

@@ -40,6 +40,7 @@ const PLAYER_SAY_WIDTH := 160
 const PLAYER_SAY_FONT_SIZE := 15
 const PLAYER_SAY_SHOW_TIME := 5000
 const PLAYER_SAY_MARGIN := 2
+const ASCEND_LIFETIME_MS := 3000.0
 const FOCUS_COLORS := [
 	Color.WHITE,
 	Color8(0xFF, 0x86, 0x00),
@@ -159,19 +160,43 @@ func _draw() -> void:
 
 	# Floating combat text is a screen overlay.
 	game_state.update_ascend_strings()
-	var font := get_theme_default_font()
-	if font:
-		for s in game_state.ascend_strings:
-			var age: int = Time.get_ticks_msec() - s.get("start_time", 0)
-			var progress: float = float(age) / 1500.0
-			var sx: int = int(s.get("x", 0)) - view_x
-			var sy: int = int(s.get("y", 0)) - view_y - int(progress * 30)
-			var alpha: float = 1.0 - progress
-			var text: String = s.get("text", "")
-			var color: Color = s.get("color", Color(1, 1, 1, 1))
-			color.a = alpha
-			var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, 13)
-			font.draw_string(get_canvas_item(), Vector2(sx - tw.x * 0.5, sy), text, HORIZONTAL_ALIGNMENT_CENTER, -1, 13, color)
+	for entry in game_state.ascend_strings:
+		_draw_ascend_feedback(entry, view_x, view_y, now)
+
+
+func _draw_ascend_feedback(entry: Dictionary, view_x: int, view_y: int, now: int) -> void:
+	var progress := clampf(float(now - int(entry.get("start_time", 0))) / ASCEND_LIFETIME_MS, 0.0, 1.0)
+	var position := Vector2(
+		int(entry.get("x", 0)) - view_x + roundi(progress * 50.0),
+		int(entry.get("y", 0)) - view_y - roundi(progress * 50.0),
+	)
+	var alpha := 1.0 - progress
+	var type := int(entry.get("type", 0))
+	if type == 0:
+		_draw_ascend_texture(0x03000030, position, alpha)
+		return
+	var value := int(entry.get("value", 0))
+	if value == 0 or type < 1 or type > 3:
+		return
+	var base_key := 0x03000000 | ((type - 1) << 4)
+	var sign_frame: Dictionary = actor_resource.frame("proguse", base_key | (0x0A if value < 0 else 0x0B))
+	var sign_texture := sign_frame.get("texture") as Texture2D
+	if sign_texture:
+		draw_texture(sign_texture, position + Vector2(0, 4 if value < 0 else 1), Color(1, 1, 1, alpha))
+		position.x += sign_texture.get_width()
+	for digit in str(absi(value)):
+		var frame: Dictionary = actor_resource.frame("proguse", base_key | (digit.unicode_at(0) - 48))
+		var texture := frame.get("texture") as Texture2D
+		if texture:
+			draw_texture(texture, position, Color(1, 1, 1, alpha))
+			position.x += texture.get_width()
+
+
+func _draw_ascend_texture(key: int, position: Vector2, alpha: float) -> void:
+	var frame: Dictionary = actor_resource.frame("proguse", key)
+	var texture := frame.get("texture") as Texture2D
+	if texture:
+		draw_texture(texture, position, Color(1, 1, 1, alpha))
 
 
 func _draw_object_depth(depth: int, x0: int, y0: int, x1: int, y1: int, view_x: int, view_y: int) -> void:
