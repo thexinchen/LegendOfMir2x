@@ -1488,15 +1488,35 @@ func _handle_chat_message_list(payload: PackedByteArray) -> void:
 	var messages := reader.read_sd_chat_message_list()
 	if not _reader_ok(reader, "SM_CHATMESSAGELIST"):
 		return
+	_apply_chat_messages(messages)
+
+
+func _apply_chat_messages(messages: Array) -> void:
 	for message in messages:
 		game_state.add_chat_message(message)
+		_query_chat_reference(message)
+	control_panel.call("start_button_blink", "Friend")
+
+
+func _query_chat_reference(message: Dictionary) -> void:
+	var refer: Variant = message.get("refer")
+	if refer == null or game_state.chat_messages.has(int(refer)):
+		return
+	NetworkClient.query_chat_message(int(refer), func(head: int, response: PackedByteArray):
+		if head != NetworkClient.SM_OK:
+			return
+		var reader := CerealReader.new(response)
+		var referenced := reader.read_sd_chat_message()
+		if _reader_ok(reader, "CM_QUERYCHATMESSAGE"):
+			game_state.cache_chat_message(referenced)
+	)
 
 
 func _handle_chat_group(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var peer := reader.read_sd_chat_peer()
 	if _reader_ok(reader, "SM_CREATECHATGROUP"):
-		game_state.add_chat_peer(peer, true)
+		game_state.add_chat_peer(peer, true, "你已经加入了群聊，现在就可以聊天了。")
 
 
 func _handle_friend_result(payload: PackedByteArray, accepted: bool) -> void:
@@ -1504,7 +1524,8 @@ func _handle_friend_result(payload: PackedByteArray, accepted: bool) -> void:
 	var peer := reader.read_sd_chat_peer()
 	if not _reader_ok(reader, "SM_ADDFRIEND"):
 		return
-	game_state.add_chat_peer(peer, accepted)
+	if accepted:
+		game_state.add_chat_peer(peer, true, "%s已经通过你的好友申请，现在可以开始聊天了。" % peer.get("name", "对方"))
 	game_state.add_chat_log("%s已%s你的好友申请" % [peer.get("name", "对方"), "通过" if accepted else "拒绝"], 1 if accepted else 3)
 
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/friend_chat_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000810.png" id="2"]
@@ -6,7 +6,12 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="4"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/friend/000008f0.png" id="5"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000900.png" id="6"]
-[ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000910.png" id="7"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/friend/000008f1.png" id="8"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000901.png" id="9"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/team/00000160.png" id="11"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/team/00000170.png" id="12"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/team/00000171.png" id="13"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/common/00000089.png" id="14"]
 
 [node name="FriendChatPanel" type="Control"]
 custom_minimum_size = Vector2(451, 464)
@@ -24,33 +29,31 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("2")
-patch_margin_top = 54
-patch_margin_right = 38
-patch_margin_bottom = 10
+modulate = Color(0.627451, 0.627451, 0.627451, 1)
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="ContentFrame" type="NinePatchRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 17.0
-offset_top = 58.0
-offset_right = -42.0
-offset_bottom = -14.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("3")
-patch_margin_left = 24
-patch_margin_top = 24
-patch_margin_right = 24
-patch_margin_bottom = 24
+patch_margin_left = 55
+patch_margin_top = 95
+patch_margin_right = 206
+patch_margin_bottom = 92
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="Title" type="Label" parent="."]
 layout_mode = 0
 offset_left = 45.0
 offset_top = 17.0
-offset_right = 390.0
+offset_right = 261.0
 offset_bottom = 42.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 14
@@ -71,6 +74,7 @@ visible = false
 custom_minimum_size = Vector2(30, 24)
 layout_mode = 2
 texture_normal = ExtResource("5")
+texture_pressed = ExtResource("8")
 ignore_texture_size = true
 stretch_mode = 5
 
@@ -79,6 +83,7 @@ visible = false
 custom_minimum_size = Vector2(30, 24)
 layout_mode = 2
 texture_normal = ExtResource("6")
+texture_pressed = ExtResource("9")
 ignore_texture_size = true
 stretch_mode = 5
 
@@ -86,22 +91,24 @@ stretch_mode = 5
 visible = false
 custom_minimum_size = Vector2(30, 24)
 layout_mode = 2
-texture_normal = ExtResource("7")
+texture_normal = ExtResource("12")
+texture_pressed = ExtResource("13")
 ignore_texture_size = true
 stretch_mode = 5
 
-[node name="Friends" type="Button" parent="Toolbar"]
-custom_minimum_size = Vector2(52, 24)
+[node name="Friends" type="TextureButton" parent="Toolbar"]
+custom_minimum_size = Vector2(30, 24)
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "好友"
+texture_normal = ExtResource("11")
+ignore_texture_size = true
+stretch_mode = 5
 
 [node name="Page" type="Control" parent="."]
 layout_mode = 0
-offset_left = 21.0
-offset_top = 62.0
-offset_right = 405.0
-offset_bottom = 446.0
+offset_left = 17.0
+offset_top = 58.0
+offset_right = 409.0
+offset_bottom = 450.0
 
 [node name="ListScroll" type="ScrollContainer" parent="Page"]
 layout_mode = 1
@@ -210,6 +217,34 @@ offset_right = 380.0
 offset_bottom = 450.0
 theme_override_colors/font_color = Color(1, 0.65, 0.35, 1)
 theme_override_font_sizes/font_size = 11
+
+[node name="SliderHit" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -40.0
+offset_top = 58.0
+offset_right = -20.0
+offset_bottom = -58.0
+grow_horizontal = 0
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="SliderThumb" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_top = 58.0
+offset_right = -20.0
+offset_bottom = 83.0
+grow_horizontal = 0
+mouse_filter = 2
+texture = ExtResource("14")
+expand_mode = 1
 
 [node name="CloseButton" type="TextureButton" parent="."]
 layout_mode = 0

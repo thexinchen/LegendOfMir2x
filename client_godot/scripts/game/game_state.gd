@@ -289,7 +289,7 @@ func set_chat_friends(friends: Array) -> void:
 	state_changed.emit()
 
 
-func add_chat_peer(peer: Dictionary, friend: bool = false) -> void:
+func add_chat_peer(peer: Dictionary, friend: bool = false, preview: String = "") -> void:
 	var cpid := int(peer.get("cpid", 0))
 	if cpid == 0:
 		return
@@ -302,7 +302,30 @@ func add_chat_peer(peer: Dictionary, friend: bool = false) -> void:
 				break
 		if not found:
 			chat_friends.append(peer)
+	if not preview.is_empty():
+		ensure_chat_conversation(cpid, preview)
 	state_changed.emit()
+
+
+func ensure_chat_conversation(cpid: int, preview: String) -> void:
+	for index in range(chat_conversations.size()):
+		if int(chat_conversations[index].get("cpid", 0)) == cpid:
+			var conversation: Dictionary = chat_conversations[index]
+			conversation["preview"] = preview
+			chat_conversations.remove_at(index)
+			chat_conversations.push_front(conversation)
+			return
+	chat_conversations.push_front({"cpid": cpid, "messages": [], "unread": 0, "preview": preview})
+
+
+func cache_chat_message(message: Dictionary) -> void:
+	var seq: Variant = message.get("seq")
+	if seq == null:
+		return
+	var message_id := int(seq.get("id", 0))
+	if message_id != 0:
+		chat_messages[message_id] = message
+		state_changed.emit()
 
 
 func add_chat_message(message: Dictionary) -> void:
