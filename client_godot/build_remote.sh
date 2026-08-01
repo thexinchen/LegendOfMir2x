@@ -34,6 +34,10 @@ if [ ! -f "$repo_dir/build/Release/res/map/mapbin.zsdb" ]; then
 fi
 
 world_res_dir="$project_dir/build/world_res"
+mkdir -p "$world_res_dir"
+# Runtime resources are decoded directly with FileAccess/Image.load_png_from_buffer().
+# Prevent the editor from importing hundreds of thousands of external sprite files.
+touch "$world_res_dir/.gdignore"
 map_id_args=""
 if [ -n "${MIR2X_GODOT_MAP_ID:-}" ]; then
     map_id_args=$MIR2X_GODOT_MAP_ID
@@ -50,7 +54,8 @@ fi
     monster "$repo_dir/build/Release/res/texture/monster.zsdb" \
     npc "$repo_dir/build/Release/res/texture/npc.zsdb" \
     item "$repo_dir/build/Release/res/texture/item.zsdb" \
-    equip "$repo_dir/build/Release/res/texture/equip.zsdb"
+    equip "$repo_dir/build/Release/res/texture/equip.zsdb" \
+    proguse "$repo_dir/build/Release/res/texture/proguse.zsdb"
 
 mkdir -p "$project_dir/build"
 "$godot_bin" --headless --editor --path "$project_dir" --quit

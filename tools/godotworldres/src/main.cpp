@@ -12,6 +12,7 @@
 #include "fflerror.hpp"
 #include "hexstr.hpp"
 #include "itemrecord.hpp"
+#include "gui/ImSkillBoard.hpp"
 #include "mir2xmapdata.hpp"
 #include "strf.hpp"
 #include "totype.hpp"
@@ -78,6 +79,16 @@ struct ItemMetaRecord
     uint16_t reserved = 0;
     uint32_t pkgGfxID = 0;
 };
+
+struct SkillMetaRecord
+{
+    uint32_t magicID = 0;
+    uint32_t iconID = 0;
+    uint8_t page = 0;
+    uint8_t x = 0;
+    uint8_t y = 0;
+    uint8_t flags = 0;
+};
 #pragma pack(pop)
 
 static_assert(sizeof(MapHeader) == 28);
@@ -87,6 +98,7 @@ static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
 static_assert(sizeof(MonsterMetaRecord) == 8);
 static_assert(sizeof(ItemMetaRecord) == 12);
+static_assert(sizeof(SkillMetaRecord) == 12);
 
 static bool animatedTextureSet(uint32_t textureID)
 {
@@ -286,6 +298,34 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "item.m2xmeta", std::ios::binary);
+        const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
+        metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
+        writeVector(metaFile, metaList);
+    }
+    if(std::strcmp(family, "proguse") == 0){
+        std::vector<SkillMetaRecord> metaList;
+        for(const auto &gfx: SkillBoardData::m_iconGfxList){
+            const auto &record = DBCOM_MAGICRECORD(gfx.magicID);
+            if(!record){
+                continue;
+            }
+            const auto elemID = magicElemID(record.elem);
+            const int page = elemID == MET_NONE
+                           ? 7
+                           : (elemID >= MET_BEGIN && elemID < MET_END ? elemID - MET_BEGIN : -1);
+            if(page < 0){
+                continue;
+            }
+            metaList.push_back({
+                gfx.magicID,
+                gfx.magicIcon,
+                check_cast<uint8_t>(page),
+                check_cast<uint8_t>(gfx.x),
+                check_cast<uint8_t>(gfx.y),
+                to_u8(gfx.passive),
+            });
+        }
+        std::ofstream metaFile(outputDir / "sprites" / "skill.m2xmeta", std::ios::binary);
         const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);

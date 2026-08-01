@@ -143,10 +143,10 @@ button_group = SubResource("TabGroup")
 ignore_texture_size = true
 
 [node name="Slider" type="TextureRect" parent="."]
-offset_left = 326.0
-offset_top = 74.0
-offset_right = 342.0
-offset_bottom = 373.0
+offset_left = 322.0
+offset_top = 67.0
+offset_right = 337.0
+offset_bottom = 82.0
 mouse_filter = 2
 texture = ExtResource("4")
 expand_mode = 1

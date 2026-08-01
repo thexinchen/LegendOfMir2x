@@ -53,7 +53,18 @@ func _verify() -> void:
 	var panel_name := OS.get_environment("MIR2X_TEST_PANEL")
 	if panel_name in ["inventory", "player_state", "skill"]:
 		var panel_nodes := {"inventory": "%InventoryPanel", "player_state": "%PlayerStatePanel", "skill": "%SkillPanel"}
-		_main.get_node(panel_nodes[panel_name]).show()
+		var panel: Control = _main.get_node(panel_nodes[panel_name])
+		if panel_name == "skill":
+			if GameState.learned_magic.is_empty():
+				GameState.learned_magic = [
+					{"magicID": 18, "exp": 0},
+					{"magicID": 21, "exp": 0},
+					{"magicID": 24, "exp": 0},
+				]
+				GameState.magic_keys = {24: 49}
+				GameState.state_changed.emit()
+			panel.call("_select_tab", 7)
+		panel.show()
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 	if OS.has_environment("MIR2X_GAME_RUNTIME_SCREENSHOT"):
