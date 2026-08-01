@@ -84,6 +84,7 @@ var quest_reset_serial := 0
 var npc_dialog: Dictionary = {}
 var npc_sell: Dictionary = {}
 var npc_sell_detail: Dictionary = {}
+var npc_sell_reset_serial := 0
 var pending_input: Dictionary = {}
 var inventory_operation: Dictionary = {}
 var inventory_operation_cost: Dictionary = {}
@@ -151,6 +152,13 @@ func set_quest_list(value: Dictionary) -> void:
 func set_secured_items(items: Array) -> void:
 	secured_items = items
 	secured_items_reset_serial += 1
+	state_changed.emit()
+
+
+func set_npc_sell(value: Dictionary) -> void:
+	npc_sell = value
+	npc_sell_detail = {}
+	npc_sell_reset_serial += 1
 	state_changed.emit()
 
 

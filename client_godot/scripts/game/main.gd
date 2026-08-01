@@ -10,6 +10,7 @@ const WorldPathfinderScript = preload("res://scripts/game/world_pathfinder.gd")
 const MINIMAP_PANEL_PATH := "res://scenes/game/panels/minimap.tscn"
 const QUEST_PANEL_PATH := "res://scenes/game/panels/quest.tscn"
 const NPC_CHAT_PANEL_PATH := "res://scenes/game/panels/npc_chat.tscn"
+const PURCHASE_PANEL_PATH := "res://scenes/game/panels/purchase.tscn"
 const SECURED_ITEMS_PANEL_PATH := "res://scenes/game/panels/secured_items.tscn"
 const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 
@@ -1390,6 +1391,9 @@ func _handle_npc_xml(payload: PackedByteArray) -> void:
 	if _reader_ok(reader, "SM_NPCXMLLAYOUT"):
 		game_state.npc_dialog = data
 		game_state.state_changed.emit()
+		var purchase_panel := _extra_panel_nodes.get(PURCHASE_PANEL_PATH) as Control
+		if purchase_panel:
+			purchase_panel.hide()
 		_ensure_extra_panel("res://scenes/game/panels/npc_chat.tscn").show()
 
 
@@ -1397,9 +1401,16 @@ func _handle_npc_sell(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var data := reader.read_sd_npc_sell()
 	if _reader_ok(reader, "SM_NPCSELL"):
-		game_state.npc_sell = data
-		game_state.state_changed.emit()
-		_ensure_extra_panel("res://scenes/game/panels/purchase.tscn").show()
+		_show_purchase(data)
+
+
+func _show_purchase(data: Dictionary) -> void:
+	game_state.set_npc_sell(data)
+	var npc_panel := _extra_panel_nodes.get(NPC_CHAT_PANEL_PATH) as Control
+	var purchase_panel := _ensure_extra_panel(PURCHASE_PANEL_PATH)
+	purchase_panel.position = Vector2(0.0, npc_panel.size.y) if npc_panel and npc_panel.visible else Vector2.ZERO
+	purchase_panel.show()
+	purchase_panel.move_to_front()
 
 
 func _handle_sell_item_list(payload: PackedByteArray) -> void:

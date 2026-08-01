@@ -15,10 +15,11 @@ const PAGE_SIZE := 12
 
 var _state: Node
 var _resources: RefCounted = ActorResourceScript.new()
-var _selected_item_id := 0
+var _selected_index := 0
 var _detail_selected := -1
 var _detail_page := 0
 var _scroll := 0.0
+var _reset_serial := -1
 
 
 func _ready() -> void:
@@ -27,11 +28,24 @@ func _ready() -> void:
 	_resources.configure_default()
 	_state.state_changed.connect(_refresh)
 	$SelectButton.pressed.connect(_query_selected)
+	$CloseButton.pressed.connect(_close_panel)
 	$GoodsList.gui_input.connect(_on_list_input)
+	$SliderHit.gui_input.connect(_on_slider_input)
 	_refresh()
 
 
+func _close_panel() -> void:
+	_state.npc_sell_detail = {}
+	_refresh_detail()
+
+
 func _refresh() -> void:
+	if _reset_serial != _state.npc_sell_reset_serial:
+		_reset_serial = _state.npc_sell_reset_serial
+		_selected_index = 0
+		_detail_selected = -1
+		_detail_page = 0
+		_scroll = 0.0
 	_refresh_goods()
 	_refresh_detail()
 
@@ -44,10 +58,10 @@ func _refresh_goods() -> void:
 	for index in range(start, mini(start + 4, items.size())):
 		var item_id: int = items[index]
 		var row := Control.new()
-		row.position = Vector2(0, (index - start) * 38)
-		row.size = Vector2(237, 38)
+		row.position = Vector2(0, (index - start) * 42)
+		row.size = Vector2(233, 38)
 		$GoodsList.add_child(row)
-		if item_id == _selected_item_id:
+		if index == _selected_index:
 			var highlight := ColorRect.new()
 			highlight.color = Color(1, 1, 1, 0.25)
 			highlight.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -55,11 +69,11 @@ func _refresh_goods() -> void:
 			highlight.show_behind_parent = true
 			row.add_child(highlight)
 		var icon_button := TextureButton.new()
-		icon_button.size = Vector2(237, 38)
+		icon_button.size = Vector2(233, 38)
 		icon_button.ignore_texture_size = true
 		icon_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
-		icon_button.pressed.connect(_select_item.bind(item_id))
-		icon_button.gui_input.connect(_on_row_input.bind(item_id))
+		icon_button.pressed.connect(_select_item.bind(index))
+		icon_button.gui_input.connect(_on_row_input.bind(index))
 		row.add_child(icon_button)
 		var icon: Dictionary = _resources.item_icon(item_id)
 		if not icon.is_empty():
@@ -83,14 +97,14 @@ func _refresh_goods() -> void:
 	$Slider.position.y = 18.0 + _scroll * 125.0
 
 
-func _select_item(item_id: int) -> void:
-	_selected_item_id = item_id
+func _select_item(index: int) -> void:
+	_selected_index = index
 	_refresh_goods()
 
 
-func _on_row_input(event: InputEvent, item_id: int) -> void:
+func _on_row_input(event: InputEvent, index: int) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
-		_selected_item_id = item_id
+		_selected_index = index
 		_query_selected()
 
 
@@ -98,21 +112,39 @@ func _on_list_input(event: InputEvent) -> void:
 	if not event is InputEventMouseButton or not event.pressed:
 		return
 	if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-		_scroll = maxf(0.0, _scroll - 0.1)
+		_scroll = maxf(0.0, _scroll - _scroll_step())
 	elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-		_scroll = minf(1.0, _scroll + 0.1)
+		_scroll = minf(1.0, _scroll + _scroll_step())
 	else:
 		return
 	_refresh_goods()
 
 
+func _scroll_step() -> float:
+	var item_count: int = _state.npc_sell.get("itemList", []).size()
+	return 1.0 / float(item_count - 4) if item_count > 4 else 0.0
+
+
+func _on_slider_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		_scroll = clampf((event.position.y - 7.0) / 125.0, 0.0, 1.0)
+		_refresh_goods()
+		accept_event()
+	elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_scroll = clampf((event.position.y - 7.0) / 125.0, 0.0, 1.0)
+		_refresh_goods()
+		accept_event()
+
+
 func _query_selected() -> void:
-	if _selected_item_id == 0:
+	var items: Array = _state.npc_sell.get("itemList", [])
+	if _selected_index < 0 or _selected_index >= items.size():
 		return
+	var item_id: int = items[_selected_index]
 	_state.npc_sell_detail = {}
 	_detail_page = 0
 	_detail_selected = -1
-	NetworkClient.send_query_sell_item_list(_state.npc_sell.get("npcUID", 0), _selected_item_id)
+	NetworkClient.send_query_sell_item_list(_state.npc_sell.get("npcUID", 0), item_id)
 
 
 func _refresh_detail() -> void:
@@ -123,7 +155,8 @@ func _refresh_detail() -> void:
 	if detail.get("npcUID", 0) != _state.npc_sell.get("npcUID", 0) or list.is_empty():
 		_set_background(0x08000000, Vector2(290, 224))
 		return
-	if _resources.item_is_packable(_selected_item_id):
+	var detail_item: Dictionary = list[0].get("item", {})
+	if _resources.item_is_packable(detail_item.get("itemID", 0)):
 		_set_background(0x08000002, Vector2(514, 224))
 		_build_packable_detail(list[0])
 	else:
@@ -136,8 +169,8 @@ func _set_background(texture_id: int, panel_size: Vector2) -> void:
 	if not frame.is_empty():
 		$Background.texture = frame.texture
 	$Background.size = panel_size
-	size = panel_size
 	custom_minimum_size = panel_size
+	size = panel_size
 
 
 func _build_unique_detail(list: Array) -> void:
@@ -163,13 +196,24 @@ func _build_unique_detail(list: Array) -> void:
 		var price := Label.new()
 		price.position = button.position
 		price.size = button.size
-		price.text = str(_gold_price(sell_item))
+		price.text = _comma_number(_gold_price(sell_item))
 		price.add_theme_font_size_override("font_size", 10)
 		price.add_theme_color_override("font_color", Color.YELLOW)
 		price.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		$Detail.add_child(price)
-		if _detail_selected == index:
-			button.modulate = Color(0.55, 0.55, 1.0, 1.0)
+		var overlay := ColorRect.new()
+		overlay.position = button.position
+		overlay.size = button.size
+		overlay.color = Color(0, 0, 1, 0.375) if _detail_selected == index else Color(1, 1, 1, 0.375)
+		overlay.visible = _detail_selected == index
+		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		$Detail.add_child(overlay)
+		button.mouse_entered.connect(func():
+			overlay.color = Color(0, 0, 1, 0.375) if _detail_selected == index else Color(1, 1, 1, 0.375)
+			overlay.show()
+		)
+		button.mouse_exited.connect(func(): overlay.visible = _detail_selected == index)
+		button.gui_input.connect(_on_detail_grid_input)
 	_add_detail_button(Vector2(315, 163), LEFT_NORMAL, LEFT_DOWN, func(): _detail_page -= 1; _refresh_detail())
 	_add_detail_button(Vector2(357, 163), BUY_NORMAL, BUY_DOWN, _buy_unique.bind(list))
 	_add_detail_button(Vector2(405, 163), RIGHT_NORMAL, RIGHT_DOWN, func(): _detail_page += 1; _refresh_detail())
@@ -197,7 +241,7 @@ func _build_packable_detail(sell_item: Dictionary) -> void:
 	var price := Label.new()
 	price.position = Vector2(353, 16)
 	price.size = Vector2(145, 38)
-	price.text = "%d 金币" % _gold_price(sell_item)
+	price.text = "%s 金币" % _comma_number(_gold_price(sell_item))
 	price.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	price.add_theme_color_override("font_color", Color.YELLOW)
 	$Detail.add_child(price)
@@ -214,7 +258,33 @@ func _buy_unique(list: Array) -> void:
 
 func _gold_price(sell_item: Dictionary) -> int:
 	var costs: Array = sell_item.get("costList", [])
-	return costs[0].get("count", 0) if not costs.is_empty() else 0
+	for cost_value in costs:
+		var cost: Dictionary = cost_value
+		if _resources.item_type(cost.get("itemID", 0)) == "金币":
+			return cost.get("count", 0)
+	return 0
+
+
+func _comma_number(value: int) -> String:
+	var digits := str(value)
+	var result := ""
+	while digits.length() > 3:
+		result = "," + digits.right(3) + result
+		digits = digits.left(digits.length() - 3)
+	return digits + result
+
+
+func _on_detail_grid_input(event: InputEvent) -> void:
+	if not event is InputEventMouseButton or not event.pressed:
+		return
+	if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		_detail_page -= 1
+	elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		_detail_page += 1
+	else:
+		return
+	_refresh_detail()
+	accept_event()
 
 
 func _add_detail_button(position: Vector2, normal: Texture2D, down: Texture2D, callback: Callable) -> void:
