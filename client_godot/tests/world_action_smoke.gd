@@ -51,6 +51,8 @@ func _ready() -> void:
 		return
 	if not _test_async_combat_feedback(main, resources):
 		return
+	if not _test_buff_transitions(main, resources):
+		return
 	if not _test_progression_feedback(main, resources):
 		return
 	if not _test_ping_feedback(main):
@@ -640,6 +642,56 @@ func _test_async_combat_feedback(main: Control, resources: RefCounted) -> bool:
 	return true
 
 
+func _test_buff_transitions(main: Control, resources: RefCounted) -> bool:
+	var shield_id: int = resources.magic_id("魔法盾")
+	var buff_id: int = resources.buff_meta.keys()[0]
+	var saved_uid: int = GameState.player_uid
+	var saved_buffs := GameState.buff_list.duplicate(true)
+	var saved_creatures := GameState.creatures.duplicate(true)
+	var saved_effects := GameState.attached_magic_effects.duplicate(true)
+	var local_uid: int = (5 << 59) | 21
+	var remote_uid: int = (5 << 59) | 22
+	var monster_uid: int = (4 << 59) | 23
+	GameState.player_uid = local_uid
+	GameState.buff_list = [buff_id]
+	GameState.creatures = {
+		remote_uid: {"uid": remote_uid, "type": 2, "buffs": [buff_id]},
+		monster_uid: {"uid": monster_uid, "type": 1, "buffs": [buff_id]},
+	}
+	GameState.attached_magic_effects = [
+		{"target_uid": local_uid, "magicID": shield_id, "kind": "shield_hit"},
+		{"target_uid": local_uid, "magicID": shield_id + 1, "kind": "yin_yang_ring"},
+		{"target_uid": remote_uid, "magicID": shield_id, "kind": "shield"},
+		{"target_uid": monster_uid, "magicID": shield_id, "kind": "shield"},
+	]
+	main.call("_on_server_message", NetworkClient.SM_BUFF, _sm_buff_payload(local_uid, 1, 1))
+	main.call("_on_server_message", NetworkClient.SM_BUFF, _sm_buff_payload(local_uid, 2, 2))
+	main.call("_on_server_message", NetworkClient.SM_BUFF, _sm_buff_payload(monster_uid, 1, 2))
+	main.call("_on_server_message", NetworkClient.SM_BUFF, _sm_buff_payload((5 << 59) | 99, 1, 2))
+	main.call("_on_server_message", NetworkClient.SM_BUFF, PackedByteArray([1, 2]))
+	if GameState.attached_magic_effects.size() != 4 or GameState.buff_list != [buff_id] or GameState.creatures[remote_uid].buffs != [buff_id] or GameState.creatures[monster_uid].buffs != [buff_id]:
+		_fail("non-shield-off SM_BUFF changed attachments or buff IDs")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_BUFF, _sm_buff_payload(local_uid, 1, 2))
+	if GameState.attached_magic_effects.size() != 3 or GameState.attached_magic_effects[0].magicID != shield_id + 1 or GameState.buff_list != [buff_id]:
+		_fail("local shield OFF did not remove only the shield attachment: %s" % GameState.attached_magic_effects)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_BUFF, _sm_buff_payload(remote_uid, 1, 2))
+	if GameState.attached_magic_effects.size() != 2 or GameState.attached_magic_effects.any(func(effect): return effect.get("target_uid", 0) == remote_uid) or GameState.creatures[remote_uid].buffs != [buff_id]:
+		_fail("remote Hero shield OFF did not preserve list ownership: %s" % GameState.attached_magic_effects)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_BUFFIDLIST, _buff_id_list_payload(local_uid, [buff_id, buff_id + 1]))
+	main.call("_on_server_message", NetworkClient.SM_BUFFIDLIST, _buff_id_list_payload(remote_uid, []))
+	if GameState.buff_list != [buff_id, buff_id + 1] or not GameState.creatures[remote_uid].buffs.is_empty() or GameState.creatures[monster_uid].buffs != [buff_id]:
+		_fail("SM_BUFFIDLIST did not exclusively own displayed buff IDs")
+		return false
+	GameState.player_uid = saved_uid
+	GameState.buff_list = saved_buffs
+	GameState.creatures = saved_creatures
+	GameState.attached_magic_effects = saved_effects
+	return true
+
+
 func _test_progression_feedback(main: Control, resources: RefCounted) -> bool:
 	var saved_exp := GameState.player_exp
 	var saved_gold := GameState.player_gold
@@ -794,6 +846,25 @@ func _buy_error_payload(npc_uid: int, item_id: int, seq_id: int, error: int) -> 
 	var payload := _buy_succeed_payload(npc_uid, item_id, seq_id)
 	payload.resize(18)
 	payload.encode_u16(16, error)
+	return payload
+
+
+func _sm_buff_payload(uid: int, type: int, state: int) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(16)
+	payload.encode_u64(0, uid)
+	payload.encode_u32(8, type)
+	payload.encode_u32(12, state)
+	return payload
+
+
+func _buff_id_list_payload(uid: int, ids: Array) -> PackedByteArray:
+	var payload := PackedByteArray([1])
+	_append_u64(payload, uid)
+	_append_u64(payload, ids.size())
+	for id_value in ids:
+		_append_u32(payload, id_value)
+	payload.append(0)
 	return payload
 
 

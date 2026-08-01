@@ -74,6 +74,8 @@ var _team_flag_active := false
 const MOVE_STEP_SECONDS := 0.75
 const PING_INTERVAL_MS := 10_000
 const U32_MASK := 0xFFFFFFFF
+const BUFF_TYPE_SHIELD := 1
+const BUFF_STATE_OFF := 2
 
 const SWING_MAGIC_NAMES := ["烈火剑法", "翔空剑法", "莲月剑法", "半月弯刀", "十方斩"]
 const TARGET_MAGIC_NAMES := [
@@ -828,23 +830,7 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_MISS:
 			_handle_miss(payload)
 		NetworkClient.SM_BUFF:
-			var buff := Protocol.decode_sm_buff(payload)
-			# SMBuff: uid(u64) + type(u32) + state(u32)
-			# state: 1=ON, 2=OFF
-			var buff_uid: int = buff.get("uid", 0)
-			var buff_type: int = buff.get("type", 0)
-			var buff_state: int = buff.get("state", 0)
-			var target_buffs: Array = game_state.buff_list if buff_uid == game_state.player_uid else game_state.get_creature(buff_uid).get("buffs", [])
-			if buff_state == 1 and not target_buffs.has(buff_type):
-				target_buffs.append(buff_type)
-			elif buff_state == 2:
-				target_buffs.erase(buff_type)
-			if buff_uid == game_state.player_uid:
-				game_state.state_changed.emit()
-			elif not game_state.get_creature(buff_uid).is_empty():
-				var creature: Dictionary = game_state.get_creature(buff_uid)
-				creature["buffs"] = target_buffs
-				game_state.update_creature(buff_uid, creature)
+			_handle_buff(payload)
 		NetworkClient.SM_BUFFIDLIST:
 			_handle_buff_id_list(payload)
 		NetworkClient.SM_INVENTORY:
@@ -1636,6 +1622,31 @@ func _handle_buff_id_list(payload: PackedByteArray) -> void:
 		var creature: Dictionary = game_state.get_creature(uid)
 		creature["buffs"] = data.get("ids", [])
 		game_state.update_creature(uid, creature)
+
+
+func _handle_buff(payload: PackedByteArray) -> void:
+	var data := Protocol.decode_sm_buff(payload)
+	if data.get("type", 0) != BUFF_TYPE_SHIELD or data.get("state", 0) != BUFF_STATE_OFF:
+		return
+	var uid: int = data.get("uid", 0)
+	if uid != game_state.player_uid:
+		var creature: Dictionary = game_state.get_creature(uid)
+		if creature.get("type", 0) != 2:
+			return
+	var shield_id: int = _resources.magic_id("魔法盾")
+	if shield_id == 0:
+		return
+	var remaining: Array = []
+	var removed := false
+	for effect_value in game_state.attached_magic_effects:
+		var effect: Dictionary = effect_value
+		if effect.get("target_uid", 0) == uid and effect.get("magicID", 0) == shield_id:
+			removed = true
+		else:
+			remaining.append(effect)
+	if removed:
+		game_state.attached_magic_effects = remaining
+		game_state.state_changed.emit()
 
 
 func _handle_equip_wear(payload: PackedByteArray) -> void:
