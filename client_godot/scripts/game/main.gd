@@ -75,12 +75,11 @@ func _process(delta: float) -> void:
 	location_label.text = "%s: %d %d" % [map_name, game_state.player_x, game_state.player_y]
 	
 	# Ping server every 10 seconds (C++ sends CM_PING)
-	# TODO: re-enable after verifying CM_PIPING format
-	#_ping_timer += delta
-	#if _ping_timer >= 10.0:
-	#	_ping_timer = 0.0
-	#	_ping_tick += 1
-	#	NetworkClient.send_ping(_ping_tick)
+	_ping_timer += delta
+	if _ping_timer >= 10.0:
+		_ping_timer = 0.0
+		_ping_tick += 1
+		NetworkClient.send_ping(_ping_tick)
 	
 	# Redraw world
 	world_renderer.queue_redraw()
@@ -113,25 +112,38 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif EXTRA_PANELS.has(event.keycode):
 		_toggle_extra_panel(EXTRA_PANELS[event.keycode])
 	
-	# Mouse click handling - disabled until CM_ACTION format verified
-	# if event is InputEventMouseButton and event.pressed:
-	#	_handle_mouse_click(event)
+	# Mouse click handling
+	if event is InputEventMouseButton and event.pressed:
+		_handle_mouse_click(event)
 
 
 func _handle_mouse_click(event: InputEventMouseButton) -> void:
 	var grid := world_renderer.grid_from_screen(int(event.position.x), int(event.position.y))
 	
 	if event.button_index == MOUSE_BUTTON_RIGHT:
-		# Right click: move toward grid
+		# Right click: move toward grid (C++ emplaces ActionMove)
 		_send_move_action(grid.x, grid.y)
 	elif event.button_index == MOUSE_BUTTON_LEFT:
 		# Left click: check for creatures/items at grid
-		pass  # TODO: attack/pickup/NPC interaction
+		# C++: if monster -> attack, if NPC -> interact, if ground item -> pickup
+		var found_creature := false
+		for uid in game_state.creatures:
+			var c: Dictionary = game_state.creatures[uid]
+			var cx: int = c.get("x", -1)
+			var cy: int = c.get("y", -1)
+			if cx == grid.x and cy == grid.y:
+				found_creature = true
+				_send_attack_action(uid)
+				break
+		if not found_creature:
+			# Check for ground items or pickup
+			_request_pickup()
 
 
 func _send_move_action(aim_x: int, aim_y: int) -> void:
+	# ACTION_MOVE = 3
 	var action := {
-		"type": 0,  # ACTION_MOVE
+		"type": 3,  # ACTION_MOVE
 		"speed": 100,  # SYS_DEFSPEED
 		"direction": _direction_to(game_state.player_x, game_state.player_y, aim_x, aim_y),
 		"x": game_state.player_x,
@@ -139,6 +151,25 @@ func _send_move_action(aim_x: int, aim_y: int) -> void:
 		"aimX": aim_x,
 		"aimY": aim_y,
 		"aimUID": 0,
+	}
+	var action_data := Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action)
+	NetworkClient.send_action(action_data)
+
+
+func _send_attack_action(target_uid: int) -> void:
+	# ACTION_ATTACK = 7
+	var creature := game_state.get_creature(target_uid)
+	var tx: int = creature.get("x", game_state.player_x)
+	var ty: int = creature.get("y", game_state.player_y)
+	var action := {
+		"type": 7,  # ACTION_ATTACK
+		"speed": 100,  # SYS_DEFSPEED
+		"direction": _direction_to(game_state.player_x, game_state.player_y, tx, ty),
+		"x": game_state.player_x,
+		"y": game_state.player_y,
+		"aimX": tx,
+		"aimY": ty,
+		"aimUID": target_uid,
 	}
 	var action_data := Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action)
 	NetworkClient.send_action(action_data)
