@@ -46,11 +46,18 @@ func _ready() -> void:
 		_fail("monster meta v3 death lifecycle flags unavailable")
 		return
 	var magic_seff_count := 0
+	var magic_target_offset_count := 0
 	for meta_value in actors.magic_meta.values():
 		var meta: PackedInt32Array = meta_value
 		magic_seff_count += 1 if meta.size() >= 9 and meta[8] != 0xFFFFFFFF else 0
+		if meta.size() >= 41:
+			for offset_index in range(9, 41):
+				magic_target_offset_count += 1 if meta[offset_index] != 0 else 0
 	if magic_seff_count == 0:
 		_fail("magic-stage SEFF metadata unavailable")
+		return
+	if magic_target_offset_count == 0:
+		_fail("magic target-offset metadata v4 unavailable")
 		return
 	var weapon_sound_count := 0
 	var mine_weapon_count := 0
@@ -64,7 +71,7 @@ func _ready() -> void:
 	if mine_weapon_count == 0:
 		_fail("item meta v5 did not export mine-capable weapons")
 		return
-	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d magic_seff=%d fade_monster=%d persistent_corpse=%d weapon_sound=%d mine_weapon=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size(), magic_seff_count, fade_monster_count, persistent_corpse_count, weapon_sound_count, mine_weapon_count])
+	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d magic_seff=%d magic_target_offsets=%d fade_monster=%d persistent_corpse=%d weapon_sound=%d mine_weapon=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size(), magic_seff_count, magic_target_offset_count, fade_monster_count, persistent_corpse_count, weapon_sound_count, mine_weapon_count])
 	get_tree().quit()
 
 

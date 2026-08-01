@@ -154,6 +154,14 @@ func magic_seff(magic_id: int, stage: int) -> int:
 	return meta[8] if meta.size() >= 9 else 0xFFFFFFFF
 
 
+func magic_target_offset(magic_id: int, stage: int, direction: int) -> Vector2i:
+	var meta := magic_layout(magic_id, stage)
+	var index := 9 + clampi(direction, 0, 15) * 2
+	if meta.size() <= index + 1:
+		return Vector2i.ZERO
+	return Vector2i(meta[index], meta[index + 1])
+
+
 func magic_id(name: String) -> int:
 	return magic_ids_by_name.get(name, 0)
 
@@ -328,7 +336,7 @@ func _load_magic_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2, 3]:
+	if version not in [1, 2, 3, 4]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -347,6 +355,10 @@ func _load_magic_meta() -> void:
 		])
 		if version >= 2:
 			meta.append(file.get_32())
+		if version >= 4:
+			for _offset_index in 32:
+				var target_offset := file.get_16()
+				meta.append(target_offset - 0x10000 if target_offset >= 0x8000 else target_offset)
 		magic_meta[magic_id * 8 + stage] = meta
 
 

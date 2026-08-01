@@ -30,7 +30,14 @@ func _ready() -> void:
 		hit_wind_id, resources.magic_id("冰咆哮"), resources.magic_id("龙卷风"), resources.magic_id("爆裂火焰"),
 		resources.magic_id("地狱雷光"), resources.magic_id("怒神霹雳"), resources.magic_id("群体治愈术"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0):
+	var fixed_projectile_ids := [resources.magic_id("月魂断玉"), resources.magic_id("月魂灵波"), resources.magic_id("冰月震天")]
+	var projectile_ids := [
+		fireball_id, resources.magic_id("大火球"), resources.magic_id("霹雳掌"), resources.magic_id("风掌"),
+		fixed_projectile_ids[0], fixed_projectile_ids[1], resources.magic_id("灵魂火符"), resources.magic_id("冰月神掌"),
+		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
+		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
+	]
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
@@ -42,6 +49,11 @@ func _ready() -> void:
 		var fixed_meta: PackedInt32Array = resources.magic_layout(magic_id, 2)
 		if fixed_meta.is_empty() or fixed_meta[2] <= 0 or fixed_meta[5] != 1:
 			_fail("fixed action metadata mismatch: id=%d meta=%s" % [magic_id, fixed_meta])
+			return
+	for magic_id in projectile_ids:
+		var projectile_meta: PackedInt32Array = resources.magic_layout(magic_id, 2)
+		if projectile_meta.size() < 41 or projectile_meta[2] <= 0 or projectile_meta[5] != 3:
+			_fail("follow projectile metadata mismatch: id=%d meta=%s" % [magic_id, projectile_meta])
 			return
 	var fireball_run: PackedInt32Array = resources.magic_layout(fireball_id, 2)
 	var thunder_run: PackedInt32Array = resources.magic_layout(thunder_id, 2)
@@ -224,7 +236,8 @@ func _ready() -> void:
 	fireball.start_time -= 250
 	GameState.magic_effects = [fireball]
 	var active: Array = $WorldRenderer.call("_resolve_magic_effects", now)
-	if active.size() != 1 or active[0].get("stage", 0) != 2:
+	var active_fireball_components: Array = active[0].get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fireball_run) if active.size() == 1 else []
+	if active.size() != 1 or active_fireball_components.size() != 1:
 		_fail("magic stage chain resolution mismatch: %s" % active)
 		return
 
@@ -276,6 +289,88 @@ func _ready() -> void:
 	$WorldRenderer.call("_resolve_magic_effect", strict_missing, now + 300)
 	if not GameState.attached_magic_effects.is_empty():
 		_fail("strict target attachment incorrectly fell back to caster")
+		return
+	GameState.creatures[target_uid] = {"uid": target_uid, "x": 409, "y": 120, "type": 1, "monster_id": 1, "direction": 7}
+
+	GameState.attached_magic_effects.clear()
+	var projectile_effect := {
+		"source": "action", "magicID": fireball_id, "uid": GameState.player_uid,
+		"x": 405, "y": 120, "aimX": 409, "aimY": 120, "aimUID": target_uid,
+		"direction": 3, "speed": 100, "start_time": now, "_seff_stage_mask": 0xFFFF,
+	}
+	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(409 * 48, 120 * 32)}})
+	var before_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + 399)
+	for component in before_projectile.get("components", []):
+		if component.meta == fireball_run:
+			_fail("follow projectile launched before spell frame 4")
+			return
+	var launched_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + 400)
+	var launched_components: Array = launched_projectile.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fireball_run)
+	var first_position: Vector2 = projectile_effect.get("_projectile_position", Vector2.ZERO)
+	var source_position := Vector2(405 * 48, 120 * 32)
+	if launched_components.size() != 1 or first_position == source_position or absf(first_position.distance_to(source_position) - 20.0) > 1.0:
+		_fail("follow projectile did not advance 20px on launch: %s pos=%s" % [launched_projectile, first_position])
+		return
+	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(first_position.x, first_position.y - 160)}})
+	var prior_position := first_position
+	$WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + 416)
+	var turned_position: Vector2 = projectile_effect.get("_projectile_position", Vector2.ZERO)
+	if turned_position.y >= prior_position.y:
+		_fail("follow projectile did not home toward moved target: before=%s after=%s" % [prior_position, turned_position])
+		return
+	var fireball_offset := Vector2(resources.magic_target_offset(fireball_id, 2, projectile_effect.get("_projectile_gfx_direction", 0)))
+	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": turned_position + fireball_offset + Vector2(1, 1)}})
+	var hit_state: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + 432)
+	var hit_run_components: Array = hit_state.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fireball_run)
+	if not hit_run_components.is_empty() or GameState.attached_magic_effects.size() != 1:
+		_fail("follow projectile hit did not replace flight with one impact: state=%s effects=%s" % [hit_state, GameState.attached_magic_effects])
+		return
+	var impact: Dictionary = GameState.attached_magic_effects[0]
+	if impact.get("target_uid", 0) != target_uid or impact.get("stage", 0) != 3 or impact.get("kind", "") != "projectile_impact":
+		_fail("follow projectile impact metadata mismatch: %s" % impact)
+		return
+	var impact_active: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now + 432)
+	if impact_active.get(target_uid, []).is_empty() or impact_active[target_uid][0].meta != resources.magic_layout(fireball_id, 3):
+		_fail("follow projectile impact did not use explode-stage graphics: %s" % impact_active)
+		return
+
+	for fixed_projectile_id in fixed_projectile_ids:
+		var fixed_projectile := projectile_effect.duplicate(true)
+		fixed_projectile["magicID"] = fixed_projectile_id
+		fixed_projectile.erase("_projectile_position")
+		fixed_projectile.erase("_projectile_start")
+		fixed_projectile.erase("_projectile_fly_direction")
+		fixed_projectile.erase("_projectile_gfx_direction")
+		fixed_projectile.erase("_projectile_last_fly_offset")
+		fixed_projectile.erase("_projectile_done")
+		fixed_projectile.erase("_projectile_impact_spawned")
+		$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(409 * 48, 120 * 32)}})
+		var fixed_projectile_state: Dictionary = $WorldRenderer.call("_resolve_magic_effect", fixed_projectile, now + 400)
+		var fixed_run_meta: PackedInt32Array = resources.magic_layout(fixed_projectile_id, 2)
+		var fixed_components: Array = fixed_projectile_state.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fixed_run_meta)
+		if fixed_components.size() != 1 or fixed_components[0].direction != 0:
+			_fail("fixed-gfx projectile direction mismatch: id=%d state=%s" % [fixed_projectile_id, fixed_projectile_state])
+			return
+
+	GameState.attached_magic_effects.clear()
+	var missing_projectile := projectile_effect.duplicate(true)
+	for key in ["_projectile_position", "_projectile_start", "_projectile_fly_direction", "_projectile_gfx_direction", "_projectile_last_fly_offset", "_projectile_impact_spawned", "_projectile_done"]:
+		missing_projectile.erase(key)
+	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(409 * 48, 120 * 32)}})
+	$WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + 400)
+	var last_offset: Vector2 = missing_projectile.get("_projectile_last_fly_offset", Vector2.ZERO)
+	GameState.creatures.erase(target_uid)
+	$WorldRenderer.set("_actor_target_rects", {})
+	var missing_before: Vector2 = missing_projectile.get("_projectile_position", Vector2.ZERO)
+	$WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + 416)
+	if missing_projectile.get("_projectile_position", Vector2.ZERO) != missing_before + last_offset:
+		_fail("missing-target projectile did not continue its last direction")
+		return
+	missing_projectile["_projectile_position"] = Vector2(missing_projectile.get("_projectile_start", Vector2.ZERO)) + Vector2(256 * 48, 0)
+	var expired_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + 432)
+	var expired_run_components: Array = expired_projectile.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fireball_run)
+	if not expired_run_components.is_empty() or not GameState.attached_magic_effects.is_empty():
+		_fail("missing-target projectile did not expire silently after 255 grids")
 		return
 	GameState.creatures[target_uid] = {"uid": target_uid, "x": 409, "y": 120, "type": 1, "monster_id": 1, "direction": 7}
 
@@ -457,7 +552,24 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FIXED_ACTION_SCREENSHOT"))
-	print("MAGIC EFFECT PASS: target/server attachments, fixed/composite/propagated magic and caster-grid laser")
+	if OS.has_environment("MIR2X_PROJECTILE_SCREENSHOT"):
+		var projectile_now := Time.get_ticks_msec()
+		GameState.creatures[target_uid] = {"uid": target_uid, "x": 413, "y": 120, "type": 1, "monster_id": 1, "direction": 7}
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.magic_effects = [{
+			"source": "action", "magicID": fireball_id, "uid": GameState.player_uid,
+			"x": 405, "y": 120, "aimX": 413, "aimY": 120, "aimUID": target_uid,
+			"direction": 3, "speed": 100, "start_time": projectile_now - 400,
+		}]
+		GameState.view_x = 409 * 48 - 400
+		GameState.view_y = 120 * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_PROJECTILE_SCREENSHOT"))
+	print("MAGIC EFFECT PASS: target/server attachments, follow/fixed/composite/propagated magic and caster-grid laser")
 	get_tree().quit()
 
 

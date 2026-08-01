@@ -96,7 +96,6 @@ func _draw() -> void:
 	if game_state == null:
 		return
 	_mouse_focus_uid = focus_uid_at_screen(get_local_mouse_position())
-	_actor_target_rects.clear()
 	
 	var view_x: int = int(game_state.view_x)
 	var view_y: int = int(game_state.view_y)
@@ -126,6 +125,7 @@ func _draw() -> void:
 	var now := Time.get_ticks_msec()
 	var active_magic := _resolve_magic_effects(now)
 	_active_attached_magic = _resolve_attached_magic(now)
+	_actor_target_rects.clear()
 	_draw_special_ground_underlays(active_magic, view_x, view_y)
 	_draw_dead_actors(view_x, view_y, now)
 
@@ -348,7 +348,8 @@ func _resolve_attached_magic(now: int) -> Dictionary:
 		if target_uid != game_state.player_uid and not game_state.creatures.has(target_uid):
 			continue
 		var magic_id: int = effect.get("magicID", 0)
-		var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+		var stage: int = effect.get("stage", MAGIC_STAGE_RUN)
+		var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, stage)
 		if meta.is_empty() or meta[2] <= 0:
 			continue
 		var speed := maxi(1, meta[4])
@@ -379,7 +380,7 @@ func _resolve_attached_magic(now: int) -> Dictionary:
 		if effect.get("play_seff", false) and not effect.get("_seff_played", false):
 			effect["_seff_played"] = true
 			var target_grid := _attached_target_grid(target_uid)
-			AudioService.play_seff_at(actor_resource.magic_seff(magic_id, MAGIC_STAGE_RUN), roundi(target_grid.x), roundi(target_grid.y), game_state.player_x, game_state.player_y)
+			AudioService.play_seff_at(actor_resource.magic_seff(magic_id, stage), roundi(target_grid.x), roundi(target_grid.y), game_state.player_x, game_state.player_y)
 	game_state.attached_magic_effects = pending
 	return active
 
@@ -398,6 +399,9 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 	var stages := [MAGIC_STAGE_RUN, MAGIC_STAGE_EXPLODE] if effect.get("source", "") == "cast" else [MAGIC_STAGE_SPELL, MAGIC_STAGE_RUN, MAGIC_STAGE_EXPLODE]
 	var special_kind := _special_magic_kind(magic_id)
 	var elapsed := maxi(0, now - int(effect.get("start_time", now)))
+	var projectile_kind := _projectile_action_magic_kind(magic_id)
+	if not projectile_kind.is_empty() and effect.get("source", "") != "cast":
+		return _resolve_projectile_action_magic(effect, magic_id, projectile_kind, elapsed)
 	var attachment_policy := _action_attachment_policy(magic_id)
 	if not attachment_policy.is_empty() and effect.get("source", "") != "cast":
 		return _resolve_target_attached_action_magic(effect, magic_id, attachment_policy, elapsed)
@@ -417,6 +421,130 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 			return resolved
 		elapsed -= duration
 	return {}
+
+
+func _projectile_action_magic_kind(magic_id: int) -> String:
+	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+	if magic_name in ["月魂断玉", "月魂灵波", "冰月震天"]:
+		return "fixed_gfx"
+	if magic_name in ["火球术", "大火球", "霹雳掌", "风掌", "灵魂火符", "冰月神掌", "幽灵盾", "神圣战甲术", "强魔震法", "猛虎强势", "集体隐身术"]:
+		return "directional"
+	return ""
+
+
+func _resolve_projectile_action_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
+	var speed := clampi(effect.get("speed", 100), 20, 500)
+	var trigger_delay := roundi(4.0 * 100.0 * 100.0 / speed)
+	var resolved := {"special_kind": "follow_projectile", "components": [], "underlays": [], "on_ground": false}
+	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
+	if not startup_meta.is_empty():
+		var startup_duration := _magic_stage_duration(startup_meta, effect)
+		if elapsed < startup_duration:
+			var startup := _make_resolved_magic(effect, startup_meta, MAGIC_STAGE_SPELL, elapsed, startup_duration)
+			_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_SPELL, startup.position)
+			resolved.components.append(_resolved_component(startup.meta, startup.frame, startup.direction, startup.position))
+	if elapsed < trigger_delay:
+		return resolved
+	if effect.get("_projectile_done", false):
+		return resolved if not resolved.components.is_empty() else {}
+	var run_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	if run_meta.is_empty() or run_meta[2] <= 0:
+		return resolved if not resolved.components.is_empty() else {}
+	if not effect.has("_projectile_position"):
+		var source_pixel := Vector2(effect.get("x", 0) * GRID_XP, effect.get("y", 0) * GRID_YP)
+		var target_pixel: Variant = _projectile_target_pixel(effect.get("aimUID", 0))
+		var fly_direction: int = _projectile_direction16(source_pixel, target_pixel, effect.get("direction", 1))
+		effect["_projectile_start"] = source_pixel
+		effect["_projectile_position"] = source_pixel
+		effect["_projectile_fly_direction"] = fly_direction
+		effect["_projectile_gfx_direction"] = 0 if kind == "fixed_gfx" else fly_direction
+	var position: Vector2 = effect.get("_projectile_position", Vector2.ZERO)
+	var gfx_direction: int = effect.get("_projectile_gfx_direction", 0)
+	var target_uid: int = effect.get("aimUID", 0)
+	var live_target: Variant = _projectile_target_pixel(target_uid)
+	var target_offset: Vector2 = Vector2(actor_resource.magic_target_offset(magic_id, MAGIC_STAGE_RUN, gfx_direction))
+	var head_position: Vector2 = position + target_offset
+	var move_offset: Vector2
+	var previous_distance2: float = INF
+	if live_target != null:
+		var target_position: Vector2 = live_target
+		var difference := target_position - head_position
+		previous_distance2 = difference.length_squared()
+		move_offset = Vector2.ZERO if difference == Vector2.ZERO else _projectile_move_offset(difference)
+	else:
+		move_offset = effect.get("_projectile_last_fly_offset", _projectile_direction_offset(effect.get("_projectile_fly_direction", 0)))
+	position += move_offset
+	effect["_projectile_position"] = position
+	effect["_projectile_last_fly_offset"] = move_offset
+	head_position = position + target_offset
+	var done := _projectile_out_of_range(effect)
+	if live_target != null:
+		var remaining: Vector2 = Vector2(live_target) - head_position
+		done = done or (absf(remaining.x) < 24.0 and absf(remaining.y) < 16.0) or remaining.length_squared() > previous_distance2
+	if done:
+		effect["_projectile_done"] = true
+		if live_target != null and not effect.get("_projectile_impact_spawned", false):
+			effect["_projectile_impact_spawned"] = true
+			game_state.attached_magic_effects.append({
+				"magicID": magic_id,
+				"target_uid": target_uid,
+				"start_time": int(effect.get("start_time", 0)) + elapsed,
+				"cycles": 1,
+				"kind": "projectile_impact",
+				"stage": MAGIC_STAGE_EXPLODE,
+				"play_seff": true,
+			})
+			game_state.state_changed.emit()
+		return resolved if not resolved.components.is_empty() else {}
+	var run_elapsed := elapsed - trigger_delay
+	var absolute_frame := _magic_absolute_frame(run_meta, run_elapsed)
+	var frame := absolute_frame % run_meta[2] if run_meta[7] & 1 else absolute_frame
+	var grid_position := Vector2(position.x / GRID_XP, position.y / GRID_YP)
+	_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_RUN, grid_position)
+	resolved.components.append(_resolved_component(run_meta, frame, gfx_direction, grid_position))
+	return resolved
+
+
+func _projectile_target_pixel(uid: int) -> Variant:
+	if uid == 0:
+		return null
+	var target: Dictionary = _actor_target_rects.get(uid, {})
+	if not target.is_empty() and target.has("world_center"):
+		return target.world_center
+	if uid == game_state.player_uid:
+		if game_state.player_action_type == DEAD_ACTION:
+			return null
+		return Vector2(game_state.player_x * GRID_XP, game_state.player_y * GRID_YP)
+	var creature: Dictionary = game_state.creatures.get(uid, {})
+	if creature.is_empty() or creature.get("action_type", 2) == DEAD_ACTION:
+		return null
+	return Vector2(creature.get("x", 0) * GRID_XP, creature.get("y", 0) * GRID_YP)
+
+
+func _projectile_direction16(source: Vector2, target: Variant, network_direction: int) -> int:
+	if target == null or Vector2(target) == source:
+		return (clampi(network_direction, 1, 8) - 1) * 2
+	var difference := Vector2(target) - source
+	var angle := fposmod(atan2(difference.x * GRID_YP, -difference.y * GRID_XP), TAU)
+	return roundi(angle / TAU * 16.0) % 16
+
+
+func _projectile_move_offset(difference: Vector2) -> Vector2:
+	var scale := 20.0 / difference.length()
+	return Vector2(roundi(difference.x * scale), roundi(difference.y * scale))
+
+
+func _projectile_direction_offset(direction: int) -> Vector2:
+	var angle := float(posmod(direction, 16)) * TAU / 16.0
+	return Vector2(roundi(sin(angle) * 20.0), roundi(-cos(angle) * 20.0))
+
+
+func _projectile_out_of_range(effect: Dictionary) -> bool:
+	var start: Vector2 = effect.get("_projectile_start", Vector2.ZERO)
+	var current: Vector2 = effect.get("_projectile_position", start)
+	var start_grid := Vector2(floori(start.x / GRID_XP), floori(start.y / GRID_YP))
+	var current_grid := Vector2(floori(current.x / GRID_XP), floori(current.y / GRID_YP))
+	return start_grid.distance_to(current_grid) > 255.0
 
 
 func _action_attachment_policy(magic_id: int) -> String:
@@ -1148,6 +1276,7 @@ func _record_actor_target(uid: int, creature_type: int, map_y: int, action_type:
 	target_position += (texture_size - target_size) * 0.5
 	_actor_target_rects[uid] = {
 		"rect": Rect2(target_position, target_size),
+		"world_center": target_position + target_size * 0.5 + Vector2(int(game_state.view_x), int(game_state.view_y)),
 		"type": creature_type,
 		"map_y": map_y,
 	}
