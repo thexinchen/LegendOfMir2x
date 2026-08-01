@@ -785,7 +785,7 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_DEADFADEOUT:
 			var data := Protocol.decode_sm_dead_fade_out(payload)
 			if data.get("mapUID", 0) == game_state.player_map_uid:
-				game_state.remove_creature(data.get("uid", 0))
+				_request_dead_fade_out(data.get("uid", 0))
 		NetworkClient.SM_REMOVEITEM:
 			if payload.size() >= 10:
 				game_state.remove_item(payload.decode_u32(0), payload.decode_u32(4), payload.decode_u16(8))
@@ -1270,6 +1270,16 @@ func _handle_notify_dead(payload: PackedByteArray) -> void:
 		game_state.update_creature(uid, creature)
 		if not was_dead:
 			_play_action_seff(uid, {"type": 13, "x": creature.get("x", 0), "y": creature.get("y", 0)}, creature)
+
+
+func _request_dead_fade_out(uid: int) -> void:
+	var creature: Dictionary = game_state.get_creature(uid)
+	if creature.get("type", 0) != 1 or creature.get("action_type", 0) != 13:
+		return
+	if not _resources.monster_dead_fade_out(creature.get("monster_id", 0)):
+		return
+	creature["dead_fade_requested_ms"] = Time.get_ticks_msec()
+	game_state.update_creature(uid, creature)
 
 
 func _handle_equip_wear_error(payload: PackedByteArray) -> void:

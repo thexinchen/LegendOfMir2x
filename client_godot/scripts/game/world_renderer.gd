@@ -22,6 +22,9 @@ const MAGIC_TYPE_FOLLOW := 3
 const GROUND_ITEM_STAR_GFX_ID := 0x00000090
 const GROUND_ITEM_STAR_CYCLE := 2.50
 const GROUND_ITEM_STAR_STEP := 0.05
+const DEAD_ACTION := 13
+const DEAD_FRAME_COUNT := 10
+const DEAD_FADE_STEP := 10
 const PLAYER_SAY_WIDTH := 160
 const PLAYER_SAY_FONT_SIZE := 15
 const PLAYER_SAY_SHOW_TIME := 5000
@@ -52,6 +55,7 @@ var _ground_item_star_ratio := 0.0
 
 func _process(_delta: float) -> void:
 	_ground_item_star_ratio = fmod(_ground_item_star_ratio + GROUND_ITEM_STAR_STEP, GROUND_ITEM_STAR_CYCLE)
+	_update_dead_fades(Time.get_ticks_msec())
 	queue_redraw()
 
 
@@ -109,6 +113,11 @@ func _draw() -> void:
 					draw_texture(texture, Vector2(gx * GRID_XP - view_x, gy * GRID_YP - view_y))
 	_draw_object_depth(0, x0, y0, x1, y1, view_x, view_y)
 
+	var now := Time.get_ticks_msec()
+	var active_magic := _resolve_magic_effects(now)
+	_active_attached_magic = _resolve_attached_magic(now)
+	_draw_dead_actors(view_x, view_y, now)
+
 	# Ground items precede living actors in the original renderer.
 	_draw_ground_items(x0, y0, x1, y1, view_x, view_y)
 
@@ -116,13 +125,12 @@ func _draw() -> void:
 	var creatures_by_row: Dictionary = {}
 	for uid in game_state.creatures:
 		var creature: Dictionary = game_state.creatures[uid]
+		if _is_dead_actor(creature):
+			continue
 		var row: int = creature.get("y", 0)
 		var row_creatures: Array = creatures_by_row.get(row, [])
 		row_creatures.append(creature)
 		creatures_by_row[row] = row_creatures
-	var now := Time.get_ticks_msec()
-	var active_magic := _resolve_magic_effects(now)
-	_active_attached_magic = _resolve_attached_magic(now)
 	for gy in range(y0, y1 + 1):
 		_draw_object_row(1, gy, x0, x1, view_x, view_y)
 		_draw_firewall_row(gy, x0, x1, view_x, view_y, now)
@@ -130,7 +138,7 @@ func _draw() -> void:
 		_draw_strike_row(gy, x0, x1, view_x, view_y, now)
 		for creature in creatures_by_row.get(gy, []):
 			_draw_creature(creature, view_x, view_y)
-		if game_state.player_y == gy:
+		if game_state.player_y == gy and game_state.player_action_type != DEAD_ACTION:
 			_draw_player(view_x, view_y)
 		_draw_object_row(2, gy, x0, x1, view_x, view_y)
 	_draw_object_depth(3, x0, y0, x1, y1, view_x, view_y)
@@ -195,6 +203,44 @@ func _draw_ground_items(x0: int, y0: int, x1: int, y1: int, view_x: int, view_y:
 					15,
 					Color.YELLOW,
 				)
+
+
+func _draw_dead_actors(view_x: int, view_y: int, now: int) -> void:
+	for creature_value in game_state.creatures.values():
+		var creature: Dictionary = creature_value
+		if _is_dead_actor(creature):
+			_draw_creature(creature, view_x, view_y, _dead_actor_alpha(creature, now))
+	if game_state.player_action_type == DEAD_ACTION:
+		_draw_player(view_x, view_y)
+
+
+func _is_dead_actor(creature: Dictionary) -> bool:
+	return creature.get("action_type", 0) == DEAD_ACTION
+
+
+func _dead_actor_alpha(creature: Dictionary, now: int) -> float:
+	var requested_ms: int = creature.get("dead_fade_requested_ms", 0)
+	if requested_ms <= 0:
+		return 1.0
+	var frame_delay := 10000.0 / float(clampi(creature.get("action_speed", 100), 20, 500))
+	var animation_done_ms := int(creature.get("action_started_ms", requested_ms) + DEAD_FRAME_COUNT * frame_delay)
+	var fade_start_ms := maxi(requested_ms, animation_done_ms)
+	var fade_step := maxi(0, floori(float(now - fade_start_ms) / frame_delay))
+	var fade_value := mini(255, 1 + fade_step * DEAD_FADE_STEP)
+	return float(255 - fade_value) / 255.0
+
+
+func _update_dead_fades(now: int) -> void:
+	if game_state == null:
+		return
+	var remove_uids: Array[int] = []
+	for uid_value in game_state.creatures:
+		var uid: int = uid_value
+		var creature: Dictionary = game_state.creatures[uid]
+		if _is_dead_actor(creature) and creature.get("dead_fade_requested_ms", 0) > 0 and _dead_actor_alpha(creature, now) <= 0.0:
+			remove_uids.append(uid)
+	for uid in remove_uids:
+		game_state.remove_creature(uid)
 
 
 func _draw_ground_item_stars(x0: int, y0: int, x1: int, y1: int, view_x: int, view_y: int) -> void:
@@ -493,7 +539,7 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	# The C++ client only enables actor HP/name overlays through debug/runtime flags.
 
 
-func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
+func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) -> void:
 	var draw_grid := _action_draw_grid(c.get("x", 0), c.get("y", 0), c.get("action_from_x", c.get("x", 0)), c.get("action_from_y", c.get("y", 0)), c.get("action_type", 2), c.get("action_started_ms", 0), c.get("action_speed", 100))
 	var cx: int = roundi(draw_grid.x * GRID_XP) - view_x
 	var cy: int = roundi(draw_grid.y * GRID_YP) - view_y
@@ -509,12 +555,12 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 	if c_type == 2:
 		_draw_attached_magic(uid, cx, cy)
 	match c_type:
-		1: sprite_drawn = _draw_monster_sprite(c, cx, cy)
+		1: sprite_drawn = _draw_monster_sprite(c, cx, cy, body_alpha)
 		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100), c.get("action_magic_id", 0), uid, c.get("y", 0))
 		3: sprite_drawn = _draw_npc_sprite(c, cx, cy)
 	if not sprite_drawn:
-		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3))
-		draw_circle(center, 12, Color(0.7, 0.2, 0.2, 0.9))
+		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3 * body_alpha))
+		draw_circle(center, 12, Color(0.7, 0.2, 0.2, 0.9 * body_alpha))
 	if c_type != 2:
 		_draw_attached_magic(uid, cx, cy)
 	
@@ -676,7 +722,7 @@ func _hero_double_handed(desp: Dictionary) -> bool:
 	return bool(actor_resource.item_attribute(weapon.get("itemID", 0)).get("double_hand", false))
 
 
-func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int) -> bool:
+func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int, alpha := 1.0) -> bool:
 	var monster_id: int = creature.get("monster_id", 0)
 	var look_id: int = actor_resource.monster_look(monster_id)
 	var direction_index := clampi(creature.get("direction", 5), 1, 8) - 1
@@ -684,11 +730,11 @@ func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int) -> b
 	var frame_index := _motion_frame(creature.get("action_type", 2), motion_data[1], creature.get("action_started_ms", 0), creature.get("action_speed", 100))
 	var body_key: int = (look_id << 12) | (motion_data[0] << 8) | (direction_index << 5) | frame_index
 	if actor_resource.monster_has_shadow(monster_id):
-		_draw_sprite_frame(actor_resource.frame("monster", body_key | (1 << 23)), start_x, start_y, 0.5)
+		_draw_sprite_frame(actor_resource.frame("monster", body_key | (1 << 23)), start_x, start_y, alpha * 0.5)
 	var body: Dictionary = actor_resource.frame("monster", body_key)
 	_record_actor_target(creature.get("uid", 0), 1, creature.get("y", 0), creature.get("action_type", 2), body, start_x, start_y)
-	_draw_sprite_frame(body, start_x, start_y, 1.0)
-	_draw_focus_overlays(body, start_x, start_y, creature.get("uid", 0), 1.0)
+	_draw_sprite_frame(body, start_x, start_y, alpha)
+	_draw_focus_overlays(body, start_x, start_y, creature.get("uid", 0), alpha)
 	return not body.is_empty()
 
 

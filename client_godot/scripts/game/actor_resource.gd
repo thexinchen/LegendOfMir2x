@@ -74,6 +74,11 @@ func monster_has_shadow(monster_id: int) -> bool:
 	return bool(monster_meta.get(monster_id, PackedInt32Array([monster_id, 1]))[1])
 
 
+func monster_dead_fade_out(monster_id: int) -> bool:
+	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
+	return meta.size() >= 7 and bool(meta[6])
+
+
 func monster_seff(monster_id: int, action_type: int) -> int:
 	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
 	if meta.size() < 6:
@@ -177,18 +182,20 @@ func _load_monster_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2]:
+	if version not in [1, 2, 3]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
 		var monster_id := file.get_32()
 		var look_id := file.get_16()
 		var shadow := file.get_8()
-		file.get_8()
+		var flags := file.get_8()
 		var meta := PackedInt32Array([look_id, shadow])
 		if version >= 2:
 			for _seff_index in range(4):
 				meta.append(file.get_32())
+		if version >= 3:
+			meta.append(flags & 1)
 		monster_meta[monster_id] = meta
 
 

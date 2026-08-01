@@ -382,6 +382,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
                     .monsterID = monsterID,
                     .lookID = check_cast<uint16_t>(record.lookID),
                     .shadow = to_u8(record.shadow),
+                    .reserved = to_u8(record.deadFadeOut),
                     .spawnSeffID = monsterSeffID(record.name, MONSEFF_SPAWN),
                     .attackSeffID = monsterSeffID(record.name, MONSEFF_ATTACK),
                     .hittedSeffID = monsterSeffID(record.name, MONSEFF_HITTED),
@@ -390,7 +391,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "monster.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 2, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 3, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
     }

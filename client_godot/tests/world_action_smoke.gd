@@ -59,7 +59,7 @@ func _ready() -> void:
 	if GameState.chat_log.size() != 2 or resources.item_name(item_id) not in GameState.chat_log[0].text or "无法放置" not in GameState.chat_log[1].text:
 		_fail("world operation error feedback mismatch: %s" % GameState.chat_log)
 		return
-	if not _test_death_and_map_filter(main):
+	if not _test_death_and_map_filter(main, resources):
 		return
 	if not _test_world_displacement(main, resources):
 		return
@@ -251,14 +251,32 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 	return true
 
 
-func _test_death_and_map_filter(main: Control) -> bool:
+func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
+	var fade_monster_id := 0
+	var persistent_monster_id := 0
+	for monster_id_value in resources.monster_meta:
+		var monster_id: int = monster_id_value
+		if resources.monster_dead_fade_out(monster_id) and fade_monster_id == 0:
+			fade_monster_id = monster_id
+		elif not resources.monster_dead_fade_out(monster_id) and persistent_monster_id == 0:
+			persistent_monster_id = monster_id
+	if fade_monster_id == 0 or persistent_monster_id == 0:
+		_fail("death lifecycle monster metadata unavailable")
+		return false
 	GameState.player_uid = 101
 	GameState.player_map_uid = 202
 	GameState.player_action_type = 2
-	GameState.update_creature(303, {"uid": 303, "action_type": 2})
+	GameState.update_creature(303, {
+		"uid": 303, "type": 1, "monster_id": fade_monster_id,
+		"x": 5, "y": 5, "direction": 5, "action_type": 2, "action_speed": 100,
+	})
 	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(303))
 	if GameState.get_creature(303).get("action_type", 0) != 13:
 		_fail("creature death action was not applied")
+		return false
+	var renderer: Control = main.get_node("WorldRenderer")
+	if not renderer.call("_is_dead_actor", GameState.get_creature(303)):
+		_fail("dead creature was not assigned to the pre-item draw pass")
 		return false
 	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(101))
 	if GameState.player_action_type != 13:
@@ -269,9 +287,30 @@ func _test_death_and_map_filter(main: Control) -> bool:
 		_fail("stale-map offline message removed current creature")
 		return false
 	main.call("_on_server_message", NetworkClient.SM_DEADFADEOUT, _map_message(303, 202, 24))
-	if not GameState.get_creature(303).is_empty():
-		_fail("current-map dead fade did not remove creature")
+	var fading: Dictionary = GameState.get_creature(303)
+	var requested_ms: int = fading.get("dead_fade_requested_ms", 0)
+	if requested_ms <= 0:
+		_fail("current-map dead fade did not retain and mark the corpse")
 		return false
+	var early_alpha: float = renderer.call("_dead_actor_alpha", fading, requested_ms + 500)
+	var first_fade_alpha: float = renderer.call("_dead_actor_alpha", fading, requested_ms + 1100)
+	if not is_equal_approx(early_alpha, 254.0 / 255.0) or not is_equal_approx(first_fade_alpha, 244.0 / 255.0):
+		_fail("death animation gate or fade step mismatch: %s %s" % [early_alpha, first_fade_alpha])
+		return false
+	GameState.update_creature(304, {
+		"uid": 304, "type": 1, "monster_id": persistent_monster_id,
+		"x": 6, "y": 5, "direction": 5, "action_type": 13, "action_speed": 100,
+		"action_started_ms": requested_ms - 2000,
+	})
+	main.call("_on_server_message", NetworkClient.SM_DEADFADEOUT, _map_message(304, 202, 24))
+	if GameState.get_creature(304).has("dead_fade_requested_ms"):
+		_fail("persistent corpse incorrectly started fading")
+		return false
+	renderer.call("_update_dead_fades", requested_ms + 3600)
+	if not GameState.get_creature(303).is_empty() or GameState.get_creature(304).is_empty():
+		_fail("faded/persistent corpse cleanup mismatch")
+		return false
+	GameState.remove_creature(304)
 	return true
 
 

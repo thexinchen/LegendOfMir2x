@@ -40,11 +40,32 @@ func _ready() -> void:
 	GameState.view_x = 405 * 48 - 400
 	GameState.view_y = 120 * 32 - 300
 	GameState.ground_items = {"406,120": [ground_item_id]}
+	var dead_monster_id := 0
+	for monster_id_value in resources.monster_meta:
+		var monster_id: int = monster_id_value
+		var look_id: int = resources.monster_look(monster_id)
+		var death_key := (look_id << 12) | (4 << 8) | (4 << 5) | 9
+		if not resources.frame("monster", death_key).is_empty():
+			dead_monster_id = monster_id
+			break
+	if dead_monster_id == 0:
+		_fail("no original monster death frame found")
+		return
+	GameState.creatures = {
+		9001: {
+			"uid": 9001, "type": 1, "monster_id": dead_monster_id,
+			"x": 406, "y": 120, "direction": 5, "action_type": 13,
+			"action_started_ms": Time.get_ticks_msec() - 2000, "action_speed": 100,
+		},
+	}
 	$WorldRenderer.game_state = GameState
 	if not $WorldRenderer.load_map(24):
 		_fail("map 24 failed to load")
 		return
 	$WorldRenderer.set("_ground_item_star_ratio", 0.5)
+	if not $WorldRenderer.call("_is_dead_actor", GameState.creatures[9001]):
+		_fail("dead monster did not enter the pre-item draw pass")
+		return
 	var expected_star_size := roundi(0.5 * star_texture.get_width() / 2.5)
 	if $WorldRenderer.call("_ground_item_star_size", star_texture.get_width()) != expected_star_size:
 		_fail("ground item star scale mismatch")
@@ -59,7 +80,7 @@ func _ready() -> void:
 	if OS.has_environment("MIR2X_GROUND_ITEM_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_GROUND_ITEM_SCREENSHOT"))
-	print("GROUND ITEM PASS: id=%d name=%s original sprite and rotating notification star" % [ground_item_id, resources.item_name(ground_item_id)])
+	print("GROUND ITEM PASS: id=%d name=%s death pre-pass, original sprite and rotating notification star" % [ground_item_id, resources.item_name(ground_item_id)])
 	get_tree().quit()
 
 
