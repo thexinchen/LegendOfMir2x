@@ -1,10 +1,8 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/main.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000000.png" id="2_world"]
+[ext_resource type="Script" path="res://scripts/game/world_renderer.gd" id="2_renderer"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/hud/00000060.png" id="3_quick"]
-[ext_resource type="Texture2D" path="res://assets/ui/game/hud/04000000.png" id="4_status"]
-[ext_resource type="Texture2D" path="res://assets/characters/preview/taoist_male_idle.png" id="5_hero"]
 [ext_resource type="PackedScene" path="res://scenes/game/panels/inventory.tscn" id="6_inventory"]
 [ext_resource type="PackedScene" path="res://scenes/game/panels/player_state.tscn" id="7_player"]
 [ext_resource type="PackedScene" path="res://scenes/game/panels/skill.tscn" id="8_skill"]
@@ -20,28 +18,15 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="World" type="TextureRect" parent="."]
+[node name="WorldRenderer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("2_world")
-expand_mode = 1
-stretch_mode = 6
-modulate = Color(0.42, 0.48, 0.36, 1)
-
-[node name="Hero" type="TextureRect" parent="."]
-layout_mode = 0
-offset_left = 383.0
-offset_top = 264.0
-offset_right = 416.0
-offset_bottom = 322.0
-mouse_filter = 2
-texture = ExtResource("5_hero")
-expand_mode = 1
+mouse_filter = 1
+script = ExtResource("2_renderer")
 
 [node name="Location" type="Label" parent="."]
 layout_mode = 0
@@ -52,7 +37,7 @@ offset_right = 200.0
 offset_bottom = 600.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 15
-text = "边境城市: 335 271"
+text = "未知地图: 0 0"
 
 [node name="QuickBar" type="Control" parent="."]
 unique_name_in_owner = true

@@ -1,5 +1,7 @@
 extends Control
 
+const Protocol = preload("res://scripts/network/protocol.gd")
+
 const JOB_WARRIOR := 1
 const JOB_TAOIST := 2
 const JOB_WIZARD := 4
@@ -105,14 +107,30 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			var messages := {2: "请勿频繁登录", 3: "先创建角色再进入游戏"}
 			_show_notice(messages.get(payload[0] if not payload.is_empty() else 0, "进入游戏失败"))
 		NetworkClient.SM_ONLINEOK:
+			# Parse SMOnlineOK and store in GameState before switching scene
+			var data := Protocol.decode_sm_online_ok(payload)
+			var action: Dictionary = data.get("action", {})
+			var game_state := get_node("/root/GameState")
+			game_state.set_player_online({
+				"uid": data.get("uid", 0),
+				"name": data.get("name", ""),
+				"gender": data.get("gender", 0),
+				"job": data.get("job", 0),
+				"map_uid": data.get("mapUID", 0),
+				"x": action.get("x", 0),
+				"y": action.get("y", 0),
+				"direction": action.get("direction", 0),
+			})
 			get_tree().change_scene_to_file("res://scenes/game/main.tscn")
 
 
 func _apply_character(payload: PackedByteArray) -> void:
+	# SMQueryCharOK: StaticBuffer<64>(68) + gender(1) + job(1) + exp(4) = 74
 	if payload.size() < 74:
 		_show_notice("角色数据格式错误")
 		return
-	var name_size := mini(payload.decode_u16(0), 64)
+	var name_len := payload.decode_u16(0)
+	var name_size := mini(name_len, 64)
 	character_name = payload.slice(2, 2 + name_size).get_string_from_utf8()
 	character_gender = payload[68]
 	character_job = payload[69]

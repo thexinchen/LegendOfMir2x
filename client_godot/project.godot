@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.7")
 [autoload]
 
 NetworkClient="*res://scripts/network/network_client.gd"
+GameState="*res://scripts/game/game_state.gd"
 
 [display]
 

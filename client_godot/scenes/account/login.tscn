@@ -100,9 +100,9 @@ expand_mode = 1
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 159.0
-offset_top = 540.0
+offset_top = 535.0
 offset_right = 305.0
-offset_bottom = 568.0
+offset_bottom = 563.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_selected_color = Color(1, 1, 1, 1)
 theme_override_colors/caret_color = Color(1, 1, 1, 1)
@@ -112,13 +112,15 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_input")
 placeholder_text = ""
 max_length = 63
 caret_blink = true
+caret_width = 1
 flat = true
+vertical_alignment = 1
 
 [node name="PasswordInput" type="LineEdit" parent="."]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 409.0
-offset_top = 540.0
+offset_top = 535.0
 offset_right = 555.0
 offset_bottom = 563.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -131,7 +133,9 @@ placeholder_text = ""
 secret = true
 max_length = 63
 caret_blink = true
+caret_width = 1
 flat = true
+vertical_alignment = 1
 
 [node name="LoginButton" type="TextureButton" parent="."]
 layout_mode = 0
