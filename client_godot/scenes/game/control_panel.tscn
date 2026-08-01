@@ -94,24 +94,25 @@ mouse_filter = 2
 texture = ExtResource("2_base")
 
 [node name="Health" type="TextureProgressBar" parent="Body"]
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 33.0
 offset_top = 26.0
 offset_right = 69.0
 offset_bottom = 114.0
 mouse_filter = 2
-value = 82.0
+value = 0.0
 fill_mode = 3
 texture_progress = ExtResource("4_health")
 
 [node name="Mana" type="TextureProgressBar" parent="Body"]
-layout_mode = 0
+unique_name_in_owner = true
 offset_left = 73.0
 offset_top = 26.0
 offset_right = 109.0
 offset_bottom = 114.0
 mouse_filter = 2
-value = 67.0
+value = 0.0
 fill_mode = 3
 texture_progress = ExtResource("5_mana")
 
@@ -311,6 +312,7 @@ flat = true
 
 [node name="ACIcon" type="TextureRect" parent="Body"]
 unique_name_in_owner = true
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 635.0
 offset_top = 124.0
@@ -320,6 +322,7 @@ mouse_filter = 2
 texture = ExtResource("22_ac")
 
 [node name="ACValue" type="Label" parent="Body"]
+unique_name_in_owner = true
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 667.0
@@ -343,6 +346,7 @@ flat = true
 
 [node name="DCIcon" type="TextureRect" parent="Body"]
 unique_name_in_owner = true
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 718.0
 offset_top = 124.0
@@ -352,6 +356,7 @@ mouse_filter = 2
 texture = ExtResource("23_dc")
 
 [node name="DCValue" type="Label" parent="Body"]
+unique_name_in_owner = true
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 751.0
@@ -382,6 +387,7 @@ mouse_filter = 1
 texture = ExtResource("6_title")
 
 [node name="Level" type="Label" parent="."]
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 395.0
 offset_top = 17.0
