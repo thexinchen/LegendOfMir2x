@@ -57,6 +57,8 @@ func _ready() -> void:
 		return
 	if not _test_monster_spawn_actions(main, resources):
 		return
+	if not _test_monster_transform_actions(main, resources):
+		return
 	if not _test_monster_jump_stands(main):
 		return
 	if not _test_self_action_map_transition(main):
@@ -631,6 +633,85 @@ func _test_monster_spawn_actions(main: Control, resources: RefCounted) -> bool:
 		return false
 	GameState.remove_creature(special_uid)
 	GameState.remove_creature(ordinary_uid)
+	return true
+
+
+func _test_monster_transform_actions(main: Control, resources: RefCounted) -> bool:
+	var monster_id := 0
+	var hidden_focusable_id := 0
+	for monster_id_value in resources.monster_meta:
+		var candidate_id: int = monster_id_value
+		var candidate: Dictionary = resources.monster_transform(candidate_id)
+		if not candidate.is_empty() and candidate.hidden_focusable:
+			hidden_focusable_id = candidate_id
+		if not candidate.is_empty() and not candidate.hidden_focusable:
+			monster_id = candidate_id
+	if monster_id == 0 or hidden_focusable_id == 0:
+		_fail("transformed monster focus fixtures unavailable")
+		return false
+	var transform: Dictionary = resources.monster_transform(monster_id)
+	var runtime_resources: RefCounted = main.get("_resources")
+	var meta: PackedInt32Array = runtime_resources.monster_meta[monster_id]
+	var spawn_seff: int = meta[2]
+	meta[2] = 0xFFFFFFFF
+	runtime_resources.monster_meta[monster_id] = meta
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	var uid: int = (4 << 59) | (monster_id << 35) | 705
+	var union_data := PackedByteArray()
+	union_data.resize(4)
+	union_data.encode_u32(0, monster_id)
+	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(uid, 202, {
+		"type": 1, "speed": 100, "direction": 5, "x": 40, "y": 41,
+	}, union_data))
+	var creature: Dictionary = GameState.get_creature(uid)
+	var renderer: Control = main.get_node("WorldRenderer")
+	var sequence: Dictionary = renderer.call("_monster_render_sequence", creature)
+	if creature.get("action_type", 0) != 2 or creature.get("monster_stand_mode", true) or sequence.focusable or sequence.motion != transform.hidden_stand[0] or sequence.begin != transform.hidden_stand[1]:
+		_fail("monster spawn did not enter the C++ hidden form: creature=%s sequence=%s" % [creature, sequence])
+		return false
+	var tao_sequence: Dictionary = renderer.call("_monster_render_sequence", {
+		"monster_id": hidden_focusable_id, "action_type": 2, "monster_stand_mode": false, "direction": 5,
+	})
+	var tao_transform: Dictionary = resources.monster_transform(hidden_focusable_id)
+	if not tao_sequence.focusable or tao_sequence.look != tao_transform.hidden_look or tao_sequence.count != 4:
+		_fail("TaoDog hidden form lost its redirected look or focusability: %s" % tao_sequence)
+		return false
+	var ext_active := PackedByteArray()
+	ext_active.resize(8)
+	ext_active[0] = 1
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 2, "speed": 100, "direction": 5, "x": 40, "y": 41, "extParam": ext_active,
+	}))
+	creature = GameState.get_creature(uid)
+	sequence = renderer.call("_monster_render_sequence", creature)
+	if creature.get("action_type", 0) != 10 or not creature.get("monster_stand_mode", false) or sequence.motion != transform.active_transform[0] or sequence.begin != transform.active_transform[1] or sequence.reverse != transform.active_reverse or not sequence.focusable:
+		_fail("ACTION_STAND did not queue the active-form transformation: creature=%s sequence=%s" % [creature, sequence])
+		return false
+	var expected_duration := float(transform.active_transform[2]) * 0.1
+	if not is_equal_approx(float(main.call("_creature_action_duration", 10, 100, creature)), expected_duration):
+		_fail("active transformation duration mismatch")
+		return false
+	var started_ms: int = creature.action_started_ms
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 10, "speed": 100, "direction": 5, "x": 40, "y": 41, "extParam": ext_active,
+	}))
+	if GameState.get_creature(uid).get("action_started_ms", 0) != started_ms:
+		_fail("redundant ACTION_TRANSF restarted an existing form")
+		return false
+	var ext_hidden := PackedByteArray()
+	ext_hidden.resize(8)
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 10, "speed": 100, "direction": 5, "x": 40, "y": 41, "extParam": ext_hidden,
+	}))
+	creature = GameState.get_creature(uid)
+	sequence = renderer.call("_monster_render_sequence", creature)
+	if creature.get("action_type", 0) != 10 or creature.get("monster_stand_mode", true) or sequence.motion != transform.hidden_transform[0] or sequence.begin != transform.hidden_transform[1] or sequence.reverse != transform.hidden_reverse or sequence.focusable:
+		_fail("ACTION_TRANSF did not enter the hidden form: creature=%s sequence=%s" % [creature, sequence])
+		return false
+	meta[2] = spawn_seff
+	runtime_resources.monster_meta[monster_id] = meta
+	GameState.remove_creature(uid)
 	return true
 
 

@@ -1319,18 +1319,58 @@ func _hero_double_handed(desp: Dictionary) -> bool:
 
 func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int, alpha := 1.0) -> bool:
 	var monster_id: int = creature.get("monster_id", 0)
-	var look_id: int = creature.get("monster_stand_look", actor_resource.monster_look(monster_id))
-	var direction_index := clampi(creature.get("direction", 5), 1, 8) - 1
-	var motion_data := _monster_motion(creature.get("action_type", 2))
-	var frame_index := _motion_frame(creature.get("action_type", 2), motion_data[1], creature.get("action_started_ms", 0), creature.get("action_speed", 100))
-	var body_key: int = (look_id << 12) | (motion_data[0] << 8) | (direction_index << 5) | frame_index
+	var action_type: int = creature.get("action_type", 2)
+	var sequence := _monster_render_sequence(creature)
+	var frame_count: int = sequence.count
+	var relative_frame := _motion_frame(action_type, frame_count, creature.get("action_started_ms", 0), creature.get("action_speed", 100))
+	var frame_index: int = sequence.begin - relative_frame if sequence.reverse else sequence.begin + relative_frame
+	var body_key: int = (int(sequence.look) << 12) | (int(sequence.motion) << 8) | (int(sequence.direction) << 5) | frame_index
 	if actor_resource.monster_has_shadow(monster_id):
 		_draw_sprite_frame(actor_resource.frame("monster", body_key | (1 << 23)), start_x, start_y, alpha * 0.5)
 	var body: Dictionary = actor_resource.frame("monster", body_key)
-	_record_actor_target(creature.get("uid", 0), 1, creature.get("y", 0), creature.get("action_type", 2), body, start_x, start_y)
+	if sequence.focusable:
+		_record_actor_target(creature.get("uid", 0), 1, creature.get("y", 0), action_type, body, start_x, start_y)
 	_draw_sprite_frame(body, start_x, start_y, alpha)
-	_draw_focus_overlays(body, start_x, start_y, creature.get("uid", 0), alpha)
+	if sequence.focusable:
+		_draw_focus_overlays(body, start_x, start_y, creature.get("uid", 0), alpha)
 	return not body.is_empty()
+
+
+func _monster_render_sequence(creature: Dictionary) -> Dictionary:
+	var monster_id: int = creature.get("monster_id", 0)
+	var action_type: int = creature.get("action_type", 2)
+	var stand_mode := bool(creature.get("monster_stand_mode", true))
+	var transform: Dictionary = actor_resource.monster_transform(monster_id)
+	var look_id: int = actor_resource.monster_look(monster_id)
+	if not stand_mode and action_type != 10 and not transform.is_empty() and transform.hidden_look > 0:
+		look_id = transform.hidden_look
+	elif transform.is_empty():
+		look_id = creature.get("monster_stand_look", look_id)
+	var direction_index := clampi(creature.get("direction", 5), 1, 8) - 1
+	var motion_data := _monster_motion(action_type)
+	var frame_begin := 0
+	var frame_count: int = motion_data[1]
+	var reverse := false
+	if not transform.is_empty():
+		if action_type == 10:
+			motion_data = transform.active_transform if stand_mode else transform.hidden_transform
+			reverse = transform.active_reverse if stand_mode else transform.hidden_reverse
+		elif action_type == 2 and not stand_mode:
+			motion_data = transform.hidden_stand
+		if action_type == 10 or (action_type == 2 and not stand_mode):
+			frame_begin = motion_data[1]
+			frame_count = motion_data[2]
+		if transform.fixed_direction and (action_type == 10 or not stand_mode):
+			direction_index = 0
+	return {
+		"look": look_id,
+		"motion": motion_data[0],
+		"direction": direction_index,
+		"begin": frame_begin,
+		"count": frame_count,
+		"reverse": reverse,
+		"focusable": transform.is_empty() or stand_mode or transform.hidden_focusable,
+	}
 
 
 func _record_actor_target(uid: int, creature_type: int, map_y: int, action_type: int, body: Dictionary, start_x: int, start_y: int) -> void:

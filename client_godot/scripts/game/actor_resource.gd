@@ -84,6 +84,23 @@ func monster_spawn_look(monster_id: int) -> int:
 	return meta[7] if meta.size() >= 8 else 0
 
 
+func monster_transform(monster_id: int) -> Dictionary:
+	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
+	if meta.size() < 19 or meta[14] <= 0:
+		return {}
+	var flags := int(meta[18])
+	return {
+		"hidden_look": meta[8],
+		"hidden_stand": PackedInt32Array([meta[9], meta[10], meta[11]]),
+		"active_transform": PackedInt32Array([meta[12], meta[13], meta[14]]),
+		"hidden_transform": PackedInt32Array([meta[15], meta[16], meta[17]]),
+		"active_reverse": bool(flags & 1),
+		"hidden_reverse": bool(flags & 2),
+		"hidden_focusable": bool(flags & 4),
+		"fixed_direction": bool(flags & 8),
+	}
+
+
 func monster_seff(monster_id: int, action_type: int) -> int:
 	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
 	if meta.size() < 6:
@@ -195,7 +212,7 @@ func _load_monster_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2, 3, 4]:
+	if version not in [1, 2, 3, 4, 5]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -211,6 +228,10 @@ func _load_monster_meta() -> void:
 			meta.append(flags & 1)
 		if version >= 4:
 			meta.append(file.get_16())
+		if version >= 5:
+			meta.append(file.get_16())
+			for _transform_index in range(10):
+				meta.append(file.get_8())
 		monster_meta[monster_id] = meta
 
 

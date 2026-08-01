@@ -713,6 +713,15 @@ func _action_duration(action_type: int, speed: int, creature_type: int, magic_id
 	return float(frame_count) * 0.1 * 100.0 / float(clampi(speed, 20, 500))
 
 
+func _creature_action_duration(action_type: int, speed: int, creature: Dictionary, magic_id := 0) -> float:
+	if creature.get("type", 0) == 1 and action_type == 10:
+		var transform: Dictionary = _resources.monster_transform(creature.get("monster_id", 0))
+		if not transform.is_empty():
+			var sequence: PackedInt32Array = transform.active_transform if creature.get("monster_stand_mode", false) else transform.hidden_transform
+			return float(sequence[2]) * 0.1 * 100.0 / float(clampi(speed, 20, 500))
+	return _action_duration(action_type, speed, creature.get("type", 0), magic_id)
+
+
 func _play_action_seff(uid: int, action: Dictionary, creature: Dictionary) -> void:
 	var action_type: int = action.get("type", 0)
 	var creature_type: int = creature.get("type", 2 if uid == game_state.player_uid else 0)
@@ -720,7 +729,8 @@ func _play_action_seff(uid: int, action: Dictionary, creature: Dictionary) -> vo
 	var source_y: int = action.get("y", creature.get("y", game_state.player_y))
 	if creature_type == 1:
 		var monster_id: int = creature.get("monster_id", 0)
-		_play_seff(_resources.monster_seff(monster_id, action_type), source_x, source_y)
+		var seff_action := 1 if creature.get("action_type", action_type) == 10 else action_type
+		_play_seff(_resources.monster_seff(monster_id, seff_action), source_x, source_y)
 		return
 	if creature_type != 2:
 		return
@@ -966,6 +976,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 	var action_type: int = action.get("type", 0)
 	var direction: int = action.get("direction", 0)
 	var creature: Dictionary = game_state.get_creature(uid) if uid != game_state.player_uid else {}
+	var is_new_creature := creature.is_empty()
 	if action_type == 1 and (uid == game_state.player_uid or not creature.is_empty()):
 		return
 	if uid != game_state.player_uid and creature.is_empty():
@@ -1013,6 +1024,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 		# Update or create creature
 		var creature_type: int = creature.get("type", _creature_type_from_uid(uid))
 		var monster_id: int = creature.get("monster_id", (uid >> 35) & 0xFFFFFF if creature_type == 1 else 0)
+		if action_type == 10 and not creature.is_empty() and _monster_transform_redundant(creature, action):
+			return
 		var stored_action_type := _creature_stored_action_type(action_type, creature_type, monster_id)
 		if creature.is_empty():
 			var inferred_type := creature_type
@@ -1047,8 +1060,11 @@ func _handle_action(payload: PackedByteArray) -> void:
 			creature["action_magic_id"] = action.get("magicID", 0)
 			if direction >= 1:
 				creature["direction"] = direction
+		if creature_type == 1:
+			stored_action_type = _configure_monster_form(creature, action_type, stored_action_type, action, is_new_creature)
+			creature["action_type"] = stored_action_type
 		game_state.update_creature(uid, creature)
-		var duration := _action_duration(stored_action_type, action.get("speed", 100), creature.get("type", 0), action.get("magicID", 0))
+		var duration := _creature_action_duration(stored_action_type, action.get("speed", 100), creature, action.get("magicID", 0))
 		if duration > 0.0:
 			_schedule_creature_idle(uid, stored_action_type, creature.get("action_started_ms", 0), duration)
 		_play_action_seff(uid, action, creature)
@@ -1116,6 +1132,36 @@ func _creature_stored_action_type(action_type: int, creature_type: int, monster_
 	if action_type == 1 and _resources.monster_spawn_look(monster_id) == 0:
 		return 2
 	return action_type
+
+
+func _monster_action_flag(action: Dictionary) -> bool:
+	var ext: PackedByteArray = action.get("extParam", PackedByteArray())
+	return not ext.is_empty() and ext[0] != 0
+
+
+func _monster_transform_redundant(creature: Dictionary, action: Dictionary) -> bool:
+	if creature.get("type", 0) != 1 or _resources.monster_transform(creature.get("monster_id", 0)).is_empty():
+		return false
+	return bool(creature.get("monster_stand_mode", false)) == _monster_action_flag(action)
+
+
+func _configure_monster_form(creature: Dictionary, action_type: int, stored_action_type: int, action: Dictionary, constructor_state: bool) -> int:
+	var transform: Dictionary = _resources.monster_transform(creature.get("monster_id", 0))
+	if transform.is_empty():
+		return stored_action_type
+	var current_mode := bool(creature.get("monster_stand_mode", false))
+	var requested_mode := current_mode
+	match action_type:
+		1:
+			requested_mode = false
+		2, 10:
+			requested_mode = _monster_action_flag(action)
+		3, 5, 7, 11:
+			requested_mode = true
+	if action_type == 2 and not constructor_state and requested_mode != current_mode:
+		stored_action_type = 10
+	creature["monster_stand_mode"] = requested_mode
+	return stored_action_type
 
 
 func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay: float) -> void:
@@ -1190,12 +1236,13 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 		creature["action_type"] = _creature_stored_action_type(action_type, c_type, monster_id)
 		if is_new and action_type == 1 and _resources.monster_spawn_look(monster_id) > 0:
 			creature["monster_stand_look"] = _resources.monster_spawn_look(monster_id)
+		creature["action_type"] = _configure_monster_form(creature, action_type, creature["action_type"], action, true)
 	
 	game_state.update_creature(uid, creature)
 	if is_new and c_type == 2:
 		NetworkClient.send_query_player_wldesp(uid)
 	var stored_action_type: int = creature.get("action_type", action_type)
-	var duration := _action_duration(stored_action_type, action.get("speed", 100), c_type, action.get("magicID", 0))
+	var duration := _creature_action_duration(stored_action_type, action.get("speed", 100), creature, action.get("magicID", 0))
 	if duration > 0.0:
 		_schedule_creature_idle(uid, stored_action_type, creature.get("action_started_ms", 0), duration)
 	_play_action_seff(uid, action, creature)

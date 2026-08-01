@@ -75,6 +75,17 @@ struct MonsterMetaRecord
     uint32_t hittedSeffID = UINT32_MAX;
     uint32_t dieSeffID = UINT32_MAX;
     uint16_t spawnLookID = 0;
+    uint16_t hiddenLookID = 0;
+    uint8_t hiddenStandMotion = 0;
+    uint8_t hiddenStandBegin = 0;
+    uint8_t hiddenStandCount = 0;
+    uint8_t activeTransfMotion = 0;
+    uint8_t activeTransfBegin = 0;
+    uint8_t activeTransfCount = 0;
+    uint8_t hiddenTransfMotion = 0;
+    uint8_t hiddenTransfBegin = 0;
+    uint8_t hiddenTransfCount = 0;
+    uint8_t transfFlags = 0;
 };
 
 struct ItemMetaRecord
@@ -149,7 +160,7 @@ static_assert(sizeof(TileRecord) == 8);
 static_assert(sizeof(ObjectRecord) == 12);
 static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
-static_assert(sizeof(MonsterMetaRecord) == 26);
+static_assert(sizeof(MonsterMetaRecord) == 38);
 static_assert(sizeof(ItemMetaRecord) == 156);
 static_assert(sizeof(SkillMetaRecord) == 16);
 static_assert(sizeof(BuffMetaRecord) == 12);
@@ -167,6 +178,71 @@ static uint32_t monsterSeffID(std::u8string_view monsterName, int offset)
         return subname.empty() ? absoluteID : monsterSeffID(subname, offset);
     }
     return SYS_MONSEFFBASE(record.lookID) + offset;
+}
+
+static MonsterMetaRecord monsterMetaRecord(uint32_t monsterID)
+{
+    const auto &record = DBCOM_MONSTERRECORD(monsterID);
+    fflassert(record);
+
+    MonsterMetaRecord result
+    {
+        .monsterID = monsterID,
+        .lookID = check_cast<uint16_t>(record.lookID),
+        .shadow = to_u8(record.shadow),
+        .reserved = to_u8(record.deadFadeOut),
+        .spawnSeffID = monsterSeffID(record.name, MONSEFF_SPAWN),
+        .attackSeffID = monsterSeffID(record.name, MONSEFF_ATTACK),
+        .hittedSeffID = monsterSeffID(record.name, MONSEFF_HITTED),
+        .dieSeffID = monsterSeffID(record.name, MONSEFF_DIE),
+        .spawnLookID = check_cast<uint16_t>(std::u8string_view(record.name) == u8"神兽" ? 0X59 : 0),
+    };
+
+    // transfFlags: bit 0/1 reverse active/hidden transform, bit 2 hidden
+    // form can be focused, bit 3 transformation uses DIR_BEGIN.
+    const auto setTransf = [&result](uint16_t hiddenLook, int standMotion, int standBegin, int standCount,
+                                    int activeMotion, int activeBegin, int activeCount,
+                                    int hiddenMotion, int hiddenBegin, int hiddenCount, int flags)
+    {
+        result.hiddenLookID = hiddenLook;
+        result.hiddenStandMotion = check_cast<uint8_t>(standMotion);
+        result.hiddenStandBegin = check_cast<uint8_t>(standBegin);
+        result.hiddenStandCount = check_cast<uint8_t>(standCount);
+        result.activeTransfMotion = check_cast<uint8_t>(activeMotion);
+        result.activeTransfBegin = check_cast<uint8_t>(activeBegin);
+        result.activeTransfCount = check_cast<uint8_t>(activeCount);
+        result.hiddenTransfMotion = check_cast<uint8_t>(hiddenMotion);
+        result.hiddenTransfBegin = check_cast<uint8_t>(hiddenBegin);
+        result.hiddenTransfCount = check_cast<uint8_t>(hiddenCount);
+        result.transfFlags = check_cast<uint8_t>(flags);
+    };
+
+    const std::u8string_view name = record.name;
+    if(name == u8"食人花"){
+        setTransf(0, 8, 7, 1, 8, 7, 8, 8, 0, 8, 0X09);
+    }
+    else if(name == u8"触龙神"){
+        setTransf(0, 8, 0, 1, 8, 0, 10, 8, 9, 10, 0X0A);
+    }
+    else if(name == u8"僵尸_1" || name == u8"僵尸_2" || name == u8"腐僵"){
+        setTransf(0, 4, 9, 1, 8, 0, 10, 4, 0, 10, 0X00);
+    }
+    else if(name == u8"沙鬼"){
+        setTransf(0, 8, 9, 1, 8, 9, 10, 8, 0, 10, 0X01);
+    }
+    else if(name == u8"神兽"){
+        setTransf(0X59, 0, 0, 4, 8, 0, 10, 8, 9, 10, 0X06);
+    }
+    else if(name == u8"祖玛雕像" || name == u8"祖玛卫士"){
+        setTransf(0, 8, 0, 1, 8, 0, 6, 8, 5, 6, 0X02);
+    }
+    else if(name == u8"祖玛教主"){
+        // The C++ hidden-form branch returns an empty spawn sequence after the
+        // mode trigger flips. Use the symmetric reverse sequence so burrowing
+        // remains visible and completes instead of leaving a zero-frame motion.
+        setTransf(0, 8, 0, 1, 8, 0, 10, 8, 9, 10, 0X0A);
+    }
+    return result;
 }
 
 static uint8_t weaponSoundID(std::u8string_view category)
@@ -380,21 +456,11 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
         for(uint32_t monsterID = 1; monsterID < DBCOM_MONSTERENDID(); ++monsterID){
             const auto &record = DBCOM_MONSTERRECORD(monsterID);
             if(record.name){
-                metaList.push_back({
-                    .monsterID = monsterID,
-                    .lookID = check_cast<uint16_t>(record.lookID),
-                    .shadow = to_u8(record.shadow),
-                    .reserved = to_u8(record.deadFadeOut),
-                    .spawnSeffID = monsterSeffID(record.name, MONSEFF_SPAWN),
-                    .attackSeffID = monsterSeffID(record.name, MONSEFF_ATTACK),
-                    .hittedSeffID = monsterSeffID(record.name, MONSEFF_HITTED),
-                    .dieSeffID = monsterSeffID(record.name, MONSEFF_DIE),
-                    .spawnLookID = check_cast<uint16_t>(std::u8string_view(record.name) == u8"神兽" ? 0X59 : 0),
-                });
+                metaList.push_back(monsterMetaRecord(monsterID));
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "monster.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 4, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 5, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
     }
