@@ -85,6 +85,10 @@ func _verify() -> void:
 		if not GameState.hud_minimized or absf(player_screen_y - 300.0) > 0.01 or _main.get_node("Location").visible:
 			_fail("minimized HUD camera/layout mismatch: y=%s" % player_screen_y, 10)
 			return
+	if OS.has_environment("MIR2X_TEST_HUD_EXPANDED"):
+		control_panel.call("_on_expand_pressed")
+		Input.warp_mouse(Vector2(556.0, 568.0))
+		await get_tree().process_frame
 	var panel_name := OS.get_environment("MIR2X_TEST_PANEL")
 	if panel_name in ["inventory", "player_state", "skill"]:
 		var panel_nodes := {"inventory": "%InventoryPanel", "player_state": "%PlayerStatePanel", "skill": "%SkillPanel"}

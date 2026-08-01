@@ -32,6 +32,9 @@ signal minimized_changed(minimized: bool)
 @onready var buff_container: Control = %BuffContainer
 @onready var title: TextureRect = $Title
 @onready var minimize_button: TextureButton = $MinimizeButton
+@onready var expand_button: TextureButton = $Body/ExpandButton
+@onready var emoji_button: TextureButton = $Body/EmojiButton
+@onready var mute_button: TextureButton = $Body/MuteButton
 
 var game_state: Node = null
 var _minimized := false
@@ -57,6 +60,15 @@ func _ready() -> void:
 	for button in %BoardButtons.get_children():
 		if button is BaseButton:
 			button.pressed.connect(_on_board_button_pressed.bind(button))
+			button.pressed.connect(AudioService.play_ui_click)
+	for button_path in [
+		"Body/QuickButton", "Body/ExitButton", "Body/Exchange", "Body/MiniMap",
+		"Body/MagicKey", "Body/ExpandButton", "Body/EmojiButton", "Body/MuteButton",
+		"MinimizeButton",
+	]:
+		var button := get_node(button_path) as TextureButton
+		button.pressed.connect(AudioService.play_ui_click)
+		_bind_overlay_button(button)
 	var chat_scroll_bar := chat_log.get_v_scroll_bar()
 	chat_scroll_bar.modulate = Color.TRANSPARENT
 	chat_scroll_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -65,6 +77,30 @@ func _ready() -> void:
 	$Body/MagicKey.pressed.connect(magic_key_hud_toggled.emit)
 	title.gui_input.connect(_on_title_gui_input)
 	_update_button_blinks()
+
+
+func _bind_overlay_button(button: TextureButton) -> void:
+	button.set_meta("overlay_hovered", false)
+	button.set_meta("overlay_pressed", false)
+	button.modulate.a = 0.0
+	button.mouse_entered.connect(_set_overlay_hovered.bind(button, true))
+	button.mouse_exited.connect(_set_overlay_hovered.bind(button, false))
+	button.button_down.connect(_set_overlay_pressed.bind(button, true))
+	button.button_up.connect(_set_overlay_pressed.bind(button, false))
+
+
+func _set_overlay_hovered(button: TextureButton, hovered: bool) -> void:
+	button.set_meta("overlay_hovered", hovered)
+	_update_overlay_alpha(button)
+
+
+func _set_overlay_pressed(button: TextureButton, pressed: bool) -> void:
+	button.set_meta("overlay_pressed", pressed)
+	_update_overlay_alpha(button)
+
+
+func _update_overlay_alpha(button: TextureButton) -> void:
+	button.modulate.a = 1.0 if button.get_meta("overlay_hovered", false) or button.get_meta("overlay_pressed", false) else 0.0
 
 
 func start_button_blink(button_name: String, duration_ms := 5000) -> void:
@@ -251,6 +287,9 @@ func _on_expand_pressed() -> void:
 	chat_background.offset_top = -269.0 if _expanded else 19.0
 	chat_background.color.a = 220.0 / 255.0 if _expanded else 1.0
 	chat_log.offset_top = -220.0 if _expanded else 34.0
+	expand_button.position.y = -266.0 if _expanded else 22.0
+	emoji_button.visible = _expanded
+	mute_button.visible = _expanded
 
 
 func _on_minimap_pressed() -> void:

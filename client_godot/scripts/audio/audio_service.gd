@@ -2,6 +2,7 @@ extends Node
 
 const SEFF_TRACK_COUNT := 128
 const INVALID_SEFF_ID := 0xFFFFFFFF
+const UI_CLICK_SEFF_ID := 0x01020069
 
 var bgm_enabled := true
 var bgm_volume := 0.5
@@ -156,6 +157,10 @@ func play_seff_at(seff_id: int, source_x: int, source_y: int, listener_x: int, l
 	last_seff_gain = gain
 	player.play()
 	return true
+
+
+func play_ui_click() -> bool:
+	return play_seff_at(UI_CLICK_SEFF_ID, 0, 0, 0, 0)
 
 
 func stop_seff() -> void:

@@ -93,9 +93,28 @@ func _ready() -> void:
 	if panel.get_node("%Face").visible or panel.get_node("%FaceHealth").visible or panel.get_node("%BuffContainer").visible:
 		_fail("compact focus HUD remains visible while chat is expanded")
 		return
+	if panel.get_node("Body/ExpandButton").position.y != -266.0 or not panel.get_node("Body/EmojiButton").visible or not panel.get_node("Body/MuteButton").visible:
+		_fail("expanded HUD switch or hover-only controls mismatch")
+		return
+	var emoji_button := panel.get_node("Body/EmojiButton") as TextureButton
+	var mute_button := panel.get_node("Body/MuteButton") as TextureButton
+	if emoji_button.modulate.a != 0.0 or mute_button.modulate.a != 0.0:
+		_fail("expanded hover-only controls were visible while idle")
+		return
+	emoji_button.mouse_entered.emit()
+	if emoji_button.modulate.a != 1.0 or mute_button.modulate.a != 0.0:
+		_fail("expanded hover feedback affected the wrong control")
+		return
+	emoji_button.mouse_exited.emit()
+	if panel.get_node("Body/ExpandButton").texture_normal != null or panel.get_node("Body/ExpandButton").texture_hover == null or panel.get_node("Body/ExpandButton").texture_pressed == null:
+		_fail("expand control did not use original hover/down-only textures")
+		return
 	panel.call("_on_expand_pressed")
 	if not panel.get_node("%Face").visible or not panel.get_node("%FaceHealth").visible or not panel.get_node("%BuffContainer").visible:
 		_fail("compact focus HUD did not return after collapsing chat")
+		return
+	if panel.get_node("Body/ExpandButton").position.y != 22.0 or panel.get_node("Body/EmojiButton").visible or panel.get_node("Body/MuteButton").visible:
+		_fail("collapsed HUD retained expanded controls")
 		return
 	panel.call("_on_minimize_pressed")
 	if panel.get_node("%Body").visible or panel.get_node("Title").position.y != 121.0 or panel.get_node("%Level").visible or panel.get_node("MinimizeButton").visible:

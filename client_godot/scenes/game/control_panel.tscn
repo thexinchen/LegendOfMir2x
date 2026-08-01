@@ -1,4 +1,4 @@
-[gd_scene load_steps=39 format=3]
+[gd_scene load_steps=43 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/control_panel.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000012.png" id="2_base"]
@@ -40,6 +40,10 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/0000003b.png" id="30_quest_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000027.png" id="31_expanded"]
 [ext_resource type="FontFile" path="res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf" id="32_chat_font"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000023.png" id="33_emoji_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000024.png" id="34_emoji_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000025.png" id="35_mute_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000026.png" id="36_mute_down"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_command"]
 content_margin_left = 0.0
@@ -217,10 +221,9 @@ offset_left = 148.0
 offset_top = 21.0
 offset_right = 172.0
 offset_bottom = 37.0
-texture_normal = ExtResource("9_quick")
+texture_hover = ExtResource("9_quick")
 texture_pressed = ExtResource("9b_quick_down")
 ignore_texture_size = true
-tooltip_text = "快捷栏"
 
 [node name="ExitButton" type="TextureButton" parent="Body"]
 layout_mode = 0
@@ -228,10 +231,9 @@ offset_left = 8.0
 offset_top = 91.0
 offset_right = 32.0
 offset_bottom = 115.0
-texture_normal = ExtResource("7_close")
+texture_hover = ExtResource("7_close")
 texture_pressed = ExtResource("7b_close_down")
 ignore_texture_size = true
-tooltip_text = "退出游戏"
 
 [node name="BoardButtons" type="Control" parent="Body"]
 unique_name_in_owner = true
@@ -251,7 +253,6 @@ offset_bottom = 39.0
 texture_normal = ExtResource("13_guild")
 texture_pressed = ExtResource("28_guild_down")
 ignore_texture_size = true
-tooltip_text = "行会"
 
 [node name="Team" type="TextureButton" parent="Body/BoardButtons"]
 metadata/scene_path = "res://scenes/game/panels/team.tscn"
@@ -262,7 +263,6 @@ offset_bottom = 28.0
 texture_normal = ExtResource("14_team")
 texture_pressed = ExtResource("29_team_down")
 ignore_texture_size = true
-tooltip_text = "队伍"
 
 [node name="Quest" type="TextureButton" parent="Body/BoardButtons"]
 metadata/scene_path = "res://scenes/game/panels/quest.tscn"
@@ -273,7 +273,6 @@ offset_bottom = 39.0
 texture_normal = ExtResource("15_quest")
 texture_pressed = ExtResource("30_quest_down")
 ignore_texture_size = true
-tooltip_text = "任务"
 
 [node name="Inventory" type="TextureButton" parent="Body/BoardButtons"]
 metadata/scene_path = "res://scenes/game/panels/inventory.tscn"
@@ -284,7 +283,6 @@ offset_bottom = 67.0
 texture_normal = ExtResource("10_inventory")
 texture_pressed = ExtResource("25_inventory_down")
 ignore_texture_size = true
-tooltip_text = "背包"
 
 [node name="PlayerState" type="TextureButton" parent="Body/BoardButtons"]
 metadata/scene_path = "res://scenes/game/panels/player_state.tscn"
@@ -295,7 +293,6 @@ offset_bottom = 69.0
 texture_normal = ExtResource("11_state")
 texture_pressed = ExtResource("26_state_down")
 ignore_texture_size = true
-tooltip_text = "人物"
 
 [node name="Skill" type="TextureButton" parent="Body/BoardButtons"]
 metadata/scene_path = "res://scenes/game/panels/skill.tscn"
@@ -306,7 +303,6 @@ offset_bottom = 67.0
 texture_normal = ExtResource("12_skill")
 texture_pressed = ExtResource("27_skill_down")
 ignore_texture_size = true
-tooltip_text = "技能"
 
 [node name="Horse" type="TextureButton" parent="Body/BoardButtons"]
 metadata/scene_path = "res://scenes/game/panels/horse.tscn"
@@ -317,7 +313,6 @@ offset_bottom = 89.0
 texture_normal = ExtResource("16_horse")
 texture_pressed = ExtResource("16b_horse_down")
 ignore_texture_size = true
-tooltip_text = "坐骑"
 
 [node name="Config" type="TextureButton" parent="Body/BoardButtons"]
 metadata/scene_path = "res://scenes/game/panels/runtime_config.tscn"
@@ -328,7 +323,6 @@ offset_bottom = 92.0
 texture_normal = ExtResource("17_config")
 texture_pressed = ExtResource("17b_config_down")
 ignore_texture_size = true
-tooltip_text = "设置"
 
 [node name="Friend" type="TextureButton" parent="Body/BoardButtons"]
 metadata/scene_path = "res://scenes/game/panels/friend_chat.tscn"
@@ -339,7 +333,6 @@ offset_bottom = 89.0
 texture_normal = ExtResource("18_friend")
 texture_pressed = ExtResource("18b_friend_down")
 ignore_texture_size = true
-tooltip_text = "好友"
 
 [node name="Exchange" type="TextureButton" parent="Body"]
 layout_mode = 0
@@ -347,9 +340,9 @@ offset_left = 638.0
 offset_top = 25.0
 offset_right = 662.0
 offset_bottom = 45.0
-texture_normal = ExtResource("19_exchange")
+texture_hover = ExtResource("19_exchange")
+texture_pressed = ExtResource("19_exchange")
 ignore_texture_size = true
-tooltip_text = "交易"
 
 [node name="MiniMap" type="TextureButton" parent="Body"]
 layout_mode = 0
@@ -357,9 +350,9 @@ offset_left = 638.0
 offset_top = 59.0
 offset_right = 662.0
 offset_bottom = 79.0
-texture_normal = ExtResource("20_minimap")
+texture_hover = ExtResource("20_minimap")
+texture_pressed = ExtResource("20_minimap")
 ignore_texture_size = true
-tooltip_text = "小地图"
 
 [node name="MagicKey" type="TextureButton" parent="Body"]
 layout_mode = 0
@@ -367,9 +360,9 @@ offset_left = 638.0
 offset_top = 94.0
 offset_right = 662.0
 offset_bottom = 114.0
-texture_normal = ExtResource("21_magic")
+texture_hover = ExtResource("21_magic")
+texture_pressed = ExtResource("21_magic")
 ignore_texture_size = true
-tooltip_text = "技能快捷键"
 
 [node name="ACButton" type="Button" parent="Body"]
 unique_name_in_owner = true
@@ -445,9 +438,31 @@ offset_left = 619.0
 offset_top = 22.0
 offset_right = 632.0
 offset_bottom = 39.0
-texture_normal = ExtResource("24_expand")
+texture_hover = ExtResource("24_expand")
+texture_pressed = ExtResource("24_expand")
 ignore_texture_size = true
-tooltip_text = "展开聊天"
+
+[node name="EmojiButton" type="TextureButton" parent="Body"]
+visible = false
+layout_mode = 0
+offset_left = 540.0
+offset_top = 108.0
+offset_right = 572.0
+offset_bottom = 140.0
+texture_hover = ExtResource("33_emoji_hover")
+texture_pressed = ExtResource("34_emoji_down")
+ignore_texture_size = true
+
+[node name="MuteButton" type="TextureButton" parent="Body"]
+visible = false
+layout_mode = 0
+offset_left = 580.0
+offset_top = 108.0
+offset_right = 612.0
+offset_bottom = 140.0
+texture_hover = ExtResource("35_mute_hover")
+texture_pressed = ExtResource("36_mute_down")
+ignore_texture_size = true
 
 [node name="Title" type="TextureRect" parent="."]
 layout_mode = 0
@@ -476,10 +491,9 @@ offset_left = 109.0
 offset_top = 91.0
 offset_right = 133.0
 offset_bottom = 115.0
-texture_normal = ExtResource("8_minimize")
+texture_hover = ExtResource("8_minimize")
 texture_pressed = ExtResource("8b_minimize_down")
 ignore_texture_size = true
-tooltip_text = "收起控制面板"
 
 [connection signal="pressed" from="Body/QuickButton" to="." method="_on_quick_pressed"]
 [connection signal="pressed" from="Body/ExitButton" to="." method="_on_exit_pressed"]
