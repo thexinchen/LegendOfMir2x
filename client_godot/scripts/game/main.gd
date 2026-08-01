@@ -1683,6 +1683,9 @@ func _toggle_extra_panel(scene_path: String) -> void:
 	if not panel:
 		return
 	if scene_path == MINIMAP_PANEL_PATH:
+		if not panel.call("has_map_texture"):
+			game_state.add_chat_log("没有可用的地图", 3)
+			return
 		panel.call("toggle_requested_visibility")
 		if panel.visible:
 			panel.move_to_front()

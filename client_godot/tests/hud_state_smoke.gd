@@ -119,7 +119,31 @@ func _ready() -> void:
 	if panel.get_node("%ACValue").text != "%d-%d" % [combat.mac[0], combat.mac[1]] or panel.get_node("%DCValue").text != "%d-%d" % [combat.mc[0], combat.mc[1]]:
 		_fail("AC/MA or DC/MC toggle mismatch")
 		return
-	print("HUD STATE PASS: self/focus face, HP, compact buffs, target depth, experience, load and combat toggles")
+	GameState.chat_log.clear()
+	panel.call("_on_exchange_pressed")
+	if GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "exchange doesn't implemented yet":
+		_fail("exchange control did not provide the original feedback")
+		return
+	GameState.chat_log.clear()
+	command.text = "   local echo  "
+	panel.call("focus_command")
+	await get_tree().process_frame
+	panel.call("_on_command_submitted", command.text)
+	if not command.text.is_empty() or command.has_focus():
+		_fail("command submission did not clear and release the input")
+		return
+	if GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "local echo  ":
+		_fail("ordinary command did not trim left, preserve right, and echo locally: %s" % GameState.chat_log)
+		return
+	panel.call("_on_command_submitted", "   !   ")
+	if GameState.chat_log.size() != 1:
+		_fail("empty broadcast command changed visible chat state")
+		return
+	panel.call("_on_command_submitted", "   @help")
+	if GameState.chat_log.size() != 2 or GameState.chat_log[-1].text != "可用命令：@help":
+		_fail("leading whitespace did not preserve prefixed command routing")
+		return
+	print("HUD STATE PASS: self/focus face, HP, compact buffs, target depth, experience, load, controls and command input")
 	get_tree().quit()
 
 

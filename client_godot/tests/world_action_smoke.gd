@@ -33,6 +33,8 @@ func _ready() -> void:
 	await get_tree().process_frame
 	if not _test_camera_centering(main):
 		return
+	if not _test_missing_minimap_feedback(main):
+		return
 	if not _test_team_flag_cursor(main):
 		return
 	main.call("_on_server_message", NetworkClient.SM_NEXTSTRIKE, PackedByteArray())
@@ -103,6 +105,24 @@ func _test_camera_centering(main: Control) -> bool:
 	main.call("_center_hero")
 	if GameState.hud_minimized or not is_equal_approx(GameState.view_y, float(132 * 32 - 234)):
 		_fail("restored HUD or ESC centering did not return to the 469px viewport")
+		return false
+	return true
+
+
+func _test_missing_minimap_feedback(main: Control) -> bool:
+	var panels: Dictionary = main.get("_extra_panel_nodes")
+	var minimap := panels.get("res://scenes/game/panels/minimap.tscn") as Control
+	if minimap == null or minimap.call("has_map_texture"):
+		_fail("missing-map feedback fixture unexpectedly has a minimap texture")
+		return false
+	var requested_before: bool = minimap.call("requested_visible")
+	GameState.chat_log.clear()
+	main.call("_on_control_panel_panel_requested", "res://scenes/game/panels/minimap.tscn")
+	if GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "没有可用的地图":
+		_fail("missing minimap control did not provide the original error feedback")
+		return false
+	if minimap.call("requested_visible") != requested_before:
+		_fail("missing minimap control changed the requested visibility state")
 		return false
 	return true
 

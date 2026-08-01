@@ -261,6 +261,10 @@ func _on_exit_pressed() -> void:
 	get_tree().quit()
 
 
+func _on_exchange_pressed() -> void:
+	add_log("exchange doesn't implemented yet", 0)
+
+
 func focus_command() -> void:
 	command.grab_focus()
 	command.caret_column = command.text.length()
@@ -270,20 +274,24 @@ func _on_command_submitted(text: String) -> void:
 	# C++ submitCommand: ! prefix = broadcast, @ = user command, $ = lua command, else = chat
 	command.clear()
 	command.release_focus()
-	if text.is_empty():
+	var full_text := text.strip_edges(true, false)
+	if full_text.is_empty():
 		return
-	if text.begins_with("!"):
-		NetworkClient.send_player_broadcast(text.substr(1))
-	elif text.begins_with("@"):
-		var user_command := text.substr(1).strip_edges()
+	if full_text.begins_with("!"):
+		var content := full_text.substr(1).strip_edges(true, false)
+		if not content.is_empty():
+			NetworkClient.send_player_broadcast(content)
+	elif full_text.begins_with("@"):
+		var user_command := full_text.substr(1).strip_edges()
 		if user_command == "help":
 			game_state.add_chat_log("可用命令：@help", 1)
 		else:
 			game_state.add_chat_log("无效的本地命令：%s" % user_command, 3)
-	elif text.begins_with("$"):
+	elif full_text.begins_with("$"):
 		game_state.add_chat_log("Godot 客户端不提供本地 Lua 执行环境", 3)
 	else:
-		NetworkClient.send_player_say(text)
+		game_state.add_chat_log(full_text, 0)
+		NetworkClient.send_player_say(full_text)
 
 
 func _on_ac_pressed() -> void:

@@ -483,6 +483,7 @@ tooltip_text = "收起控制面板"
 
 [connection signal="pressed" from="Body/QuickButton" to="." method="_on_quick_pressed"]
 [connection signal="pressed" from="Body/ExitButton" to="." method="_on_exit_pressed"]
+[connection signal="pressed" from="Body/Exchange" to="." method="_on_exchange_pressed"]
 [connection signal="pressed" from="Body/MiniMap" to="." method="_on_minimap_pressed"]
 [connection signal="pressed" from="Body/ExpandButton" to="." method="_on_expand_pressed"]
 [connection signal="pressed" from="Body/ACButton" to="." method="_on_ac_pressed"]
