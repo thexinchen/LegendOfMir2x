@@ -70,6 +70,10 @@ struct MonsterMetaRecord
     uint16_t lookID = 0;
     uint8_t shadow = 0;
     uint8_t reserved = 0;
+    uint32_t spawnSeffID = UINT32_MAX;
+    uint32_t attackSeffID = UINT32_MAX;
+    uint32_t hittedSeffID = UINT32_MAX;
+    uint32_t dieSeffID = UINT32_MAX;
 };
 
 struct ItemMetaRecord
@@ -98,7 +102,8 @@ struct ItemMetaRecord
     int32_t acElem[7] {};
     int32_t load[3] {};
     uint8_t doubleHand = 0;
-    uint8_t metaReserved[3] {};
+    uint8_t weaponSound = 7;
+    uint8_t metaReserved[2] {};
 };
 
 struct SkillMetaRecord
@@ -131,6 +136,7 @@ struct MagicEffectMetaRecord
     uint8_t type = 0;
     uint8_t gfxDirType = 0;
     uint8_t flags = 0;
+    uint32_t seffID = UINT32_MAX;
 };
 #pragma pack(pop)
 
@@ -139,11 +145,37 @@ static_assert(sizeof(TileRecord) == 8);
 static_assert(sizeof(ObjectRecord) == 12);
 static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
-static_assert(sizeof(MonsterMetaRecord) == 8);
+static_assert(sizeof(MonsterMetaRecord) == 24);
 static_assert(sizeof(ItemMetaRecord) == 156);
 static_assert(sizeof(SkillMetaRecord) == 12);
 static_assert(sizeof(BuffMetaRecord) == 12);
-static_assert(sizeof(MagicEffectMetaRecord) == 22);
+static_assert(sizeof(MagicEffectMetaRecord) == 26);
+
+static uint32_t monsterSeffID(std::u8string_view monsterName, int offset)
+{
+    const auto &record = DBCOM_MONSTERRECORD(monsterName.data());
+    fflassert(record);
+    if(!record.seff.ref.empty()){
+        return monsterSeffID(record.seff.ref, offset);
+    }
+    if(const auto &entry = record.seff.list.at(offset); entry.has_value()){
+        const auto &[subname, absoluteID] = entry.value();
+        return subname.empty() ? absoluteID : monsterSeffID(subname, offset);
+    }
+    return SYS_MONSEFFBASE(record.lookID) + offset;
+}
+
+static uint8_t weaponSoundID(std::u8string_view category)
+{
+    if(category == u8"匕首") return 0;
+    if(category == u8"木剑") return 1;
+    if(category == u8"剑"  ) return 2;
+    if(category == u8"刀"  ) return 3;
+    if(category == u8"斧"  ) return 4;
+    if(category == u8"锏"  ) return 5;
+    if(category == u8"棍"  ) return 6;
+    return 7;
+}
 
 static bool animatedTextureSet(uint32_t textureID)
 {
@@ -344,11 +376,19 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
         for(uint32_t monsterID = 1; monsterID < DBCOM_MONSTERENDID(); ++monsterID){
             const auto &record = DBCOM_MONSTERRECORD(monsterID);
             if(record.name){
-                metaList.push_back({monsterID, check_cast<uint16_t>(record.lookID), to_u8(record.shadow)});
+                metaList.push_back({
+                    .monsterID = monsterID,
+                    .lookID = check_cast<uint16_t>(record.lookID),
+                    .shadow = to_u8(record.shadow),
+                    .spawnSeffID = monsterSeffID(record.name, MONSEFF_SPAWN),
+                    .attackSeffID = monsterSeffID(record.name, MONSEFF_ATTACK),
+                    .hittedSeffID = monsterSeffID(record.name, MONSEFF_HITTED),
+                    .dieSeffID = monsterSeffID(record.name, MONSEFF_DIE),
+                });
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "monster.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 2, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
     }
@@ -387,11 +427,12 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
                     },
                     .load = {record.equip.load.body, record.equip.load.weapon, record.equip.load.inventory},
                     .doubleHand = to_u8(record.equip.weapon.doubleHand),
+                    .weaponSound = weaponSoundID(record.equip.weapon.category),
                 });
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "item.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 3, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 4, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
 
@@ -477,11 +518,12 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
                     check_cast<uint8_t>(magicGfxEntryID(gfxEntry->type)),
                     check_cast<uint8_t>(gfxEntry->gfxDirType),
                     to_u8((gfxEntry->loop ? 1 : 0) | (gfxEntry->onGround ? 2 : 0)),
+                    DBCOM_MAGICGFXSEFFID(magicID, magicStageName(stage)).value_or(UINT32_MAX),
                 });
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "magic.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 2, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
 

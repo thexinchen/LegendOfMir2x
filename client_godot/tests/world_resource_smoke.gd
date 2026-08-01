@@ -32,7 +32,24 @@ func _ready() -> void:
 	if actors.offsets.size() < 345000 or actors.monster_look(224) <= 0 or actors.item_meta.size() < 1000:
 		_fail("incomplete actor indices")
 		return
-	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size()])
+	if actors.monster_seff(224, 7) == 0xFFFFFFFF:
+		_fail("monster SEFF metadata unavailable")
+		return
+	var magic_seff_count := 0
+	for meta_value in actors.magic_meta.values():
+		var meta: PackedInt32Array = meta_value
+		magic_seff_count += 1 if meta.size() >= 9 and meta[8] != 0xFFFFFFFF else 0
+	if magic_seff_count == 0:
+		_fail("magic-stage SEFF metadata unavailable")
+		return
+	var weapon_sound_count := 0
+	for attributes_value in actors.item_attributes.values():
+		var attributes: Dictionary = attributes_value
+		weapon_sound_count += 1 if attributes.get("weapon_sound", 7) < 7 else 0
+	if weapon_sound_count == 0:
+		_fail("weapon sound metadata unavailable")
+		return
+	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d magic_seff=%d weapon_sound=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size(), magic_seff_count, weapon_sound_count])
 	get_tree().quit()
 
 

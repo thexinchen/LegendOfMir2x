@@ -1,24 +1,59 @@
 extends Node
 
+const SEFF_TRACK_COUNT := 128
+const INVALID_SEFF_ID := 0xFFFFFFFF
+
 var bgm_enabled := true
 var bgm_volume := 0.5
 var seff_enabled := true
 var seff_volume := 0.5
 var current_bgm_id := -1
 var current_bgm_path := ""
+var last_seff_id := INVALID_SEFF_ID
+var last_seff_path := ""
+var last_seff_distance := 0
+var last_seff_angle := 0
+var last_seff_pan := 0.0
+var last_seff_gain := 0.0
 
 var _bgm_player: AudioStreamPlayer
+var _seff_players: Array[AudioStreamPlayer] = []
+var _seff_panners: Array[AudioEffectPanner] = []
+var _seff_bus_names: Array[StringName] = []
+var _seff_gains: Array[float] = []
+var _seff_cache: Dictionary = {}
 
 
 func _ready() -> void:
 	_bgm_player = AudioStreamPlayer.new()
 	_bgm_player.name = "BGMPlayer"
 	add_child(_bgm_player)
+	for index in range(SEFF_TRACK_COUNT):
+		var bus_name := StringName("SEFF%03d" % index)
+		var bus_index := AudioServer.bus_count
+		AudioServer.add_bus(bus_index)
+		AudioServer.set_bus_name(bus_index, bus_name)
+		AudioServer.set_bus_send(bus_index, &"Master")
+		var panner := AudioEffectPanner.new()
+		AudioServer.add_bus_effect(bus_index, panner)
+		var player := AudioStreamPlayer.new()
+		player.name = "SEFFPlayer%03d" % index
+		player.bus = bus_name
+		add_child(player)
+		_seff_players.append(player)
+		_seff_panners.append(panner)
+		_seff_bus_names.append(bus_name)
+		_seff_gains.append(1.0)
 	_apply_bgm_volume()
 
 
 func _exit_tree() -> void:
 	stop_bgm()
+	stop_seff()
+	for index in range(_seff_bus_names.size() - 1, -1, -1):
+		var bus_index := AudioServer.get_bus_index(_seff_bus_names[index])
+		if bus_index >= 0:
+			AudioServer.remove_bus(bus_index)
 
 
 func play_map_bgm(bgm_id: int) -> bool:
@@ -66,10 +101,74 @@ func set_bgm_volume(value: float) -> void:
 
 func set_seff_enabled(enabled: bool) -> void:
 	seff_enabled = enabled
+	if not enabled:
+		stop_seff()
 
 
 func set_seff_volume(value: float) -> void:
 	seff_volume = clampf(value, 0.0, 1.0)
+	for index in range(_seff_players.size()):
+		if _seff_players[index].playing:
+			_apply_seff_volume(index)
+
+
+func play_seff_at(seff_id: int, source_x: int, source_y: int, listener_x: int, listener_y: int, repeats := 1) -> bool:
+	if not seff_enabled or seff_id < 0 or seff_id == INVALID_SEFF_ID:
+		return false
+	var dx := source_x - listener_x
+	var dy := source_y - listener_y
+	var distance := roundi(Vector2(dx, dy).length())
+	if distance > 255:
+		return false
+	var path := _find_seff_path(seff_id)
+	if path.is_empty():
+		push_warning("SEFF resource not found: %08X" % seff_id)
+		return false
+	var stream: AudioStreamWAV = _seff_cache.get(seff_id)
+	if stream == null:
+		stream = AudioStreamWAV.load_from_file(path)
+		if stream == null:
+			push_warning("Failed to load SEFF resource: %s" % path)
+			return false
+		_seff_cache[seff_id] = stream
+	var player := _available_seff_player()
+	if player == null:
+		return false
+	var angle := 0 if distance == 0 else roundi(90.0 - rad_to_deg(atan2(-float(dy), float(dx))))
+	var spatial_distance := float(distance) * 0.5
+	var gain := 1.0 if spatial_distance <= 1.0 else clampf((128.0 - spatial_distance) / 127.0, 0.0, 1.0)
+	var pan := 0.0 if distance == 0 else sin(deg_to_rad(float(angle)))
+	var play_stream: AudioStreamWAV = stream
+	if repeats == 0:
+		play_stream = stream.duplicate()
+		play_stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	player.stream = play_stream
+	var player_index := _seff_players.find(player)
+	if player_index >= 0:
+		_seff_gains[player_index] = gain
+		_seff_panners[player_index].pan = pan
+		_apply_seff_volume(player_index)
+	last_seff_id = seff_id
+	last_seff_path = path
+	last_seff_distance = distance
+	last_seff_angle = angle
+	last_seff_pan = pan
+	last_seff_gain = gain
+	player.play()
+	return true
+
+
+func stop_seff() -> void:
+	for player in _seff_players:
+		player.stop()
+		player.stream = null
+
+
+func active_seff_count() -> int:
+	var result := 0
+	for player in _seff_players:
+		result += 1 if player.playing else 0
+	return result
 
 
 func apply_runtime_config(config: Dictionary) -> void:
@@ -94,6 +193,31 @@ func _find_bgm_path(bgm_id: int) -> String:
 			if file_name.to_upper().begins_with(prefix):
 				return bgm_dir.path_join(file_name)
 	return ""
+
+
+func _find_seff_path(seff_id: int) -> String:
+	for directory in _audio_base_paths():
+		var seff_dir := directory.path_join("seff")
+		var exact_path := seff_dir.path_join("%08X.WAV" % seff_id)
+		if FileAccess.file_exists(exact_path):
+			return exact_path
+		var prefix := "%08X_" % seff_id
+		for file_name in DirAccess.get_files_at(seff_dir):
+			if file_name.to_upper().begins_with(prefix):
+				return seff_dir.path_join(file_name)
+	return ""
+
+
+func _available_seff_player() -> AudioStreamPlayer:
+	for player in _seff_players:
+		if not player.playing:
+			return player
+	return null
+
+
+func _apply_seff_volume(index: int) -> void:
+	var value := seff_volume * _seff_gains[index]
+	_seff_players[index].volume_db = linear_to_db(value) if value > 0.0 else -80.0
 
 
 func _audio_base_paths() -> Array[String]:

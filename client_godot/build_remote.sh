@@ -31,6 +31,8 @@ cp "$resource_dir/font/0B_WenQuanYi_Bitmap_Song_15_px.TTF" "$project_dir/assets/
 
 mkdir -p "$project_dir/build/audio/bgm"
 cp -a "$resource_dir/sound/bgm/." "$project_dir/build/audio/bgm/"
+mkdir -p "$project_dir/build/audio/seff"
+cp -a "$resource_dir/sound/seff/." "$project_dir/build/audio/seff/"
 touch "$project_dir/build/audio/.gdignore"
 
 "$repo_dir/build.sh" Release --mir2x-res "$resource_dir" --target godotworldres

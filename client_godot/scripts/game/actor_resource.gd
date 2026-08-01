@@ -74,6 +74,18 @@ func monster_has_shadow(monster_id: int) -> bool:
 	return bool(monster_meta.get(monster_id, PackedInt32Array([monster_id, 1]))[1])
 
 
+func monster_seff(monster_id: int, action_type: int) -> int:
+	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
+	if meta.size() < 6:
+		return 0xFFFFFFFF
+	match action_type:
+		1: return meta[2]
+		7: return meta[3]
+		11: return meta[4]
+		13: return meta[5]
+	return 0xFFFFFFFF
+
+
 func item_shape(item_id: int) -> int:
 	return item_meta.get(item_id, PackedInt32Array([0, 0]))[0]
 
@@ -88,6 +100,10 @@ func item_is_packable(item_id: int) -> bool:
 
 func item_attribute(item_id: int) -> Dictionary:
 	return item_attributes.get(item_id, {})
+
+
+func item_weapon_sound(item_id: int) -> int:
+	return item_attribute(item_id).get("weapon_sound", 7)
 
 
 func item_weight(item_id: int) -> int:
@@ -124,6 +140,11 @@ func magic_layout(magic_id: int, stage: int) -> PackedInt32Array:
 	return magic_meta.get(magic_id * 8 + stage, PackedInt32Array())
 
 
+func magic_seff(magic_id: int, stage: int) -> int:
+	var meta := magic_layout(magic_id, stage)
+	return meta[8] if meta.size() >= 9 else 0xFFFFFFFF
+
+
 func magic_id(name: String) -> int:
 	return magic_ids_by_name.get(name, 0)
 
@@ -151,7 +172,8 @@ func _load_monster_meta() -> void:
 	var file := FileAccess.open("%s/sprites/monster.m2xmeta" % base_path, FileAccess.READ)
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
-	if file.get_32() != 1:
+	var version := file.get_32()
+	if version not in [1, 2]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -159,7 +181,11 @@ func _load_monster_meta() -> void:
 		var look_id := file.get_16()
 		var shadow := file.get_8()
 		file.get_8()
-		monster_meta[monster_id] = PackedInt32Array([look_id, shadow])
+		var meta := PackedInt32Array([look_id, shadow])
+		if version >= 2:
+			for _seff_index in range(4):
+				meta.append(file.get_32())
+		monster_meta[monster_id] = meta
 
 
 func _load_item_meta() -> void:
@@ -167,7 +193,7 @@ func _load_item_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2, 3]:
+	if version not in [1, 2, 3, 4]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -197,7 +223,11 @@ func _load_item_meta() -> void:
 			}
 			if version >= 3:
 				item_attributes[item_id]["double_hand"] = file.get_8() != 0
-				file.get_buffer(3)
+				if version >= 4:
+					item_attributes[item_id]["weapon_sound"] = file.get_8()
+					file.get_buffer(2)
+				else:
+					file.get_buffer(3)
 
 
 func _read_s32(file: FileAccess) -> int:
@@ -280,7 +310,8 @@ func _load_magic_meta() -> void:
 	var file := FileAccess.open("%s/sprites/magic.m2xmeta" % base_path, FileAccess.READ)
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
-	if file.get_32() != 1:
+	var version := file.get_32()
+	if version not in [1, 2]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -294,9 +325,12 @@ func _load_magic_meta() -> void:
 		var type := file.get_8()
 		var gfx_dir_type := file.get_8()
 		var flags := file.get_8()
-		magic_meta[magic_id * 8 + stage] = PackedInt32Array([
+		var meta := PackedInt32Array([
 			gfx_id, mod_color, frame_count, gfx_id_count, speed, type, gfx_dir_type, flags,
 		])
+		if version >= 2:
+			meta.append(file.get_32())
+		magic_meta[magic_id * 8 + stage] = meta
 
 
 func _load_magic_names() -> void:

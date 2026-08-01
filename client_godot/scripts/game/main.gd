@@ -536,6 +536,73 @@ func _action_duration(action_type: int, speed: int, creature_type: int, magic_id
 	return float(frame_count) * 0.1 * 100.0 / float(clampi(speed, 20, 500))
 
 
+func _play_action_seff(uid: int, action: Dictionary, creature: Dictionary) -> void:
+	var action_type: int = action.get("type", 0)
+	var creature_type: int = creature.get("type", 2 if uid == game_state.player_uid else 0)
+	var source_x: int = action.get("x", creature.get("x", game_state.player_x))
+	var source_y: int = action.get("y", creature.get("y", game_state.player_y))
+	if creature_type == 1:
+		var monster_id: int = creature.get("monster_id", 0)
+		_play_seff(_resources.monster_seff(monster_id, action_type), source_x, source_y)
+		return
+	if creature_type != 2:
+		return
+	match action_type:
+		3:
+			_schedule_hero_step_seff(uid, action, creature, 1, 0x01000001)
+			_schedule_hero_step_seff(uid, action, creature, 4, 0x01000002)
+		7, 14:
+			var weapon_id := _wear_item_id(creature, 3)
+			_play_seff(0x01010032 + _resources.item_weapon_sound(weapon_id), source_x, source_y)
+		11:
+			_play_seff(0x01030000 + (138 if int(creature.get("gender", 0)) != 0 else 139), source_x, source_y)
+			_play_seff(_hero_hit_seff(action.get("aimUID", 0), _wear_item_id(creature, 1) > 0), source_x, source_y)
+
+
+func _schedule_hero_step_seff(uid: int, action: Dictionary, creature: Dictionary, frame: int, seff_id: int) -> void:
+	var speed := clampi(action.get("speed", 100), 20, 500)
+	var token: int = creature.get("action_started_ms", game_state.player_action_started_ms)
+	var delay := float(frame) * 0.1 * 100.0 / float(speed)
+	get_tree().create_timer(delay).timeout.connect(func() -> void:
+		if uid == game_state.player_uid:
+			if game_state.player_action_type != 3 or game_state.player_action_started_ms != token:
+				return
+		else:
+			var current: Dictionary = game_state.get_creature(uid)
+			if current.get("action_type", 0) != 3 or current.get("action_started_ms", -1) != token:
+				return
+		var ratio := float(frame) / 6.0
+		var x := roundi(lerpf(float(action.get("x", 0)), float(action.get("aimX", action.get("x", 0))), ratio))
+		var y := roundi(lerpf(float(action.get("y", 0)), float(action.get("aimY", action.get("y", 0))), ratio))
+		_play_seff(seff_id, x, y)
+	)
+
+
+func _hero_hit_seff(from_uid: int, has_dress: bool) -> int:
+	var bare_id := 83 if has_dress else 73
+	match (from_uid >> 59) & 0xF:
+		4:
+			return 0x01010000 + bare_id
+		5:
+			var attacker: Dictionary = game_state.get_creature(from_uid)
+			if from_uid == game_state.player_uid:
+				attacker = {"desp": game_state.player_desp}
+			var weapon_sound: int = _resources.item_weapon_sound(_wear_item_id(attacker, 3))
+			var impact_ids := [80, 82, 80, 80, 81, 80, 83, 83] if has_dress else [70, 72, 70, 70, 71, 70, 73, 73]
+			return 0x01010000 + impact_ids[clampi(weapon_sound, 0, 7)]
+	return 0x01010000 + bare_id
+
+
+func _wear_item_id(creature: Dictionary, location: int) -> int:
+	var desp: Dictionary = creature.get("desp", game_state.player_desp if creature.get("uid", game_state.player_uid) == game_state.player_uid else {})
+	var wear: Dictionary = desp.get("wear", {})
+	return wear.get(location, {}).get("itemID", 0)
+
+
+func _play_seff(seff_id: int, x: int, y: int) -> void:
+	AudioService.play_seff_at(seff_id, x, y, game_state.player_x, game_state.player_y)
+
+
 func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 	match head_code:
 		NetworkClient.SM_STARTGAMESCENE:
@@ -747,6 +814,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 		elif action_type == 13:
 			_move_path.clear()
 			_chase_target_uid = 0
+		_play_action_seff(uid, action, {"uid": uid, "type": 2, "gender": game_state.player_gender, "desp": game_state.player_desp, "action_started_ms": game_state.player_action_started_ms})
 	else:
 		# Update or create creature
 		var creature: Dictionary = game_state.get_creature(uid)
@@ -785,6 +853,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 		var duration := _action_duration(action_type, action.get("speed", 100), creature.get("type", 0), action.get("magicID", 0))
 		if duration > 0.0:
 			_schedule_creature_idle(uid, action_type, creature.get("action_started_ms", 0), duration)
+		_play_action_seff(uid, action, creature)
 
 
 func _has_pending_local_magic(magic_id: int) -> bool:
@@ -866,6 +935,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	var duration := _action_duration(action.get("type", 0), action.get("speed", 100), c_type, action.get("magicID", 0))
 	if duration > 0.0:
 		_schedule_creature_idle(uid, action.get("type", 0), creature.get("action_started_ms", 0), duration)
+	_play_action_seff(uid, action, creature)
 
 
 func _creature_type_from_uid(uid: int) -> int:
@@ -1086,10 +1156,13 @@ func _handle_notify_dead(payload: PackedByteArray) -> void:
 		return
 	var creature: Dictionary = game_state.get_creature(uid)
 	if not creature.is_empty():
+		var was_dead: bool = creature.get("action_type", 0) == 13
 		creature["action_type"] = 13
 		creature["action_started_ms"] = Time.get_ticks_msec()
 		creature["action_speed"] = 100
 		game_state.update_creature(uid, creature)
+		if not was_dead:
+			_play_action_seff(uid, {"type": 13, "x": creature.get("x", 0), "y": creature.get("y", 0)}, creature)
 
 
 func _handle_equip_wear_error(payload: PackedByteArray) -> void:

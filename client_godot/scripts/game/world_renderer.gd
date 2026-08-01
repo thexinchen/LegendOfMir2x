@@ -227,9 +227,21 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 			continue
 		var duration := _magic_stage_duration(meta, effect)
 		if elapsed < duration:
-			return _make_resolved_magic(effect, meta, stage, elapsed, duration)
+			var resolved := _make_resolved_magic(effect, meta, stage, elapsed, duration)
+			_play_magic_stage_seff(effect, magic_id, stage, resolved.position)
+			return resolved
 		elapsed -= duration
 	return {}
+
+
+func _play_magic_stage_seff(effect: Dictionary, magic_id: int, stage: int, position: Vector2) -> void:
+	var stage_mask: int = effect.get("_seff_stage_mask", 0)
+	var stage_bit := 1 << stage
+	if stage_mask & stage_bit:
+		return
+	effect["_seff_stage_mask"] = stage_mask | stage_bit
+	var seff_id: int = actor_resource.magic_seff(magic_id, stage)
+	AudioService.play_seff_at(seff_id, roundi(position.x), roundi(position.y), game_state.player_x, game_state.player_y)
 
 
 func _magic_stage_duration(meta: PackedInt32Array, effect: Dictionary) -> int:

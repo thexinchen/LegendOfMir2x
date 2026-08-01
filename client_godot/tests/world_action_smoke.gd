@@ -31,6 +31,8 @@ func _ready() -> void:
 		return
 	if not _test_magic_actions(main, resources, physical_id):
 		return
+	if not await _test_action_seff(main, resources):
+		return
 
 	GameState.chat_log.clear()
 	var item_id: int = resources.item_names.keys()[0]
@@ -57,8 +59,73 @@ func _ready() -> void:
 		return
 	if not _test_pickup_action(main, resources):
 		return
-	print("WORLD ACTION PASS: attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
+	print("WORLD ACTION PASS: action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
+
+
+func _test_action_seff(main: Control, resources: RefCounted) -> bool:
+	AudioService.set_seff_enabled(true)
+	AudioService.set_seff_volume(0.5)
+	GameState.player_uid = (5 << 59) | 1
+	GameState.player_x = 10
+	GameState.player_y = 10
+	var weapon_id := 0
+	var weapon_sound := 7
+	for item_id_value in resources.item_attributes:
+		var sound_class: int = resources.item_weapon_sound(item_id_value)
+		if sound_class < 7:
+			weapon_id = int(item_id_value)
+			weapon_sound = sound_class
+			break
+	if weapon_id == 0:
+		_fail("weapon SEFF test item unavailable")
+		return false
+	main.call("_play_action_seff", GameState.player_uid, {"type": 7, "x": 10, "y": 10}, {
+		"uid": GameState.player_uid, "type": 2, "gender": 0,
+		"desp": {"wear": {3: {"itemID": weapon_id}}},
+	})
+	if AudioService.last_seff_id != 0x01010032 + weapon_sound:
+		_fail("Hero weapon SEFF route mismatch")
+		return false
+	var monster_id := 224
+	var monster_attack: int = resources.monster_seff(monster_id, 7)
+	main.call("_play_action_seff", (4 << 59) | (monster_id << 35) | 1, {"type": 7, "x": 13, "y": 10}, {
+		"type": 1, "monster_id": monster_id,
+	})
+	if AudioService.last_seff_id != monster_attack or AudioService.last_seff_distance != 3:
+		_fail("monster attack SEFF route mismatch")
+		return false
+	var monster_die: int = resources.monster_seff(monster_id, 13)
+	main.call("_play_action_seff", (4 << 59) | (monster_id << 35) | 1, {"type": 13, "x": 13, "y": 10}, {
+		"type": 1, "monster_id": monster_id,
+	})
+	if AudioService.last_seff_id != monster_die:
+		_fail("monster die SEFF route mismatch")
+		return false
+	main.call("_play_action_seff", GameState.player_uid, {"type": 11, "x": 10, "y": 10, "aimUID": 0}, {
+		"uid": GameState.player_uid, "type": 2, "gender": 0, "desp": {"wear": {}},
+	})
+	if AudioService.last_seff_id != 0x01010049:
+		_fail("Hero hitted impact SEFF route mismatch")
+		return false
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	GameState.player_action_type = 3
+	GameState.player_action_started_ms = Time.get_ticks_msec()
+	main.call("_play_action_seff", GameState.player_uid, {
+		"type": 3, "speed": 100, "x": 10, "y": 10, "aimX": 11, "aimY": 10,
+	}, {
+		"uid": GameState.player_uid, "type": 2, "action_started_ms": GameState.player_action_started_ms,
+	})
+	await get_tree().create_timer(0.15).timeout
+	if AudioService.last_seff_id != 0x01000001:
+		_fail("Hero first movement step did not trigger at frame 1")
+		return false
+	await get_tree().create_timer(0.3).timeout
+	if AudioService.last_seff_id != 0x01000002:
+		_fail("Hero second movement step did not trigger at frame 4")
+		return false
+	AudioService.stop_seff()
+	return true
 
 
 func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int) -> bool:
