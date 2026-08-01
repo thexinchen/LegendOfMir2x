@@ -1505,7 +1505,7 @@ func _item_update_seff(item_id: int) -> int:
 func _handle_text(payload: PackedByteArray) -> void:
 	# SM_TEXT is type-3 (variable), raw UTF-8 text bytes (not cereal)
 	var text := payload.get_string_from_utf8()
-	game_state.add_chat_log(text, 0)
+	game_state.add_chat_log(text, 1)
 
 
 func _handle_player_say(payload: PackedByteArray) -> void:
@@ -1521,8 +1521,18 @@ func _handle_player_say(payload: PackedByteArray) -> void:
 
 func _handle_player_broadcast(payload: PackedByteArray) -> void:
 	var data := Protocol.decode_sm_player_broadcast(payload)
+	if data.is_empty():
+		return
+	var uid: int = data.get("uid", 0)
 	var content: String = data.get("content", "")
-	game_state.add_chat_log("[广播] %s" % content, 2)
+	var player_name := ""
+	if uid == game_state.player_uid:
+		player_name = game_state.player_name
+	else:
+		var creature: Dictionary = game_state.get_creature(uid)
+		if creature.get("type", 0) == 2:
+			player_name = creature.get("name", "")
+	game_state.add_chat_log("%s: %s" % [player_name, content] if not player_name.is_empty() else content, 1)
 
 
 func _handle_inventory(payload: PackedByteArray) -> void:
@@ -1557,7 +1567,7 @@ func _handle_cast_magic(payload: PackedByteArray) -> void:
 	if magic_name.is_empty():
 		return
 	game_state.add_cast_magic_attachment(data, magic_name)
-	game_state.add_chat_log("使用魔法: %s" % magic_name, 0)
+	game_state.add_chat_log("使用魔法: %s" % magic_name, 1)
 
 
 func _handle_miss(payload: PackedByteArray) -> void:

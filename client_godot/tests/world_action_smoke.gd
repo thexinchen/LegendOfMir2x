@@ -45,6 +45,8 @@ func _ready() -> void:
 		return
 	if not _test_player_say(main):
 		return
+	if not _test_system_chat_feedback(main):
+		return
 	if not _test_magic_actions(main, resources, physical_id):
 		return
 	if not _test_async_combat_feedback(main, resources):
@@ -238,6 +240,40 @@ func _test_player_say(main: Control) -> bool:
 		return false
 	GameState.player_say_messages.clear()
 	GameState.creatures.clear()
+	return true
+
+
+func _test_system_chat_feedback(main: Control) -> bool:
+	var saved_uid: int = GameState.player_uid
+	var saved_name: String = GameState.player_name
+	var saved_creatures := GameState.creatures.duplicate(true)
+	var local_uid: int = (5 << 59) | 11
+	var remote_uid: int = (5 << 59) | 12
+	var monster_uid: int = (4 << 59) | 13
+	GameState.player_uid = local_uid
+	GameState.player_name = "本地角色"
+	GameState.creatures = {
+		remote_uid: {"uid": remote_uid, "type": 2, "name": "远端角色"},
+		monster_uid: {"uid": monster_uid, "type": 1, "name": "怪物名"},
+	}
+	GameState.chat_log.clear()
+	main.call("_on_server_message", NetworkClient.SM_TEXT, "服务器正文".to_utf8_buffer())
+	main.call("_on_server_message", NetworkClient.SM_PLAYERBROADCAST, _player_say_payload(local_uid, "本地广播"))
+	main.call("_on_server_message", NetworkClient.SM_PLAYERBROADCAST, _player_say_payload(remote_uid, "远端广播"))
+	main.call("_on_server_message", NetworkClient.SM_PLAYERBROADCAST, _player_say_payload(monster_uid, "非角色广播"))
+	main.call("_on_server_message", NetworkClient.SM_PLAYERBROADCAST, _player_say_payload((5 << 59) | 99, "未知广播"))
+	var expected := ["服务器正文", "本地角色: 本地广播", "远端角色: 远端广播", "非角色广播", "未知广播"]
+	if GameState.chat_log.size() != expected.size():
+		_fail("system chat feedback count mismatch: %s" % GameState.chat_log)
+		return false
+	for index in expected.size():
+		if GameState.chat_log[index].text != expected[index] or GameState.chat_log[index].type != 1:
+			_fail("system chat routing mismatch at %d: %s" % [index, GameState.chat_log[index]])
+			return false
+	GameState.player_uid = saved_uid
+	GameState.player_name = saved_name
+	GameState.creatures = saved_creatures
+	GameState.chat_log.clear()
 	return true
 
 
@@ -523,7 +559,7 @@ func _test_async_combat_feedback(main: Control, resources: RefCounted) -> bool:
 		return false
 	var shield_id: int = resources.magic_id("魔法盾")
 	main.call("_on_server_message", NetworkClient.SM_CASTMAGIC, _sm_cast_magic(999, 202, shield_id, 0))
-	if GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "使用魔法: 魔法盾" or not GameState.attached_magic_effects.is_empty():
+	if GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "使用魔法: 魔法盾" or GameState.chat_log[0].type != 1 or not GameState.attached_magic_effects.is_empty():
 		_fail("valid missing-caster magic did not keep log while rejecting attachment: log=%s effects=%s" % [GameState.chat_log, GameState.attached_magic_effects])
 		return false
 	main.call("_on_server_message", NetworkClient.SM_CASTMAGIC, _sm_cast_magic(101, 202, shield_id, 0))
