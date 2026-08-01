@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3]
 
-[ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/game/runtime_config_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/runtime_config/00000450.png" id="2"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
 

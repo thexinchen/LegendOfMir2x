@@ -33,8 +33,11 @@ var ac_magic: bool = false  # show MA instead of AC
 var dc_magic: bool = false  # show MC instead of DC
 
 # Inventory (10x10 grid, 38px cells)
-var inventory: Array = []  # list of SDItem
+var inventory: Array = []  # compact list of SDItem; the panel computes grid placement
 var belt: Array = []  # 6 slots, each is SDItem or null
+var wear: Dictionary = {}  # wear location -> SDItem
+var grabbed_item: Dictionary = {}
+var secured_items: Array = []
 
 # Buffs
 var buff_list: Array = []  # list of {id, type, state}
@@ -52,6 +55,17 @@ const CHAT_LOG_MAX := 100
 # Magic/skill list
 var learned_magic: Array = []  # list of magic IDs
 var magic_keys: Dictionary = {}  # magicID -> key char
+var runtime_config: Dictionary = {}
+
+# Panel-backed gameplay state
+var team_leader: int = 0
+var team_members: Array = []
+var team_candidates: Array = []
+var quests: Dictionary = {}
+var npc_dialog: Dictionary = {}
+var npc_sell: Dictionary = {}
+var pending_input: Dictionary = {}
+var firewalls: Array = []
 
 # Camera position (pixel coordinates)
 var view_x: float = 0.0
@@ -71,10 +85,6 @@ const SCREEN_H := 600
 
 
 func _ready() -> void:
-	# Initialize inventory grid
-	inventory.resize(100)
-	for i in range(100):
-		inventory[i] = null
 	belt.resize(6)
 	for i in range(6):
 		belt[i] = null
@@ -95,10 +105,14 @@ func set_player_online(online_data: Dictionary) -> void:
 
 
 func start_game_scene(scene_data: Dictionary) -> void:
+	player_uid = scene_data.get("uid", player_uid)
+	player_map_uid = scene_data.get("mapUID", player_map_uid)
+	player_map_id = _map_id_from_uid(player_map_uid)
 	player_name = scene_data.get("name", player_name)
 	player_x = scene_data.get("x", player_x)
 	player_y = scene_data.get("y", player_y)
 	player_direction = scene_data.get("direction", player_direction)
+	wear = scene_data.get("desp", {}).get("wear", wear)
 	_center_camera_on_player()
 	state_changed.emit()
 
@@ -156,6 +170,53 @@ func update_inventory(items: Array) -> void:
 
 func update_belt(items: Array) -> void:
 	belt = items
+	state_changed.emit()
+
+
+func update_item(item: Dictionary) -> void:
+	var item_id: int = item.get("itemID", 0)
+	var seq_id: int = item.get("seqID", 0)
+	for index in range(inventory.size()):
+		if inventory[index].get("itemID", 0) == item_id and inventory[index].get("seqID", 0) == seq_id:
+			if item.get("count", 0) > 0:
+				inventory[index] = item
+			else:
+				inventory.remove_at(index)
+			state_changed.emit()
+			return
+	if item_id != 0 and item.get("count", 0) > 0:
+		inventory.append(item)
+		state_changed.emit()
+
+
+func remove_item(item_id: int, seq_id: int, count: int) -> void:
+	for index in range(inventory.size()):
+		var item: Dictionary = inventory[index]
+		if item.get("itemID", 0) != item_id or item.get("seqID", 0) != seq_id:
+			continue
+		var remaining: int = maxi(0, item.get("count", 0) - count)
+		if remaining == 0:
+			inventory.remove_at(index)
+		else:
+			item["count"] = remaining
+			inventory[index] = item
+		state_changed.emit()
+		return
+
+
+func update_entity_health(data: Dictionary) -> void:
+	var uid: int = data.get("uid", 0)
+	if uid == player_uid:
+		update_health(data.get("hp", 0), data.get("maxHP", 0), data.get("mp", 0), data.get("maxMP", 0))
+		return
+	var creature: Dictionary = creatures.get(uid, {})
+	if creature.is_empty():
+		return
+	creature["hp"] = data.get("hp", 0)
+	creature["mp"] = data.get("mp", 0)
+	creature["hp_max"] = data.get("maxHP", 0)
+	creature["mp_max"] = data.get("maxMP", 0)
+	creatures[uid] = creature
 	state_changed.emit()
 
 

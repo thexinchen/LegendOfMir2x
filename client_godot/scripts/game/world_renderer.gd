@@ -84,7 +84,7 @@ func _draw() -> void:
 		if age > 1000:
 			to_remove.append(grid_key)
 			continue
-		var parts := grid_key.split(",")
+		var parts: PackedStringArray = grid_key.split(",")
 		var gx := int(parts[0])
 		var gy := int(parts[1])
 		var sx := gx * GRID_XP - view_x
@@ -110,7 +110,7 @@ func _draw() -> void:
 	
 	# 4. Draw ground items
 	for grid_key in game_state.ground_items:
-		var parts := grid_key.split(",")
+		var parts: PackedStringArray = grid_key.split(",")
 		var gx := int(parts[0])
 		var gy := int(parts[1])
 		var sx := gx * GRID_XP - view_x + GRID_XP / 2 - 8

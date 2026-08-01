@@ -27,6 +27,10 @@ func _ready() -> void:
 			_fail("cannot load %s" % scene_path)
 			return
 		var panel := packed.instantiate()
+		if not panel.get_script():
+			panel.free()
+			_fail("root script failed to load in %s" % scene_path)
+			return
 		if _texture_count(panel) == 0:
 			panel.free()
 			_fail("no texture found in %s" % scene_path)

@@ -3,8 +3,6 @@ extends Control
 signal panel_requested(scene_path: String)
 signal quick_bar_toggled
 
-const NetworkClient = preload("res://scripts/network/network_client.gd")
-
 @onready var body: Control = %Body
 @onready var command: LineEdit = %Command
 @onready var compact_middle: NinePatchRect = %CompactMiddle

@@ -1,6 +1,6 @@
 [gd_scene load_steps=9 format=3]
 
-[ext_resource type="Script" path="res://scripts/game/closable_panel.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/game/input_string_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/input/07000000.png" id="2"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/input/07000001.png" id="3"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/input/07000002.png" id="4"]

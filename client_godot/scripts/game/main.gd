@@ -42,7 +42,6 @@ func _ready() -> void:
 	game_state = get_node("/root/GameState")
 	protocol = Protocol.new()
 	world_renderer.game_state = game_state
-	world_renderer.protocol = protocol
 	
 	inventory_panel.hide()
 	player_state_panel.hide()
@@ -69,7 +68,7 @@ func _process(delta: float) -> void:
 	game_state.scroll_camera()
 	
 	# Update location label
-	var map_name := game_state.player_map_name
+	var map_name: String = game_state.player_map_name
 	if map_name.is_empty():
 		map_name = "未知地图"
 	location_label.text = "%s: %d %d" % [map_name, game_state.player_x, game_state.player_y]
@@ -118,7 +117,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _handle_mouse_click(event: InputEventMouseButton) -> void:
-	var grid := world_renderer.grid_from_screen(int(event.position.x), int(event.position.y))
+	var grid: Vector2i = world_renderer.grid_from_screen(int(event.position.x), int(event.position.y))
 	
 	if event.button_index == MOUSE_BUTTON_RIGHT:
 		# Right click: move toward grid (C++ emplaces ActionMove)
@@ -158,7 +157,7 @@ func _send_move_action(aim_x: int, aim_y: int) -> void:
 
 func _send_attack_action(target_uid: int) -> void:
 	# ACTION_ATTACK = 7
-	var creature := game_state.get_creature(target_uid)
+	var creature: Dictionary = game_state.get_creature(target_uid)
 	var tx: int = creature.get("x", game_state.player_x)
 	var ty: int = creature.get("y", game_state.player_y)
 	var action := {
@@ -204,6 +203,10 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			_handle_action(payload)
 		NetworkClient.SM_HEALTH:
 			_handle_health(payload)
+		NetworkClient.SM_PLAYERCONFIG:
+			_handle_player_config(payload)
+		NetworkClient.SM_PLAYERWLDESP:
+			_handle_player_wl_desp(payload)
 		NetworkClient.SM_EXP:
 			game_state.update_exp(Protocol.decode_sm_exp(payload))
 		NetworkClient.SM_GOLD:
@@ -232,12 +235,17 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			var buff_uid: int = buff.get("uid", 0)
 			var buff_type: int = buff.get("type", 0)
 			var buff_state: int = buff.get("state", 0)
-			if buff_uid == game_state.player_uid:
-				if buff_state == 1:  # BFS_ON
-					if not game_state.buff_list.has(buff_type):
-						game_state.buff_list.append(buff_type)
-				elif buff_state == 2:  # BFS_OFF
-					game_state.buff_list.erase(buff_type)
+			var target_buffs: Array = game_state.buff_list if buff_uid == game_state.player_uid else game_state.get_creature(buff_uid).get("buffs", [])
+			if buff_state == 1 and not target_buffs.has(buff_type):
+				target_buffs.append(buff_type)
+			elif buff_state == 2:
+				target_buffs.erase(buff_type)
+			if buff_uid != game_state.player_uid and not game_state.get_creature(buff_uid).is_empty():
+				var creature: Dictionary = game_state.get_creature(buff_uid)
+				creature["buffs"] = target_buffs
+				game_state.update_creature(buff_uid, creature)
+		NetworkClient.SM_BUFFIDLIST:
+			_handle_buff_id_list(payload)
 		NetworkClient.SM_INVENTORY:
 			_handle_inventory(payload)
 		NetworkClient.SM_BELT:
@@ -256,7 +264,8 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			var uid := _decode_u64_payload(payload, 0)
 			game_state.remove_creature(uid)
 		NetworkClient.SM_REMOVEITEM:
-			pass  # TODO: remove from inventory
+			if payload.size() >= 10:
+				game_state.remove_item(payload.decode_u32(0), payload.decode_u32(4), payload.decode_u16(8))
 		NetworkClient.SM_REMOVEGROUNDITEM:
 			# SMRemoveGroundItem: X(u16) + Y(u16) + ID(u32) + DBID(u32)
 			if payload.size() >= 12:
@@ -271,26 +280,50 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 						game_state.ground_items.erase(key)
 		NetworkClient.SM_GROUNDITEMIDLIST:
 			_handle_ground_item_id_list(payload)
-		NetworkClient.SM_EQUIPWEAR, NetworkClient.SM_GRABWEAR, NetworkClient.SM_EQUIPBELT, NetworkClient.SM_GRABBELT:
-			pass  # TODO: update equipment
+		NetworkClient.SM_EQUIPWEAR:
+			_handle_equip_wear(payload)
+		NetworkClient.SM_GRABWEAR:
+			_handle_grab_wear(payload)
+		NetworkClient.SM_EQUIPBELT:
+			_handle_equip_belt(payload)
+		NetworkClient.SM_GRABBELT:
+			_handle_grab_belt(payload)
 		NetworkClient.SM_UPDATEITEM:
-			pass  # TODO: update item
-		NetworkClient.SM_TEAMCANDIDATE, NetworkClient.SM_TEAMMEMBERLIST:
-			pass  # TODO: team
-		NetworkClient.SM_QUESTDESPLIST, NetworkClient.SM_QUESTDESPUPDATE:
-			pass  # TODO: quest
+			var reader := CerealReader.new(payload)
+			var item := reader.read_sd_update_item()
+			if _reader_ok(reader, "SM_UPDATEITEM"):
+				game_state.update_item(item)
+		NetworkClient.SM_SHOWSECUREDITEMLIST:
+			_handle_secured_items(payload)
+		NetworkClient.SM_TEAMCANDIDATE:
+			_handle_team_candidate(payload)
+		NetworkClient.SM_TEAMMEMBERLIST:
+			_handle_team_members(payload)
+		NetworkClient.SM_QUESTDESPLIST:
+			_handle_quest_list(payload)
+		NetworkClient.SM_QUESTDESPUPDATE:
+			_handle_quest_update(payload)
 		NetworkClient.SM_LEARNEDMAGICLIST:
-			pass  # TODO: magic list
+			_handle_learned_magic(payload)
+		NetworkClient.SM_GROUNDFIREWALLLIST:
+			_handle_ground_firewalls(payload)
+		NetworkClient.SM_NPCXMLLAYOUT:
+			_handle_npc_xml(payload)
+		NetworkClient.SM_NPCSELL:
+			_handle_npc_sell(payload)
+		NetworkClient.SM_STARTINPUT:
+			_handle_start_input(payload)
 
 
 func _handle_start_game_scene(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var data := reader.read_sd_start_game_scene()
+	if not _reader_ok(reader, "SM_STARTGAMESCENE"):
+		return
+	if data.get("uid", 0) != game_state.player_uid or data.get("mapUID", 0) != game_state.player_map_uid:
+		push_error("SM_STARTGAMESCENE identity mismatch")
+		return
 	game_state.start_game_scene(data)
-	game_state.player_name = data.get("name", game_state.player_name)
-	game_state.player_x = data.get("x", game_state.player_x)
-	game_state.player_y = data.get("y", game_state.player_y)
-	game_state.player_direction = data.get("direction", game_state.player_direction)
 	# Set placeholder map size based on known map dimensions
 	# C++ loads from mapbin.zsdb, Godot uses placeholder for now
 	world_renderer.set_map_data(100, 100)
@@ -376,7 +409,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 				var gj: int = union_data[0]
 				creature["gender"] = gj & 1
 				creature["job"] = (gj >> 1) & 7
-				creature["level"] = union_data.decode_u32(4) if union_data.size() >= 8 else 0
+				creature["level"] = union_data.decode_u32(1) if union_data.size() >= 5 else 0
 			3:  # NPC: NPCID (u32)
 				creature["npc_id"] = union_data.decode_u32(0)
 	
@@ -386,7 +419,8 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 func _handle_health(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var data := reader.read_sd_health()
-	game_state.update_health(data.get("hp", 0), data.get("hpMax", 0), data.get("mp", 0), data.get("mpMax", 0))
+	if _reader_ok(reader, "SM_HEALTH"):
+		game_state.update_entity_health(data)
 
 
 func _handle_text(payload: PackedByteArray) -> void:
@@ -403,7 +437,7 @@ func _handle_player_say(payload: PackedByteArray) -> void:
 	if uid == game_state.player_uid:
 		name = game_state.player_name
 	else:
-		var c := game_state.get_creature(uid)
+		var c: Dictionary = game_state.get_creature(uid)
 		if not c.get("name", "").is_empty():
 			name = c.get("name")
 	game_state.add_chat_log("%s: %s" % [name, content], 0)
@@ -416,13 +450,17 @@ func _handle_player_broadcast(payload: PackedByteArray) -> void:
 
 
 func _handle_inventory(payload: PackedByteArray) -> void:
-	# TODO: parse cereal SDItemStorage
-	pass
+	var reader := CerealReader.new(payload)
+	var items := reader.read_sd_inventory()
+	if _reader_ok(reader, "SM_INVENTORY"):
+		game_state.update_inventory(items)
 
 
 func _handle_belt(payload: PackedByteArray) -> void:
-	# TODO: parse cereal SDBelt
-	pass
+	var reader := CerealReader.new(payload)
+	var items := reader.read_sd_belt()
+	if _reader_ok(reader, "SM_BELT"):
+		game_state.update_belt(items)
 
 
 func _handle_ground_item_id_list(payload: PackedByteArray) -> void:
@@ -457,16 +495,215 @@ func _handle_miss(payload: PackedByteArray) -> void:
 	var x: int = c.get("x", game_state.player_x)
 	var y: int = c.get("y", game_state.player_y)
 	game_state.add_ascend_string(x, y, "Miss", Color(1, 1, 1, 1))
+
+
+func _handle_player_name(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var data := reader.read_sd_player_name()
 	var uid: int = data.get("uid", 0)
 	var name: String = data.get("name", "")
 	if not name.is_empty():
-		var c := game_state.get_creature(uid)
+		var c: Dictionary = game_state.get_creature(uid)
 		if not c.is_empty():
 			c["name"] = name
 			c["name_color"] = data.get("nameColor", 0xFFFFFFFF)
 			game_state.update_creature(uid, c)
+
+
+func _handle_player_config(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var config := reader.read_sd_player_config()
+	if _reader_ok(reader, "SM_PLAYERCONFIG"):
+		game_state.magic_keys = config.get("magicKeys", {})
+		game_state.runtime_config = config.get("runtimeConfig", {})
+		game_state.state_changed.emit()
+
+
+func _handle_player_wl_desp(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_uid_wldesp()
+	if not _reader_ok(reader, "SM_PLAYERWLDESP"):
+		return
+	var uid: int = data.get("uid", 0)
+	if uid == game_state.player_uid:
+		game_state.wear = data.get("desp", {}).get("wear", {})
+		game_state.state_changed.emit()
+	elif not game_state.get_creature(uid).is_empty():
+		var creature: Dictionary = game_state.get_creature(uid)
+		creature["desp"] = data.get("desp", {})
+		game_state.update_creature(uid, creature)
+
+
+func _handle_buff_id_list(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_buff_id_list()
+	if not _reader_ok(reader, "SM_BUFFIDLIST"):
+		return
+	var uid: int = data.get("uid", 0)
+	if uid == game_state.player_uid:
+		game_state.buff_list = data.get("ids", [])
+		game_state.state_changed.emit()
+	elif not game_state.get_creature(uid).is_empty():
+		var creature: Dictionary = game_state.get_creature(uid)
+		creature["buffs"] = data.get("ids", [])
+		game_state.update_creature(uid, creature)
+
+
+func _handle_equip_wear(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_equip_wear()
+	if not _reader_ok(reader, "SM_EQUIPWEAR"):
+		return
+	var uid: int = data.get("uid", 0)
+	if uid == game_state.player_uid:
+		game_state.wear[data.get("wltype", 0)] = data.get("item", {})
+		game_state.state_changed.emit()
+	elif not game_state.get_creature(uid).is_empty():
+		var creature: Dictionary = game_state.get_creature(uid)
+		var desp: Dictionary = creature.get("desp", {})
+		var wear_data: Dictionary = desp.get("wear", {})
+		wear_data[data.get("wltype", 0)] = data.get("item", {})
+		desp["wear"] = wear_data
+		creature["desp"] = desp
+		game_state.update_creature(uid, creature)
+
+
+func _handle_grab_wear(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_grab_wear()
+	if _reader_ok(reader, "SM_GRABWEAR"):
+		game_state.wear.erase(data.get("wltype", 0))
+		game_state.grabbed_item = data.get("item", {})
+		game_state.state_changed.emit()
+
+
+func _handle_equip_belt(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_equip_belt()
+	if not _reader_ok(reader, "SM_EQUIPBELT"):
+		return
+	var slot: int = data.get("slot", -1)
+	if slot >= 0 and slot < game_state.belt.size():
+		game_state.belt[slot] = data.get("item", {})
+		game_state.state_changed.emit()
+
+
+func _handle_grab_belt(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_grab_belt()
+	if not _reader_ok(reader, "SM_GRABBELT"):
+		return
+	var slot: int = data.get("slot", -1)
+	if slot >= 0 and slot < game_state.belt.size():
+		game_state.belt[slot] = {}
+		game_state.grabbed_item = data.get("item", {})
+		game_state.state_changed.emit()
+
+
+func _handle_secured_items(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var items := reader.read_sd_show_secured_item_list()
+	if _reader_ok(reader, "SM_SHOWSECUREDITEMLIST"):
+		game_state.secured_items = items
+		game_state.state_changed.emit()
+
+
+func _handle_team_candidate(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var candidate := reader.read_sd_team_candidate()
+	if _reader_ok(reader, "SM_TEAMCANDIDATE"):
+		game_state.team_candidates.append(candidate)
+		game_state.state_changed.emit()
+
+
+func _handle_team_members(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var team := reader.read_sd_team_member_list()
+	if _reader_ok(reader, "SM_TEAMMEMBERLIST"):
+		game_state.team_leader = team.get("teamLeader", 0)
+		game_state.team_members = team.get("members", [])
+		game_state.state_changed.emit()
+
+
+func _handle_quest_list(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var quests := reader.read_sd_quest_desp_list()
+	if _reader_ok(reader, "SM_QUESTDESPLIST"):
+		game_state.quests = quests
+		game_state.state_changed.emit()
+
+
+func _handle_quest_update(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var update := reader.read_sd_quest_desp_update()
+	if not _reader_ok(reader, "SM_QUESTDESPUPDATE"):
+		return
+	var quest_name: String = update.get("name", "")
+	var state_map: Dictionary = game_state.quests.get(quest_name, {})
+	var fsm: String = update.get("fsm", "")
+	if update.get("desp") == null:
+		state_map.erase(fsm)
+	else:
+		state_map[fsm] = update.get("desp", "")
+	if state_map.is_empty():
+		game_state.quests.erase(quest_name)
+	else:
+		game_state.quests[quest_name] = state_map
+	game_state.state_changed.emit()
+
+
+func _handle_learned_magic(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var magic_list := reader.read_sd_learned_magic_list()
+	if _reader_ok(reader, "SM_LEARNEDMAGICLIST"):
+		game_state.learned_magic = magic_list
+		game_state.state_changed.emit()
+
+
+func _handle_ground_firewalls(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_ground_firewall_list()
+	if _reader_ok(reader, "SM_GROUNDFIREWALLLIST") and data.get("mapUID", 0) == game_state.player_map_uid:
+		game_state.firewalls = data.get("firewalls", [])
+		game_state.state_changed.emit()
+
+
+func _handle_npc_xml(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_npc_xml_layout()
+	if _reader_ok(reader, "SM_NPCXMLLAYOUT"):
+		game_state.npc_dialog = data
+		game_state.state_changed.emit()
+		_ensure_extra_panel("res://scenes/game/panels/npc_chat.tscn").show()
+
+
+func _handle_npc_sell(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_npc_sell()
+	if _reader_ok(reader, "SM_NPCSELL"):
+		game_state.npc_sell = data
+		game_state.state_changed.emit()
+		_ensure_extra_panel("res://scenes/game/panels/purchase.tscn").show()
+
+
+func _handle_start_input(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_start_input()
+	if _reader_ok(reader, "SM_STARTINPUT"):
+		game_state.pending_input = data
+		game_state.state_changed.emit()
+		var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
+		panel.configure(data.get("title", ""), data.get("show", false))
+
+
+func _reader_ok(reader: RefCounted, packet_name: String) -> bool:
+	if not reader.valid:
+		push_error("%s parse failed: %s" % [packet_name, reader.error])
+		return false
+	if not reader.at_end():
+		push_error("%s has %d unread archive bytes" % [packet_name, reader.remaining()])
+		return false
+	return true
 
 
 func _decode_u64_payload(buf: PackedByteArray, offset: int) -> int:
@@ -501,14 +738,30 @@ func _toggle_panel(panel: Control) -> void:
 
 
 func _toggle_extra_panel(scene_path: String) -> void:
-	var panel := _extra_panel_nodes.get(scene_path) as Control
+	var panel := _ensure_extra_panel(scene_path)
 	if not panel:
-		var packed := load(scene_path) as PackedScene
-		if not packed:
-			return
-		panel = packed.instantiate() as Control
-		add_child(panel)
-		panel.position = (size - panel.size) * 0.5
-		_extra_panel_nodes[scene_path] = panel
 		return
 	_toggle_panel(panel)
+
+
+func _ensure_extra_panel(scene_path: String) -> Control:
+	var panel := _extra_panel_nodes.get(scene_path) as Control
+	if panel:
+		return panel
+	var packed := load(scene_path) as PackedScene
+	if not packed:
+		return null
+	panel = packed.instantiate() as Control
+	add_child(panel)
+	panel.position = (size - panel.size) * 0.5
+	panel.hide()
+	_extra_panel_nodes[scene_path] = panel
+	if scene_path.ends_with("/input_string.tscn") and panel.has_signal("committed"):
+		panel.committed.connect(_on_input_committed)
+	return panel
+
+
+func _on_input_committed(value: String) -> void:
+	var input: Dictionary = game_state.pending_input
+	NetworkClient.send_npc_event(input.get("uid", 0), "", input.get("commitTag", ""), value)
+	game_state.pending_input = {}

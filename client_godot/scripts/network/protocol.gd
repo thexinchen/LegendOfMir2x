@@ -3,55 +3,53 @@ extends RefCounted
 # Binary protocol helpers for parsing packed struct messages
 # All structs use #pragma pack(1) (no alignment padding)
 
-# ActionNode layout (28 bytes, packed):
+# ActionNode layout (27 bytes, packed, verified against GCC):
 #   uint16_t bitfield0: type(5) | speed(9)       -> 2 bytes
-#   uint16_t bitfield1: direction(5) | pad(11)   -> 2 bytes  
+#   uint8_t bitfield1: direction(5)               -> 1 byte
 #   int16_t x                                     -> 2 bytes
 #   int16_t y                                     -> 2 bytes
 #   int16_t aimX                                  -> 2 bytes
 #   int16_t aimY                                  -> 2 bytes
 #   uint64_t aimUID/fromUID                       -> 8 bytes
 #   uint8_t extParam[8]                           -> 8 bytes
-# Total: 28 bytes
+# Total: 27 bytes
 
 static func decode_action_node(buf: PackedByteArray, offset: int = 0) -> Dictionary:
-	if buf.size() < offset + 28:
+	if buf.size() < offset + 27:
 		return {}
 	var bf0 := buf.decode_u16(offset)
-	var bf1 := buf.decode_u16(offset + 2)
 	return {
 		"type": bf0 & 0x1F,
 		"speed": (bf0 >> 5) & 0x1FF,
-		"direction": bf1 & 0x1F,
-		"x": _decode_s16(buf, offset + 4),
-		"y": _decode_s16(buf, offset + 6),
-		"aimX": _decode_s16(buf, offset + 8),
-		"aimY": _decode_s16(buf, offset + 10),
-		"aimUID": _decode_u64(buf, offset + 12),
-		"extParam": buf.slice(offset + 20, offset + 28),
+		"direction": buf[offset + 2] & 0x1F,
+		"x": _decode_s16(buf, offset + 3),
+		"y": _decode_s16(buf, offset + 5),
+		"aimX": _decode_s16(buf, offset + 7),
+		"aimY": _decode_s16(buf, offset + 9),
+		"aimUID": _decode_u64(buf, offset + 11),
+		"extParam": buf.slice(offset + 19, offset + 27),
 	}
 
 static func encode_action_node(action: Dictionary) -> PackedByteArray:
 	var buf := PackedByteArray()
-	buf.resize(28)
+	buf.resize(27)
 	buf.fill(0)
 	var bf0: int = (action.get("type", 0) & 0x1F) | ((action.get("speed", 100) & 0x1FF) << 5)
-	var bf1: int = action.get("direction", 0) & 0x1F
 	buf.encode_u16(0, bf0)
-	buf.encode_u16(2, bf1)
-	_encode_s16(buf, 4, action.get("x", 0))
-	_encode_s16(buf, 6, action.get("y", 0))
-	_encode_s16(buf, 8, action.get("aimX", 0))
-	_encode_s16(buf, 10, action.get("aimY", 0))
-	_encode_u64(buf, 12, action.get("aimUID", 0))
+	buf[2] = action.get("direction", 0) & 0x1F
+	_encode_s16(buf, 3, action.get("x", 0))
+	_encode_s16(buf, 5, action.get("y", 0))
+	_encode_s16(buf, 7, action.get("aimX", 0))
+	_encode_s16(buf, 9, action.get("aimY", 0))
+	_encode_u64(buf, 11, action.get("aimUID", 0))
 	var ext: PackedByteArray = action.get("extParam", PackedByteArray())
 	for i in range(mini(ext.size(), 8)):
-		buf[20 + i] = ext[i]
+		buf[19 + i] = ext[i]
 	return buf
 
-# SMAction (44 bytes): uid(8) + mapUID(8) + action(28)
+# SMAction (43 bytes): uid(8) + mapUID(8) + action(27)
 static func decode_sm_action(buf: PackedByteArray) -> Dictionary:
-	if buf.size() < 44:
+	if buf.size() < 43:
 		return {}
 	return {
 		"uid": _decode_u64(buf, 0),
@@ -59,36 +57,34 @@ static func decode_sm_action(buf: PackedByteArray) -> Dictionary:
 		"action": decode_action_node(buf, 16),
 	}
 
-# SMOnlineOK (176 bytes): uid(8) + name(StaticBuffer<128>=131) + gender/job(1) + mapUID(8) + action(28)
-# Note: StaticBuffer<128> = 2+129=131, odd but NOT padded because it's followed by uint8_t bitfield
-# Total with pack(1): 8 + 131 + 1 + 8 + 28 = 176
+# SMOnlineOK (176 bytes): uid(8) + name(StaticBuffer<128>=132) + gender/job(1) + mapUID(8) + action(27)
 static func decode_sm_online_ok(buf: PackedByteArray) -> Dictionary:
 	if buf.size() < 176:
 		return {}
 	var name_len := buf.decode_u16(8)
 	var name_text := buf.slice(10, 10 + name_len).get_string_from_utf8()
-	var gender_job := buf[139]
+	var gender_job := buf[140]
 	return {
 		"uid": _decode_u64(buf, 0),
 		"name": name_text,
 		"gender": gender_job & 1,
 		"job": (gender_job >> 1) & 7,
-		"mapUID": _decode_u64(buf, 140),
-		"action": decode_action_node(buf, 148),
+		"mapUID": _decode_u64(buf, 141),
+		"action": decode_action_node(buf, 149),
 	}
 
-# SMCORecord (52 bytes): uid(8) + mapUID(8) + action(28) + union(8)
+# SMCORecord (48 bytes): uid(8) + mapUID(8) + action(27) + packed union(5)
 static func decode_sm_corecord(buf: PackedByteArray) -> Dictionary:
-	if buf.size() < 52:
+	if buf.size() < 48:
 		return {}
 	var result := {
 		"uid": _decode_u64(buf, 0),
 		"mapUID": _decode_u64(buf, 8),
 		"action": decode_action_node(buf, 16),
 	}
-	# Union at offset 44, 8 bytes
+	# Union at offset 43, 5 bytes
 	# We don't know which type without context, return raw
-	result["union_data"] = buf.slice(44, 52)
+	result["union_data"] = buf.slice(43, 48)
 	return result
 
 # SMExp (4 bytes)
@@ -168,9 +164,9 @@ static func decode_sm_player_say(buf: PackedByteArray) -> Dictionary:
 static func decode_sm_player_broadcast(buf: PackedByteArray) -> Dictionary:
 	return decode_sm_player_say(buf)
 
-# SMCastMagic (28 bytes): uid(8) + mapUID(8) + magic(1) + magicParam(1) + speed(1) + direction(1) + x(2) + y(2) + aimX(2) + aimY(2) + aimUID(8)
+# SMCastMagic (36 bytes): uid(8) + mapUID(8) + magic(1) + magicParam(1) + speed(1) + direction(1) + x(2) + y(2) + aimX(2) + aimY(2) + aimUID(8)
 static func decode_sm_cast_magic(buf: PackedByteArray) -> Dictionary:
-	if buf.size() < 28:
+	if buf.size() < 36:
 		return {}
 	return {
 		"uid": _decode_u64(buf, 0),
@@ -183,17 +179,17 @@ static func decode_sm_cast_magic(buf: PackedByteArray) -> Dictionary:
 		"y": buf.decode_u16(22),
 		"aimX": buf.decode_u16(24),
 		"aimY": buf.decode_u16(26),
-		"aimUID": _decode_u64(buf, 28) if buf.size() >= 36 else 0,
+		"aimUID": _decode_u64(buf, 28),
 	}
 
-# CMAction (44 bytes): uid(8) + mapUID(8) + action(28)
+# CMAction (43 bytes): uid(8) + mapUID(8) + action(27)
 static func encode_cm_action(uid: int, map_uid: int, action: Dictionary) -> PackedByteArray:
 	var buf := PackedByteArray()
-	buf.resize(44)
+	buf.resize(43)
 	_encode_u64(buf, 0, uid)
 	_encode_u64(buf, 8, map_uid)
 	var action_buf := encode_action_node(action)
-	for i in range(28):
+	for i in range(27):
 		buf[16 + i] = action_buf[i]
 	return buf
 

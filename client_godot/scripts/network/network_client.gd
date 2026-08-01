@@ -20,6 +20,7 @@ const CM_QUERYGOLD := 21
 const CM_QUERYPLAYERNAME := 23
 const CM_QUERYPLAYERWLDESP := 24
 const CM_NPCEVENT := 29
+const CM_QUERYSELLITEMLIST := 30
 const CM_DROPITEM := 31
 const CM_CONSUMEITEM := 32
 const CM_BUY := 34
@@ -31,6 +32,7 @@ const CM_REQUESTEQUIPBELT := 44
 const CM_REQUESTGRABBELT := 45
 const CM_REQUESTJOINTEAM := 46
 const CM_REQUESTLEAVETEAM := 47
+const CM_REQUESTRETRIEVESECUREDITEM := 16
 const CM_CREATEACCOUNT := 28
 
 # SMType enum (server -> client)
@@ -119,8 +121,8 @@ const STATIC_NAME_SIZE := 68  # StaticBuffer<64>
 const STATIC_PWD_SIZE := 68   # StaticBuffer<64>
 const STATIC_BIGBUF_SIZE := 132 # StaticBuffer<128>
 
-# ActionNode size: bitfields(4) + x(2) + y(2) + aimX(2) + aimY(2) + aimUID(8) + extParam(8) = 28
-const ACTION_NODE_SIZE := 28
+# GCC packs the three ActionNode bitfields into 3 bytes.
+const ACTION_NODE_SIZE := 27
 
 # System constants
 const SYS_MAPGRIDXP := 48
@@ -251,13 +253,10 @@ func send_player_broadcast(content: String) -> Error:
 
 func send_pickup(x: int, y: int, map_uid: int) -> Error:
 	var payload := PackedByteArray()
-	payload.resize(18)
+	payload.resize(12)
 	payload.encode_u16(0, x)
 	payload.encode_u16(2, y)
-	payload.encode_u64(4, map_uid & 0xFFFFFFFF)
-	payload.encode_u32(8, (map_uid >> 32) & 0xFFFFFFFF)
-	payload.encode_u32(12, 0)
-	payload.encode_u32(16, 0)
+	_encode_u64(payload, 4, map_uid)
 	return _send_fixed_message(CM_PICKUP, payload)
 
 
@@ -280,6 +279,149 @@ func send_query_corecord(uid: int) -> Error:
 	payload.resize(8)
 	_encode_u64(payload, 0, uid)
 	return _send_fixed_message(CM_QUERYCORECORD, payload)
+
+
+func send_set_magic_key(magic_id: int, key: int) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(5)
+	payload.encode_u32(0, magic_id)
+	payload[4] = key & 0xFF
+	return _send_fixed_message(CM_SETMAGICKEY, payload)
+
+
+func send_set_runtime_config(config_type: int, value: PackedByteArray) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(262)
+	payload.fill(0)
+	payload.encode_u16(0, config_type)
+	var encoded := value
+	if encoded.size() > 256:
+		encoded = encoded.slice(0, 256)
+	payload.encode_u16(2, encoded.size())
+	for index in encoded.size():
+		payload[4 + index] = encoded[index]
+	return _send_fixed_message(CM_SETRUNTIMECONFIG, payload)
+
+
+func send_runtime_bool(config_type: int, value: bool) -> Error:
+	return send_set_runtime_config(config_type, PackedByteArray([1, 1 if value else 0, 0]))
+
+
+func send_runtime_float(config_type: int, value: float) -> Error:
+	var archive := PackedByteArray()
+	archive.resize(6)
+	archive[0] = 1
+	archive.encode_float(1, value)
+	archive[5] = 0
+	return send_set_runtime_config(config_type, archive)
+
+
+func send_runtime_int(config_type: int, value: int) -> Error:
+	var archive := PackedByteArray()
+	archive.resize(6)
+	archive[0] = 1
+	archive.encode_s32(1, value)
+	archive[5] = 0
+	return send_set_runtime_config(config_type, archive)
+
+
+func send_npc_event(uid: int, path: String, event: String, value: String = "") -> Error:
+	var payload := PackedByteArray()
+	payload.resize(410)
+	payload.fill(0)
+	_encode_u64(payload, 0, uid)
+	_write_c_string(payload, 8, 100, path)
+	_write_c_string(payload, 108, 100, event)
+	var value_bytes := value.to_utf8_buffer()
+	if value_bytes.size() > 200:
+		value_bytes = value_bytes.slice(0, 200)
+	for index in value_bytes.size():
+		payload[208 + index] = value_bytes[index]
+	payload.encode_u16(408, value_bytes.size())
+	return _send_fixed_message(CM_NPCEVENT, payload)
+
+
+func send_query_sell_item_list(npc_uid: int, item_id: int) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(12)
+	_encode_u64(payload, 0, npc_uid)
+	payload.encode_u32(8, item_id)
+	return _send_fixed_message(CM_QUERYSELLITEMLIST, payload)
+
+
+func send_buy(npc_uid: int, item_id: int, seq_id: int, count: int) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(20)
+	_encode_u64(payload, 0, npc_uid)
+	payload.encode_u32(8, item_id)
+	payload.encode_u32(12, seq_id)
+	payload.encode_u32(16, count)
+	return _send_fixed_message(CM_BUY, payload)
+
+
+func send_retrieve_secured_item(item_id: int, seq_id: int) -> Error:
+	return _send_item_pair(CM_REQUESTRETRIEVESECUREDITEM, item_id, seq_id)
+
+
+func send_request_equip_wear(item_id: int, seq_id: int, wear_type: int) -> Error:
+	return _send_item_pair_slot(CM_REQUESTEQUIPWEAR, item_id, seq_id, wear_type)
+
+
+func send_request_grab_wear(wear_type: int) -> Error:
+	return _send_u16(CM_REQUESTGRABWEAR, wear_type)
+
+
+func send_request_equip_belt(item_id: int, seq_id: int, slot: int) -> Error:
+	return _send_item_pair_slot(CM_REQUESTEQUIPBELT, item_id, seq_id, slot)
+
+
+func send_request_grab_belt(slot: int) -> Error:
+	return _send_u16(CM_REQUESTGRABBELT, slot)
+
+
+func send_request_join_team(uid: int) -> Error:
+	return _send_u64_message(CM_REQUESTJOINTEAM, uid)
+
+
+func send_request_leave_team(uid: int) -> Error:
+	return _send_u64_message(CM_REQUESTLEAVETEAM, uid)
+
+
+func _send_item_pair(head_code: int, item_id: int, seq_id: int) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(8)
+	payload.encode_u32(0, item_id)
+	payload.encode_u32(4, seq_id)
+	return _send_fixed_message(head_code, payload)
+
+
+func _send_item_pair_slot(head_code: int, item_id: int, seq_id: int, slot: int) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(10)
+	payload.encode_u32(0, item_id)
+	payload.encode_u32(4, seq_id)
+	payload.encode_u16(8, slot)
+	return _send_fixed_message(head_code, payload)
+
+
+func _send_u16(head_code: int, value: int) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(2)
+	payload.encode_u16(0, value)
+	return _send_fixed_message(head_code, payload)
+
+
+func _send_u64_message(head_code: int, value: int) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(8)
+	_encode_u64(payload, 0, value)
+	return _send_fixed_message(head_code, payload)
+
+
+func _write_c_string(target: PackedByteArray, offset: int, capacity: int, value: String) -> void:
+	var encoded := value.to_utf8_buffer()
+	for index in range(mini(encoded.size(), capacity - 1)):
+		target[offset + index] = encoded[index]
 
 
 func _make_account_payload(account: String, password: String) -> PackedByteArray:
@@ -476,8 +618,8 @@ func _server_message_attribute(head_code: int) -> Array:
 		SM_FRIENDLIST:           return [3, 0]
 		SM_LEARNEDMAGICLIST:     return [3, 0]
 		SM_PLAYERWLDESP:         return [3, 0]
-		SM_ACTION:               return [1, 44]
-		SM_COREORD:              return [1, 52]
+		SM_ACTION:               return [1, 43]
+		SM_COREORD:              return [1, 48]
 		SM_HEALTH:               return [3, 0]
 		SM_NEXTSTRIKE:           return [0, 0]
 		SM_NOTIFYDEAD:           return [1, 8]
@@ -486,7 +628,7 @@ func _server_message_attribute(head_code: int) -> Array:
 		SM_BUFF:                 return [1, 16]
 		SM_BUFFIDLIST:           return [3, 0]
 		SM_MISS:                 return [1, 8]
-		SM_CASTMAGIC:            return [1, 28]
+		SM_CASTMAGIC:            return [1, 36]
 		SM_OFFLINE:              return [1, 16]
 		SM_PICKUPERROR:          return [1, 4]
 		SM_REMOVEGROUNDITEM:     return [1, 12]
@@ -500,14 +642,14 @@ func _server_message_attribute(head_code: int) -> Array:
 		SM_SELLITEMLIST:         return [3, 0]
 		SM_TEXT:                 return [3, 0]
 		SM_PLAYERNAME:           return [3, 0]
-		SM_BUILDVERSION:         return [1, 130]
+		SM_BUILDVERSION:         return [1, 132]
 		SM_INVENTORY:            return [3, 0]
 		SM_BELT:                 return [3, 0]
 		SM_UPDATEITEM:           return [3, 0]
 		SM_REMOVEITEM:           return [1, 10]
 		SM_REMOVESECUREDITEM:    return [1, 8]
-		SM_BUYSUCCEED:           return [1, 20]
-		SM_BUYERROR:             return [1, 22]
+		SM_BUYSUCCEED:           return [1, 16]
+		SM_BUYERROR:             return [1, 18]
 		SM_GROUNDITEMIDLIST:     return [3, 0]
 		SM_GROUNDFIREWALLLIST:   return [3, 0]
 		SM_EQUIPWEAR:            return [3, 0]
