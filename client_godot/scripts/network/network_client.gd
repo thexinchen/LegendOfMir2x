@@ -383,6 +383,24 @@ func send_buy(npc_uid: int, item_id: int, seq_id: int, count: int) -> Error:
 	return _send_fixed_message(CM_BUY, payload)
 
 
+func send_drop_item(item_id: int, seq_id: int, count: int) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(10)
+	payload.encode_u32(0, item_id)
+	payload.encode_u32(4, seq_id)
+	payload.encode_u16(8, clampi(count, 0, 0xFFFF))
+	return _send_fixed_message(CM_DROPITEM, payload)
+
+
+func send_consume_item(item_id: int, seq_id: int, count: int = 1) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(10)
+	payload.encode_u32(0, item_id)
+	payload.encode_u32(4, seq_id)
+	payload.encode_u16(8, clampi(count, 0, 0xFFFF))
+	return _send_fixed_message(CM_CONSUMEITEM, payload)
+
+
 func send_retrieve_secured_item(item_id: int, seq_id: int) -> Error:
 	return _send_item_pair(CM_REQUESTRETRIEVESECUREDITEM, item_id, seq_id)
 

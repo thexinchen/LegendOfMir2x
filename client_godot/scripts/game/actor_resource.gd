@@ -8,6 +8,7 @@ var offsets: Dictionary = {}
 var monster_meta: Dictionary = {}
 var item_meta: Dictionary = {}
 var item_names: Dictionary = {}
+var item_types: Dictionary = {}
 var skill_meta: Dictionary = {}
 var buff_meta: Dictionary = {}
 var magic_meta: Dictionary = {}
@@ -24,6 +25,7 @@ func configure(path: String) -> bool:
 	_load_monster_meta()
 	_load_item_meta()
 	_load_item_names()
+	_load_item_types()
 	_load_skill_meta()
 	_load_buff_meta()
 	_load_magic_meta()
@@ -85,6 +87,10 @@ func item_is_packable(item_id: int) -> bool:
 
 func item_name(item_id: int) -> String:
 	return item_names.get(item_id, "物品 %d" % item_id)
+
+
+func item_type(item_id: int) -> String:
+	return item_types.get(item_id, "")
 
 
 func item_icon(item_id: int) -> Dictionary:
@@ -173,6 +179,19 @@ func _load_item_names() -> void:
 		var item_id := file.get_32()
 		var length := file.get_16()
 		item_names[item_id] = file.get_buffer(length).get_string_from_utf8()
+
+
+func _load_item_types() -> void:
+	var file := FileAccess.open("%s/sprites/item_type.m2xmeta" % base_path, FileAccess.READ)
+	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
+		return
+	if file.get_32() != 1:
+		return
+	var count := file.get_32()
+	for _index in range(count):
+		var item_id := file.get_32()
+		var length := file.get_16()
+		item_types[item_id] = file.get_buffer(length).get_string_from_utf8()
 
 
 func _load_skill_meta() -> void:

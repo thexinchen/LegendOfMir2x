@@ -74,6 +74,8 @@ var npc_dialog: Dictionary = {}
 var npc_sell: Dictionary = {}
 var npc_sell_detail: Dictionary = {}
 var pending_input: Dictionary = {}
+var inventory_operation: Dictionary = {}
+var inventory_operation_cost: Dictionary = {}
 var firewalls: Array = []
 var magic_effects: Array = []
 
@@ -296,6 +298,25 @@ func update_inventory(items: Array) -> void:
 	state_changed.emit()
 
 
+func start_inventory_operation(operation: Dictionary) -> void:
+	inventory_operation = operation
+	inventory_operation_cost = {}
+	state_changed.emit()
+
+
+func clear_inventory_operation() -> void:
+	inventory_operation = {}
+	inventory_operation_cost = {}
+	state_changed.emit()
+
+
+func set_inventory_operation_cost(data: Dictionary) -> void:
+	if int(inventory_operation.get("invOp", 0)) != int(data.get("invOp", -1)):
+		return
+	inventory_operation_cost = data
+	state_changed.emit()
+
+
 func update_belt(items: Array) -> void:
 	belt = items
 	state_changed.emit()
@@ -304,6 +325,10 @@ func update_belt(items: Array) -> void:
 func update_item(item: Dictionary) -> void:
 	var item_id: int = item.get("itemID", 0)
 	var seq_id: int = item.get("seqID", 0)
+	if grabbed_item.get("itemID", 0) == item_id and grabbed_item.get("seqID", 0) == seq_id:
+		grabbed_item = item if item.get("count", 0) > 0 else {}
+		state_changed.emit()
+		return
 	for index in range(inventory.size()):
 		if inventory[index].get("itemID", 0) == item_id and inventory[index].get("seqID", 0) == seq_id:
 			if item.get("count", 0) > 0:
@@ -318,6 +343,14 @@ func update_item(item: Dictionary) -> void:
 
 
 func remove_item(item_id: int, seq_id: int, count: int) -> void:
+	if grabbed_item.get("itemID", 0) == item_id and grabbed_item.get("seqID", 0) == seq_id:
+		var grabbed_remaining: int = maxi(0, grabbed_item.get("count", 0) - count)
+		if grabbed_remaining == 0:
+			grabbed_item = {}
+		else:
+			grabbed_item["count"] = grabbed_remaining
+		state_changed.emit()
+		return
 	for index in range(inventory.size()):
 		var item: Dictionary = inventory[index]
 		if item.get("itemID", 0) != item_id or item.get("seqID", 0) != seq_id:

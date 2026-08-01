@@ -119,6 +119,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _handle_mouse_click(event: InputEventMouseButton) -> void:
 	var grid: Vector2i = world_renderer.grid_from_screen(int(event.position.x), int(event.position.y))
+	if event.button_index == MOUSE_BUTTON_LEFT and not game_state.grabbed_item.is_empty():
+		var grabbed: Dictionary = game_state.grabbed_item
+		if NetworkClient.send_drop_item(grabbed.get("itemID", 0), grabbed.get("seqID", 0), grabbed.get("count", 0)) == OK:
+			game_state.grabbed_item = {}
+			game_state.state_changed.emit()
+		return
 	
 	if event.button_index == MOUSE_BUTTON_RIGHT:
 		# Right click: move toward grid (C++ emplaces ActionMove)
@@ -327,6 +333,10 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			_handle_buy_error(payload)
 		NetworkClient.SM_STARTINPUT:
 			_handle_start_input(payload)
+		NetworkClient.SM_STARTINVOP:
+			_handle_start_inventory_operation(payload)
+		NetworkClient.SM_INVOPCOST:
+			_handle_inventory_operation_cost(payload)
 		NetworkClient.SM_FRIENDLIST:
 			_handle_friend_list(payload)
 		NetworkClient.SM_CHATMESSAGELIST:
@@ -753,6 +763,28 @@ func _handle_start_input(payload: PackedByteArray) -> void:
 		game_state.state_changed.emit()
 		var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
 		panel.configure(data.get("title", ""), data.get("show", false))
+
+
+func _handle_start_inventory_operation(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var operation := reader.read_sd_start_inv_op()
+	if not _reader_ok(reader, "SM_STARTINVOP"):
+		return
+	game_state.start_inventory_operation(operation)
+	inventory_panel.show()
+	inventory_panel.position = Vector2(size.x - inventory_panel.size.x, 0)
+	inventory_panel.move_to_front()
+
+
+func _handle_inventory_operation_cost(payload: PackedByteArray) -> void:
+	if payload.size() < 16:
+		return
+	game_state.set_inventory_operation_cost({
+		"invOp": payload.decode_u32(0),
+		"itemID": payload.decode_u32(4),
+		"seqID": payload.decode_u32(8),
+		"cost": payload.decode_u32(12),
+	})
 
 
 func _handle_friend_list(payload: PackedByteArray) -> void:

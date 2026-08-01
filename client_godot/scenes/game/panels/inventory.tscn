@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/inventory_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001b.png" id="2"]
@@ -7,6 +7,13 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/00000080.png" id="5"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="6"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000c1.png" id="7"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000b0.png" id="8"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000b1.png" id="9"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000b2.png" id="10"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000b3.png" id="11"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000b4.png" id="12"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000b5.png" id="13"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000b6.png" id="14"]
 
 [node name="InventoryPanel" type="Control"]
 custom_minimum_size = Vector2(434, 543)
@@ -36,6 +43,8 @@ offset_left = 18.0
 offset_top = 59.0
 offset_right = 405.0
 offset_bottom = 428.0
+clip_contents = true
+mouse_filter = 1
 
 [node name="Gold" type="Label" parent="."]
 offset_left = 62.0
@@ -75,3 +84,30 @@ texture_hover = ExtResource("3")
 texture_pressed = ExtResource("6")
 ignore_texture_size = true
 tooltip_text = "关闭"
+
+[node name="OperationBackground" type="TextureRect" parent="."]
+visible = false
+offset_left = 295.0
+offset_top = 475.0
+offset_right = 365.0
+offset_bottom = 515.0
+mouse_filter = 2
+texture = ExtResource("8")
+
+[node name="OperationButton" type="TextureButton" parent="."]
+visible = false
+offset_left = 298.0
+offset_top = 478.0
+offset_right = 362.0
+offset_bottom = 512.0
+ignore_texture_size = true
+
+[node name="OperationCost" type="Label" parent="."]
+visible = false
+offset_left = 62.0
+offset_top = 493.0
+offset_right = 202.0
+offset_bottom = 517.0
+theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1

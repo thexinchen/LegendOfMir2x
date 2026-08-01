@@ -336,12 +336,20 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
 
         std::ofstream nameFile(outputDir / "sprites" / "item_name.m2xmeta", std::ios::binary);
         nameFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
+        std::ofstream typeFile(outputDir / "sprites" / "item_type.m2xmeta", std::ios::binary);
+        typeFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         for(const auto &meta: metaList){
             const std::string name(to_cstr(DBCOM_ITEMRECORD(meta.itemID).name));
             const auto length = check_cast<uint16_t>(name.size());
             nameFile.write(reinterpret_cast<const char *>(&meta.itemID), sizeof(meta.itemID));
             nameFile.write(reinterpret_cast<const char *>(&length), sizeof(length));
             nameFile.write(name.data(), length);
+
+            const std::string type(to_cstr(DBCOM_ITEMRECORD(meta.itemID).type));
+            const auto typeLength = check_cast<uint16_t>(type.size());
+            typeFile.write(reinterpret_cast<const char *>(&meta.itemID), sizeof(meta.itemID));
+            typeFile.write(reinterpret_cast<const char *>(&typeLength), sizeof(typeLength));
+            typeFile.write(type.data(), typeLength);
         }
     }
     if(std::strcmp(family, "proguse") == 0){

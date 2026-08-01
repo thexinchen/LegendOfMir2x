@@ -22,3 +22,9 @@ func _gui_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and _dragging:
 		position += event.relative
 		accept_event()
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		hide()
+		get_viewport().set_input_as_handled()

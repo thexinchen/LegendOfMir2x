@@ -448,6 +448,20 @@ func read_sd_start_input() -> Dictionary:
 	}
 
 
+func read_sd_start_inv_op() -> Dictionary:
+	var result := {
+		"invOp": read_s32(),
+		"uid": read_u64(),
+		"queryTag": read_string(),
+		"commitTag": read_string(),
+		"typeList": [],
+	}
+	var type_count := read_size()
+	for _index in range(type_count):
+		result.typeList.append(read_string())
+	return result
+
+
 func read_sd_npc_xml_layout() -> Dictionary:
 	return {
 		"npcUID": read_u64(),
