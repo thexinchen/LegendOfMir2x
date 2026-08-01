@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/input_string_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/input/07000000.png" id="2"]
@@ -8,6 +8,20 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/input/07000004.png" id="6"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/input/07000005.png" id="7"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/input/07000006.png" id="8"]
+
+[sub_resource type="StyleBoxFlat" id="InputNormal"]
+bg_color = Color(0, 0, 0, 0)
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+
+[sub_resource type="StyleBoxFlat" id="InputFocus"]
+bg_color = Color(1, 1, 1, 0.12549)
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
 
 [node name="InputStringPanel" type="Control"]
 custom_minimum_size = Vector2(358, 268)
@@ -37,7 +51,14 @@ offset_top = 225.0
 offset_right = 337.0
 offset_bottom = 248.0
 theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_selected_color = Color(1, 1, 1, 1)
+theme_override_colors/caret_color = Color(1, 1, 1, 1)
+theme_override_colors/selection_color = Color(0, 0, 0, 0)
+theme_override_styles/normal = SubResource("InputNormal")
+theme_override_styles/focus = SubResource("InputFocus")
 text = ""
+secret_character = "*"
 
 [node name="ConfirmButton" type="TextureButton" parent="."]
 offset_left = 66.0

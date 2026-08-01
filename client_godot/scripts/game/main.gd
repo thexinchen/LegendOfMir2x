@@ -34,7 +34,6 @@ const EXTRA_PANELS := {
 	KEY_T: "res://scenes/game/panels/team.tscn",
 	KEY_L: "res://scenes/game/panels/secured_items.tscn",
 	KEY_P: "res://scenes/game/panels/purchase.tscn",
-	KEY_I: "res://scenes/game/panels/input_string.tscn",
 	KEY_A: "res://scenes/game/panels/auction.tscn",
 	KEY_F: "res://scenes/game/panels/friend_chat.tscn",
 	KEY_O: "res://scenes/game/panels/runtime_config.tscn",
@@ -1568,6 +1567,7 @@ func _ensure_extra_panel(scene_path: String) -> Control:
 	_extra_panel_nodes[scene_path] = panel
 	if scene_path.ends_with("/input_string.tscn") and panel.has_signal("committed"):
 		panel.committed.connect(_on_input_committed)
+		panel.cancelled.connect(_on_input_cancelled)
 	if scene_path.ends_with("/purchase.tscn") and panel.has_signal("quantity_requested"):
 		panel.quantity_requested.connect(_on_purchase_quantity_requested)
 	return panel
@@ -1592,7 +1592,12 @@ func _on_input_committed(value: String) -> void:
 	game_state.pending_input = {}
 
 
+func _on_input_cancelled() -> void:
+	_pending_purchase = {}
+	game_state.pending_input = {}
+
+
 func _on_purchase_quantity_requested(npc_uid: int, item_id: int, item_name: String) -> void:
 	_pending_purchase = {"npcUID": npc_uid, "itemID": item_id}
 	var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
-	panel.configure("请输入购买 %s 的数量" % item_name, true)
+	panel.configure("请输入购买 %s 的数量" % item_name, false)
