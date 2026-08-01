@@ -607,10 +607,7 @@ func _serialize_cereal_string(value: String) -> PackedByteArray:
 
 func _send_fixed_message(head_code: int, payload: PackedByteArray, response_id: int = 0) -> Error:
 	if not is_connected_to_server():
-		var connect_error := connect_to_server()
-		if connect_error != OK:
-			return connect_error
-		return ERR_BUSY
+		return ERR_UNCONFIGURED
 	var compressed := _xor_encode(payload)
 	var packet := PackedByteArray([head_code | 0x80 if response_id > 0 else head_code])
 	if response_id > 0:

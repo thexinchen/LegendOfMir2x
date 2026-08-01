@@ -57,7 +57,9 @@ var ground_items: Dictionary = {}  # "x,y" -> list of item IDs
 
 # Chat log
 var chat_log: Array = []  # list of {type, text, color}
+var player_say_messages: Dictionary = {}  # hero uid -> [{text, start_time}]
 const CHAT_LOG_MAX := 100
+const PLAYER_SAY_LIMIT := 10
 
 # Persistent friend-chat state (separate from nearby/world chat).
 var chat_friends: Array = []
@@ -146,6 +148,7 @@ func start_game_scene(scene_data: Dictionary) -> void:
 	player_action_from_y = player_y
 	player_desp = scene_data.get("desp", player_desp)
 	wear = player_desp.get("wear", wear)
+	player_say_messages.clear()
 	magic_effects.clear()
 	attached_magic_effects.clear()
 	_center_camera_on_player()
@@ -191,6 +194,17 @@ func add_chat_log(text: String, log_type: int = 0) -> void:
 	chat_log.append({"type": log_type, "text": text, "color": color})
 	if chat_log.size() > CHAT_LOG_MAX:
 		chat_log.pop_front()
+	state_changed.emit()
+
+
+func add_player_say(uid: int, text: String) -> void:
+	if uid == 0 or text.is_empty():
+		return
+	var messages: Array = player_say_messages.get(uid, [])
+	while messages.size() >= PLAYER_SAY_LIMIT:
+		messages.pop_front()
+	messages.append({"text": text, "start_time": Time.get_ticks_msec()})
+	player_say_messages[uid] = messages
 	state_changed.emit()
 
 
@@ -307,6 +321,7 @@ func update_creature(uid: int, data: Dictionary) -> void:
 
 func remove_creature(uid: int) -> void:
 	creatures.erase(uid)
+	player_say_messages.erase(uid)
 	state_changed.emit()
 
 

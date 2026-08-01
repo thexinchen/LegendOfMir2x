@@ -963,14 +963,11 @@ func _handle_player_say(payload: PackedByteArray) -> void:
 	var data := Protocol.decode_sm_player_say(payload)
 	var uid: int = data.get("uid", 0)
 	var content: String = data.get("content", "")
-	var name := "未知"
-	if uid == game_state.player_uid:
-		name = game_state.player_name
-	else:
-		var c: Dictionary = game_state.get_creature(uid)
-		if not c.get("name", "").is_empty():
-			name = c.get("name")
-	game_state.add_chat_log("%s: %s" % [name, content], 0)
+	var creature: Dictionary = game_state.get_creature(uid)
+	if uid == game_state.player_uid or creature.get("type", 0) == 2:
+		game_state.add_player_say(uid, content)
+	if uid != game_state.player_uid:
+		game_state.add_chat_log(content, 0)
 
 
 func _handle_player_broadcast(payload: PackedByteArray) -> void:

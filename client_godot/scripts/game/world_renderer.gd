@@ -19,6 +19,10 @@ const MAGIC_STAGE_EXPLODE := 3
 const MAGIC_TYPE_FIXED := 1
 const MAGIC_TYPE_BOUND := 2
 const MAGIC_TYPE_FOLLOW := 3
+const PLAYER_SAY_WIDTH := 160
+const PLAYER_SAY_FONT_SIZE := 15
+const PLAYER_SAY_SHOW_TIME := 5000
+const PLAYER_SAY_MARGIN := 2
 
 var game_state: Node = null
 
@@ -423,6 +427,7 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
+	_draw_player_say(game_state.player_uid, px, py)
 	
 	# The C++ client only enables actor HP/name overlays through debug/runtime flags.
 
@@ -459,6 +464,81 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 		if not c_name.is_empty():
 			var tw := font.get_string_size(c_name, HORIZONTAL_ALIGNMENT_CENTER, -1, 11)
 			font.draw_string(get_canvas_item(), Vector2(center.x - tw.x * 0.5, cy - 4), c_name, HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(1, 1, 1, 0.9))
+	if c_type == 2:
+		_draw_player_say(uid, cx, cy)
+
+
+func _draw_player_say(uid: int, start_x: int, start_y: int) -> void:
+	var font := get_theme_default_font()
+	if font == null:
+		return
+	var layout := _player_say_layout(uid, font, Time.get_ticks_msec())
+	if layout.is_empty():
+		return
+	var board_x := float(start_x + GRID_XP / 2) - float(layout.width) / 2.0
+	var draw_y := float(start_y - 70 - layout.height)
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color(0, 0, 0, 128.0 / 255.0)
+	background.set_corner_radius_all(3)
+	for message_value in layout.messages:
+		var message: Dictionary = message_value
+		var box_rect := Rect2(board_x, draw_y, message.width, message.height)
+		draw_style_box(background, box_rect)
+		var baseline := draw_y + PLAYER_SAY_MARGIN + font.get_ascent(PLAYER_SAY_FONT_SIZE)
+		for line_value in message.lines:
+			font.draw_string(get_canvas_item(), Vector2(board_x + PLAYER_SAY_MARGIN, baseline), str(line_value), HORIZONTAL_ALIGNMENT_LEFT, -1, PLAYER_SAY_FONT_SIZE, Color.WHITE)
+			baseline += message.line_height
+		draw_y += message.height
+
+
+func _player_say_layout(uid: int, font: Font, now: int) -> Dictionary:
+	var active_messages: Array = []
+	for message_value in game_state.player_say_messages.get(uid, []):
+		var message: Dictionary = message_value
+		if now - int(message.get("start_time", now)) < PLAYER_SAY_SHOW_TIME:
+			active_messages.append(message)
+	if active_messages.is_empty():
+		game_state.player_say_messages.erase(uid)
+		return {}
+	game_state.player_say_messages[uid] = active_messages
+	var result_messages: Array = []
+	var board_width := 0
+	var board_height := 0
+	var line_height := ceili(font.get_height(PLAYER_SAY_FONT_SIZE))
+	for message in active_messages:
+		var lines := _wrap_player_say(str(message.get("text", "")), font)
+		var text_width := 0
+		for line in lines:
+			text_width = maxi(text_width, ceili(font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, PLAYER_SAY_FONT_SIZE).x))
+		var box_width := text_width + PLAYER_SAY_MARGIN * 2
+		var box_height := lines.size() * line_height + PLAYER_SAY_MARGIN * 2
+		result_messages.append({
+			"lines": lines,
+			"line_height": line_height,
+			"width": box_width,
+			"height": box_height,
+		})
+		board_width = maxi(board_width, box_width)
+		board_height += box_height
+	return {"messages": result_messages, "width": board_width, "height": board_height}
+
+
+func _wrap_player_say(text: String, font: Font) -> Array[String]:
+	var result: Array[String] = []
+	for paragraph in text.split("\n", true):
+		if paragraph.is_empty():
+			result.append("")
+			continue
+		var line := ""
+		for character in paragraph:
+			var candidate := line + character
+			if not line.is_empty() and font.get_string_size(candidate, HORIZONTAL_ALIGNMENT_LEFT, -1, PLAYER_SAY_FONT_SIZE).x > PLAYER_SAY_WIDTH:
+				result.append(line)
+				line = character
+			else:
+				line = candidate
+		result.append(line)
+	return result
 
 
 func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int, action_started_ms := 0, action_speed := 100, magic_id := 0) -> bool:

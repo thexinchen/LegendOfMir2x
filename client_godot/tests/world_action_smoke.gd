@@ -6,6 +6,12 @@ const WorldPathfinderScript = preload("res://scripts/game/world_pathfinder.gd")
 
 
 func _ready() -> void:
+	NetworkClient.disconnect_from_server()
+	var offline_action := PackedByteArray()
+	offline_action.resize(43)
+	if NetworkClient.send_action(offline_action) != ERR_UNCONFIGURED:
+		_fail("offline action unexpectedly initiated a server connection")
+		return
 	var resources: RefCounted = ActorResourceScript.new()
 	if not resources.configure_default():
 		_fail("world resources unavailable")
@@ -28,6 +34,8 @@ func _ready() -> void:
 	main.call("_on_server_message", NetworkClient.SM_NEXTSTRIKE, PackedByteArray())
 	if main.call("_consume_attack_magic_id") != next_strike_id or main.call("_consume_attack_magic_id") != physical_id:
 		_fail("SM_NEXTSTRIKE was not consumed exactly once")
+		return
+	if not _test_player_say(main):
 		return
 	if not _test_magic_actions(main, resources, physical_id):
 		return
@@ -61,6 +69,43 @@ func _ready() -> void:
 		return
 	print("WORLD ACTION PASS: action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
+
+
+func _test_player_say(main: Control) -> bool:
+	GameState.chat_log.clear()
+	GameState.player_say_messages.clear()
+	GameState.player_uid = (5 << 59) | 1
+	var remote_uid: int = (5 << 59) | 2
+	var monster_uid: int = (4 << 59) | 3
+	GameState.creatures = {
+		remote_uid: {"uid": remote_uid, "type": 2, "name": "远端玩家"},
+		monster_uid: {"uid": monster_uid, "type": 1},
+	}
+	main.call("_on_server_message", NetworkClient.SM_PLAYERSAY, _player_say_payload(GameState.player_uid, "自己的头顶消息"))
+	if GameState.player_say_messages.get(GameState.player_uid, []).size() != 1 or not GameState.chat_log.is_empty():
+		_fail("self player say did not remain bubble-only")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_PLAYERSAY, _player_say_payload(remote_uid, "远端原文"))
+	if GameState.player_say_messages.get(remote_uid, []).size() != 1 or GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "远端原文":
+		_fail("remote player say bubble/chat semantics mismatch: %s" % GameState.chat_log)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_PLAYERSAY, _player_say_payload(monster_uid, "无效气泡"))
+	if GameState.player_say_messages.has(monster_uid) or GameState.chat_log.size() != 2 or GameState.chat_log[1].text != "无效气泡":
+		_fail("non-hero player say filtering mismatch")
+		return false
+	GameState.player_say_messages.clear()
+	GameState.creatures.clear()
+	return true
+
+
+func _player_say_payload(uid: int, text: String) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(136)
+	payload.encode_u64(0, uid)
+	var encoded := text.to_utf8_buffer()
+	for index in mini(encoded.size(), 127):
+		payload[8 + index] = encoded[index]
+	return payload
 
 
 func _test_action_seff(main: Control, resources: RefCounted) -> bool:
