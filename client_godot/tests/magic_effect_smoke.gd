@@ -21,6 +21,7 @@ func _ready() -> void:
 	var wind_chain_id: int = resources.magic_id("风震天")
 	var laser_id: int = resources.magic_id("疾光电影")
 	var healing_id: int = resources.magic_id("治愈术")
+	var flame_sword_id: int = resources.magic_id("烈火剑法")
 	var target_attachment_ids := [
 		resources.magic_id("乾坤大挪移"), healing_id, resources.magic_id("圣言术"), resources.magic_id("云寂术"),
 		resources.magic_id("回生术"), resources.magic_id("施毒术"), resources.magic_id("诱惑之光"), resources.magic_id("移花接玉"),
@@ -37,7 +38,7 @@ func _ready() -> void:
 		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
 		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
@@ -569,6 +570,25 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_PROJECTILE_SCREENSHOT"))
+	if OS.has_environment("MIR2X_ATTACK_MAGIC_SCREENSHOT"):
+		var attack_now := Time.get_ticks_msec()
+		GameState.player_x = 405
+		GameState.player_y = 120
+		GameState.player_action_type = 7
+		GameState.player_action_magic_id = flame_sword_id
+		GameState.player_action_speed = 100
+		GameState.player_action_started_ms = attack_now - 200
+		GameState.player_direction = 3
+		GameState.magic_effects.clear()
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.strike_grids.clear()
+		GameState.view_x = GameState.player_x * 48 - 400
+		GameState.view_y = GameState.player_y * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ATTACK_MAGIC_SCREENSHOT"))
 	print("MAGIC EFFECT PASS: target/server attachments, follow/fixed/composite/propagated magic and caster-grid laser")
 	get_tree().quit()
 

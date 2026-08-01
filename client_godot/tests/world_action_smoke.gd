@@ -525,8 +525,22 @@ func _test_pickup_action(main: Control, resources: RefCounted) -> bool:
 		_fail("physical attack does not use the C++ one-handed vertical swing")
 		return false
 	var sky_sword_id: int = resources.magic_id("翔空剑法")
+	var flame_sword_id: int = resources.magic_id("烈火剑法")
+	var lotus_sword_id: int = resources.magic_id("莲月剑法")
 	var half_moon_id: int = resources.magic_id("半月弯刀")
 	var wheel_id: int = resources.magic_id("十方斩")
+	var attack_magic_ids := [
+		flame_sword_id, sky_sword_id, lotus_sword_id, half_moon_id, wheel_id,
+		resources.magic_id("攻杀剑术"), resources.magic_id("刺杀剑术"),
+	]
+	if attack_magic_ids.has(0):
+		_fail("attack magic name metadata incomplete")
+		return false
+	for attack_magic_id in attack_magic_ids:
+		var attack_meta: PackedInt32Array = resources.magic_layout(attack_magic_id, 2)
+		if attack_meta.is_empty() or attack_meta[2] <= 0 or attack_meta[5] != 2:
+			_fail("motion-synced attack metadata mismatch: id=%d meta=%s" % [attack_magic_id, attack_meta])
+			return false
 	if renderer.call("_hero_motion", 7, sky_sword_id, {}) != PackedInt32Array([17, 10]):
 		_fail("sky sword attack does not use C++ random swing motion")
 		return false
@@ -552,6 +566,21 @@ func _test_pickup_action(main: Control, resources: RefCounted) -> bool:
 		_fail("special attack action timing mismatch")
 		return false
 	var now := Time.get_ticks_msec()
+	var flame_effect: Dictionary = renderer.call("_attack_motion_effect_state", flame_sword_id, 3, now - 100)
+	if flame_effect.is_empty() or not flame_effect.visible or flame_effect.frame != 1 or flame_effect.direction != (2 if flame_effect.meta[6] > 1 else 0):
+		_fail("ordinary sword effect did not sync to the attack motion: %s" % flame_effect)
+		return false
+	var wheel_lag: Dictionary = renderer.call("_attack_motion_effect_state", wheel_id, 3, now)
+	var wheel_visible: Dictionary = renderer.call("_attack_motion_effect_state", wheel_id, 3, now - 200)
+	if wheel_lag.is_empty() or wheel_lag.visible or wheel_visible.is_empty() or not wheel_visible.visible or wheel_visible.frame != 0:
+		_fail("wheel sword effect did not preserve the C++ three-frame lag: early=%s visible=%s" % [wheel_lag, wheel_visible])
+		return false
+	if not renderer.call("_attack_motion_effect_state", flame_sword_id, 3, now - 600).is_empty():
+		_fail("motion-synced sword effect outlived its six-frame attack")
+		return false
+	if not is_equal_approx(float(main.call("_action_duration", 7, 250, 2, flame_sword_id)), 0.9):
+		_fail("ordinary sword action incorrectly inherited network speed")
+		return false
 	if renderer.call("_motion_frame", 8, 2, now, 100) != 0 or renderer.call("_motion_frame", 8, 2, now - 1000, 100) != 1:
 		_fail("transient motion does not start at frame zero and clamp at the last frame")
 		return false

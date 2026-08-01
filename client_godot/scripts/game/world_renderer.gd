@@ -1174,7 +1174,7 @@ func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dict
 	var frame_index := _motion_frame(action_type, motion_data[1], action_started_ms, action_speed)
 	if action_type in [7, 14]:
 		var magic_name: String = actor_resource.magic_names.get(magic_id, "") if action_type == 7 else ""
-		var primary_speed := 150 if magic_name == "十方斩" else action_speed
+		var primary_speed := 150 if magic_name == "十方斩" else 100
 		var attack_step := _motion_step(action_started_ms, primary_speed)
 		if attack_step >= motion_data[1]:
 			var primary_ms := float(motion_data[1]) * 100.0 * 100.0 / float(clampi(primary_speed, 20, 500))
@@ -1213,7 +1213,40 @@ func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dict
 			_draw_sprite_frame(actor_resource.frame("hair", hair_key), start_x, start_y, 1.0)
 	if weapon_key != 0:
 		_draw_sprite_frame(actor_resource.frame("weapon", weapon_key), start_x, start_y, 1.0)
+	if action_type == 7:
+		_draw_attack_motion_effect(magic_id, direction, action_started_ms, start_x, start_y)
 	return not body.is_empty()
+
+
+func _draw_attack_motion_effect(magic_id: int, direction: int, started_ms: int, start_x: int, start_y: int) -> void:
+	var effect := _attack_motion_effect_state(magic_id, direction, started_ms)
+	if effect.is_empty() or not effect.get("visible", false):
+		return
+	_draw_magic_frame(effect.meta, effect.frame, effect.direction, Vector2(float(start_x) / GRID_XP, float(start_y) / GRID_YP), 0, 0)
+
+
+func _attack_motion_effect_state(magic_id: int, direction: int, started_ms: int) -> Dictionary:
+	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+	if magic_name not in ["烈火剑法", "翔空剑法", "莲月剑法", "半月弯刀", "十方斩", "攻杀剑术", "刺杀剑术"]:
+		return {}
+	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	if meta.is_empty() or meta[2] <= 0:
+		return {}
+	var motion_speed := 150 if magic_name == "十方斩" else 100
+	var lag_frame := 3 if magic_name == "十方斩" else 0
+	var elapsed := Time.get_ticks_msec() if started_ms <= 0 else maxi(0, Time.get_ticks_msec() - started_ms)
+	var absolute_frame := roundi(float(elapsed) * motion_speed / 10000.0)
+	var motion_frame_count := 10 if magic_name in ["翔空剑法", "莲月剑法", "十方斩"] else 6
+	var effect_frame_count := mini(meta[2] + lag_frame, motion_frame_count)
+	if absolute_frame >= effect_frame_count:
+		return {}
+	var gfx_frame := absolute_frame - lag_frame
+	return {
+		"meta": meta,
+		"frame": gfx_frame,
+		"direction": clampi(direction, 1, 8) - 1 if meta[6] > 1 else 0,
+		"visible": gfx_frame >= 0,
+	}
 
 
 func _wear_shape(wear: Dictionary, location: int) -> int:

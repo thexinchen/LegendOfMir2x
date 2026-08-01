@@ -634,7 +634,7 @@ func _action_duration(action_type: int, speed: int, creature_type: int, magic_id
 			else:
 				var magic_name: String = _resources.magic_names.get(magic_id, "")
 				var primary_frames := 10 if magic_name in ["翔空剑法", "莲月剑法", "十方斩"] else 6
-				var primary_speed := 150 if magic_name == "十方斩" else speed
+				var primary_speed := 150 if magic_name == "十方斩" else 100
 				return float(primary_frames) * 0.1 * 100.0 / float(clampi(primary_speed, 20, 500)) + 0.3
 		8: frame_count = 2
 		9: frame_count = 10 if creature_type == 1 else 5
