@@ -49,6 +49,11 @@ static func encode_action_node(action: Dictionary) -> PackedByteArray:
 	var ext: PackedByteArray = action.get("extParam", PackedByteArray())
 	for i in range(mini(ext.size(), 8)):
 		buf[19 + i] = ext[i]
+	if action.get("type", 0) in [7, 9]:
+		if action.has("magicID"):
+			buf.encode_u32(19, action.magicID)
+		if action.has("modifierID"):
+			buf.encode_u32(23, action.modifierID)
 	return buf
 
 # SMAction (43 bytes): uid(8) + mapUID(8) + action(27)

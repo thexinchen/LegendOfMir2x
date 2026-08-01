@@ -5,6 +5,7 @@ extends Control
 
 const Protocol = preload("res://scripts/network/protocol.gd")
 const CerealReader = preload("res://scripts/network/cereal_reader.gd")
+const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 
 @onready var world_renderer: Control = $WorldRenderer
 @onready var inventory_panel: Control = %InventoryPanel
@@ -37,11 +38,14 @@ const EXTRA_PANELS := {
 
 var _extra_panel_nodes: Dictionary = {}
 var _pending_purchase: Dictionary = {}
+var _resources: RefCounted = ActorResourceScript.new()
+var _next_strike := false
 
 
 func _ready() -> void:
 	game_state = get_node("/root/GameState")
 	protocol = Protocol.new()
+	_resources.configure_default()
 	world_renderer.game_state = game_state
 	
 	inventory_panel.hide()
@@ -185,9 +189,20 @@ func _send_attack_action(target_uid: int) -> void:
 		"aimX": tx,
 		"aimY": ty,
 		"aimUID": target_uid,
+		"magicID": _consume_attack_magic_id(),
 	}
 	var action_data := Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action)
 	NetworkClient.send_action(action_data)
+
+
+func _consume_attack_magic_id() -> int:
+	if _next_strike:
+		_next_strike = false
+		var next_magic: int = _resources.magic_id("攻杀剑术")
+		if next_magic > 0:
+			return next_magic
+	var physical_magic: int = _resources.magic_id("物理攻击")
+	return physical_magic
 
 
 func _direction_to(from_x: int, from_y: int, to_x: int, to_y: int) -> int:
@@ -220,6 +235,8 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			_handle_action(payload)
 		NetworkClient.SM_HEALTH:
 			_handle_health(payload)
+		NetworkClient.SM_NEXTSTRIKE:
+			_next_strike = true
 		NetworkClient.SM_PLAYERCONFIG:
 			_handle_player_config(payload)
 		NetworkClient.SM_PLAYERWLDESP:
@@ -243,6 +260,8 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_OFFLINE:
 			var data := Protocol.decode_sm_offline(payload)
 			game_state.remove_creature(data.get("uid", 0))
+		NetworkClient.SM_PICKUPERROR:
+			_handle_pickup_error(payload)
 		NetworkClient.SM_MISS:
 			_handle_miss(payload)
 		NetworkClient.SM_BUFF:
@@ -296,12 +315,20 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			_handle_ground_item_id_list(payload)
 		NetworkClient.SM_EQUIPWEAR:
 			_handle_equip_wear(payload)
+		NetworkClient.SM_EQUIPWEARERROR:
+			_handle_equip_wear_error(payload)
 		NetworkClient.SM_GRABWEAR:
 			_handle_grab_wear(payload)
+		NetworkClient.SM_GRABWEARERROR:
+			_handle_grab_wear_error(payload)
 		NetworkClient.SM_EQUIPBELT:
 			_handle_equip_belt(payload)
+		NetworkClient.SM_EQUIPBELTERROR:
+			_handle_equip_belt_error(payload)
 		NetworkClient.SM_GRABBELT:
 			_handle_grab_belt(payload)
+		NetworkClient.SM_GRABBELTERROR:
+			_handle_grab_belt_error(payload)
 		NetworkClient.SM_UPDATEITEM:
 			var reader := CerealReader.new(payload)
 			var item := reader.read_sd_update_item()
@@ -630,7 +657,10 @@ func _handle_equip_belt(payload: PackedByteArray) -> void:
 		return
 	var slot: int = data.get("slot", -1)
 	if slot >= 0 and slot < game_state.belt.size():
-		game_state.belt[slot] = data.get("item", {})
+		var equipped: Dictionary = data.get("item", {})
+		game_state.belt[slot] = equipped
+		if game_state.grabbed_item.get("itemID", 0) == equipped.get("itemID", 0) and game_state.grabbed_item.get("seqID", 0) == equipped.get("seqID", 0):
+			game_state.grabbed_item = {}
 		game_state.state_changed.emit()
 
 
@@ -642,8 +672,50 @@ func _handle_grab_belt(payload: PackedByteArray) -> void:
 	var slot: int = data.get("slot", -1)
 	if slot >= 0 and slot < game_state.belt.size():
 		game_state.belt[slot] = {}
+		if not game_state.grabbed_item.is_empty():
+			game_state.inventory.append(game_state.grabbed_item)
 		game_state.grabbed_item = data.get("item", {})
 		game_state.state_changed.emit()
+
+
+func _handle_pickup_error(payload: PackedByteArray) -> void:
+	if payload.size() < 4:
+		return
+	var item_id := payload.decode_u32(0)
+	if item_id > 0:
+		game_state.add_chat_log("无法捡起%s" % _resources.item_name(item_id), 1)
+	else:
+		game_state.add_chat_log("当前无法捡起物品，请稍后再试", 1)
+
+
+func _handle_equip_wear_error(payload: PackedByteArray) -> void:
+	if payload.size() < 10:
+		return
+	var item_id := payload.decode_u32(0)
+	match payload.decode_u16(8):
+		1, 2: game_state.add_chat_log("无效的物品", 3)
+		3: game_state.add_chat_log("无法放置：%s" % _resources.item_name(item_id), 3)
+		4: game_state.add_chat_log("角色属性不足，无法装备：%s" % _resources.item_name(item_id), 3)
+
+
+func _handle_grab_wear_error(payload: PackedByteArray) -> void:
+	if payload.size() >= 2 and payload.decode_u16(0) == 2:
+		game_state.add_chat_log("无法取下装备", 3)
+
+
+func _handle_equip_belt_error(payload: PackedByteArray) -> void:
+	if payload.size() < 10:
+		return
+	var item_id := payload.decode_u32(0)
+	match payload.decode_u16(8):
+		1, 2: game_state.add_chat_log("无效的物品", 3)
+		3: game_state.add_chat_log("无法装备：%s" % _resources.item_name(item_id), 3)
+		4: game_state.add_chat_log("无效的快捷栏位置", 3)
+
+
+func _handle_grab_belt_error(payload: PackedByteArray) -> void:
+	if payload.size() >= 2 and payload.decode_u16(0) == 1:
+		game_state.add_chat_log("快捷栏中没有物品", 3)
 
 
 func _handle_secured_items(payload: PackedByteArray) -> void:
