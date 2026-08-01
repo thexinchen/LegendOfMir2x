@@ -976,7 +976,10 @@ func _handle_action(payload: PackedByteArray) -> void:
 	var action_type: int = action.get("type", 0)
 	var direction: int = action.get("direction", 0)
 	var creature: Dictionary = game_state.get_creature(uid) if uid != game_state.player_uid else {}
+	var previous_creature := creature.duplicate(true)
 	var is_new_creature := creature.is_empty()
+	if previous_creature.get("monster_pending_forced_action", {}).get("type", 0) == 13:
+		return
 	if action_type == 1 and (uid == game_state.player_uid or not creature.is_empty()):
 		return
 	if uid != game_state.player_uid and creature.is_empty():
@@ -1022,10 +1025,9 @@ func _handle_action(payload: PackedByteArray) -> void:
 		_play_action_seff(uid, action, {"uid": uid, "type": 2, "gender": game_state.player_gender, "desp": game_state.player_desp, "action_started_ms": game_state.player_action_started_ms})
 	else:
 		# Update or create creature
+		var continued_monster_action := false
 		var creature_type: int = creature.get("type", _creature_type_from_uid(uid))
 		var monster_id: int = creature.get("monster_id", (uid >> 35) & 0xFFFFFF if creature_type == 1 else 0)
-		if action_type == 10 and not creature.is_empty() and _monster_transform_redundant(creature, action):
-			return
 		var stored_action_type := _creature_stored_action_type(action_type, creature_type, monster_id)
 		if creature.is_empty():
 			var inferred_type := creature_type
@@ -1061,13 +1063,16 @@ func _handle_action(payload: PackedByteArray) -> void:
 			if direction >= 1:
 				creature["direction"] = direction
 		if creature_type == 1:
-			stored_action_type = _configure_monster_form(creature, action_type, stored_action_type, action, is_new_creature)
+			stored_action_type = _configure_monster_form(creature, action_type, stored_action_type, action, is_new_creature, previous_creature)
 			creature["action_type"] = stored_action_type
+			continued_monster_action = creature.get("monster_transform_continued", false)
+			creature.erase("monster_transform_continued")
 		game_state.update_creature(uid, creature)
-		var duration := _creature_action_duration(stored_action_type, action.get("speed", 100), creature, action.get("magicID", 0))
-		if duration > 0.0:
-			_schedule_creature_idle(uid, stored_action_type, creature.get("action_started_ms", 0), duration)
-		_play_action_seff(uid, action, creature)
+		if not continued_monster_action:
+			var duration := _creature_action_duration(stored_action_type, action.get("speed", 100), creature, action.get("magicID", 0))
+			if duration > 0.0:
+				_schedule_creature_idle(uid, stored_action_type, creature.get("action_started_ms", 0), duration)
+			_play_action_seff(uid, action, creature)
 
 
 func _switch_player_map(map_uid: int, action: Dictionary) -> void:
@@ -1139,18 +1144,15 @@ func _monster_action_flag(action: Dictionary) -> bool:
 	return not ext.is_empty() and ext[0] != 0
 
 
-func _monster_transform_redundant(creature: Dictionary, action: Dictionary) -> bool:
-	if creature.get("type", 0) != 1 or _resources.monster_transform(creature.get("monster_id", 0)).is_empty():
-		return false
-	return bool(creature.get("monster_stand_mode", false)) == _monster_action_flag(action)
-
-
-func _configure_monster_form(creature: Dictionary, action_type: int, stored_action_type: int, action: Dictionary, constructor_state: bool) -> int:
+func _configure_monster_form(creature: Dictionary, action_type: int, stored_action_type: int, action: Dictionary, constructor_state: bool, previous := {}) -> int:
 	var transform: Dictionary = _resources.monster_transform(creature.get("monster_id", 0))
 	if transform.is_empty():
 		return stored_action_type
 	var current_mode := bool(creature.get("monster_stand_mode", false))
 	creature.erase("monster_pending_action")
+	var form_queue: Array = previous.get("monster_pending_form_modes", []).duplicate()
+	var final_mode: bool = bool(form_queue.back()) if not form_queue.is_empty() else current_mode
+	var was_transforming: bool = not constructor_state and previous.get("action_type", 0) == 10
 	var requested_mode := current_mode
 	match action_type:
 		1:
@@ -1159,18 +1161,88 @@ func _configure_monster_form(creature: Dictionary, action_type: int, stored_acti
 			requested_mode = _monster_action_flag(action)
 		3, 5, 7, 11:
 			requested_mode = true
-	if action_type == 2 and not constructor_state and requested_mode != current_mode:
-		stored_action_type = 10
-	elif not constructor_state and not current_mode and (action_type == 7 or (action_type == 11 and transform.reveal_on_hit)):
-		creature["monster_pending_action"] = {
-			"type": stored_action_type,
+	if constructor_state:
+		creature["monster_stand_mode"] = requested_mode
+		creature.erase("monster_pending_form_modes")
+		return stored_action_type
+	if action_type in [4, 6]:
+		creature.erase("monster_pending_form_modes")
+		creature.erase("monster_pending_forced_action")
+		creature["monster_stand_mode"] = final_mode
+		return stored_action_type
+	if action_type == 13 and (was_transforming or not form_queue.is_empty()):
+		creature["monster_pending_forced_action"] = {
+			"type": 13,
 			"speed": action.get("speed", 100),
 			"magic_id": action.get("magicID", 0),
 			"action": action.duplicate(true),
+			"state": _monster_pending_state(creature),
+		}
+		if not form_queue.is_empty():
+			creature["monster_pending_form_modes"] = form_queue
+		_restore_monster_transform_state(creature, previous, true)
+		creature["monster_stand_mode"] = current_mode
+		creature["monster_transform_continued"] = was_transforming
+		return 10
+	var form_request := action_type in [2, 10]
+	var queued_action: bool = action_type == 7 or (action_type == 11 and transform.reveal_on_hit)
+	var needs_reveal: bool = queued_action and not final_mode
+	if form_request and not constructor_state and requested_mode != final_mode:
+		if was_transforming:
+			form_queue.append(requested_mode)
+		else:
+			current_mode = requested_mode
+		stored_action_type = 10
+	elif form_request and was_transforming:
+		stored_action_type = 10
+	elif action_type == 10:
+		stored_action_type = previous.get("action_type", 2)
+		_restore_monster_transform_state(creature, previous, true)
+		creature["monster_transform_continued"] = true
+	elif needs_reveal:
+		if was_transforming:
+			form_queue.append(true)
+		else:
+			current_mode = true
+		stored_action_type = 10
+	if queued_action and (stored_action_type == 10 or was_transforming):
+		creature["monster_pending_action"] = {
+			"type": action_type,
+			"speed": action.get("speed", 100),
+			"magic_id": action.get("magicID", 0),
+			"action": action.duplicate(true),
+			"state": _monster_pending_state(creature),
 		}
 		stored_action_type = 10
-	creature["monster_stand_mode"] = requested_mode
+	if not form_queue.is_empty():
+		creature["monster_pending_form_modes"] = form_queue
+	else:
+		creature.erase("monster_pending_form_modes")
+	if stored_action_type == 10 and not constructor_state:
+		_restore_monster_transform_state(creature, previous, was_transforming)
+		creature["action_speed"] = previous.get("action_speed", 100) if was_transforming else 100
+		creature["action_magic_id"] = previous.get("action_magic_id", 0) if was_transforming else 0
+		creature["monster_transform_continued"] = was_transforming
+	creature["monster_stand_mode"] = current_mode
 	return stored_action_type
+
+
+func _monster_pending_state(creature: Dictionary) -> Dictionary:
+	var state := {}
+	for key in ["x", "y", "action_from_x", "action_from_y", "direction"]:
+		if creature.has(key):
+			state[key] = creature[key]
+	return state
+
+
+func _restore_monster_transform_state(creature: Dictionary, previous: Dictionary, restore_timing: bool) -> void:
+	for key in ["x", "y", "action_from_x", "action_from_y", "direction"]:
+		if previous.has(key):
+			creature[key] = previous[key]
+	if restore_timing:
+		for key in ["action_started_ms", "action_speed", "action_magic_id"]:
+			if previous.has(key):
+				creature[key] = previous[key]
 
 
 func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay: float) -> void:
@@ -1184,9 +1256,39 @@ func _finish_creature_action(uid: int, action_type: int, started_ms: int) -> voi
 	if creature.is_empty() or creature.get("action_type", 0) != action_type or creature.get("action_started_ms", -1) != started_ms:
 		return
 	var pending: Dictionary = creature.get("monster_pending_action", {})
+	var forced_pending: Dictionary = creature.get("monster_pending_forced_action", {})
 	creature.erase("monster_pending_action")
 	creature["action_started_ms"] = Time.get_ticks_msec()
+	var form_queue: Array = creature.get("monster_pending_form_modes", [])
+	if action_type == 10 and not form_queue.is_empty():
+		creature["monster_stand_mode"] = bool(form_queue.pop_front())
+		if form_queue.is_empty():
+			creature.erase("monster_pending_form_modes")
+		else:
+			creature["monster_pending_form_modes"] = form_queue
+		creature["action_speed"] = 100
+		creature["action_magic_id"] = 0
+		if not pending.is_empty():
+			creature["monster_pending_action"] = pending
+		game_state.update_creature(uid, creature)
+		_play_action_seff(uid, {"type": 10, "x": creature.get("x", 0), "y": creature.get("y", 0)}, creature)
+		var transform_duration := _creature_action_duration(10, 100, creature)
+		_schedule_creature_idle(uid, 10, creature.action_started_ms, transform_duration)
+		return
+	if action_type == 10 and not forced_pending.is_empty():
+		creature.erase("monster_pending_forced_action")
+		creature.erase("monster_pending_form_modes")
+		for key in forced_pending.get("state", {}):
+			creature[key] = forced_pending.state[key]
+		creature["action_type"] = forced_pending.get("type", 13)
+		creature["action_speed"] = forced_pending.get("speed", 100)
+		creature["action_magic_id"] = forced_pending.get("magic_id", 0)
+		game_state.update_creature(uid, creature)
+		_play_action_seff(uid, forced_pending.get("action", {}), creature)
+		return
 	if action_type == 10 and not pending.is_empty():
+		for key in pending.get("state", {}):
+			creature[key] = pending.state[key]
 		creature["action_type"] = pending.get("type", 2)
 		creature["action_speed"] = pending.get("speed", 100)
 		creature["action_magic_id"] = pending.get("magic_id", 0)
@@ -1262,7 +1364,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 		creature["action_type"] = _creature_stored_action_type(action_type, c_type, monster_id)
 		if is_new and action_type == 1 and _resources.monster_spawn_look(monster_id) > 0:
 			creature["monster_stand_look"] = _resources.monster_spawn_look(monster_id)
-		creature["action_type"] = _configure_monster_form(creature, action_type, creature["action_type"], action, true)
+		creature["action_type"] = _configure_monster_form(creature, action_type, creature["action_type"], action, true, {})
 	
 	game_state.update_creature(uid, creature)
 	if is_new and c_type == 2:
