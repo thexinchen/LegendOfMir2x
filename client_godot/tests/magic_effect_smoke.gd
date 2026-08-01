@@ -25,13 +25,23 @@ func _ready() -> void:
 		resources.magic_id("乾坤大挪移"), healing_id, resources.magic_id("圣言术"), resources.magic_id("云寂术"),
 		resources.magic_id("回生术"), resources.magic_id("施毒术"), resources.magic_id("诱惑之光"), resources.magic_id("移花接玉"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or target_attachment_ids.has(0):
+	var hit_wind_id: int = resources.magic_id("击风")
+	var fixed_action_ids := [
+		hit_wind_id, resources.magic_id("冰咆哮"), resources.magic_id("龙卷风"), resources.magic_id("爆裂火焰"),
+		resources.magic_id("地狱雷光"), resources.magic_id("怒神霹雳"), resources.magic_id("群体治愈术"),
+	]
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
 		var attachment_meta: PackedInt32Array = resources.magic_layout(magic_id, 2)
 		if attachment_meta.is_empty() or attachment_meta[2] <= 0 or attachment_meta[5] != 2:
 			_fail("target attachment metadata mismatch: id=%d meta=%s" % [magic_id, attachment_meta])
+			return
+	for magic_id in fixed_action_ids:
+		var fixed_meta: PackedInt32Array = resources.magic_layout(magic_id, 2)
+		if fixed_meta.is_empty() or fixed_meta[2] <= 0 or fixed_meta[5] != 1:
+			_fail("fixed action metadata mismatch: id=%d meta=%s" % [magic_id, fixed_meta])
 			return
 	var fireball_run: PackedInt32Array = resources.magic_layout(fireball_id, 2)
 	var thunder_run: PackedInt32Array = resources.magic_layout(thunder_id, 2)
@@ -161,6 +171,42 @@ func _ready() -> void:
 	var laser_components: Array = laser_state.get("components", [])
 	if laser_components.size() != 1 or laser_components[0].position != Vector2(special_source) or laser_components[0].direction != 2:
 		_fail("laser did not stay on caster grid/direction: %s" % laser_state)
+		return
+	var fixed_effect := propagated_effect.duplicate(true)
+	fixed_effect["aimUID"] = target_uid
+	fixed_effect["aimX"] = 409
+	fixed_effect["aimY"] = 120
+	fixed_effect["_seff_stage_mask"] = 0xFFFF
+	for fixed_id in fixed_action_ids:
+		var action_fixed := fixed_effect.duplicate(true)
+		action_fixed["magicID"] = fixed_id
+		var fixed_run: PackedInt32Array = resources.magic_layout(fixed_id, 2)
+		var before_fixed: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", action_fixed, fixed_id, "run_explode" if fixed_id == hit_wind_id else "run", 299)
+		for component in before_fixed.get("components", []):
+			if component.meta == fixed_run:
+				_fail("fixed action triggered before spell frame 3: id=%d" % fixed_id)
+				return
+		var running_fixed: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", action_fixed, fixed_id, "run_explode" if fixed_id == hit_wind_id else "run", 300)
+		var run_components: Array = running_fixed.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fixed_run)
+		if run_components.size() != 1 or run_components[0].position != Vector2(409, 120):
+			_fail("fixed action frame-3 placement mismatch: id=%d state=%s" % [fixed_id, running_fixed])
+			return
+		GameState.creatures[target_uid]["x"] = 410
+		var moved_fixed: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", action_fixed, fixed_id, "run_explode" if fixed_id == hit_wind_id else "run", 400)
+		for component in moved_fixed.get("components", []):
+			if component.meta == fixed_run and component.position != Vector2(409, 120):
+				_fail("fixed action followed target after trigger: id=%d state=%s" % [fixed_id, moved_fixed])
+				return
+		GameState.creatures[target_uid]["x"] = 409
+	var hit_run: PackedInt32Array = resources.magic_layout(hit_wind_id, 2)
+	var hit_explode: PackedInt32Array = resources.magic_layout(hit_wind_id, 3)
+	var hit_effect := fixed_effect.duplicate(true)
+	hit_effect["magicID"] = hit_wind_id
+	$WorldRenderer.call("_resolve_fixed_action_magic", hit_effect, hit_wind_id, "run_explode", 300)
+	var hit_explode_state: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", hit_effect, hit_wind_id, "run_explode", 300 + int($WorldRenderer.call("_magic_frame_duration", hit_run)))
+	var hit_components: Array = hit_explode_state.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == hit_explode)
+	if hit_components.size() != 1 or hit_components[0].position != Vector2(409, 120):
+		_fail("hit-wind explode chain mismatch: %s" % hit_explode_state)
 		return
 	if not is_equal_approx(float($WorldRenderer.call("_fire_ash_alpha", 500)), 0.5) or not is_equal_approx(float($WorldRenderer.call("_ice_slag_alpha", 5)), 0.5):
 		_fail("special ground alpha envelope mismatch")
@@ -388,7 +434,30 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ATTACHMENT_SCREENSHOT"))
-	print("MAGIC EFFECT PASS: target/server attachments, firewall, composite/propagated fixed magic and caster-grid laser")
+	if OS.has_environment("MIR2X_FIXED_ACTION_SCREENSHOT"):
+		var fixed_now := Time.get_ticks_msec()
+		var ice_roar_visual := fixed_effect.duplicate(true)
+		ice_roar_visual["magicID"] = fixed_action_ids[1]
+		ice_roar_visual["aimUID"] = 0
+		ice_roar_visual["aimX"] = special_source.x
+		ice_roar_visual["aimY"] = special_source.y
+		ice_roar_visual["start_time"] = fixed_now - 600
+		var hit_visual := fixed_effect.duplicate(true)
+		hit_visual["magicID"] = hit_wind_id
+		hit_visual["aimUID"] = 0
+		hit_visual["aimX"] = special_source.x + 5
+		hit_visual["aimY"] = special_source.y
+		hit_visual["start_time"] = fixed_now - 300 - int($WorldRenderer.call("_magic_frame_duration", hit_run)) - 200
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.magic_effects = [ice_roar_visual, hit_visual]
+		GameState.view_x = (special_source.x + 2) * 48 - 400
+		GameState.view_y = special_source.y * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FIXED_ACTION_SCREENSHOT"))
+	print("MAGIC EFFECT PASS: target/server attachments, fixed/composite/propagated magic and caster-grid laser")
 	get_tree().quit()
 
 

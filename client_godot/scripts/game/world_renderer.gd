@@ -401,6 +401,9 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 	var attachment_policy := _action_attachment_policy(magic_id)
 	if not attachment_policy.is_empty() and effect.get("source", "") != "cast":
 		return _resolve_target_attached_action_magic(effect, magic_id, attachment_policy, elapsed)
+	var fixed_action_kind := _fixed_action_magic_kind(magic_id)
+	if not fixed_action_kind.is_empty() and effect.get("source", "") != "cast":
+		return _resolve_fixed_action_magic(effect, magic_id, fixed_action_kind, elapsed)
 	if not special_kind.is_empty() and effect.get("source", "") != "cast":
 		return _resolve_special_action_magic(effect, magic_id, special_kind, elapsed)
 	for stage in stages:
@@ -457,6 +460,48 @@ func _resolve_target_attached_action_magic(effect: Dictionary, magic_id: int, po
 
 func _attached_target_exists(uid: int) -> bool:
 	return uid != 0 and (uid == game_state.player_uid or game_state.creatures.has(uid))
+
+
+func _fixed_action_magic_kind(magic_id: int) -> String:
+	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+	if magic_name == "击风":
+		return "run_explode"
+	if magic_name in ["冰咆哮", "龙卷风", "爆裂火焰", "地狱雷光", "怒神霹雳", "群体治愈术"]:
+		return "run"
+	return ""
+
+
+func _resolve_fixed_action_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
+	var speed := clampi(effect.get("speed", 100), 20, 500)
+	var trigger_delay := roundi(3.0 * 100.0 * 100.0 / speed)
+	var resolved := {"special_kind": "fixed_action", "components": [], "underlays": [], "on_ground": false}
+	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
+	if not startup_meta.is_empty():
+		var startup_duration := _magic_stage_duration(startup_meta, effect)
+		if elapsed < startup_duration:
+			var startup := _make_resolved_magic(effect, startup_meta, MAGIC_STAGE_SPELL, elapsed, startup_duration)
+			_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_SPELL, startup.position)
+			resolved.components.append(_resolved_component(startup.meta, startup.frame, startup.direction, startup.position))
+	if elapsed < trigger_delay:
+		return resolved
+	if not effect.has("_fixed_position"):
+		effect["_fixed_position"] = _effect_target_grid(effect)
+	var position: Vector2 = effect.get("_fixed_position", Vector2.ZERO)
+	var stage := MAGIC_STAGE_RUN
+	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, stage)
+	var stage_elapsed := elapsed - trigger_delay
+	if meta.is_empty():
+		return resolved if not resolved.components.is_empty() else {}
+	var run_duration := _magic_frame_duration(meta)
+	if kind == "run_explode" and stage_elapsed >= run_duration:
+		stage = MAGIC_STAGE_EXPLODE
+		stage_elapsed -= run_duration
+		meta = actor_resource.magic_layout(magic_id, stage)
+	if not meta.is_empty() and stage_elapsed < _magic_frame_duration(meta):
+		_play_magic_stage_seff(effect, magic_id, stage, position)
+		var frame := mini(_magic_absolute_frame(meta, stage_elapsed), meta[2] - 1)
+		resolved.components.append(_resolved_component(meta, frame, 0, position))
+	return resolved if not resolved.components.is_empty() else {}
 
 
 func _special_magic_kind(magic_id: int) -> String:
