@@ -67,8 +67,19 @@ func _ready() -> void:
 	if not _has_label_text(panel.get_node("Detail"), "1,234") or _count_type(panel.get_node("Detail"), "ColorRect") < 12:
 		_fail("unique price or overlay mismatch")
 		return
+	get_viewport().warp_mouse(Vector2(520, 100))
+	panel.call("_show_item_tooltip", 0, unique_list[0])
+	var purchase_tooltip := panel.get_node("ItemTooltip") as Panel
+	var purchase_lines := _label_texts(purchase_tooltip)
+	var purchase_style := purchase_tooltip.get_theme_stylebox("panel") as StyleBoxFlat
+	if not purchase_tooltip.visible or not purchase_lines.any(func(line): return "【售价】1234" in line) or purchase_style.border_width_left != 0 or purchase_style.corner_radius_top_left != 0:
+		_fail("unique purchase tooltip content/style mismatch: %s" % purchase_lines)
+		return
 	panel.set("_detail_selected", 0)
 	panel.call("_refresh_detail")
+	if not purchase_tooltip.visible or panel.get("_tooltip_index") != 0:
+		_fail("purchase tooltip did not survive detail refresh")
+		return
 	if OS.has_environment("MIR2X_PURCHASE_UNIQUE_SCREENSHOT"):
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
@@ -92,6 +103,9 @@ func _ready() -> void:
 	GameState.state_changed.emit()
 	if panel.size.x != 514 or panel.get_node("Detail").get_child_count() < 3 or not _has_label_text(panel.get_node("Detail"), "1,288 金币"):
 		_fail("packable item extension missing")
+		return
+	if panel.get_node("ItemTooltip").visible:
+		_fail("packable extension unexpectedly exposes unique-item tooltip")
 		return
 	if OS.has_environment("MIR2X_PURCHASE_SCREENSHOT"):
 		await get_tree().process_frame
@@ -131,6 +145,14 @@ func _has_label_text(parent: Node, wanted: String) -> bool:
 		if child is Label and child.text == wanted:
 			return true
 	return false
+
+
+func _label_texts(parent: Node) -> Array[String]:
+	var result: Array[String] = []
+	for child in parent.get_children():
+		if child is Label:
+			result.append(child.text)
+	return result
 
 
 func _count_type(parent: Node, type_name: String) -> int:

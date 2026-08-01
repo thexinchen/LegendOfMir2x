@@ -74,3 +74,11 @@ offset_right = 320.0
 offset_bottom = 47.0
 texture_hover = ExtResource("3")
 ignore_texture_size = true
+
+[node name="ItemTooltip" type="Panel" parent="."]
+visible = false
+z_index = 4096
+z_as_relative = false
+offset_right = 220.0
+offset_bottom = 40.0
+mouse_filter = 2

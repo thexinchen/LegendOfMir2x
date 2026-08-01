@@ -3,6 +3,8 @@ extends "res://scripts/game/closable_panel.gd"
 signal quantity_requested(npc_uid: int, item_id: int, item_name: String)
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const ItemTooltipFormatterScript = preload("res://scripts/game/item_tooltip_formatter.gd")
+const ItemTooltipRendererScript = preload("res://scripts/game/item_tooltip_renderer.gd")
 const BUY_NORMAL := preload("res://assets/ui/game/purchase/08000005.png")
 const BUY_DOWN := preload("res://assets/ui/game/purchase/08000006.png")
 const LEFT_NORMAL := preload("res://assets/ui/game/purchase/08000007.png")
@@ -20,18 +22,28 @@ var _detail_selected := -1
 var _detail_page := 0
 var _scroll := 0.0
 var _reset_serial := -1
+var _tooltip_index := -1
 
 
 func _ready() -> void:
 	super._ready()
 	_state = get_node("/root/GameState")
 	_resources.configure_default()
+	ItemTooltipRendererScript.configure($ItemTooltip, false, false)
 	_state.state_changed.connect(_refresh)
 	$SelectButton.pressed.connect(_query_selected)
 	$CloseButton.pressed.connect(_close_panel)
 	$GoodsList.gui_input.connect(_on_list_input)
 	$SliderHit.gui_input.connect(_on_slider_input)
 	_refresh()
+
+
+func _process(_delta: float) -> void:
+	if $ItemTooltip.visible:
+		if is_visible_in_tree():
+			ItemTooltipRendererScript.update_position($ItemTooltip, false)
+		else:
+			_hide_item_tooltip()
 
 
 func _close_panel() -> void:
@@ -148,20 +160,27 @@ func _query_selected() -> void:
 
 
 func _refresh_detail() -> void:
+	var tooltip_index := _tooltip_index
 	for child in $Detail.get_children():
 		child.free()
 	var detail: Dictionary = _state.npc_sell_detail
 	var list: Array = detail.get("list", [])
 	if detail.get("npcUID", 0) != _state.npc_sell.get("npcUID", 0) or list.is_empty():
 		_set_background(0x08000000, Vector2(290, 224))
+		_hide_item_tooltip()
 		return
 	var detail_item: Dictionary = list[0].get("item", {})
 	if _resources.item_is_packable(detail_item.get("itemID", 0)):
 		_set_background(0x08000002, Vector2(514, 224))
 		_build_packable_detail(list[0])
+		_hide_item_tooltip()
 	else:
 		_set_background(0x08000001, Vector2(488, 224))
 		_build_unique_detail(list)
+		if tooltip_index >= 0 and tooltip_index < list.size() and tooltip_index / PAGE_SIZE == _detail_page:
+			_show_item_tooltip(tooltip_index, list[tooltip_index])
+		else:
+			_hide_item_tooltip()
 
 
 func _set_background(texture_id: int, panel_size: Vector2) -> void:
@@ -190,7 +209,8 @@ func _build_unique_detail(list: Array) -> void:
 		var icon: Dictionary = _resources.item_icon(item.get("itemID", 0))
 		if not icon.is_empty():
 			button.texture_normal = icon.texture
-		button.tooltip_text = "%s\n价格 %d" % [_resources.item_name(item.get("itemID", 0)), _gold_price(sell_item)]
+		button.mouse_entered.connect(_show_item_tooltip.bind(index, sell_item))
+		button.mouse_exited.connect(_hide_item_tooltip)
 		button.pressed.connect(func(): _detail_selected = index; _refresh_detail())
 		$Detail.add_child(button)
 		var price := Label.new()
@@ -224,6 +244,19 @@ func _build_unique_detail(list: Array) -> void:
 	page_label.add_theme_font_size_override("font_size", 12)
 	page_label.add_theme_color_override("font_color", Color.YELLOW)
 	$Detail.add_child(page_label)
+
+
+func _show_item_tooltip(index: int, sell_item: Dictionary) -> void:
+	_tooltip_index = index
+	var item: Dictionary = sell_item.get("item", {})
+	var lines: Array[String] = ItemTooltipFormatterScript.plain_layout_lines(item, _resources, _gold_price(sell_item))
+	ItemTooltipRendererScript.show_lines($ItemTooltip, lines, 220.0, 40.0, Vector2(10, 10), 15.0, 10)
+	ItemTooltipRendererScript.update_position($ItemTooltip, false)
+
+
+func _hide_item_tooltip() -> void:
+	_tooltip_index = -1
+	$ItemTooltip.hide()
 
 
 func _build_packable_detail(sell_item: Dictionary) -> void:

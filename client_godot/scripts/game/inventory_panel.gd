@@ -2,6 +2,7 @@ extends "res://scripts/game/closable_panel.gd"
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const ItemTooltipFormatterScript = preload("res://scripts/game/item_tooltip_formatter.gd")
+const ItemTooltipRendererScript = preload("res://scripts/game/item_tooltip_renderer.gd")
 const GRID_COLUMNS := 10
 const GRID_VISIBLE_ROWS := 10
 const CELL_SIZE := 38
@@ -56,6 +57,7 @@ func _ready() -> void:
 	$OperationButton.pressed.connect(AudioService.play_ui_click)
 	_bind_overlay_button($SortButton)
 	_bind_overlay_button($CloseButton)
+	ItemTooltipRendererScript.configure($ItemTooltip, true, true)
 	_refresh()
 	_update_emblem()
 
@@ -157,21 +159,8 @@ func _refresh() -> void:
 
 func _show_item_tooltip(item: Dictionary) -> void:
 	_tooltip_key = _item_key(item)
-	for child in $ItemTooltip.get_children():
-		child.free()
 	var lines: Array[String] = ItemTooltipFormatterScript.plain_layout_lines(item, _resources)
-	var tooltip_height := maxf(TOOLTIP_MIN_HEIGHT, TOOLTIP_PADDING * 2.0 + lines.size() * TOOLTIP_LINE_HEIGHT)
-	$ItemTooltip.size = Vector2(TOOLTIP_WIDTH, tooltip_height)
-	for index in range(lines.size()):
-		var label := Label.new()
-		label.position = Vector2(TOOLTIP_PADDING, TOOLTIP_PADDING + index * TOOLTIP_LINE_HEIGHT)
-		label.size = Vector2(TOOLTIP_WIDTH - TOOLTIP_PADDING * 2.0, TOOLTIP_LINE_HEIGHT)
-		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		label.add_theme_font_size_override("font_size", TOOLTIP_FONT_SIZE)
-		label.add_theme_color_override("font_color", Color.WHITE)
-		label.text = lines[index]
-		$ItemTooltip.add_child(label)
-	$ItemTooltip.show()
+	ItemTooltipRendererScript.show_lines($ItemTooltip, lines, TOOLTIP_WIDTH, TOOLTIP_MIN_HEIGHT, Vector2(TOOLTIP_PADDING, TOOLTIP_PADDING), TOOLTIP_LINE_HEIGHT, TOOLTIP_FONT_SIZE)
 	_update_tooltip_position()
 
 
@@ -181,14 +170,7 @@ func _hide_item_tooltip() -> void:
 
 
 func _update_tooltip_position(mouse_position: Variant = null) -> void:
-	var viewport_size := get_viewport_rect().size
-	var tooltip_size: Vector2 = $ItemTooltip.size
-	var mouse: Vector2 = get_viewport().get_mouse_position() if mouse_position == null else mouse_position
-	var clamped := Vector2(
-		clampf(mouse.x, 0.0, maxf(0.0, viewport_size.x - tooltip_size.x)),
-		clampf(mouse.y, 0.0, maxf(0.0, viewport_size.y - tooltip_size.y)),
-	)
-	$ItemTooltip.position = clamped - global_position
+	ItemTooltipRendererScript.update_position($ItemTooltip, true, mouse_position)
 
 
 func _sync_bins() -> void:

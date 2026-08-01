@@ -5,7 +5,7 @@ const DEFAULT_DESCRIPTION := "游戏处于开发阶段，暂无物品描述。"
 const ELEMENT_NAMES := ["火", "冰", "雷", "风", "神圣", "暗黑", "幻影"]
 
 
-static func plain_layout_lines(item: Dictionary, resources: RefCounted) -> Array[String]:
+static func plain_layout_lines(item: Dictionary, resources: RefCounted, price: Variant = null) -> Array[String]:
 	var item_id := int(item.get("itemID", 0))
 	var attributes: Dictionary = resources.item_attribute(item_id)
 	var detail: Dictionary = resources.item_detail(item_id)
@@ -13,6 +13,8 @@ static func plain_layout_lines(item: Dictionary, resources: RefCounted) -> Array
 	lines.append(_line("【名称】%s" % resources.item_name(item_id)))
 	lines.append(_line("【类型】%s" % resources.item_type(item_id)))
 	lines.append(_line("【重量】%d" % int(attributes.get("weight", 0))))
+	if price != null:
+		lines.append(_line("【售价】%d" % int(price)))
 
 	var record_duration := int(detail.get("duration", 0))
 	if record_duration > 0:

@@ -1,6 +1,7 @@
 extends "res://scripts/game/closable_panel.gd"
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const ItemTooltipRendererScript = preload("res://scripts/game/item_tooltip_renderer.gd")
 const PAGE_SIZE := 12
 
 var _state: Node
@@ -8,12 +9,14 @@ var _resources: RefCounted = ActorResourceScript.new()
 var _page := 0
 var _selected_index := -1
 var _last_reset_serial := -1
+var _tooltip_index := -1
 
 
 func _ready() -> void:
 	super._ready()
 	_state = get_node("/root/GameState")
 	_resources.configure_default()
+	ItemTooltipRendererScript.configure($ItemTooltip, false, false)
 	_state.state_changed.connect(_refresh)
 	$LeftButton.pressed.connect(func(): _change_page(-1))
 	$RightButton.pressed.connect(func(): _change_page(1))
@@ -21,7 +24,16 @@ func _ready() -> void:
 	_refresh()
 
 
+func _process(_delta: float) -> void:
+	if $ItemTooltip.visible:
+		if is_visible_in_tree():
+			ItemTooltipRendererScript.update_position($ItemTooltip, false)
+		else:
+			_hide_item_tooltip()
+
+
 func _refresh() -> void:
+	var tooltip_index := _tooltip_index
 	if _last_reset_serial != _state.secured_items_reset_serial:
 		_last_reset_serial = _state.secured_items_reset_serial
 		_page = 0
@@ -45,7 +57,8 @@ func _refresh() -> void:
 			var icon: Dictionary = _resources.item_icon(item_id)
 			if not icon.is_empty():
 				cell.texture_normal = icon.texture
-			cell.tooltip_text = "%s\n%s\n数量 %d" % [_resources.item_name(item_id), _resources.item_type(item_id), item.get("count", 0)]
+			cell.mouse_entered.connect(_show_item_tooltip.bind(index, item))
+			cell.mouse_exited.connect(_hide_item_tooltip)
 			cell.pressed.connect(_select_index.bind(index))
 			cell.gui_input.connect(_on_cell_input)
 			if _resources.item_is_packable(item_id) and int(item.get("count", 0)) > 0:
@@ -73,6 +86,24 @@ func _refresh() -> void:
 				cell.mouse_entered.connect(hovered.show)
 				cell.mouse_exited.connect(hovered.hide)
 		$ItemGrid.add_child(cell)
+	if tooltip_index >= _page * PAGE_SIZE and tooltip_index < mini((_page + 1) * PAGE_SIZE, _state.secured_items.size()):
+		_show_item_tooltip(tooltip_index, _state.secured_items[tooltip_index])
+	else:
+		_hide_item_tooltip()
+
+
+func _show_item_tooltip(index: int, item: Dictionary) -> void:
+	_tooltip_index = index
+	var item_id := int(item.get("itemID", 0))
+	var description := str(_resources.item_detail(item_id).get("description", ""))
+	var lines: Array[String] = [_resources.item_name(item_id), description if not description.is_empty() else "暂无描述"]
+	ItemTooltipRendererScript.show_lines($ItemTooltip, lines, 240.0, 60.0, Vector2(20, 12), 19.0, 10, 60.0)
+	ItemTooltipRendererScript.update_position($ItemTooltip, false)
+
+
+func _hide_item_tooltip() -> void:
+	_tooltip_index = -1
+	$ItemTooltip.hide()
 
 
 func _select_index(index: int) -> void:

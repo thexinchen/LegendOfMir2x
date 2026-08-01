@@ -2,9 +2,12 @@ extends "res://scripts/game/closable_panel.gd"
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const CombatCalculatorScript = preload("res://scripts/game/combat_calculator.gd")
+const ItemTooltipFormatterScript = preload("res://scripts/game/item_tooltip_formatter.gd")
+const ItemTooltipRendererScript = preload("res://scripts/game/item_tooltip_renderer.gd")
 
 var _state: Node
 var _resources: RefCounted = ActorResourceScript.new()
+var _tooltip_location := -1
 
 const WEAR_GRIDS := {
 	1: Rect2(90, 100, 60, 110),
@@ -25,11 +28,21 @@ func _ready() -> void:
 	super._ready()
 	_state = get_node("/root/GameState")
 	_resources.configure_default()
+	ItemTooltipRendererScript.configure($ItemTooltip, true, true)
 	_state.state_changed.connect(_refresh)
 	_refresh()
 
 
+func _process(_delta: float) -> void:
+	if $ItemTooltip.visible:
+		if is_visible_in_tree():
+			ItemTooltipRendererScript.update_position($ItemTooltip, false)
+		else:
+			_hide_item_tooltip()
+
+
 func _refresh() -> void:
+	var tooltip_location := _tooltip_location
 	$Name.text = _state.player_name
 	var combat: Dictionary = CombatCalculatorScript.calculate(_state, _resources)
 	var inv_load := CombatCalculatorScript.inventory_load(_state, _resources)
@@ -62,9 +75,14 @@ func _refresh() -> void:
 			if not frame.is_empty():
 				icon.texture_normal = frame.texture
 		if not item.is_empty():
-			icon.tooltip_text = _item_tooltip(item)
+			icon.mouse_entered.connect(_show_item_tooltip.bind(location, item))
+			icon.mouse_exited.connect(_hide_item_tooltip)
 		icon.pressed.connect(_on_wear_pressed.bind(location))
 		$EquipmentSlots.add_child(icon)
+	if tooltip_location >= 0 and not _state.wear.get(tooltip_location, {}).is_empty():
+		_show_item_tooltip(tooltip_location, _state.wear[tooltip_location])
+	else:
+		_hide_item_tooltip()
 	$CharacterLayers.queue_redraw()
 
 
@@ -114,19 +132,16 @@ func _can_wear(item_id: int, location: int) -> bool:
 	return true
 
 
-func _item_tooltip(item: Dictionary) -> String:
-	var item_id := int(item.get("itemID", 0))
-	var attr: Dictionary = _resources.item_attribute(item_id)
-	var lines := [_resources.item_name(item_id), _resources.item_type(item_id), "重量 %d" % attr.get("weight", 0)]
-	for entry in [["攻击", "dc"], ["魔法", "mc"], ["道术", "sc"], ["防御", "ac"], ["魔防", "mac"]]:
-		var pair: PackedInt32Array = attr.get(entry[1], PackedInt32Array())
-		if pair.size() >= 2 and (pair[0] != 0 or pair[1] != 0):
-			lines.append("%s %d - %d" % [entry[0], pair[0], pair[1]])
-	for entry in [["命中", "dc_hit"], ["闪避", "dc_dodge"], ["速度", "speed"], ["舒适度", "comfort"]]:
-		var value := int(attr.get(entry[1], 0))
-		if value != 0:
-			lines.append("%s %+d" % [entry[0], value])
-	return "\n".join(lines)
+func _show_item_tooltip(location: int, item: Dictionary) -> void:
+	_tooltip_location = location
+	var lines: Array[String] = ItemTooltipFormatterScript.plain_layout_lines(item, _resources)
+	ItemTooltipRendererScript.show_lines($ItemTooltip, lines, 220.0, 40.0, Vector2(10, 10), 15.0, 10)
+	ItemTooltipRendererScript.update_position($ItemTooltip, false)
+
+
+func _hide_item_tooltip() -> void:
+	_tooltip_location = -1
+	$ItemTooltip.hide()
 
 
 func _refresh_elements(combat: Dictionary) -> void:

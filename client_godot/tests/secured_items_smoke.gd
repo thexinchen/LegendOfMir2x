@@ -47,6 +47,17 @@ func _ready() -> void:
 	if count_label == null or count_label.text != "1,234" or first_cell.get_node_or_null("Hover") == null:
 		_fail("count formatting/hover overlay mismatch: children=%s count=%s" % [first_cell.get_children().map(func(child): return child.name), count_label.text if count_label else "null"])
 		return
+	get_viewport().warp_mouse(Vector2(520, 100))
+	panel.call("_show_item_tooltip", 0, secured_items[0])
+	var secured_tooltip := panel.get_node("ItemTooltip") as Panel
+	var secured_lines := _label_texts(secured_tooltip)
+	var secured_style := secured_tooltip.get_theme_stylebox("panel") as StyleBoxFlat
+	if not secured_tooltip.visible or secured_tooltip.size != Vector2(240, 60) or secured_lines.size() != 2 or "数量" in "".join(secured_lines) or resources.item_type(packable_id) in "".join(secured_lines) or secured_style.border_width_left != 0:
+		_fail("secured tooltip content/style mismatch: %s" % secured_lines)
+		return
+	if OS.has_environment("MIR2X_SECURED_TOOLTIP_SCREENSHOT"):
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_SECURED_TOOLTIP_SCREENSHOT"))
 	GameState.set_secured_items(secured_items)
 	if panel.get("_page") != 0 or panel.get("_selected_index") != -1:
 		_fail("full list replacement did not reset page/selection")
@@ -80,3 +91,11 @@ func _ready() -> void:
 func _fail(message: String) -> void:
 	push_error("SECURED_ITEMS_SMOKE %s" % message)
 	get_tree().quit(1)
+
+
+func _label_texts(parent: Node) -> Array[String]:
+	var result: Array[String] = []
+	for child in parent.get_children():
+		if child is Label:
+			result.append(child.text)
+	return result
