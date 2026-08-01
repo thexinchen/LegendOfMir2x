@@ -53,6 +53,8 @@ func _ready() -> void:
 		return
 	if not _test_spinkick_direction(main):
 		return
+	if not _test_actor_record_lifecycle(main):
+		return
 
 	GameState.chat_log.clear()
 	var item_id: int = resources.item_names.keys()[0]
@@ -511,6 +513,63 @@ func _test_spinkick_direction(main: Control) -> bool:
 	return true
 
 
+func _test_actor_record_lifecycle(main: Control) -> bool:
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	var monster_uid: int = (4 << 59) | (224 << 35) | 303
+	GameState.update_creature(monster_uid, {
+		"uid": monster_uid, "type": 1, "monster_id": 224,
+		"x": 5, "y": 6, "direction": 3, "action_type": 2,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(monster_uid, 202, {
+		"type": 1, "speed": 100, "direction": 7, "x": 20, "y": 21,
+	}))
+	var retained: Dictionary = GameState.get_creature(monster_uid)
+	if retained.get("x", 0) != 5 or retained.get("y", 0) != 6 or retained.get("direction", 0) != 3 or retained.get("action_type", 0) != 2:
+		_fail("late ACTION_SPAWN reset an existing actor: %s" % retained)
+		return false
+
+	var player_uid: int = (5 << 59) | 404
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(player_uid, 202, {
+		"type": 3, "speed": 100, "direction": 5, "x": 8, "y": 9, "aimX": 9, "aimY": 9,
+	}))
+	if not GameState.get_creature(player_uid).is_empty():
+		_fail("unknown player action created a blank phantom before SM_COREORD")
+		return false
+	var player_union := PackedByteArray([5, 18, 0, 0, 0])
+	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(player_uid, 202, {
+		"type": 2, "speed": 100, "direction": 6, "x": 9, "y": 9,
+	}, player_union))
+	var resolved: Dictionary = GameState.get_creature(player_uid)
+	if resolved.get("type", 0) != 2 or resolved.get("gender", 0) != 1 or resolved.get("job", 0) != 2 or resolved.get("level", 0) != 18:
+		_fail("matching SM_COREORD did not create the queried player: %s" % resolved)
+		return false
+
+	var stale_uid: int = (5 << 59) | 405
+	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(stale_uid, 999, {
+		"type": 2, "speed": 100, "direction": 5, "x": 30, "y": 31,
+	}, player_union))
+	if not GameState.get_creature(stale_uid).is_empty():
+		_fail("stale-map SM_COREORD inserted an actor into the current world")
+		return false
+	var new_monster_uid: int = (4 << 59) | (225 << 35) | 406
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(new_monster_uid, 202, {
+		"type": 2, "speed": 100, "direction": 4, "x": 11, "y": 12,
+	}))
+	var new_npc_uid: int = (3 << 59) | (7 << 35) | 407
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(new_npc_uid, 202, {
+		"type": 1, "speed": 100, "direction": 1, "x": 13, "y": 14,
+	}))
+	if GameState.get_creature(new_monster_uid).get("monster_id", 0) != 225 or GameState.get_creature(new_npc_uid).get("npc_id", 0) != 7:
+		_fail("player-specific record query suppressed unknown monster or NPC creation")
+		return false
+	GameState.remove_creature(monster_uid)
+	GameState.remove_creature(player_uid)
+	GameState.remove_creature(new_monster_uid)
+	GameState.remove_creature(new_npc_uid)
+	return true
+
+
 func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
 	GameState.player_uid = 101
 	GameState.player_map_uid = 202
@@ -533,6 +592,10 @@ func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
 		_fail("space move did not create original teleport effect")
 		return false
 	var remote_uid: int = (5 << 59) | 606
+	GameState.update_creature(remote_uid, {
+		"uid": remote_uid, "type": 2, "gender": 0, "job": 0,
+		"x": 6, "y": 7, "direction": 3, "action_type": 2,
+	})
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(remote_uid, 202, {
 		"type": 5, "speed": 100, "direction": 3, "x": 6, "y": 7, "aimX": 8, "aimY": 7,
 	}))
@@ -549,6 +612,7 @@ func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
 		_fail("mine action did not use C++ two-handed swing and attack-mode timing")
 		return false
 	main.call("_process_player_action", 0.02)
+	GameState.remove_creature(remote_uid)
 	main.call("_cancel_movement")
 	return true
 
@@ -561,6 +625,19 @@ func _sm_action(uid: int, map_uid: int, action: Dictionary) -> PackedByteArray:
 	var encoded_action := Protocol.encode_action_node(action)
 	for index in range(encoded_action.size()):
 		payload[16 + index] = encoded_action[index]
+	return payload
+
+
+func _sm_corecord(uid: int, map_uid: int, action: Dictionary, union_data: PackedByteArray) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(48)
+	payload.encode_u64(0, uid)
+	payload.encode_u64(8, map_uid)
+	var action_data := Protocol.encode_action_node(action)
+	for index in action_data.size():
+		payload[16 + index] = action_data[index]
+	for index in mini(5, union_data.size()):
+		payload[43 + index] = union_data[index]
 	return payload
 
 

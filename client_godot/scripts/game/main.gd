@@ -957,6 +957,16 @@ func _handle_action(payload: PackedByteArray) -> void:
 	var y: int = action.get("y", 0)
 	var action_type: int = action.get("type", 0)
 	var direction: int = action.get("direction", 0)
+	var creature: Dictionary = game_state.get_creature(uid) if uid != game_state.player_uid else {}
+	if action_type == 1 and (uid == game_state.player_uid or not creature.is_empty()):
+		return
+	if uid != game_state.player_uid and creature.is_empty():
+		match _creature_type_from_uid(uid):
+			2:
+				NetworkClient.send_query_corecord(uid)
+				return
+			0:
+				return
 	if action_type == 12 and direction < 1:
 		direction = _spinkick_direction(uid, action)
 	if action_type == 6:
@@ -993,7 +1003,6 @@ func _handle_action(payload: PackedByteArray) -> void:
 		_play_action_seff(uid, action, {"uid": uid, "type": 2, "gender": game_state.player_gender, "desp": game_state.player_desp, "action_started_ms": game_state.player_action_started_ms})
 	else:
 		# Update or create creature
-		var creature: Dictionary = game_state.get_creature(uid)
 		if creature.is_empty():
 			var inferred_type := _creature_type_from_uid(uid)
 			creature = {
@@ -1076,6 +1085,8 @@ func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay:
 
 func _handle_corecord(payload: PackedByteArray) -> void:
 	var data := Protocol.decode_sm_corecord(payload)
+	if data.get("mapUID", 0) != game_state.player_map_uid:
+		return
 	var uid: int = data.get("uid", 0)
 	var action: Dictionary = data.get("action", {})
 	
@@ -1085,6 +1096,9 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	var c_type := _creature_type_from_uid(uid)
 	
 	var creature: Dictionary = game_state.get_creature(uid)
+	var is_new := creature.is_empty()
+	if is_new and c_type not in [1, 2]:
+		return
 	if creature.is_empty():
 		creature = {
 			"uid": uid,
@@ -1127,6 +1141,8 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 				creature["npc_id"] = union_data.decode_u32(0)
 	
 	game_state.update_creature(uid, creature)
+	if is_new and c_type == 2:
+		NetworkClient.send_query_player_wldesp(uid)
 	var duration := _action_duration(action.get("type", 0), action.get("speed", 100), c_type, action.get("magicID", 0))
 	if duration > 0.0:
 		_schedule_creature_idle(uid, action.get("type", 0), creature.get("action_started_ms", 0), duration)
