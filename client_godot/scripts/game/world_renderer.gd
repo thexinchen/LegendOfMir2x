@@ -23,6 +23,13 @@ const PLAYER_SAY_WIDTH := 160
 const PLAYER_SAY_FONT_SIZE := 15
 const PLAYER_SAY_SHOW_TIME := 5000
 const PLAYER_SAY_MARGIN := 2
+const FOCUS_COLORS := [
+	Color.WHITE,
+	Color8(0xFF, 0x86, 0x00),
+	Color8(0x92, 0xC6, 0x20),
+	Color8(0x00, 0xC6, 0xF0),
+	Color8(0xD0, 0x2C, 0x70),
+]
 
 var game_state: Node = null
 
@@ -33,6 +40,10 @@ var world_resource: RefCounted = WorldResourceScript.new()
 var actor_resource: RefCounted = ActorResourceScript.new()
 var _active_attached_magic: Dictionary = {}
 var _actor_target_rects: Dictionary = {}
+var _mouse_focus_uid := 0
+var _magic_focus_uid := 0
+var _follow_focus_uid := 0
+var _attack_focus_uid := 0
 
 
 func _ready() -> void:
@@ -56,9 +67,16 @@ func can_walk(x: int, y: int) -> bool:
 	return world_resource.can_walk(x, y)
 
 
+func set_focus_channels(magic_uid: int, follow_uid: int, attack_uid: int) -> void:
+	_magic_focus_uid = magic_uid
+	_follow_focus_uid = follow_uid
+	_attack_focus_uid = attack_uid
+
+
 func _draw() -> void:
 	if game_state == null:
 		return
+	_mouse_focus_uid = focus_uid_at_screen(get_local_mouse_position())
 	_actor_target_rects.clear()
 	
 	var view_x: int = int(game_state.view_x)
@@ -636,6 +654,7 @@ func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int) -> b
 	var body: Dictionary = actor_resource.frame("monster", body_key)
 	_record_actor_target(creature.get("uid", 0), 1, creature.get("y", 0), creature.get("action_type", 2), body, start_x, start_y)
 	_draw_sprite_frame(body, start_x, start_y, 1.0)
+	_draw_focus_overlays(body, start_x, start_y, creature.get("uid", 0), 1.0)
 	return not body.is_empty()
 
 
@@ -669,6 +688,23 @@ func focus_uid_at_screen(screen_position: Vector2, allow_player := false) -> int
 	return best_uid
 
 
+func focus_color(channel: int) -> Color:
+	return FOCUS_COLORS[channel] if channel >= 0 and channel < FOCUS_COLORS.size() else Color.WHITE
+
+
+func _draw_focus_overlays(body: Dictionary, start_x: int, start_y: int, uid: int, alpha: float) -> void:
+	if body.is_empty() or uid == 0:
+		return
+	var channel_uids := [_mouse_focus_uid, _magic_focus_uid, _follow_focus_uid, _attack_focus_uid]
+	var offset: Vector2i = body.offset
+	for index in range(channel_uids.size()):
+		if int(channel_uids[index]) != uid:
+			continue
+		var color := focus_color(index + 1)
+		color.a = alpha
+		draw_texture(body.texture, Vector2(start_x + offset.x, start_y + offset.y), color)
+
+
 func _draw_npc_sprite(creature: Dictionary, start_x: int, start_y: int) -> bool:
 	var npc_id: int = creature.get("npc_id", 0)
 	# NPC resources store the first/second/third available view, not eight compass directions.
@@ -679,6 +715,7 @@ func _draw_npc_sprite(creature: Dictionary, start_x: int, start_y: int) -> bool:
 	var body: Dictionary = actor_resource.frame("npc", body_key)
 	_record_actor_target(creature.get("uid", 0), 3, creature.get("y", 0), creature.get("action_type", 2), body, start_x, start_y)
 	_draw_sprite_frame(body, start_x, start_y, 1.0)
+	_draw_focus_overlays(body, start_x, start_y, creature.get("uid", 0), 1.0)
 	return not body.is_empty()
 
 

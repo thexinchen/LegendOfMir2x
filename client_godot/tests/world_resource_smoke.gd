@@ -43,13 +43,18 @@ func _ready() -> void:
 		_fail("magic-stage SEFF metadata unavailable")
 		return
 	var weapon_sound_count := 0
+	var mine_weapon_count := 0
 	for attributes_value in actors.item_attributes.values():
 		var attributes: Dictionary = attributes_value
 		weapon_sound_count += 1 if attributes.get("weapon_sound", 7) < 7 else 0
+		mine_weapon_count += 1 if attributes.get("mine", false) else 0
 	if weapon_sound_count == 0:
 		_fail("weapon sound metadata unavailable")
 		return
-	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d magic_seff=%d weapon_sound=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size(), magic_seff_count, weapon_sound_count])
+	if mine_weapon_count == 0:
+		_fail("item meta v5 did not export mine-capable weapons")
+		return
+	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d magic_seff=%d weapon_sound=%d mine_weapon=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size(), magic_seff_count, weapon_sound_count, mine_weapon_count])
 	get_tree().quit()
 
 

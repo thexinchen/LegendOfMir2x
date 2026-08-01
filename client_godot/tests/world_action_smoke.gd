@@ -67,9 +67,11 @@ func _ready() -> void:
 		return
 	if not _test_exact_frame_input(main):
 		return
+	if not _test_mining(main, resources):
+		return
 	if not _test_pickup_action(main, resources):
 		return
-	print("WORLD ACTION PASS: exact-frame focus, action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
+	print("WORLD ACTION PASS: focus channels, mining, exact-frame focus, action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
 
 
@@ -371,7 +373,7 @@ func _test_exact_frame_input(main: Control) -> bool:
 	left_click.position = Vector2(100, 100)
 	left_click.pressed = true
 	main.call("_handle_mouse_click", left_click)
-	if main.get("_chase_target_uid") != 707 or GameState.grabbed_item.is_empty():
+	if main.get("_chase_target_uid") != 707 or main.get("_attack_focus_uid") != 707 or GameState.grabbed_item.is_empty():
 		_fail("exact-frame monster click did not outrank grabbed-item drop")
 		return false
 	main.call("_cancel_movement")
@@ -380,13 +382,64 @@ func _test_exact_frame_input(main: Control) -> bool:
 	right_click.position = Vector2(100, 100)
 	right_click.pressed = true
 	main.call("_handle_mouse_click", right_click)
-	if main.get("_follow_focus_uid") != 707 or not main.get("_move_path").is_empty():
+	if main.get("_attack_focus_uid") != 0 or main.get("_follow_focus_uid") != 707 or not main.get("_move_path").is_empty():
 		_fail("right-click focused creature incorrectly issued ground movement")
 		return false
 	main.call("_cancel_movement")
+	if main.get("_follow_focus_uid") != 707:
+		_fail("generic movement cancellation erased persistent follow focus")
+		return false
+	if renderer.focus_color(1) != Color8(0xFF, 0x86, 0x00) or renderer.focus_color(2) != Color8(0x92, 0xC6, 0x20) or renderer.focus_color(3) != Color8(0x00, 0xC6, 0xF0) or renderer.focus_color(4) != Color8(0xD0, 0x2C, 0x70):
+		_fail("focus channel colors do not match C++")
+		return false
 	GameState.grabbed_item = {}
 	GameState.creatures.erase(707)
 	renderer._actor_target_rects.clear()
+	return true
+
+
+func _test_mining(main: Control, resources: RefCounted) -> bool:
+	var mine_weapon := 0
+	for item_id_value in resources.item_attributes:
+		if resources.item_can_mine(int(item_id_value)):
+			mine_weapon = int(item_id_value)
+			break
+	if mine_weapon == 0:
+		_fail("mine-capable weapon metadata unavailable")
+		return false
+	GameState.wear = {3: {"itemID": mine_weapon}}
+	GameState.grabbed_item = {}
+	GameState.ground_items.clear()
+	var renderer: Control = main.get_node("WorldRenderer")
+	renderer._actor_target_rects.clear()
+	GameState.view_x = 0.0
+	GameState.view_y = 0.0
+	var click_position := Vector2(96, 32)
+	var mine_grid: Vector2i = renderer.grid_from_screen(int(click_position.x), int(click_position.y))
+	var encoded_mine := Protocol.encode_action_node({"type": 14, "speed": 100, "x": mine_grid.x, "y": mine_grid.y})
+	var decoded_mine := Protocol.decode_action_node(encoded_mine)
+	if int(decoded_mine.get("type", 0)) != 14 or int(decoded_mine.get("x", -1)) != mine_grid.x or int(decoded_mine.get("y", -1)) != mine_grid.y:
+		_fail("ACTION_MINE target is not encoded in ActionNode x/y")
+		return false
+	GameState.player_x = mine_grid.x - 1
+	GameState.player_y = mine_grid.y
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.position = click_position
+	click.pressed = true
+	main.call("_handle_mouse_click", click)
+	if main.get("_mine_target") != mine_grid or GameState.player_action_type != 14 or float(main.get("_player_action_timer")) < 0.89:
+		_fail("mine click did not enter repeating ACTION_MINE at the target grid")
+		return false
+	main.call("_process_player_action", 1.0)
+	main.call("_process_movement", 0.01)
+	if GameState.player_action_type != 14 or float(main.get("_player_action_timer")) < 0.89:
+		_fail("mine action did not repeat after attack-mode timing")
+		return false
+	main.call("_cancel_movement")
+	if main.get("_mine_target") != Vector2i(-1, -1):
+		_fail("new operation did not cancel mining")
+		return false
 	return true
 
 

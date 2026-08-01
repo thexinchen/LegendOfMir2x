@@ -50,7 +50,9 @@ var _move_path: Array[Vector2i] = []
 var _move_step_timer := 0.0
 var _chase_target_uid := 0
 var _follow_focus_uid := 0
+var _attack_focus_uid := 0
 var _pickup_target := Vector2i(-1, -1)
+var _mine_target := Vector2i(-1, -1)
 var _pickup_action_timer := -1.0
 var _player_action_timer := -1.0
 
@@ -119,6 +121,7 @@ func _process(delta: float) -> void:
 		NetworkClient.send_ping(_ping_tick)
 	
 	# Redraw world
+	world_renderer.set_focus_channels(_magic_focus_uid, _follow_focus_uid, _attack_focus_uid)
 	world_renderer.queue_redraw()
 	if grabbed_item_icon.visible:
 		grabbed_item_icon.position = get_viewport().get_mouse_position() - grabbed_item_icon.size * 0.5
@@ -184,6 +187,8 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 	var grid: Vector2i = world_renderer.grid_from_screen(int(event.position.x), int(event.position.y))
 	var focus_uid: int = world_renderer.focus_uid_at_screen(event.position, event.button_index == MOUSE_BUTTON_LEFT)
 	if event.button_index == MOUSE_BUTTON_RIGHT:
+		_attack_focus_uid = 0
+		_follow_focus_uid = 0
 		if focus_uid != 0:
 			_cancel_movement()
 			_follow_focus_uid = focus_uid
@@ -207,6 +212,10 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 		var ground_key := "%d,%d" % [grid.x, grid.y]
 		if game_state.ground_items.has(ground_key):
 			_start_pickup_at(grid)
+		else:
+			var weapon: Dictionary = game_state.wear.get(3, {})
+			if _resources.item_can_mine(int(weapon.get("itemID", 0))):
+				_start_mining(grid)
 
 
 func _start_move_to(destination: Vector2i) -> void:
@@ -216,6 +225,7 @@ func _start_move_to(destination: Vector2i) -> void:
 
 func _start_chase(target_uid: int) -> void:
 	_cancel_movement()
+	_attack_focus_uid = target_uid
 	_chase_target_uid = target_uid
 	_plan_chase_path()
 
@@ -236,8 +246,8 @@ func _cancel_movement() -> void:
 	_move_path.clear()
 	_move_step_timer = 0.0
 	_chase_target_uid = 0
-	_follow_focus_uid = 0
 	_pickup_target = Vector2i(-1, -1)
+	_mine_target = Vector2i(-1, -1)
 
 
 func _try_magic_key(event: InputEventKey) -> bool:
@@ -363,6 +373,37 @@ func _plan_chase_path() -> void:
 	_move_step_timer = 0.0 if not _move_path.is_empty() else 0.25
 
 
+func _start_mining(target: Vector2i) -> void:
+	_cancel_movement()
+	_mine_target = target
+	_plan_mine_path()
+
+
+func _plan_mine_path() -> void:
+	var player_position := Vector2i(game_state.player_x, game_state.player_y)
+	var distance := _grid_distance(player_position, _mine_target)
+	if distance == 0:
+		_mine_target = Vector2i(-1, -1)
+		_move_path.clear()
+		return
+	if distance == 1:
+		_move_path.clear()
+		_send_mine_action()
+		return
+	var goals: Array[Vector2i] = []
+	for direction in WorldPathfinderScript.DIRECTIONS:
+		goals.append(_mine_target + direction)
+	_move_path = _find_path(goals)
+	if not _move_path.is_empty():
+		_move_step_timer = 0.0
+		return
+	var unobstructed_path: Array[Vector2i] = _pathfinder.find_path(player_position, goals, world_renderer.can_walk, {})
+	if unobstructed_path.is_empty():
+		_mine_target = Vector2i(-1, -1)
+	else:
+		_move_step_timer = 0.25
+
+
 func _find_path(goals: Array[Vector2i]) -> Array[Vector2i]:
 	var occupied := {}
 	var player_position := Vector2i(game_state.player_x, game_state.player_y)
@@ -388,6 +429,13 @@ func _process_movement(delta: float) -> void:
 			_pickup_target = Vector2i(-1, -1)
 			if target == Vector2i(game_state.player_x, game_state.player_y):
 				_begin_pickup_action()
+			return
+		if _mine_target.x >= 0:
+			_move_step_timer -= delta
+			if _move_step_timer > 0.0:
+				return
+			_set_player_action(2)
+			_plan_mine_path()
 			return
 		if _chase_target_uid == 0:
 			if game_state.player_action_type == 3:
@@ -461,6 +509,21 @@ func _send_attack_action(target_uid: int) -> void:
 	game_state.player_direction = action.direction
 	_set_player_action(7, action.speed, action.magicID)
 	_player_action_timer = _action_duration(7, action.speed, 2, action.magicID)
+
+
+func _send_mine_action() -> void:
+	var direction := _direction_to(game_state.player_x, game_state.player_y, _mine_target.x, _mine_target.y)
+	var action := {
+		"type": 14,
+		"speed": 100,
+		"direction": direction,
+		"x": _mine_target.x,
+		"y": _mine_target.y,
+	}
+	NetworkClient.send_action(Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action))
+	game_state.player_direction = direction
+	_set_player_action(14, action.speed)
+	_player_action_timer = _action_duration(14, action.speed, 2)
 
 
 func _consume_attack_magic_id() -> int:

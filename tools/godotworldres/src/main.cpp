@@ -103,7 +103,8 @@ struct ItemMetaRecord
     int32_t load[3] {};
     uint8_t doubleHand = 0;
     uint8_t weaponSound = 7;
-    uint8_t metaReserved[2] {};
+    uint8_t mine = 0;
+    uint8_t metaReserved = 0;
 };
 
 struct SkillMetaRecord
@@ -429,11 +430,12 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
                     .load = {record.equip.load.body, record.equip.load.weapon, record.equip.load.inventory},
                     .doubleHand = to_u8(record.equip.weapon.doubleHand),
                     .weaponSound = weaponSoundID(record.equip.weapon.category),
+                    .mine = to_u8(record.equip.weapon.mine),
                 });
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "item.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 4, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 5, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
 

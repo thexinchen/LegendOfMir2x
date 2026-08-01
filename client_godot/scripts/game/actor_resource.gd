@@ -106,6 +106,10 @@ func item_weapon_sound(item_id: int) -> int:
 	return item_attribute(item_id).get("weapon_sound", 7)
 
 
+func item_can_mine(item_id: int) -> bool:
+	return bool(item_attribute(item_id).get("mine", false))
+
+
 func item_weight(item_id: int) -> int:
 	return item_attribute(item_id).get("weight", 0)
 
@@ -193,7 +197,7 @@ func _load_item_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2, 3, 4]:
+	if version not in [1, 2, 3, 4, 5]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -225,7 +229,11 @@ func _load_item_meta() -> void:
 				item_attributes[item_id]["double_hand"] = file.get_8() != 0
 				if version >= 4:
 					item_attributes[item_id]["weapon_sound"] = file.get_8()
-					file.get_buffer(2)
+					if version >= 5:
+						item_attributes[item_id]["mine"] = file.get_8() != 0
+						file.get_8()
+					else:
+						file.get_buffer(2)
 				else:
 					file.get_buffer(3)
 
