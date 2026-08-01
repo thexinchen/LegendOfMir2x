@@ -20,7 +20,8 @@ const CHARACTER_TEXTURES := {
 @onready var notice: Label = %Notice
 @onready var delete_dialog: Control = %DeleteCharacterDialog
 
-var has_character := true
+var has_character := false
+var _query_complete := false
 var character_name := "预览角色"
 var character_gender := 1
 var character_job := JOB_WARRIOR
@@ -28,12 +29,19 @@ var character_exp := 0
 
 
 func _ready() -> void:
-	_update_character_preview()
+	AudioService.play_map_bgm(0x00040002)
 	if OS.has_environment("MIR2X_SCREENSHOT"):
+		has_character = true
+		_query_complete = true
+		_update_character_preview()
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_SCREENSHOT"))
 		get_tree().quit()
 		return
+	character_sprite.hide()
+	$InfoPanel.hide()
+	character_info.hide()
+	_update_button_visibility()
 	NetworkClient.message_received.connect(_on_server_message)
 	delete_dialog.confirmed.connect(_on_delete_confirmed)
 	delete_dialog.canceled.connect(_on_delete_canceled)
@@ -53,7 +61,9 @@ func _on_start_pressed() -> void:
 
 
 func _on_create_pressed() -> void:
-	if has_character:
+	if not _query_complete:
+		_show_notice("正在下载游戏角色")
+	elif has_character:
 		_show_notice("一个账号只能创建一个游戏角色")
 	else:
 		get_tree().change_scene_to_file("res://scenes/account/create_character.tscn")
@@ -88,15 +98,19 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_QUERYCHAROK:
 			_apply_character(payload)
 		NetworkClient.SM_QUERYCHARERROR:
+			_query_complete = true
 			has_character = false
 			character_sprite.hide()
+			$InfoPanel.hide()
 			character_info.hide()
 			_update_button_visibility()
 			_show_notice("请先创建游戏角色")
 			_capture_flow_if_requested()
 		NetworkClient.SM_DELETECHAROK:
+			_query_complete = true
 			has_character = false
 			character_sprite.hide()
+			$InfoPanel.hide()
 			character_info.hide()
 			_update_button_visibility()
 			_show_notice("删除角色成功")
@@ -136,6 +150,7 @@ func _apply_character(payload: PackedByteArray) -> void:
 	character_job = payload[69]
 	character_exp = payload.decode_u32(70)
 	has_character = true
+	_query_complete = true
 	notice.hide()
 	_update_character_preview()
 	_capture_flow_if_requested()
@@ -151,6 +166,7 @@ func _update_character_preview() -> void:
 	character_sprite.size = texture.get_size()
 	character_sprite.position = Vector2(462, 351)
 	character_sprite.show()
+	$InfoPanel.show()
 	var jobs := {JOB_WARRIOR: "战士", JOB_WIZARD: "法师", JOB_TAOIST: "道士"}
 	character_info.text = "角色：%s\n等级：%d\n职业：%s" % [
 		character_name,
@@ -190,10 +206,9 @@ func _show_notice(message: String) -> void:
 
 
 func _update_button_visibility() -> void:
-	# C++ hides start/create/delete buttons when there's no character
-	$StartButton.visible = has_character
-	$CreateButton.visible = has_character
-	$DeleteButton.visible = has_character
+	$StartButton.visible = _query_complete and has_character
+	$CreateButton.visible = _query_complete
+	$DeleteButton.visible = _query_complete and has_character
 
 
 func _capture_flow_if_requested() -> void:

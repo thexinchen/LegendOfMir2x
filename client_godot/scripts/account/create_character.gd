@@ -32,6 +32,7 @@ var selected_male := true
 
 
 func _ready() -> void:
+	AudioService.play_map_bgm(0x00040001)
 	_update_characters()
 	if OS.has_environment("MIR2X_SCREENSHOT"):
 		await RenderingServer.frame_post_draw

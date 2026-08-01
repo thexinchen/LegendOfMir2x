@@ -71,9 +71,21 @@ func play_map_bgm(bgm_id: int) -> bool:
 	if bytes.is_empty():
 		push_warning("BGM resource is empty: %s" % path)
 		return false
-	var stream := AudioStreamMP3.new()
-	stream.data = bytes
-	stream.loop = true
+	var stream: AudioStream
+	match path.get_extension().to_lower():
+		"mp3":
+			var mp3 := AudioStreamMP3.new()
+			mp3.data = bytes
+			mp3.loop = true
+			stream = mp3
+		"wav":
+			var wav := AudioStreamWAV.load_from_file(path)
+			if wav != null:
+				wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			stream = wav
+	if stream == null:
+		push_warning("Failed to load BGM resource: %s" % path)
+		return false
 	_bgm_player.stream = stream
 	current_bgm_id = bgm_id
 	current_bgm_path = path
@@ -195,7 +207,7 @@ func _find_bgm_path(bgm_id: int) -> String:
 	for directory in _audio_base_paths():
 		var bgm_dir := directory.path_join("bgm")
 		for file_name in DirAccess.get_files_at(bgm_dir):
-			if file_name.to_upper().begins_with(prefix):
+			if file_name.to_upper().begins_with(prefix) and file_name.get_extension().to_lower() in ["mp3", "wav"]:
 				return bgm_dir.path_join(file_name)
 	return ""
 
