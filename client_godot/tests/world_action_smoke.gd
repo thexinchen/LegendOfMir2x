@@ -51,6 +51,8 @@ func _ready() -> void:
 		return
 	if not _test_progression_feedback(main, resources):
 		return
+	if not _test_ping_feedback(main):
+		return
 	if not await _test_action_seff(main, resources):
 		return
 	if not _test_shield_hit_action(main, resources):
@@ -609,6 +611,47 @@ func _test_progression_feedback(main: Control, resources: RefCounted) -> bool:
 	GameState.chat_log = saved_chat
 	control_panel.set("_button_blinks", saved_blinks)
 	AudioService.stop_seff()
+	return true
+
+
+func _test_ping_feedback(main: Control) -> bool:
+	var saved_chat := GameState.chat_log.duplicate(true)
+	var saved_pending: bool = main.get("_ping_pending")
+	var saved_tick: int = main.get("_ping_tick")
+	var saved_last_sent: int = main.get("_last_ping_sent_ms")
+	GameState.chat_log.clear()
+	main.set("_ping_pending", false)
+	main.call("_handle_ping", _u32_payload(123))
+	if not GameState.chat_log.is_empty():
+		_fail("unsolicited ping echo created feedback")
+		return false
+	var current_tick: int = Time.get_ticks_msec() & 0xFFFFFFFF
+	var sent_tick: int = (current_tick - 20) & 0xFFFFFFFF
+	main.set("_ping_pending", true)
+	main.set("_ping_tick", sent_tick)
+	main.call("_handle_ping", _u32_payload(sent_tick))
+	if main.get("_ping_pending") or GameState.chat_log.size() != 1 or GameState.chat_log[0].type != 1 or not GameState.chat_log[0].text.begins_with("延迟") or not GameState.chat_log[0].text.ends_with("ms"):
+		_fail("matching ping echo did not complete with original feedback: %s" % GameState.chat_log)
+		return false
+	var elapsed: int = GameState.chat_log[0].text.trim_prefix("延迟").trim_suffix("ms").to_int()
+	if elapsed < 20 or elapsed > 1000:
+		_fail("ping latency was not derived from the wire timestamp: %d" % elapsed)
+		return false
+	main.call("_handle_ping", _u32_payload(sent_tick))
+	if GameState.chat_log.size() != 1:
+		_fail("duplicate ping echo created repeated feedback")
+		return false
+	main.set("_ping_pending", true)
+	main.set("_ping_tick", 123)
+	main.call("_handle_ping", _u32_payload(124))
+	main.call("_handle_ping", PackedByteArray([1, 2]))
+	if not main.get("_ping_pending") or GameState.chat_log.size() != 1:
+		_fail("mismatched or malformed ping echo changed pending state")
+		return false
+	main.set("_ping_pending", saved_pending)
+	main.set("_ping_tick", saved_tick)
+	main.set("_last_ping_sent_ms", saved_last_sent)
+	GameState.chat_log = saved_chat
 	return true
 
 

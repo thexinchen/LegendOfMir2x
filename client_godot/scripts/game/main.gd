@@ -32,8 +32,9 @@ const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 var game_state: Node = null
 var protocol: RefCounted = null
 
-var _ping_timer: float = 0.0
+var _ping_pending: bool = false
 var _ping_tick: int = 0
+var _last_ping_sent_ms: int = 0
 
 const EXTRA_PANELS := {
 	KEY_H: "res://scenes/game/panels/horse.tscn",
@@ -71,6 +72,8 @@ var _team_flag_active := false
 # C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame).
 # Keep a small network margin before sending the next one-hop action.
 const MOVE_STEP_SECONDS := 0.75
+const PING_INTERVAL_MS := 10_000
+const U32_MASK := 0xFFFFFFFF
 
 const SWING_MAGIC_NAMES := ["烈火剑法", "翔空剑法", "莲月剑法", "半月弯刀", "十方斩"]
 const TARGET_MAGIC_NAMES := [
@@ -128,12 +131,7 @@ func _process(delta: float) -> void:
 		map_name = "未知地图"
 	location_label.text = "%s: %d %d" % [map_name, game_state.player_x, game_state.player_y]
 	
-	# Ping server every 10 seconds (C++ sends CM_PING)
-	_ping_timer += delta
-	if _ping_timer >= 10.0:
-		_ping_timer = 0.0
-		_ping_tick += 1
-		NetworkClient.send_ping(_ping_tick)
+	_process_ping()
 	
 	# Redraw world
 	world_renderer.set_focus_channels(_magic_focus_uid, _follow_focus_uid, _attack_focus_uid)
@@ -812,7 +810,7 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_GOLD:
 			_handle_gold(payload)
 		NetworkClient.SM_PING:
-			pass  # Server ping echo
+			_handle_ping(payload)
 		NetworkClient.SM_TEXT:
 			_handle_text(payload)
 		NetworkClient.SM_PLAYERSAY:
@@ -1437,6 +1435,34 @@ func _handle_gold(payload: PackedByteArray) -> void:
 	game_state.update_gold(current)
 	if current != previous:
 		game_state.add_chat_log("你%s了%d金币" % ["获得" if current > previous else "失去", absi(current - previous)], 1)
+
+
+func _process_ping() -> void:
+	var current_ms := Time.get_ticks_msec()
+	if not NetworkClient.is_connected_to_server():
+		_ping_pending = false
+		_last_ping_sent_ms = current_ms
+		return
+	if _ping_pending or current_ms <= _last_ping_sent_ms + PING_INTERVAL_MS:
+		return
+	_last_ping_sent_ms = current_ms
+	var wire_tick := current_ms & U32_MASK
+	if NetworkClient.send_ping(wire_tick) == OK:
+		_ping_pending = true
+		_ping_tick = wire_tick
+
+
+func _handle_ping(payload: PackedByteArray) -> void:
+	if payload.size() < 4 or not _ping_pending:
+		return
+	var echoed_tick: int = Protocol.decode_sm_ping(payload)
+	if echoed_tick != _ping_tick:
+		return
+	var elapsed: int = ((Time.get_ticks_msec() & U32_MASK) - echoed_tick) & U32_MASK
+	if elapsed > 0x7FFFFFFF:
+		return
+	_ping_pending = false
+	game_state.add_chat_log("延迟%dms" % elapsed, 1)
 
 
 func _handle_update_item(payload: PackedByteArray) -> void:

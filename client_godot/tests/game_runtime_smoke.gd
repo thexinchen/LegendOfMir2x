@@ -66,6 +66,17 @@ func _verify() -> void:
 	if minimap == null or not minimap.visible or not minimap.call("has_map_texture") or minimap.position != Vector2(600.0, 0.0):
 		_fail("default online minimap lifecycle mismatch", 11)
 		return
+	if OS.has_environment("MIR2X_TEST_PING"):
+		GameState.chat_log.clear()
+		_main.set("_ping_pending", false)
+		_main.set("_last_ping_sent_ms", Time.get_ticks_msec() - 10_001)
+		_main.call("_process_ping")
+		var ping_deadline: int = Time.get_ticks_msec() + 2000
+		while Time.get_ticks_msec() < ping_deadline and not _has_latency_log():
+			await get_tree().process_frame
+		if _main.get("_ping_pending") or not _has_latency_log():
+			_fail("real server ping did not complete with latency feedback: %s" % GameState.chat_log, 12)
+			return
 	if OS.has_environment("MIR2X_TEST_HUD_MINIMIZED"):
 		control_panel.call("_on_minimize_pressed")
 		for _frame in range(34):
@@ -102,6 +113,13 @@ func _verify() -> void:
 	print("GAME RUNTIME PASS: name=%s hp=%d/%d inventory=%d creatures=%d" % [GameState.player_name, GameState.player_hp, GameState.player_hp_max, GameState.inventory.size(), GameState.creatures.size()])
 	NetworkClient.disconnect_from_server()
 	get_tree().quit()
+
+
+func _has_latency_log() -> bool:
+	for entry in GameState.chat_log:
+		if entry.get("type", -1) == 1 and str(entry.get("text", "")).begins_with("延迟") and str(entry.get("text", "")).ends_with("ms"):
+			return true
+	return false
 
 
 func _fail(message: String, code: int) -> void:
