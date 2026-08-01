@@ -47,6 +47,8 @@ func _ready() -> void:
 		return
 	if not _test_magic_actions(main, resources, physical_id):
 		return
+	if not _test_async_combat_feedback(main, resources):
+		return
 	if not await _test_action_seff(main, resources):
 		return
 	if not _test_shield_hit_action(main, resources):
@@ -383,9 +385,13 @@ func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 	if not renderer.call("_is_dead_actor", GameState.get_creature(303)):
 		_fail("dead creature was not assigned to the pre-item draw pass")
 		return false
+	GameState.chat_log.clear()
 	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(101))
 	if GameState.player_action_type != 13:
 		_fail("player death action was not applied")
+		return false
+	if not GameState.chat_log.is_empty():
+		_fail("player death notification invented a non-original chat entry: %s" % GameState.chat_log)
 		return false
 	main.call("_update_death_overlay")
 	var death_overlay := main.get_node("DeathOverlay") as ColorRect
@@ -467,6 +473,64 @@ func _u64_payload(value: int) -> PackedByteArray:
 	payload.resize(8)
 	payload.encode_u64(0, value)
 	return payload
+
+
+func _sm_cast_magic(uid: int, map_uid: int, magic_id: int, aim_uid: int) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(36)
+	payload.encode_u64(0, uid)
+	payload.encode_u64(8, map_uid)
+	payload[16] = magic_id
+	payload[18] = 100
+	payload[19] = 1
+	payload.encode_u16(20, 3)
+	payload.encode_u16(22, 4)
+	payload.encode_u16(24, 3)
+	payload.encode_u16(26, 4)
+	payload.encode_u64(28, aim_uid)
+	return payload
+
+
+func _test_async_combat_feedback(main: Control, resources: RefCounted) -> bool:
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	GameState.player_x = 3
+	GameState.player_y = 4
+	GameState.ascend_strings.clear()
+	main.call("_on_server_message", NetworkClient.SM_MISS, _u64_payload(999))
+	if not GameState.ascend_strings.is_empty():
+		_fail("stale SM_MISS created false local-player feedback: %s" % GameState.ascend_strings)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_MISS, _u64_payload(101))
+	if GameState.ascend_strings.size() != 1 or GameState.ascend_strings[0].x != 3 * 48 + 24 or GameState.ascend_strings[0].y != 4 * 32:
+		_fail("local-player SM_MISS did not use the existing actor position: %s" % GameState.ascend_strings)
+		return false
+	var target_uid := 303
+	GameState.update_creature(target_uid, {"uid": target_uid, "type": 1, "x": 8, "y": 9})
+	main.call("_on_server_message", NetworkClient.SM_MISS, _u64_payload(target_uid))
+	if GameState.ascend_strings.size() != 2 or GameState.ascend_strings[1].x != 8 * 48 + 24 or GameState.ascend_strings[1].y != 9 * 32:
+		_fail("creature SM_MISS did not use the existing actor position: %s" % GameState.ascend_strings)
+		return false
+	GameState.chat_log.clear()
+	GameState.attached_magic_effects.clear()
+	main.call("_on_server_message", NetworkClient.SM_CASTMAGIC, _sm_cast_magic(101, 202, 0, 101))
+	if not GameState.chat_log.is_empty() or not GameState.attached_magic_effects.is_empty():
+		_fail("invalid magic record created feedback: log=%s effects=%s" % [GameState.chat_log, GameState.attached_magic_effects])
+		return false
+	var shield_id: int = resources.magic_id("魔法盾")
+	main.call("_on_server_message", NetworkClient.SM_CASTMAGIC, _sm_cast_magic(999, 202, shield_id, 0))
+	if GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "使用魔法: 魔法盾" or not GameState.attached_magic_effects.is_empty():
+		_fail("valid missing-caster magic did not keep log while rejecting attachment: log=%s effects=%s" % [GameState.chat_log, GameState.attached_magic_effects])
+		return false
+	main.call("_on_server_message", NetworkClient.SM_CASTMAGIC, _sm_cast_magic(101, 202, shield_id, 0))
+	if GameState.chat_log.size() != 2 or GameState.attached_magic_effects.size() != 1 or GameState.attached_magic_effects[0].target_uid != 101:
+		_fail("valid existing-caster magic feedback was suppressed: log=%s effects=%s" % [GameState.chat_log, GameState.attached_magic_effects])
+		return false
+	GameState.ascend_strings.clear()
+	GameState.chat_log.clear()
+	GameState.attached_magic_effects.clear()
+	GameState.remove_creature(target_uid)
+	return true
 
 
 func _test_shield_hit_action(main: Control, resources: RefCounted) -> bool:
@@ -866,9 +930,7 @@ func _test_monster_transform_actions(main: Control, resources: RefCounted) -> bo
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(death_uid, 202, {
 		"type": 7, "speed": 100, "direction": 1, "x": 52, "y": 53,
 	}))
-	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(death_uid, 202, {
-		"type": 13, "speed": 100, "direction": 2, "x": 54, "y": 55,
-	}))
+	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(death_uid))
 	var death_creature: Dictionary = GameState.get_creature(death_uid)
 	if death_creature.get("action_type", 0) != 10 or death_creature.x != 50 or death_creature.y != 51 or death_creature.has("monster_pending_action") or death_creature.get("monster_pending_forced_action", {}).get("type", 0) != 13:
 		_fail("death did not wait behind the forced transformation: %s" % death_creature)
@@ -882,7 +944,7 @@ func _test_monster_transform_actions(main: Control, resources: RefCounted) -> bo
 		return false
 	main.call("_finish_creature_action", death_uid, 10, death_creature.action_started_ms)
 	death_creature = GameState.get_creature(death_uid)
-	if death_creature.get("action_type", 0) != 13 or death_creature.x != 54 or death_creature.y != 55 or death_creature.has("monster_pending_forced_action"):
+	if death_creature.get("action_type", 0) != 13 or death_creature.x != 50 or death_creature.y != 51 or death_creature.has("monster_pending_forced_action"):
 		_fail("queued death did not start after the forced transformation: %s" % death_creature)
 		return false
 	var flush_uid: int = (4 << 59) | (monster_id << 35) | 708

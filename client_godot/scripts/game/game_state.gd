@@ -581,6 +581,8 @@ func add_cast_magic_attachment(data: Dictionary, magic_name: String) -> bool:
 			return false
 	if effect.target_uid == 0 or effect.magicID == 0:
 		return false
+	if effect.target_uid != player_uid and not creatures.has(effect.target_uid):
+		return false
 	attached_magic_effects.append(effect)
 	state_changed.emit()
 	return true

@@ -1471,17 +1471,26 @@ func _handle_ground_item_id_list(payload: PackedByteArray) -> void:
 
 func _handle_cast_magic(payload: PackedByteArray) -> void:
 	var data := Protocol.decode_sm_cast_magic(payload)
-	if not data.is_empty() and data.get("mapUID", 0) == game_state.player_map_uid:
-		var magic_name: String = _resources.magic_names.get(data.get("magic", 0), "")
-		game_state.add_cast_magic_attachment(data, magic_name)
-		game_state.add_chat_log("使用魔法: %s" % magic_name, 0)
+	if data.is_empty() or data.get("mapUID", 0) != game_state.player_map_uid:
+		return
+	var magic_name: String = _resources.magic_names.get(data.get("magic", 0), "")
+	if magic_name.is_empty():
+		return
+	game_state.add_cast_magic_attachment(data, magic_name)
+	game_state.add_chat_log("使用魔法: %s" % magic_name, 0)
 
 
 func _handle_miss(payload: PackedByteArray) -> void:
 	var uid: int = Protocol.decode_sm_miss(payload)
-	var c: Dictionary = game_state.get_creature(uid)
-	var x: int = c.get("x", game_state.player_x)
-	var y: int = c.get("y", game_state.player_y)
+	var c: Dictionary
+	if uid == game_state.player_uid:
+		c = {"x": game_state.player_x, "y": game_state.player_y}
+	else:
+		c = game_state.get_creature(uid)
+		if c.is_empty():
+			return
+	var x: int = c.get("x", 0)
+	var y: int = c.get("y", 0)
 	game_state.add_ascend_string(x, y, "Miss", Color(1, 1, 1, 1))
 
 
@@ -1619,17 +1628,28 @@ func _handle_notify_dead(payload: PackedByteArray) -> void:
 		_pickup_action_timer = -1.0
 		_player_action_timer = -1.0
 		_set_player_action(13)
-		game_state.add_chat_log("你已死亡", 3)
 		return
 	var creature: Dictionary = game_state.get_creature(uid)
-	if not creature.is_empty():
-		var was_dead: bool = creature.get("action_type", 0) == 13
-		creature["action_type"] = 13
-		creature["action_started_ms"] = Time.get_ticks_msec()
-		creature["action_speed"] = 100
-		game_state.update_creature(uid, creature)
-		if not was_dead:
-			_play_action_seff(uid, {"type": 13, "x": creature.get("x", 0), "y": creature.get("y", 0)}, creature)
+	if creature.is_empty() or creature.get("action_type", 0) == 13 or creature.get("monster_pending_forced_action", {}).get("type", 0) == 13:
+		return
+	var death_action := {
+		"type": 13,
+		"speed": 100,
+		"direction": creature.get("direction", 1),
+		"x": creature.get("x", 0),
+		"y": creature.get("y", 0),
+	}
+	var previous := creature.duplicate(true)
+	creature["action_type"] = 13
+	creature["action_started_ms"] = Time.get_ticks_msec()
+	creature["action_speed"] = 100
+	creature["action_magic_id"] = 0
+	if creature.get("type", 0) == 1:
+		creature["action_type"] = _configure_monster_form(creature, 13, 13, death_action, false, previous)
+		creature.erase("monster_transform_continued")
+	game_state.update_creature(uid, creature)
+	if creature.get("action_type", 0) == 13:
+		_play_action_seff(uid, death_action, creature)
 
 
 func _request_dead_fade_out(uid: int) -> void:
