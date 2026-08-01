@@ -58,6 +58,30 @@ func _ready() -> void:
 	if panel.get_node("Page/SearchPage/Results").get_child(0).size.y != 52:
 		_fail("search candidate row mismatch")
 		return
+	panel.call("_open_group_page")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not panel.get_node("Page/ListScroll").visible or not panel.get_node("Toolbar/GroupConfirm").visible or not panel.get_node("Toolbar/Invert").visible:
+		_fail("group toolbar/list choreography mismatch")
+		return
+	if panel.get_node("Toolbar").get_child(0).name != "Invert" or panel.get_node("Page/ListScroll").scroll_vertical != 0:
+		_fail("group toolbar order or independent scroll mismatch")
+		return
+	panel.call("_toggle_group_member", friend.cpid)
+	panel.call("_invert_group_selection")
+	if panel.get("_selected_group").has(friend.cpid) or panel.get("_selected_group").size() != GameState.chat_friends.size() - 1:
+		_fail("group selection/invert mismatch")
+		return
+	var group_request: Array = [[]]
+	panel.group_name_requested.connect(func(ids: Array): group_request[0] = ids)
+	panel.call("_request_group_name")
+	if group_request[0].size() != panel.get("_selected_group").size():
+		_fail("group-name request member list mismatch")
+		return
+	if OS.has_environment("MIR2X_FRIEND_GROUP_SCREENSHOT"):
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FRIEND_GROUP_SCREENSHOT"))
 	panel.set("_resize_edge", 7)
 	panel.call("_apply_resize", Vector2(40, 30))
 	if panel.size != Vector2(491, 494):
@@ -88,6 +112,19 @@ func _ready() -> void:
 	var main := load("res://scenes/game/main.tscn").instantiate() as Control
 	add_child(main)
 	await get_tree().process_frame
+	var main_friend := main.call("_ensure_extra_panel", "res://scenes/game/panels/friend_chat.tscn") as Control
+	var main_selection := {}
+	main_selection[int(friend.cpid)] = true
+	main_friend.set("_selected_group", main_selection)
+	main_friend.call("_request_group_name")
+	var input_panel := main.call("_ensure_extra_panel", "res://scenes/game/panels/input_string.tscn") as Control
+	if main.get("_pending_chat_group").size() != 1 or not input_panel.visible:
+		_fail("shared group-name dialog did not open")
+		return
+	main.call("_on_input_cancelled")
+	if not main.get("_pending_chat_group").is_empty():
+		_fail("group-name cancellation left stale context")
+		return
 	main.call("_apply_chat_messages", [_message(1003, 120, friend.cpid, GameState.self_chat_cpid(), "闪烁测试")])
 	if not main.get_node("ControlPanel").get("_button_blinks").has("Friend"):
 		_fail("incoming friend message did not start HUD blink")

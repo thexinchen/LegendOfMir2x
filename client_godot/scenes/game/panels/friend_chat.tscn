@@ -96,6 +96,20 @@ texture_pressed = ExtResource("13")
 ignore_texture_size = true
 stretch_mode = 5
 
+[node name="GroupConfirm" type="TextureButton" parent="Toolbar"]
+visible = false
+custom_minimum_size = Vector2(30, 24)
+layout_mode = 2
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="Invert" type="TextureButton" parent="Toolbar"]
+visible = false
+custom_minimum_size = Vector2(30, 24)
+layout_mode = 2
+ignore_texture_size = true
+stretch_mode = 5
+
 [node name="Friends" type="TextureButton" parent="Toolbar"]
 custom_minimum_size = Vector2(30, 24)
 layout_mode = 2
@@ -187,27 +201,6 @@ placeholder_text = "输入用户ID或角色名"
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 2
-
-[node name="GroupPage" type="VBoxContainer" parent="Page"]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Name" type="LineEdit" parent="Page/GroupPage"]
-layout_mode = 2
-placeholder_text = "群聊名称"
-
-[node name="Members" type="VBoxContainer" parent="Page/GroupPage"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="Confirm" type="Button" parent="Page/GroupPage"]
-layout_mode = 2
-text = "创建群聊"
 
 [node name="Status" type="Label" parent="."]
 layout_mode = 0

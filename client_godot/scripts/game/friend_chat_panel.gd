@@ -1,5 +1,7 @@
 extends "res://scripts/game/closable_panel.gd"
 
+signal group_name_requested(member_ids: Array)
+
 const CerealReader = preload("res://scripts/network/cereal_reader.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const PAGE_PREVIEW := 0
@@ -22,6 +24,8 @@ var _resources: RefCounted = ActorResourceScript.new()
 var _pending_messages: Dictionary = {}
 var _next_pending_id := 1
 var _resize_edge := -1
+var _page_scroll := {PAGE_PREVIEW: 0.0, PAGE_CHAT: 0.0, PAGE_FRIENDS: 0.0, PAGE_SEARCH: 0.0, PAGE_GROUP: 0.0}
+var _restoring_scroll := false
 
 
 func _ready() -> void:
@@ -32,19 +36,24 @@ func _ready() -> void:
 	$Toolbar/Friends.pressed.connect(func(): _show_page(PAGE_FRIENDS))
 	$Toolbar/Back.pressed.connect(func(): _show_page(PAGE_PREVIEW))
 	$Toolbar/Search.pressed.connect(func(): _show_page(PAGE_SEARCH))
-	$Toolbar/CreateGroup.pressed.connect(func(): _show_page(PAGE_GROUP))
+	$Toolbar/CreateGroup.pressed.connect(_open_group_page)
+	$Toolbar/GroupConfirm.pressed.connect(_request_group_name)
+	$Toolbar/Invert.pressed.connect(_invert_group_selection)
 	$Page/SearchPage/Query.text_changed.connect(_search)
 	$Page/SearchPage/Query.text_submitted.connect(_show_search_candidates)
 	$Page/ChatPage/Composer/Send.pressed.connect(_send)
 	$Page/ChatPage/Composer/Input.gui_input.connect(_chat_input)
-	$Page/GroupPage/Confirm.pressed.connect(_create_group)
 	$SliderHit.gui_input.connect(_on_slider_input)
 	_hide_stock_scrollbars()
+	_configure_group_toolbar()
 	_register_special_peers()
 	_refresh()
 
 
 func _process(_delta: float) -> void:
+	var bar := _current_scrollbar()
+	if bar and not _restoring_scroll:
+		_page_scroll[_page] = bar.value
 	_update_slider_thumb()
 
 
@@ -55,8 +64,22 @@ func _hide_stock_scrollbars() -> void:
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
+func _configure_group_toolbar() -> void:
+	var create_off: Dictionary = _resources.frame("proguse", 0x00000910)
+	var create_down: Dictionary = _resources.frame("proguse", 0x00000911)
+	var invert_off: Dictionary = _resources.frame("proguse", 0x00000860)
+	var invert_down: Dictionary = _resources.frame("proguse", 0x00000861)
+	$Toolbar/GroupConfirm.texture_normal = create_off.get("texture")
+	$Toolbar/GroupConfirm.texture_pressed = create_down.get("texture")
+	$Toolbar/Invert.texture_normal = invert_off.get("texture")
+	$Toolbar/Invert.texture_pressed = invert_down.get("texture")
+	var order := [$Toolbar/Invert, $Toolbar/GroupConfirm, $Toolbar/CreateGroup, $Toolbar/Search, $Toolbar/Friends, $Toolbar/Back]
+	for index in range(order.size()):
+		$Toolbar.move_child(order[index], index)
+
+
 func _current_scrollbar() -> VScrollBar:
-	if _page == PAGE_PREVIEW or _page == PAGE_FRIENDS:
+	if _page == PAGE_PREVIEW or _page == PAGE_FRIENDS or _page == PAGE_GROUP:
 		return $Page/ListScroll.get_v_scroll_bar()
 	if _page == PAGE_CHAT:
 		return $Page/ChatPage/Messages.get_v_scroll_bar()
@@ -140,16 +163,38 @@ func _register_special_peers() -> void:
 
 
 func _show_page(page: int) -> void:
+	var previous_bar := _current_scrollbar()
+	if previous_bar:
+		_page_scroll[_page] = previous_bar.value
 	_page = page
-	$Page/ListScroll.visible = page == PAGE_PREVIEW or page == PAGE_FRIENDS
+	_restoring_scroll = true
+	$Page/ListScroll.visible = page == PAGE_PREVIEW or page == PAGE_FRIENDS or page == PAGE_GROUP
 	$Page/ChatPage.visible = page == PAGE_CHAT
 	$Page/SearchPage.visible = page == PAGE_SEARCH
-	$Page/GroupPage.visible = page == PAGE_GROUP
 	$Toolbar/Back.visible = page != PAGE_PREVIEW
 	$Toolbar/Friends.visible = page == PAGE_PREVIEW
 	$Toolbar/Search.visible = page == PAGE_FRIENDS
 	$Toolbar/CreateGroup.visible = page == PAGE_FRIENDS
+	$Toolbar/GroupConfirm.visible = page == PAGE_GROUP
+	$Toolbar/Invert.visible = page == PAGE_GROUP
 	_refresh()
+	_restore_page_scroll(page)
+
+
+func _restore_page_scroll(page: int) -> void:
+	await get_tree().process_frame
+	if _page != page:
+		return
+	var bar := _current_scrollbar()
+	if bar:
+		var reach := maxf(0.0, bar.max_value - bar.page)
+		bar.value = clampf(float(_page_scroll.get(page, 0.0)), 0.0, reach)
+	_restoring_scroll = false
+
+
+func _open_group_page() -> void:
+	_selected_group.clear()
+	_show_page(PAGE_GROUP)
 
 
 func _refresh() -> void:
@@ -201,7 +246,7 @@ func _fill_friends() -> void:
 		_add_row(rows, peer, peer.get("name", "未知好友"), "", func(): _open_chat(cpid))
 
 
-func _add_row(parent: Node, peer: Dictionary, title: String, subtitle: String, action: Callable, row_height := 52) -> void:
+func _add_row(parent: Node, peer: Dictionary, title: String, subtitle: String, action: Callable, row_height := 52) -> Button:
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, row_height)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -239,6 +284,7 @@ func _add_row(parent: Node, peer: Dictionary, title: String, subtitle: String, a
 		subtitle_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 		subtitle_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		button.add_child(subtitle_label)
+	return button
 
 
 func _row_style(fill: Color, border_alpha: float) -> StyleBoxFlat:
@@ -581,31 +627,75 @@ func _request_friend(cpid: int) -> void:
 
 
 func _fill_group_members() -> void:
-	var parent := $Page/GroupPage/Members
+	var parent := $Page/ListScroll/Rows
 	_clear(parent)
-	for peer in _state.chat_friends:
-		if int(peer.get("type", 0)) != 2:
-			continue
+	for peer_value in _state.chat_friends:
+		var peer: Dictionary = peer_value
 		var cpid := int(peer.get("cpid", 0))
-		var check := CheckBox.new()
-		check.text = peer.get("name", "未知好友")
-		check.button_pressed = _selected_group.has(cpid)
-		check.toggled.connect(func(enabled: bool):
-			if enabled: _selected_group[cpid] = true
-			else: _selected_group.erase(cpid)
-		)
-		parent.add_child(check)
+		var button := _add_row(parent, peer, peer.get("name", "未知好友"), "", _toggle_group_member.bind(cpid))
+		var box := ColorRect.new()
+		box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		box.position = Vector2(-28, 17)
+		box.size = Vector2(16, 16)
+		box.color = Color.TRANSPARENT
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var border := StyleBoxFlat.new()
+		border.bg_color = Color.TRANSPARENT
+		border.border_color = Color(0.906, 0.906, 0.741, 0.5)
+		border.set_border_width_all(1)
+		var check_panel := Panel.new()
+		check_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		check_panel.add_theme_stylebox_override("panel", border)
+		check_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(check_panel)
+		if _selected_group.has(cpid):
+			var check := TextureRect.new()
+			check.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			var frame: Dictionary = _resources.frame("proguse", 0x00000480)
+			check.texture = frame.get("texture")
+			check.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			check.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			check.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			box.add_child(check)
+		button.add_child(box)
 
 
-func _create_group() -> void:
-	var group_name: String = $Page/GroupPage/Name.text.strip_edges()
-	if group_name.is_empty() or _selected_group.is_empty():
-		$Status.text = "请输入群名并选择好友"
+func _toggle_group_member(cpid: int) -> void:
+	if _selected_group.has(cpid):
+		_selected_group.erase(cpid)
+	else:
+		_selected_group[cpid] = true
+	_fill_group_members()
+
+
+func _invert_group_selection() -> void:
+	for peer_value in _state.chat_friends:
+		var cpid := int(peer_value.get("cpid", 0))
+		if _selected_group.has(cpid):
+			_selected_group.erase(cpid)
+		else:
+			_selected_group[cpid] = true
+	_fill_group_members()
+
+
+func _request_group_name() -> void:
+	if _selected_group.is_empty():
 		return
 	var ids: Array = []
 	for cpid in _selected_group:
 		ids.append(int(cpid) & 0xFFFFFFFF)
-	NetworkClient.create_chat_group(group_name, ids, func(head: int, payload: PackedByteArray):
+	if ids.size() > 512:
+		$Status.text = "群聊成员不能超过 512 人"
+		return
+	group_name_requested.emit(ids)
+
+
+func create_group_named(group_name: String, ids: Array) -> void:
+	var clean_name := group_name.strip_edges()
+	if clean_name.is_empty() or ids.is_empty():
+		$Status.text = "无效的群聊名称"
+		return
+	NetworkClient.create_chat_group(clean_name, ids, func(head: int, payload: PackedByteArray):
 		if head != NetworkClient.SM_OK:
 			$Status.text = "创建群聊失败"
 			return

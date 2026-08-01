@@ -11,6 +11,7 @@ const MINIMAP_PANEL_PATH := "res://scenes/game/panels/minimap.tscn"
 const QUEST_PANEL_PATH := "res://scenes/game/panels/quest.tscn"
 const NPC_CHAT_PANEL_PATH := "res://scenes/game/panels/npc_chat.tscn"
 const PURCHASE_PANEL_PATH := "res://scenes/game/panels/purchase.tscn"
+const FRIEND_CHAT_PANEL_PATH := "res://scenes/game/panels/friend_chat.tscn"
 const SECURED_ITEMS_PANEL_PATH := "res://scenes/game/panels/secured_items.tscn"
 const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 
@@ -46,6 +47,7 @@ const EXTRA_PANELS := {
 
 var _extra_panel_nodes: Dictionary = {}
 var _pending_purchase: Dictionary = {}
+var _pending_chat_group: Array = []
 var _resources: RefCounted = ActorResourceScript.new()
 var _pathfinder: RefCounted = WorldPathfinderScript.new()
 var _next_strike := false
@@ -1615,6 +1617,8 @@ func _ensure_extra_panel(scene_path: String) -> Control:
 		panel.cancelled.connect(_on_input_cancelled)
 	if scene_path.ends_with("/purchase.tscn") and panel.has_signal("quantity_requested"):
 		panel.quantity_requested.connect(_on_purchase_quantity_requested)
+	if scene_path == FRIEND_CHAT_PANEL_PATH and panel.has_signal("group_name_requested"):
+		panel.group_name_requested.connect(_on_friend_group_name_requested)
 	return panel
 
 
@@ -1632,6 +1636,12 @@ func _on_input_committed(value: String) -> void:
 			game_state.add_chat_log("无效的购买数量：%s" % value, 3)
 		_pending_purchase = {}
 		return
+	if not _pending_chat_group.is_empty():
+		var ids := _pending_chat_group.duplicate()
+		_pending_chat_group.clear()
+		var friend_panel := _ensure_extra_panel(FRIEND_CHAT_PANEL_PATH)
+		friend_panel.call("create_group_named", value, ids)
+		return
 	var input: Dictionary = game_state.pending_input
 	NetworkClient.send_npc_event(input.get("uid", 0), "", input.get("commitTag", ""), value)
 	game_state.pending_input = {}
@@ -1639,10 +1649,19 @@ func _on_input_committed(value: String) -> void:
 
 func _on_input_cancelled() -> void:
 	_pending_purchase = {}
+	_pending_chat_group.clear()
 	game_state.pending_input = {}
 
 
 func _on_purchase_quantity_requested(npc_uid: int, item_id: int, item_name: String) -> void:
+	_pending_chat_group.clear()
 	_pending_purchase = {"npcUID": npc_uid, "itemID": item_id}
 	var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
 	panel.configure("请输入购买 %s 的数量" % item_name, false)
+
+
+func _on_friend_group_name_requested(ids: Array) -> void:
+	_pending_purchase = {}
+	_pending_chat_group = ids.duplicate()
+	var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
+	panel.configure("请输入你要建立的群名称", false)
