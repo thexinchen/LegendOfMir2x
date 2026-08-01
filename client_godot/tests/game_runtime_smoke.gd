@@ -59,6 +59,9 @@ func _verify() -> void:
 	if control_panel.get_node("%ACValue").text != "%d-%d" % [combat.ac[0], combat.ac[1]] or control_panel.get_node("%DCValue").text != "%d-%d" % [combat.dc[0], combat.dc[1]]:
 		_fail("HUD combat values do not match equipped state", 8)
 		return
+	if AudioService.current_bgm_id != 0x00010002 or AudioService.current_bgm_path.is_empty():
+		_fail("map BGM did not start: %08X %s" % [AudioService.current_bgm_id, AudioService.current_bgm_path], 9)
+		return
 	var panel_name := OS.get_environment("MIR2X_TEST_PANEL")
 	if panel_name in ["inventory", "player_state", "skill"]:
 		var panel_nodes := {"inventory": "%InventoryPanel", "player_state": "%PlayerStatePanel", "skill": "%SkillPanel"}

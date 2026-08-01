@@ -288,6 +288,8 @@ static size_t convertMap(uint32_t mapID, ZSDB &mapDB, ZSDB &textureDB, const fs:
     const auto nameLength = check_cast<uint16_t>(displayName.size());
     metaFile.write(reinterpret_cast<const char *>(&nameLength), sizeof(nameLength));
     metaFile.write(displayName.data(), nameLength);
+    const uint32_t bgmID = mapRecord.bgmID.value_or(UINT32_MAX);
+    metaFile.write(reinterpret_cast<const char *>(&bgmID), sizeof(bgmID));
     if(!metaFile){
         throw fflpanic("failed to write map metadata: {}", metaPath.string());
     }

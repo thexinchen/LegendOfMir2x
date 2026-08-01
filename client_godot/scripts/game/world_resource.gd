@@ -10,6 +10,7 @@ var width: int = 0
 var height: int = 0
 var minimap_id: int = -1
 var map_name: String = ""
+var bgm_id: int = -1
 var land: PackedByteArray = PackedByteArray()
 var tiles: Dictionary = {}
 var objects: Array[Dictionary] = [{}, {}, {}, {}]
@@ -52,6 +53,8 @@ func load_map(requested_map_id: int) -> bool:
 			var name_length := meta_file.get_16()
 			if name_length <= meta_file.get_length() - meta_file.get_position():
 				map_name = meta_file.get_buffer(name_length).get_string_from_utf8()
+				if meta_file.get_length() - meta_file.get_position() >= 4:
+					bgm_id = meta_file.get_32()
 
 	land = file.get_buffer(width * height)
 	if land.size() != width * height:
@@ -85,6 +88,7 @@ func clear() -> void:
 	height = 0
 	minimap_id = -1
 	map_name = ""
+	bgm_id = -1
 	land.clear()
 	tiles.clear()
 	objects = [{}, {}, {}, {}]

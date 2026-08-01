@@ -18,6 +18,9 @@ func _ready() -> void:
 	if world.map_name != "道馆":
 		_fail("unexpected map name: %s" % world.map_name)
 		return
+	if world.bgm_id != 0x00010002:
+		_fail("unexpected BGM ID: %08X" % world.bgm_id)
+		return
 	var first_texture_id: int = world.tiles.values()[0]
 	if world.texture(first_texture_id) == null:
 		_fail("failed to decode map texture %08X" % first_texture_id)

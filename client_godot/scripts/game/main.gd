@@ -702,6 +702,9 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 	game_state.start_game_scene(data)
 	if world_renderer.load_map(game_state.player_map_id):
 		game_state.player_map_name = world_renderer.world_resource.map_name
+		AudioService.play_map_bgm(world_renderer.world_resource.bgm_id)
+	else:
+		AudioService.stop_bgm()
 	_center_hero()
 
 
@@ -964,6 +967,7 @@ func _handle_player_config(payload: PackedByteArray) -> void:
 	if _reader_ok(reader, "SM_PLAYERCONFIG"):
 		game_state.magic_keys = config.get("magicKeys", {})
 		game_state.runtime_config = config.get("runtimeConfig", {})
+		AudioService.apply_runtime_config(game_state.runtime_config)
 		game_state.state_changed.emit()
 
 
