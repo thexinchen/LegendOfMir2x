@@ -7,6 +7,7 @@ const Protocol = preload("res://scripts/network/protocol.gd")
 const CerealReader = preload("res://scripts/network/cereal_reader.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const WorldPathfinderScript = preload("res://scripts/game/world_pathfinder.gd")
+const MINIMAP_PANEL_PATH := "res://scenes/game/panels/minimap.tscn"
 
 @onready var world_renderer: Control = $WorldRenderer
 @onready var inventory_panel: Control = %InventoryPanel
@@ -36,7 +37,7 @@ const EXTRA_PANELS := {
 	KEY_F: "res://scenes/game/panels/friend_chat.tscn",
 	KEY_O: "res://scenes/game/panels/runtime_config.tscn",
 	KEY_N: "res://scenes/game/panels/npc_chat.tscn",
-	KEY_M: "res://scenes/game/panels/minimap.tscn",
+	KEY_M: MINIMAP_PANEL_PATH,
 }
 
 var _extra_panel_nodes: Dictionary = {}
@@ -93,6 +94,7 @@ func _ready() -> void:
 	game_state.state_changed.connect(_refresh_grabbed_item_icon)
 	control_panel.connect("minimized_changed", _on_control_panel_minimized_changed)
 	_refresh_grabbed_item_icon()
+	_ensure_extra_panel(MINIMAP_PANEL_PATH)
 	
 	if OS.has_environment("MIR2X_GAME_SCREENSHOT"):
 		inventory_panel.show()
@@ -1518,7 +1520,7 @@ func _on_control_panel_magic_key_hud_toggled() -> void:
 
 
 func minimap_hud_width() -> float:
-	var panel := _extra_panel_nodes.get("res://scenes/game/panels/minimap.tscn") as Control
+	var panel := _extra_panel_nodes.get(MINIMAP_PANEL_PATH) as Control
 	if panel == null or not panel.visible:
 		return 0.0
 	var texture_rect := panel.get_node_or_null("MapViewport/MapTexture") as TextureRect
@@ -1539,6 +1541,11 @@ func _toggle_extra_panel(scene_path: String) -> void:
 	var panel := _ensure_extra_panel(scene_path)
 	if not panel:
 		return
+	if scene_path == MINIMAP_PANEL_PATH:
+		panel.call("toggle_requested_visibility")
+		if panel.visible:
+			panel.move_to_front()
+		return
 	_toggle_panel(panel)
 
 
@@ -1552,7 +1559,10 @@ func _ensure_extra_panel(scene_path: String) -> Control:
 	panel = packed.instantiate() as Control
 	add_child(panel)
 	panel.position = Vector2(size.x - panel.size.x, 0.0) if scene_path.ends_with("/minimap.tscn") else (size - panel.size) * 0.5
-	panel.hide()
+	if scene_path == MINIMAP_PANEL_PATH:
+		panel.call("set_requested_visible", true)
+	else:
+		panel.hide()
 	_extra_panel_nodes[scene_path] = panel
 	if scene_path.ends_with("/input_string.tscn") and panel.has_signal("committed"):
 		panel.committed.connect(_on_input_committed)

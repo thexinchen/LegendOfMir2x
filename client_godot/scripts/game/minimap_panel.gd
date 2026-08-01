@@ -18,6 +18,7 @@ var _hover_position := Vector2(-1, -1)
 var _last_marker_signature := 0
 var _last_marker_offset := Vector2(INF, INF)
 var _last_marker_zoom := -1.0
+var _requested_visible := true
 
 
 func _ready() -> void:
@@ -54,15 +55,47 @@ func _load_map(map_id: int) -> void:
 	_last_map_id = map_id
 	$MapViewport/MapTexture.texture = null
 	if map_id <= 0 or not _world.load_map(map_id):
+		_apply_requested_visibility()
 		return
 	_actors.configure(_world.base_path)
 	if _world.minimap_id < 0 or _world.minimap_id == 0xFFFFFFFF:
+		_apply_requested_visibility()
 		return
 	var frame: Dictionary = _actors.frame("proguse", _world.minimap_id)
 	$MapViewport/MapTexture.texture = frame.get("texture")
-	_zoom = 1.0
-	_auto_center = true
-	_center_on_player()
+	if _auto_center:
+		_center_on_player()
+	else:
+		_fix_image_offset()
+		_apply_image_rect()
+	_apply_requested_visibility()
+	_update_button_textures()
+
+
+func set_requested_visible(value: bool) -> void:
+	_requested_visible = value
+	_apply_requested_visibility()
+
+
+func toggle_requested_visibility() -> void:
+	set_requested_visible(not _requested_visible)
+
+
+func requested_visible() -> bool:
+	return _requested_visible
+
+
+func has_map_texture() -> bool:
+	return $MapViewport/MapTexture.texture != null
+
+
+func _apply_requested_visibility() -> void:
+	visible = _requested_visible and has_map_texture()
+
+
+# C++ minimap ignores Escape; ProcessRun uses it only to center the hero.
+func _unhandled_key_input(_event: InputEvent) -> void:
+	pass
 
 
 func _image_size() -> Vector2:
@@ -210,7 +243,7 @@ func _update_tooltip() -> void:
 		tooltip.hide()
 		return
 	var location := _canvas_to_map(_hover_position)
-	tooltip.text = "[%d,%d]  %d%%" % [location.x, location.y, roundi(_zoom * 100.0)]
+	tooltip.text = "[%d,%d]" % [location.x, location.y]
 	tooltip.add_theme_color_override("font_color", Color.YELLOW)
 	tooltip.add_theme_color_override("font_outline_color", Color.RED if not _world.can_walk(location.x, location.y) else Color.BLACK)
 	tooltip.position = Vector2(clampf(_hover_position.x - 90.0, 0.0, size.x - 90.0), clampf(_hover_position.y - 22.0, 0.0, size.y - 20.0))
@@ -251,3 +284,4 @@ func _update_button_textures() -> void:
 	$ExtendButton.texture_normal = load("res://assets/ui/game/minimap/09000021.png" if _extended else "res://assets/ui/game/minimap/09000020.png")
 	$CenterButton.texture_normal = load("res://assets/ui/game/minimap/09000031.png" if _auto_center else "res://assets/ui/game/minimap/09000030.png")
 	$ConfigButton.texture_normal = load("res://assets/ui/game/minimap/09000041.png" if _show_creatures else "res://assets/ui/game/minimap/09000040.png")
+	$ZoomBackground/ZoomText.text = "%d%%" % roundi(_zoom * 100.0)

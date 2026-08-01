@@ -62,6 +62,10 @@ func _verify() -> void:
 	if AudioService.current_bgm_id != 0x00010002 or AudioService.current_bgm_path.is_empty():
 		_fail("map BGM did not start: %08X %s" % [AudioService.current_bgm_id, AudioService.current_bgm_path], 9)
 		return
+	var minimap := _main.call("_ensure_extra_panel", "res://scenes/game/panels/minimap.tscn") as Control
+	if minimap == null or not minimap.visible or not minimap.call("has_map_texture") or minimap.position != Vector2(600.0, 0.0):
+		_fail("default online minimap lifecycle mismatch", 11)
+		return
 	if OS.has_environment("MIR2X_TEST_HUD_MINIMIZED"):
 		control_panel.call("_on_minimize_pressed")
 		for _frame in range(34):

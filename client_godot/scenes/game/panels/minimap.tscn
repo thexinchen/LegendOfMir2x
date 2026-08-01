@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/minimap_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/minimap/09000006.png" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/minimap/09000020.png" id="6"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/minimap/09000030.png" id="7"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/minimap/09000040.png" id="8"]
+[ext_resource type="FontFile" path="res://assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf" id="9_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_border"]
 bg_color = Color(0, 0, 0, 0)
@@ -111,9 +112,9 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -108.0
-offset_top = -29.0
-offset_right = -82.0
+offset_left = -79.0
+offset_top = -19.0
+offset_right = -60.0
 grow_horizontal = 0
 grow_vertical = 0
 texture_normal = ExtResource("5")
@@ -126,9 +127,9 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -81.0
-offset_top = -29.0
-offset_right = -55.0
+offset_left = -59.0
+offset_top = -19.0
+offset_right = -40.0
 grow_horizontal = 0
 grow_vertical = 0
 texture_normal = ExtResource("6")
@@ -141,9 +142,9 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -54.0
-offset_top = -29.0
-offset_right = -28.0
+offset_left = -39.0
+offset_top = -19.0
+offset_right = -20.0
 grow_horizontal = 0
 grow_vertical = 0
 texture_normal = ExtResource("7")
@@ -156,9 +157,39 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -27.0
-offset_top = -29.0
+offset_left = -19.0
+offset_top = -19.0
 grow_horizontal = 0
 grow_vertical = 0
 texture_normal = ExtResource("8")
 ignore_texture_size = true
+
+[node name="ZoomBackground" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -108.0
+offset_top = -15.0
+offset_right = -80.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="ZoomText" type="Label" parent="ZoomBackground"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_fonts/font = ExtResource("9_font")
+text = "100%"
+horizontal_alignment = 1
+vertical_alignment = 1

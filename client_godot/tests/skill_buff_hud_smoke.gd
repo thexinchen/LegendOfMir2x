@@ -43,13 +43,19 @@ func _ready() -> void:
 	if GameState.magic_key_hud_visible:
 		_fail("magic HUD toggle failed")
 		return
-	if main.call("minimap_hud_width") != 0.0:
+	var minimap := main.call("_ensure_extra_panel", "res://scenes/game/panels/minimap.tscn") as Control
+	var main_child_count := main.get_child_count()
+	if not minimap.visible or main.call("minimap_hud_width") != minimap.size.x:
+		_fail("default minimap did not shift buffs")
+		return
+	main.call("_on_control_panel_panel_requested", "res://scenes/game/panels/minimap.tscn")
+	await get_tree().process_frame
+	if minimap.visible or main.call("minimap_hud_width") != 0.0:
 		_fail("hidden minimap shifted buffs")
 		return
-	var minimap := main.call("_ensure_extra_panel", "res://scenes/game/panels/minimap.tscn") as Control
-	minimap.show()
+	main.call("_on_control_panel_panel_requested", "res://scenes/game/panels/minimap.tscn")
 	await get_tree().process_frame
-	if minimap.position != Vector2(600.0, 0.0) or main.call("minimap_hud_width") != minimap.size.x:
+	if minimap.position != Vector2(600.0, 0.0) or main.call("minimap_hud_width") != minimap.size.x or main.get_child_count() != main_child_count:
 		_fail("visible minimap position or buff offset mismatch")
 		return
 	main.call("_on_control_panel_magic_key_hud_toggled")
