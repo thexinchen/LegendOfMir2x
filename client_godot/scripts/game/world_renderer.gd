@@ -19,6 +19,9 @@ const MAGIC_STAGE_EXPLODE := 3
 const MAGIC_TYPE_FIXED := 1
 const MAGIC_TYPE_BOUND := 2
 const MAGIC_TYPE_FOLLOW := 3
+const GROUND_ITEM_STAR_GFX_ID := 0x00000090
+const GROUND_ITEM_STAR_CYCLE := 2.50
+const GROUND_ITEM_STAR_STEP := 0.05
 const PLAYER_SAY_WIDTH := 160
 const PLAYER_SAY_FONT_SIZE := 15
 const PLAYER_SAY_SHOW_TIME := 5000
@@ -44,10 +47,12 @@ var _mouse_focus_uid := 0
 var _magic_focus_uid := 0
 var _follow_focus_uid := 0
 var _attack_focus_uid := 0
+var _ground_item_star_ratio := 0.0
 
 
-func _ready() -> void:
-	pass
+func _process(_delta: float) -> void:
+	_ground_item_star_ratio = fmod(_ground_item_star_ratio + GROUND_ITEM_STAR_STEP, GROUND_ITEM_STAR_CYCLE)
+	queue_redraw()
 
 
 func load_map(map_id: int) -> bool:
@@ -129,6 +134,7 @@ func _draw() -> void:
 			_draw_player(view_x, view_y)
 		_draw_object_row(2, gy, x0, x1, view_x, view_y)
 	_draw_object_depth(3, x0, y0, x1, y1, view_x, view_y)
+	_draw_ground_item_stars(x0, y0, x1, y1, view_x, view_y)
 	_draw_magic_row(active_magic, -1, false, view_x, view_y)
 
 	# Floating combat text is a screen overlay.
@@ -189,6 +195,41 @@ func _draw_ground_items(x0: int, y0: int, x1: int, y1: int, view_x: int, view_y:
 					15,
 					Color.YELLOW,
 				)
+
+
+func _draw_ground_item_stars(x0: int, y0: int, x1: int, y1: int, view_x: int, view_y: int) -> void:
+	if _ground_item_star_ratio > 1.0:
+		return
+	var frame: Dictionary = actor_resource.frame("proguse", GROUND_ITEM_STAR_GFX_ID)
+	var texture := frame.get("texture") as Texture2D
+	if texture == null:
+		return
+	var current_size := _ground_item_star_size(texture.get_width())
+	if current_size <= 0:
+		return
+	var scale := Vector2(float(current_size) / texture.get_width(), float(current_size) / texture.get_height())
+	var angle := deg_to_rad(roundf(_ground_item_star_ratio * 360.0))
+	for grid_key in game_state.ground_items:
+		var items: Array = game_state.ground_items[grid_key]
+		if items.is_empty():
+			continue
+		var parts: PackedStringArray = grid_key.split(",")
+		if parts.size() != 2:
+			continue
+		var gx := int(parts[0])
+		var gy := int(parts[1])
+		if gx < x0 or gx > x1 or gy < y0 or gy > y1:
+			continue
+		var center := Vector2(gx * GRID_XP - view_x + GRID_XP * 0.5, gy * GRID_YP - view_y + GRID_YP * 0.5)
+		draw_set_transform(center, angle, scale)
+		draw_texture(texture, Vector2(texture.get_width(), texture.get_height()) * -0.5, Color(1, 1, 1, 128.0 / 255.0))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _ground_item_star_size(texture_width: int) -> int:
+	if _ground_item_star_ratio > 1.0:
+		return 0
+	return roundi(_ground_item_star_ratio * texture_width / GROUND_ITEM_STAR_CYCLE)
 
 
 func _draw_object_row(depth: int, y: int, x0: int, x1: int, view_x: int, view_y: int) -> void:

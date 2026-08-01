@@ -17,6 +17,11 @@ func _ready() -> void:
 	if ground_item_id == 0:
 		_fail("no original ground item texture found")
 		return
+	var star_frame: Dictionary = resources.frame("proguse", 0x00000090)
+	var star_texture := star_frame.get("texture") as Texture2D
+	if star_texture == null:
+		_fail("original ground item notification star unavailable")
+		return
 	GameState.ground_items = {"1,1": [ground_item_id], "2,2": [ground_item_id]}
 	GameState.update_ground_item_grids([
 		{"x": 2, "y": 2, "items": []},
@@ -39,12 +44,22 @@ func _ready() -> void:
 	if not $WorldRenderer.load_map(24):
 		_fail("map 24 failed to load")
 		return
+	$WorldRenderer.set("_ground_item_star_ratio", 0.5)
+	var expected_star_size := roundi(0.5 * star_texture.get_width() / 2.5)
+	if $WorldRenderer.call("_ground_item_star_size", star_texture.get_width()) != expected_star_size:
+		_fail("ground item star scale mismatch")
+		return
+	$WorldRenderer.set("_ground_item_star_ratio", 1.05)
+	if $WorldRenderer.call("_ground_item_star_size", star_texture.get_width()) != 0:
+		_fail("ground item star visible interval mismatch")
+		return
+	$WorldRenderer.set("_ground_item_star_ratio", 0.75)
 	$WorldRenderer.queue_redraw()
 	await get_tree().process_frame
 	if OS.has_environment("MIR2X_GROUND_ITEM_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_GROUND_ITEM_SCREENSHOT"))
-	print("GROUND ITEM PASS: id=%d name=%s original sprite and world draw" % [ground_item_id, resources.item_name(ground_item_id)])
+	print("GROUND ITEM PASS: id=%d name=%s original sprite and rotating notification star" % [ground_item_id, resources.item_name(ground_item_id)])
 	get_tree().quit()
 
 
