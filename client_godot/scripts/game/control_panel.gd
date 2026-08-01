@@ -261,9 +261,15 @@ func _on_exit_pressed() -> void:
 	get_tree().quit()
 
 
+func focus_command() -> void:
+	command.grab_focus()
+	command.caret_column = command.text.length()
+
+
 func _on_command_submitted(text: String) -> void:
 	# C++ submitCommand: ! prefix = broadcast, @ = user command, $ = lua command, else = chat
 	command.clear()
+	command.release_focus()
 	if text.is_empty():
 		return
 	if text.begins_with("!"):

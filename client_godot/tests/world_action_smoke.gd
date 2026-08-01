@@ -336,6 +336,49 @@ func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 	if GameState.player_action_type != 13:
 		_fail("player death action was not applied")
 		return false
+	main.call("_update_death_overlay")
+	var death_overlay := main.get_node("DeathOverlay") as ColorRect
+	if not death_overlay.visible or not death_overlay.color.is_equal_approx(Color(128.0 / 255.0, 0, 0, 64.0 / 255.0)):
+		_fail("player death veil color or visibility mismatch: %s" % death_overlay.color)
+		return false
+	var command := main.get_node("ControlPanel").get_node("%Command") as LineEdit
+	command.release_focus()
+	var enter_key := InputEventKey.new()
+	enter_key.keycode = KEY_ENTER
+	enter_key.pressed = true
+	main.call("_unhandled_input", enter_key)
+	if not command.has_focus():
+		_fail("dead-player gate blocked the original Enter chat focus")
+		return false
+	main.get_node("ControlPanel").call("_on_command_submitted", "")
+	if command.has_focus():
+		_fail("submitted HUD command retained input focus")
+		return false
+	var inventory_panel := main.get_node("InventoryPanel") as Control
+	inventory_panel.hide()
+	var panel_key := InputEventKey.new()
+	panel_key.keycode = KEY_B
+	panel_key.pressed = true
+	main.call("_unhandled_input", panel_key)
+	if not inventory_panel.visible:
+		_fail("dead-player gate blocked UI panel interaction")
+		return false
+	inventory_panel.hide()
+	main.set("_follow_focus_uid", 777)
+	var blocked_click := InputEventMouseButton.new()
+	blocked_click.button_index = MOUSE_BUTTON_RIGHT
+	blocked_click.pressed = true
+	blocked_click.position = Vector2(500, 300)
+	main.call("_unhandled_input", blocked_click)
+	if main.get("_follow_focus_uid") != 777:
+		_fail("dead player still processed a world mouse command")
+		return false
+	main.call("_set_player_action", 2)
+	main.call("_update_death_overlay")
+	main.call("_unhandled_input", blocked_click)
+	if death_overlay.visible or main.get("_follow_focus_uid") != 0:
+		_fail("living action did not clear the death veil and restore mouse input")
+		return false
 	main.call("_on_server_message", NetworkClient.SM_OFFLINE, _map_message(303, 999, 16))
 	if GameState.get_creature(303).is_empty():
 		_fail("stale-map offline message removed current creature")

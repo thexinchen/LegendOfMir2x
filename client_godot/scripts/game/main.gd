@@ -26,6 +26,7 @@ const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 @onready var grabbed_item_icon: TextureRect = $GrabbedItemIcon
 @onready var skill_buff_hud: Control = $SkillBuffHUD
 @onready var team_flag_cursor: TextureRect = $TeamFlagCursor
+@onready var death_overlay: ColorRect = $DeathOverlay
 
 var game_state: Node = null
 var protocol: RefCounted = null
@@ -136,6 +137,7 @@ func _process(delta: float) -> void:
 	# Redraw world
 	world_renderer.set_focus_channels(_magic_focus_uid, _follow_focus_uid, _attack_focus_uid)
 	world_renderer.queue_redraw()
+	_update_death_overlay()
 	if grabbed_item_icon.visible:
 		grabbed_item_icon.position = get_viewport().get_mouse_position() - grabbed_item_icon.size * 0.5
 	_update_team_flag_cursor()
@@ -165,7 +167,24 @@ func _refresh_grabbed_item_icon() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
-	if quick_bar.visible and event is InputEventKey:
+	if _player_dead():
+		if event is InputEventKey:
+			if event.keycode in [KEY_ENTER, KEY_KP_ENTER]:
+				control_panel.call("focus_command")
+				get_viewport().set_input_as_handled()
+			elif not event.alt_pressed:
+				_try_panel_hotkey(event.keycode)
+		return
+	if event is InputEventMouseButton:
+		_handle_mouse_click(event)
+		return
+	if not event is InputEventKey:
+		return
+	if event.keycode in [KEY_ENTER, KEY_KP_ENTER]:
+		control_panel.call("focus_command")
+		get_viewport().set_input_as_handled()
+		return
+	if quick_bar.visible:
 		var quick_slot: int = event.keycode - KEY_1
 		if quick_slot >= 0 and quick_slot < 6:
 			quick_bar.call("activate_slot", quick_slot, MOUSE_BUTTON_RIGHT)
@@ -177,7 +196,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_center_hero()
 	elif event.keycode == KEY_TAB:
 		_request_pickup()
-	elif event is InputEventKey and event.alt_pressed:
+	elif event.alt_pressed:
 		if event.keycode == KEY_E:
 			get_tree().quit()
 		elif event.keycode == KEY_F:
@@ -186,20 +205,32 @@ func _unhandled_input(event: InputEvent) -> void:
 				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 			else:
 				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-	elif event.keycode == KEY_B:
-		_toggle_panel(inventory_panel)
-	elif event.keycode == KEY_C:
-		_toggle_panel(player_state_panel)
-	elif event.keycode == KEY_S:
-		_toggle_panel(skill_panel)
-	elif EXTRA_PANELS.has(event.keycode):
-		_toggle_extra_panel(EXTRA_PANELS[event.keycode])
-	elif event is InputEventKey:
+	elif _try_panel_hotkey(event.keycode):
+		pass
+	else:
 		_try_magic_key(event)
-	
-	# Mouse click handling
-	if event is InputEventMouseButton and event.pressed:
-		_handle_mouse_click(event)
+
+
+func _try_panel_hotkey(keycode: int) -> bool:
+	if keycode == KEY_B:
+		_toggle_panel(inventory_panel)
+	elif keycode == KEY_C:
+		_toggle_panel(player_state_panel)
+	elif keycode == KEY_S:
+		_toggle_panel(skill_panel)
+	elif EXTRA_PANELS.has(keycode):
+		_toggle_extra_panel(EXTRA_PANELS[keycode])
+	else:
+		return false
+	return true
+
+
+func _player_dead() -> bool:
+	return game_state.player_action_type == 13
+
+
+func _update_death_overlay() -> void:
+	death_overlay.visible = _player_dead()
 
 
 func _handle_mouse_click(event: InputEventMouseButton) -> void:
