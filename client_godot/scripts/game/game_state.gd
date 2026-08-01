@@ -317,6 +317,14 @@ func set_inventory_operation_cost(data: Dictionary) -> void:
 	state_changed.emit()
 
 
+func remove_secured_item(item_id: int, seq_id: int) -> void:
+	for index in range(secured_items.size() - 1, -1, -1):
+		var item: Dictionary = secured_items[index]
+		if int(item.get("itemID", 0)) == item_id and int(item.get("seqID", 0)) == seq_id:
+			secured_items.remove_at(index)
+	state_changed.emit()
+
+
 func update_belt(items: Array) -> void:
 	belt = items
 	state_changed.emit()

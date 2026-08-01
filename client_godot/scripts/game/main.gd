@@ -309,6 +309,9 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 				game_state.update_item(item)
 		NetworkClient.SM_SHOWSECUREDITEMLIST:
 			_handle_secured_items(payload)
+		NetworkClient.SM_REMOVESECUREDITEM:
+			if payload.size() >= 8:
+				game_state.remove_secured_item(payload.decode_u32(0), payload.decode_u32(4))
 		NetworkClient.SM_TEAMCANDIDATE:
 			_handle_team_candidate(payload)
 		NetworkClient.SM_TEAMMEMBERLIST:
