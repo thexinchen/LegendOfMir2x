@@ -97,6 +97,23 @@ func _ready() -> void:
 	if not panel.get_node("%Face").visible or not panel.get_node("%FaceHealth").visible or not panel.get_node("%BuffContainer").visible:
 		_fail("compact focus HUD did not return after collapsing chat")
 		return
+	panel.call("_on_minimize_pressed")
+	if panel.get_node("%Body").visible or panel.get_node("Title").position.y != 121.0 or panel.get_node("%Level").visible or panel.get_node("MinimizeButton").visible:
+		_fail("minimized HUD does not match the C++ title-only layout")
+		return
+	var title_double_click := InputEventMouseButton.new()
+	title_double_click.button_index = MOUSE_BUTTON_LEFT
+	title_double_click.pressed = true
+	title_double_click.double_click = true
+	panel.call("_on_title_gui_input", title_double_click)
+	if not panel.get_node("%Body").visible or panel.get_node("Title").position.y != 0.0 or not panel.get_node("%Level").visible or not panel.get_node("MinimizeButton").visible:
+		_fail("title double-click did not restore the compact HUD")
+		return
+	panel.call("_on_title_gui_input", title_double_click)
+	if panel.get_node("%Body").visible:
+		_fail("title double-click did not minimize the compact HUD")
+		return
+	panel.call("_on_minimize_pressed")
 	panel.call("_on_ac_pressed")
 	panel.call("_on_dc_pressed")
 	if panel.get_node("%ACValue").text != "%d-%d" % [combat.mac[0], combat.mac[1]] or panel.get_node("%DCValue").text != "%d-%d" % [combat.mc[0], combat.mc[1]]:

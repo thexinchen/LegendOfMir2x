@@ -91,6 +91,7 @@ func _ready() -> void:
 	
 	NetworkClient.message_received.connect(_on_server_message)
 	game_state.state_changed.connect(_refresh_grabbed_item_icon)
+	control_panel.connect("minimized_changed", _on_control_panel_minimized_changed)
 	_refresh_grabbed_item_icon()
 	
 	if OS.has_environment("MIR2X_GAME_SCREENSHOT"):
@@ -564,8 +565,12 @@ func _direction_to(from_x: int, from_y: int, to_x: int, to_y: int) -> int:
 
 func _center_hero() -> void:
 	# Center camera on player immediately
-	game_state.view_x = float(game_state.player_x) * 48 - 400
-	game_state.view_y = float(game_state.player_y) * 32 - 300
+	game_state.center_camera_on_player()
+
+
+func _on_control_panel_minimized_changed(minimized: bool) -> void:
+	game_state.hud_minimized = minimized
+	location_label.visible = not minimized
 
 
 func _request_pickup() -> void:

@@ -62,6 +62,14 @@ func _verify() -> void:
 	if AudioService.current_bgm_id != 0x00010002 or AudioService.current_bgm_path.is_empty():
 		_fail("map BGM did not start: %08X %s" % [AudioService.current_bgm_id, AudioService.current_bgm_path], 9)
 		return
+	if OS.has_environment("MIR2X_TEST_HUD_MINIMIZED"):
+		control_panel.call("_on_minimize_pressed")
+		for _frame in range(34):
+			await get_tree().process_frame
+		var player_screen_y := float(GameState.player_y * 32) - GameState.view_y
+		if not GameState.hud_minimized or absf(player_screen_y - 300.0) > 0.01 or _main.get_node("Location").visible:
+			_fail("minimized HUD camera/layout mismatch: y=%s" % player_screen_y, 10)
+			return
 	var panel_name := OS.get_environment("MIR2X_TEST_PANEL")
 	if panel_name in ["inventory", "player_state", "skill"]:
 		var panel_nodes := {"inventory": "%InventoryPanel", "player_state": "%PlayerStatePanel", "skill": "%SkillPanel"}

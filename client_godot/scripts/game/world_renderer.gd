@@ -477,13 +477,6 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 	if c_type != 2:
 		_draw_attached_magic(uid, cx, cy)
 	
-	# Name
-	var font := get_theme_default_font()
-	if font:
-		var c_name: String = c.get("name", "")
-		if not c_name.is_empty():
-			var tw := font.get_string_size(c_name, HORIZONTAL_ALIGNMENT_CENTER, -1, 11)
-			font.draw_string(get_canvas_item(), Vector2(center.x - tw.x * 0.5, cy - 4), c_name, HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(1, 1, 1, 0.9))
 	if c_type == 2:
 		_draw_player_say(uid, cx, cy)
 

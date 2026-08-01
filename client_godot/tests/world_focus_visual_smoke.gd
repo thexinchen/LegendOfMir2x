@@ -8,7 +8,7 @@ func _ready() -> void:
 	GameState.player_x = 0
 	GameState.player_y = -1
 	GameState.view_x = float(371 * 48 - 304)
-	GameState.view_y = float(132 * 32 - 240)
+	GameState.view_y = float(132 * 32 - 234)
 	GameState.creatures = {
 		1001: _monster(1001, 371, 132, "MOUSE"),
 		1002: _monster(1002, 372, 132, "MAGIC"),

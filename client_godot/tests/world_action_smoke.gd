@@ -31,6 +31,8 @@ func _ready() -> void:
 	var main: Control = load("res://scenes/game/main.tscn").instantiate()
 	add_child(main)
 	await get_tree().process_frame
+	if not _test_camera_centering(main):
+		return
 	main.call("_on_server_message", NetworkClient.SM_NEXTSTRIKE, PackedByteArray())
 	if main.call("_consume_attack_magic_id") != next_strike_id or main.call("_consume_attack_magic_id") != physical_id:
 		_fail("SM_NEXTSTRIKE was not consumed exactly once")
@@ -73,6 +75,32 @@ func _ready() -> void:
 		return
 	print("WORLD ACTION PASS: focus channels, mining, exact-frame focus, action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
+
+
+func _test_camera_centering(main: Control) -> bool:
+	GameState.player_x = 371
+	GameState.player_y = 132
+	GameState.hud_minimized = false
+	GameState.center_camera_on_player()
+	if GameState.camera_center_y() != 234 or not is_equal_approx(GameState.view_y, float(132 * 32 - 234)):
+		_fail("normal HUD camera does not use C++ 469px world viewport")
+		return false
+	var control_panel: Control = main.get_node("ControlPanel")
+	control_panel.call("_on_minimize_pressed")
+	if not GameState.hud_minimized or GameState.camera_center_y() != 300:
+		_fail("minimized HUD did not expose the full 600px world viewport")
+		return false
+	var previous_view_y := GameState.view_y
+	GameState.scroll_camera()
+	if not is_equal_approx(GameState.view_y, previous_view_y - 2.0):
+		_fail("minimized HUD camera did not smoothly converge at the C++ vertical rate")
+		return false
+	control_panel.call("_on_minimize_pressed")
+	main.call("_center_hero")
+	if GameState.hud_minimized or not is_equal_approx(GameState.view_y, float(132 * 32 - 234)):
+		_fail("restored HUD or ESC centering did not return to the 469px viewport")
+		return false
+	return true
 
 
 func _test_player_say(main: Control) -> bool:

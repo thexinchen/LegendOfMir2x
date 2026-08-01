@@ -10,6 +10,7 @@ const MC_TEXTURE := preload("res://assets/ui/game/control_panel/00000049.png")
 signal panel_requested(scene_path: String)
 signal quick_bar_toggled
 signal magic_key_hud_toggled
+signal minimized_changed(minimized: bool)
 
 @onready var body: Control = %Body
 @onready var command: LineEdit = %Command
@@ -29,6 +30,8 @@ signal magic_key_hud_toggled
 @onready var face: TextureRect = %Face
 @onready var face_health: ColorRect = %FaceHealth
 @onready var buff_container: Control = %BuffContainer
+@onready var title: TextureRect = $Title
+@onready var minimize_button: TextureButton = $MinimizeButton
 
 var game_state: Node = null
 var _minimized := false
@@ -61,6 +64,7 @@ func _ready() -> void:
 	_refresh_static()
 	_update_chat_display()
 	$Body/MagicKey.pressed.connect(magic_key_hud_toggled.emit)
+	title.gui_input.connect(_on_title_gui_input)
 
 
 func _process(_delta: float) -> void:
@@ -186,8 +190,24 @@ func _update_chat_display() -> void:
 
 
 func _on_minimize_pressed() -> void:
-	_minimized = not _minimized
-	body.visible = not _minimized
+	_set_minimized(not _minimized)
+
+
+func _set_minimized(minimized: bool) -> void:
+	if _minimized == minimized:
+		return
+	_minimized = minimized
+	body.visible = not minimized
+	title.position.y = 121.0 if minimized else 0.0
+	level_label.visible = not minimized
+	minimize_button.visible = not minimized
+	minimized_changed.emit(minimized)
+
+
+func _on_title_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
+		_set_minimized(not _minimized)
+		accept_event()
 
 
 func _on_quick_pressed() -> void:

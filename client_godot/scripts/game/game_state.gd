@@ -92,6 +92,7 @@ var attached_magic_effects: Array = []
 # Camera position (pixel coordinates)
 var view_x: float = 0.0
 var view_y: float = 0.0
+var hud_minimized := false
 
 # Strike grids (recently attacked grid cells, for red flash overlay)
 var strike_grids: Dictionary = {}  # "x,y" -> timestamp_msec
@@ -104,6 +105,7 @@ const GRID_XP := 48
 const GRID_YP := 32
 const SCREEN_W := 800
 const SCREEN_H := 600
+const HUD_SHIFT_HEIGHT := 131
 
 
 func _ready() -> void:
@@ -113,6 +115,7 @@ func _ready() -> void:
 
 
 func set_player_online(online_data: Dictionary) -> void:
+	hud_minimized = false
 	player_uid = online_data.get("uid", 0)
 	player_name = online_data.get("name", "")
 	player_gender = online_data.get("gender", 0)
@@ -129,7 +132,7 @@ func set_player_online(online_data: Dictionary) -> void:
 	player_action_from_y = player_y
 	player_map_id = _map_id_from_uid(player_map_uid)
 	player_map_name = ""
-	_center_camera_on_player()
+	center_camera_on_player()
 	state_changed.emit()
 
 
@@ -153,7 +156,7 @@ func start_game_scene(scene_data: Dictionary) -> void:
 	player_say_messages.clear()
 	magic_effects.clear()
 	attached_magic_effects.clear()
-	_center_camera_on_player()
+	center_camera_on_player()
 	state_changed.emit()
 
 
@@ -485,9 +488,14 @@ func update_entity_health(data: Dictionary) -> void:
 	state_changed.emit()
 
 
-func _center_camera_on_player() -> void:
+func camera_center_y() -> int:
+	var visible_height := SCREEN_H if hud_minimized else SCREEN_H - HUD_SHIFT_HEIGHT
+	return floori(float(visible_height) * 0.5)
+
+
+func center_camera_on_player() -> void:
 	view_x = float(player_x) * GRID_XP - SCREEN_W * 0.5
-	view_y = float(player_y) * GRID_YP - SCREEN_H * 0.5
+	view_y = float(player_y) * GRID_YP - camera_center_y()
 
 
 func _map_id_from_uid(map_uid: int) -> int:
@@ -512,7 +520,7 @@ func _sum_exp(level: int) -> int:
 func scroll_camera() -> void:
 	# Smoothly scroll camera toward player
 	var target_x := float(player_x) * GRID_XP - SCREEN_W * 0.5
-	var target_y := float(player_y) * GRID_YP - SCREEN_H * 0.5
+	var target_y := float(player_y) * GRID_YP - camera_center_y()
 	var dx := target_x - view_x
 	var dy := target_y - view_y
 	if abs(dx) > 0.5:
