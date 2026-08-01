@@ -398,6 +398,9 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 	var stages := [MAGIC_STAGE_RUN, MAGIC_STAGE_EXPLODE] if effect.get("source", "") == "cast" else [MAGIC_STAGE_SPELL, MAGIC_STAGE_RUN, MAGIC_STAGE_EXPLODE]
 	var special_kind := _special_magic_kind(magic_id)
 	var elapsed := maxi(0, now - int(effect.get("start_time", now)))
+	var attachment_policy := _action_attachment_policy(magic_id)
+	if not attachment_policy.is_empty() and effect.get("source", "") != "cast":
+		return _resolve_target_attached_action_magic(effect, magic_id, attachment_policy, elapsed)
 	if not special_kind.is_empty() and effect.get("source", "") != "cast":
 		return _resolve_special_action_magic(effect, magic_id, special_kind, elapsed)
 	for stage in stages:
@@ -411,6 +414,49 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 			return resolved
 		elapsed -= duration
 	return {}
+
+
+func _action_attachment_policy(magic_id: int) -> String:
+	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+	if magic_name == "治愈术":
+		return "heal_fallback"
+	if magic_name in ["乾坤大挪移", "圣言术", "云寂术", "回生术", "施毒术", "诱惑之光", "移花接玉"]:
+		return "target_only"
+	return ""
+
+
+func _resolve_target_attached_action_magic(effect: Dictionary, magic_id: int, policy: String, elapsed: int) -> Dictionary:
+	var speed := clampi(effect.get("speed", 100), 20, 500)
+	var trigger_delay := roundi(3.0 * 100.0 * 100.0 / speed)
+	var resolved := {"special_kind": "target_attachment", "components": [], "underlays": [], "on_ground": false}
+	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
+	if not startup_meta.is_empty():
+		var startup_duration := _magic_stage_duration(startup_meta, effect)
+		if elapsed < startup_duration:
+			var startup := _make_resolved_magic(effect, startup_meta, MAGIC_STAGE_SPELL, elapsed, startup_duration)
+			_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_SPELL, startup.position)
+			resolved.components.append(_resolved_component(startup.meta, startup.frame, startup.direction, startup.position))
+	if elapsed < trigger_delay:
+		return resolved
+	if not effect.get("_attachment_spawned", false):
+		effect["_attachment_spawned"] = true
+		var target_uid: int = effect.get("aimUID", 0)
+		if not _attached_target_exists(target_uid):
+			target_uid = effect.get("uid", 0) if policy == "heal_fallback" else 0
+		if _attached_target_exists(target_uid):
+			game_state.attached_magic_effects.append({
+				"magicID": magic_id,
+				"target_uid": target_uid,
+				"start_time": int(effect.get("start_time", 0)) + trigger_delay,
+				"cycles": 1,
+				"kind": "action_attachment",
+			})
+			game_state.state_changed.emit()
+	return resolved if not resolved.components.is_empty() else {}
+
+
+func _attached_target_exists(uid: int) -> bool:
+	return uid != 0 and (uid == game_state.player_uid or game_state.creatures.has(uid))
 
 
 func _special_magic_kind(magic_id: int) -> String:
@@ -822,10 +868,11 @@ func _magic_mod_color(meta: PackedInt32Array, alpha_mod: float) -> Color:
 	)
 
 
-func _draw_attached_magic(uid: int, start_x: int, start_y: int) -> void:
+func _draw_attached_magic(uid: int, start_x: int, start_y: int, overlay := false) -> void:
 	for magic_value in _active_attached_magic.get(uid, []):
 		var magic: Dictionary = magic_value
-		_draw_magic_frame(magic.meta, magic.frame, magic.direction, Vector2(float(start_x) / GRID_XP, float(start_y) / GRID_YP), 0, 0, magic.alpha_mod, magic.mirror_vertical)
+		var alpha_mod: float = magic.alpha_mod * (240.0 / 255.0 if overlay else 1.0)
+		_draw_magic_frame(magic.meta, magic.frame, magic.direction, Vector2(float(start_x) / GRID_XP, float(start_y) / GRID_YP), 0, 0, alpha_mod, magic.mirror_vertical)
 
 
 func _draw_player(view_x: int, view_y: int) -> void:
@@ -838,6 +885,7 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id, game_state.player_uid, game_state.player_y):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
+	_draw_attached_magic(game_state.player_uid, px, py, true)
 	_draw_player_say(game_state.player_uid, px, py)
 	
 	# The C++ client only enables actor HP/name overlays through debug/runtime flags.
@@ -865,7 +913,9 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 	if not sprite_drawn:
 		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3 * body_alpha))
 		draw_circle(center, 12, Color(0.7, 0.2, 0.2, 0.9 * body_alpha))
-	if c_type != 2:
+	if c_type == 2:
+		_draw_attached_magic(uid, cx, cy, true)
+	else:
 		_draw_attached_magic(uid, cx, cy)
 	
 	if c_type == 2:

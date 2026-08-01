@@ -20,9 +20,19 @@ func _ready() -> void:
 	var ice_thorn_id: int = resources.magic_id("魔法特效_冰刺")
 	var wind_chain_id: int = resources.magic_id("风震天")
 	var laser_id: int = resources.magic_id("疾光电影")
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0:
+	var healing_id: int = resources.magic_id("治愈术")
+	var target_attachment_ids := [
+		resources.magic_id("乾坤大挪移"), healing_id, resources.magic_id("圣言术"), resources.magic_id("云寂术"),
+		resources.magic_id("回生术"), resources.magic_id("施毒术"), resources.magic_id("诱惑之光"), resources.magic_id("移花接玉"),
+	]
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or target_attachment_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
+	for magic_id in target_attachment_ids:
+		var attachment_meta: PackedInt32Array = resources.magic_layout(magic_id, 2)
+		if attachment_meta.is_empty() or attachment_meta[2] <= 0 or attachment_meta[5] != 2:
+			_fail("target attachment metadata mismatch: id=%d meta=%s" % [magic_id, attachment_meta])
+			return
 	var fireball_run: PackedInt32Array = resources.magic_layout(fireball_id, 2)
 	var thunder_run: PackedInt32Array = resources.magic_layout(thunder_id, 2)
 	var firewall_run: PackedInt32Array = resources.magic_layout(firewall_id, 2)
@@ -173,6 +183,56 @@ func _ready() -> void:
 		return
 
 	GameState.attached_magic_effects.clear()
+	var attachment_action := {
+		"source": "action", "uid": GameState.player_uid,
+		"x": 405, "y": 120, "aimX": 409, "aimY": 120, "aimUID": target_uid,
+		"direction": 3, "speed": 100, "start_time": now, "_seff_stage_mask": 0xFFFF,
+	}
+	for attachment_id in target_attachment_ids:
+		var action_effect := attachment_action.duplicate(true)
+		action_effect["magicID"] = attachment_id
+		$WorldRenderer.call("_resolve_magic_effect", action_effect, now + 299)
+		if not GameState.attached_magic_effects.is_empty():
+			_fail("target attachment triggered before spell frame 3: id=%d" % attachment_id)
+			return
+		$WorldRenderer.call("_resolve_magic_effect", action_effect, now + 300)
+		if GameState.attached_magic_effects.size() != 1 or GameState.attached_magic_effects[0].get("target_uid", 0) != target_uid:
+			_fail("target attachment did not bind aimed creature: id=%d effects=%s" % [attachment_id, GameState.attached_magic_effects])
+			return
+		$WorldRenderer.call("_resolve_magic_effect", action_effect, now + 400)
+		if GameState.attached_magic_effects.size() != 1:
+			_fail("target attachment duplicated during redraw: id=%d" % attachment_id)
+			return
+		GameState.attached_magic_effects.clear()
+	var moving_effect := attachment_action.duplicate(true)
+	moving_effect["magicID"] = healing_id
+	$WorldRenderer.call("_resolve_magic_effect", moving_effect, now + 300)
+	GameState.creatures[target_uid]["x"] = 411
+	GameState.creatures[target_uid]["y"] = 121
+	if $WorldRenderer.call("_attached_target_grid", target_uid) != Vector2(411, 121):
+		_fail("target attachment did not follow creature movement")
+		return
+	GameState.creatures.erase(target_uid)
+	if not $WorldRenderer.call("_resolve_attached_magic", now + 301).is_empty() or not GameState.attached_magic_effects.is_empty():
+		_fail("target attachment survived missing creature")
+		return
+	var healing_fallback := attachment_action.duplicate(true)
+	healing_fallback["magicID"] = healing_id
+	healing_fallback["aimUID"] = target_uid
+	$WorldRenderer.call("_resolve_magic_effect", healing_fallback, now + 300)
+	if GameState.attached_magic_effects.size() != 1 or GameState.attached_magic_effects[0].get("target_uid", 0) != GameState.player_uid:
+		_fail("healing attachment did not fall back to caster: %s" % GameState.attached_magic_effects)
+		return
+	GameState.attached_magic_effects.clear()
+	var strict_missing := attachment_action.duplicate(true)
+	strict_missing["magicID"] = target_attachment_ids[0]
+	strict_missing["aimUID"] = target_uid
+	$WorldRenderer.call("_resolve_magic_effect", strict_missing, now + 300)
+	if not GameState.attached_magic_effects.is_empty():
+		_fail("strict target attachment incorrectly fell back to caster")
+		return
+	GameState.creatures[target_uid] = {"uid": target_uid, "x": 409, "y": 120, "type": 1, "monster_id": 1, "direction": 7}
+
 	var cast_data := {
 		"uid": GameState.player_uid, "mapUID": GameState.player_map_uid,
 		"x": 405, "y": 120, "aimX": 409, "aimY": 120, "aimUID": target_uid,
@@ -311,7 +371,24 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_LASER_SCREENSHOT"))
-	print("MAGIC EFFECT PASS: attachments, firewall, hellfire/ice composites, wind chain and caster-grid laser")
+	if OS.has_environment("MIR2X_ATTACHMENT_SCREENSHOT"):
+		var attachment_now := Time.get_ticks_msec()
+		GameState.magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.player_action_type = 2
+		GameState.player_action_started_ms = attachment_now
+		GameState.creatures[target_uid] = {"uid": target_uid, "x": 409, "y": 120, "type": 1, "monster_id": 1, "direction": 7}
+		GameState.attached_magic_effects = [
+			{"magicID": healing_id, "target_uid": target_uid, "start_time": attachment_now - 300, "cycles": 1, "kind": "action_attachment"},
+			{"magicID": healing_id, "target_uid": GameState.player_uid, "start_time": attachment_now - 300, "cycles": 1, "kind": "action_attachment"},
+		]
+		GameState.view_x = 409 * 48 - 400
+		GameState.view_y = 120 * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ATTACHMENT_SCREENSHOT"))
+	print("MAGIC EFFECT PASS: target/server attachments, firewall, composite/propagated fixed magic and caster-grid laser")
 	get_tree().quit()
 
 
