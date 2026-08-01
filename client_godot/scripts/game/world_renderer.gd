@@ -376,11 +376,13 @@ func _resolve_attached_magic(now: int) -> Dictionary:
 		var cycle_elapsed := elapsed % cycle_duration
 		var absolute_frame := floori(float(cycle_elapsed) / 1000.0 * 10.0 * speed / 100.0)
 		var alpha_mod := 1.0
-		if effect.get("kind", "") == "shield":
+		if effect.get("kind", "") in ["shield", "shield_hit"]:
 			alpha_mod = 240.0 / 255.0
 		elif effect.get("kind", "") == "yin_yang_ring" and cycle == 1:
 			alpha_mod = maxf(absf(cos(float(cycle_elapsed) / 800.0)), 32.0 / 255.0)
 		var resolved := {
+			"magic_id": magic_id,
+			"kind": effect.get("kind", ""),
 			"meta": meta,
 			"frame": mini(absolute_frame, meta[2] - 1),
 			"direction": 0,
@@ -1055,11 +1057,30 @@ func _magic_mod_color(meta: PackedInt32Array, alpha_mod: float) -> Color:
 	)
 
 
-func _draw_attached_magic(uid: int, start_x: int, start_y: int, overlay := false) -> void:
+func _draw_attached_magic(uid: int, start_x: int, start_y: int) -> void:
 	for magic_value in _active_attached_magic.get(uid, []):
 		var magic: Dictionary = magic_value
-		var alpha_mod: float = magic.alpha_mod * (240.0 / 255.0 if overlay else 1.0)
-		_draw_magic_frame(magic.meta, magic.frame, magic.direction, Vector2(float(start_x) / GRID_XP, float(start_y) / GRID_YP), 0, 0, alpha_mod, magic.mirror_vertical)
+		_draw_magic_frame(magic.meta, magic.frame, magic.direction, Vector2(float(start_x) / GRID_XP, float(start_y) / GRID_YP), 0, 0, magic.alpha_mod, magic.mirror_vertical)
+
+
+func _draw_hero_attached_magic(uid: int, start_x: int, start_y: int, actor_direction: int, overlay: bool) -> void:
+	for magic_value in _active_attached_magic.get(uid, []):
+		var magic: Dictionary = magic_value
+		var policy := _hero_attached_magic_draw_policy(magic.get("magic_id", 0), magic.get("kind", ""), actor_direction, overlay, magic.get("alpha_mod", 1.0))
+		if not policy.draw:
+			continue
+		_draw_magic_frame(magic.meta, magic.frame, magic.direction, Vector2(float(start_x) / GRID_XP, float(start_y) / GRID_YP), 0, 0, policy.alpha_mod, magic.mirror_vertical)
+
+
+func _hero_attached_magic_draw_policy(magic_id: int, kind: String, actor_direction: int, overlay: bool, base_alpha: float) -> Dictionary:
+	if not overlay:
+		return {"draw": true, "alpha_mod": base_alpha}
+	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+	if magic_name == "灵魂火符":
+		return {"draw": actor_direction >= 5 and actor_direction <= 8, "alpha_mod": base_alpha}
+	if kind in ["shield", "shield_hit"]:
+		return {"draw": true, "alpha_mod": 240.0 / 255.0}
+	return {"draw": true, "alpha_mod": base_alpha * 240.0 / 255.0}
 
 
 func _draw_player(view_x: int, view_y: int) -> void:
@@ -1068,11 +1089,11 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	var py: int = roundi(draw_grid.y * GRID_YP) - view_y
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
 
-	_draw_attached_magic(game_state.player_uid, px, py)
+	_draw_hero_attached_magic(game_state.player_uid, px, py, game_state.player_direction, false)
 	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id, game_state.player_uid, game_state.player_y):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
-	_draw_attached_magic(game_state.player_uid, px, py, true)
+	_draw_hero_attached_magic(game_state.player_uid, px, py, game_state.player_direction, true)
 	_draw_player_say(game_state.player_uid, px, py)
 	
 	# The C++ client only enables actor HP/name overlays through debug/runtime flags.
@@ -1092,7 +1113,7 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 	var sprite_drawn := false
 	var uid: int = c.get("uid", 0)
 	if c_type == 2:
-		_draw_attached_magic(uid, cx, cy)
+		_draw_hero_attached_magic(uid, cx, cy, c.get("direction", 5), false)
 	match c_type:
 		1: sprite_drawn = _draw_monster_sprite(c, cx, cy, body_alpha)
 		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100), c.get("action_magic_id", 0), uid, c.get("y", 0))
@@ -1101,7 +1122,7 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3 * body_alpha))
 		draw_circle(center, 12, Color(0.7, 0.2, 0.2, 0.9 * body_alpha))
 	if c_type == 2:
-		_draw_attached_magic(uid, cx, cy, true)
+		_draw_hero_attached_magic(uid, cx, cy, c.get("direction", 5), true)
 	else:
 		_draw_attached_magic(uid, cx, cy)
 	

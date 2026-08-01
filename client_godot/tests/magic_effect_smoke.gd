@@ -21,6 +21,7 @@ func _ready() -> void:
 	var wind_chain_id: int = resources.magic_id("风震天")
 	var laser_id: int = resources.magic_id("疾光电影")
 	var healing_id: int = resources.magic_id("治愈术")
+	var soul_talisman_id: int = resources.magic_id("灵魂火符")
 	var flame_sword_id: int = resources.magic_id("烈火剑法")
 	var target_attachment_ids := [
 		resources.magic_id("乾坤大挪移"), healing_id, resources.magic_id("圣言术"), resources.magic_id("云寂术"),
@@ -34,7 +35,7 @@ func _ready() -> void:
 	var fixed_projectile_ids := [resources.magic_id("月魂断玉"), resources.magic_id("月魂灵波"), resources.magic_id("冰月震天")]
 	var projectile_ids := [
 		fireball_id, resources.magic_id("大火球"), resources.magic_id("霹雳掌"), resources.magic_id("风掌"),
-		fixed_projectile_ids[0], fixed_projectile_ids[1], resources.magic_id("灵魂火符"), resources.magic_id("冰月神掌"),
+		fixed_projectile_ids[0], fixed_projectile_ids[1], soul_talisman_id, resources.magic_id("冰月神掌"),
 		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
 		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
 	]
@@ -394,8 +395,23 @@ func _ready() -> void:
 	shield.start_time = now
 	var attached: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now)
 	var player_attached: Array = attached.get(GameState.player_uid, [])
-	if player_attached.size() != 1 or not is_equal_approx(player_attached[0].get("alpha_mod", 0.0), 240.0 / 255.0):
+	if player_attached.size() != 1 or player_attached[0].get("magic_id", 0) != shield_id or player_attached[0].get("kind", "") != "shield" or not is_equal_approx(player_attached[0].get("alpha_mod", 0.0), 240.0 / 255.0):
 		_fail("magic shield alpha/layer resolution mismatch: %s" % attached)
+		return
+	var shield_under: Dictionary = $WorldRenderer.call("_hero_attached_magic_draw_policy", shield_id, "shield", 2, false, 240.0 / 255.0)
+	var shield_over: Dictionary = $WorldRenderer.call("_hero_attached_magic_draw_policy", shield_id, "shield", 2, true, 240.0 / 255.0)
+	var ordinary_under: Dictionary = $WorldRenderer.call("_hero_attached_magic_draw_policy", healing_id, "action_attachment", 2, false, 1.0)
+	var ordinary_over: Dictionary = $WorldRenderer.call("_hero_attached_magic_draw_policy", healing_id, "action_attachment", 2, true, 1.0)
+	var talisman_up: Dictionary = $WorldRenderer.call("_hero_attached_magic_draw_policy", soul_talisman_id, "projectile_impact", 2, true, 1.0)
+	var talisman_down: Dictionary = $WorldRenderer.call("_hero_attached_magic_draw_policy", soul_talisman_id, "projectile_impact", 5, true, 1.0)
+	if not shield_under.draw or not shield_over.draw or not is_equal_approx(shield_under.alpha_mod, 240.0 / 255.0) or not is_equal_approx(shield_over.alpha_mod, 240.0 / 255.0):
+		_fail("shield under/overlay alpha policy mismatch: under=%s over=%s" % [shield_under, shield_over])
+		return
+	if not ordinary_under.draw or not is_equal_approx(ordinary_under.alpha_mod, 1.0) or not ordinary_over.draw or not is_equal_approx(ordinary_over.alpha_mod, 240.0 / 255.0):
+		_fail("ordinary attachment under/overlay policy mismatch: under=%s over=%s" % [ordinary_under, ordinary_over])
+		return
+	if talisman_up.draw or not talisman_down.draw or not is_equal_approx(talisman_down.alpha_mod, 1.0):
+		_fail("soul talisman direction-layer policy mismatch: up=%s down=%s" % [talisman_up, talisman_down])
 		return
 	var shield_meta: PackedInt32Array = resources.magic_layout(shield_id, 2)
 	var shield_hit_meta: PackedInt32Array = resources.magic_layout(shield_id, 5)
@@ -628,6 +644,30 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_SHIELD_HIT_SCREENSHOT"))
+	if OS.has_environment("MIR2X_ATTACHMENT_LAYER_SCREENSHOT"):
+		var layer_visual_now := Time.get_ticks_msec()
+		var up_uid: int = (5 << 59) | 801
+		var down_uid: int = (5 << 59) | 802
+		GameState.player_x = 409
+		GameState.player_y = 126
+		GameState.player_action_type = 2
+		GameState.creatures = {
+			up_uid: {"uid": up_uid, "x": 407, "y": 120, "type": 2, "gender": 1, "direction": 2, "action_type": 2},
+			down_uid: {"uid": down_uid, "x": 411, "y": 120, "type": 2, "gender": 1, "direction": 5, "action_type": 2},
+		}
+		GameState.magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.strike_grids.clear()
+		GameState.attached_magic_effects = [
+			{"magicID": soul_talisman_id, "target_uid": up_uid, "stage": 3, "kind": "projectile_impact", "cycles": 1, "start_time": layer_visual_now},
+			{"magicID": soul_talisman_id, "target_uid": down_uid, "stage": 3, "kind": "projectile_impact", "cycles": 1, "start_time": layer_visual_now},
+		]
+		GameState.view_x = 409 * 48 - 400
+		GameState.view_y = 120 * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ATTACHMENT_LAYER_SCREENSHOT"))
 	print("MAGIC EFFECT PASS: target/server attachments, follow/fixed/composite/propagated magic and caster-grid laser")
 	get_tree().quit()
 
