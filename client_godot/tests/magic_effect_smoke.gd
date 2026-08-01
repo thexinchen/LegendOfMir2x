@@ -18,7 +18,9 @@ func _ready() -> void:
 	var ice_thrust_id: int = resources.magic_id("冰沙掌")
 	var fire_ash_id: int = resources.magic_id("魔法特效_火焰灰烬")
 	var ice_thorn_id: int = resources.magic_id("魔法特效_冰刺")
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0:
+	var wind_chain_id: int = resources.magic_id("风震天")
+	var laser_id: int = resources.magic_id("疾光电影")
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0:
 		_fail("magic name metadata incomplete")
 		return
 	var fireball_run: PackedInt32Array = resources.magic_layout(fireball_id, 2)
@@ -118,6 +120,37 @@ func _ready() -> void:
 		return
 	if resources.magic_seff(ice_thrust_id, 2) < 0:
 		_fail("invisible ice thrust parent lost its run SEFF metadata")
+		return
+	var wind_run: PackedInt32Array = resources.magic_layout(wind_chain_id, 2)
+	var wind_explode: PackedInt32Array = resources.magic_layout(wind_chain_id, 3)
+	var laser_run: PackedInt32Array = resources.magic_layout(laser_id, 2)
+	if wind_run.is_empty() or wind_explode.is_empty() or laser_run.is_empty():
+		_fail("propagated spell metadata missing")
+		return
+	var propagated_effect := {
+		"source": "action", "x": special_source.x, "y": special_source.y,
+		"aimX": special_source.x + 8, "aimY": special_source.y, "direction": 3, "speed": 100,
+		"_propagated_seff_mask": 0xFF,
+	}
+	var wind_effect := propagated_effect.duplicate(true)
+	wind_effect["magicID"] = wind_chain_id
+	var first_wind: Dictionary = $WorldRenderer.call("_resolve_wind_chain", wind_effect, wind_chain_id, wind_run, 0)
+	var first_wind_components: Array = first_wind.get("components", [])
+	if first_wind_components.size() != 1 or first_wind_components[0].position != Vector2(special_source + Vector2i(1, 0)):
+		_fail("wind chain did not begin one grid forward: %s" % first_wind)
+		return
+	var wind_run_duration: int = $WorldRenderer.call("_magic_frame_duration", wind_run)
+	var wind_explode_state: Dictionary = $WorldRenderer.call("_resolve_wind_chain", wind_effect, wind_chain_id, wind_run, 7 * wind_run_duration)
+	var wind_explode_components: Array = wind_explode_state.get("components", [])
+	if wind_explode_components.size() != 1 or wind_explode_components[0].meta != wind_explode or wind_explode_components[0].position != Vector2(special_source + Vector2i(8, 0)):
+		_fail("wind chain eighth-grid explode mismatch: %s" % wind_explode_state)
+		return
+	var laser_effect := propagated_effect.duplicate(true)
+	laser_effect["magicID"] = laser_id
+	var laser_state: Dictionary = $WorldRenderer.call("_resolve_caster_laser", laser_effect, laser_id, laser_run, 100)
+	var laser_components: Array = laser_state.get("components", [])
+	if laser_components.size() != 1 or laser_components[0].position != Vector2(special_source) or laser_components[0].direction != 2:
+		_fail("laser did not stay on caster grid/direction: %s" % laser_state)
 		return
 	if not is_equal_approx(float($WorldRenderer.call("_fire_ash_alpha", 500)), 0.5) or not is_equal_approx(float($WorldRenderer.call("_ice_slag_alpha", 5)), 0.5):
 		_fail("special ground alpha envelope mismatch")
@@ -250,7 +283,35 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ICE_SCREENSHOT"))
-	print("MAGIC EFFECT PASS: action spell, attachments, firewall, eight-grid hellfire/ice composites and ground underlays")
+	if OS.has_environment("MIR2X_PROPAGATED_SCREENSHOT"):
+		var propagated_now := Time.get_ticks_msec()
+		var wind_visual := wind_effect.duplicate(true)
+		wind_visual["start_time"] = propagated_now - 400 - 3 * wind_run_duration - 200
+		var laser_visual := laser_effect.duplicate(true)
+		laser_visual["x"] = ice_source.x
+		laser_visual["y"] = ice_source.y
+		laser_visual["start_time"] = propagated_now - 300 - 200
+		GameState.magic_effects = [wind_visual, laser_visual]
+		GameState.view_x = special_source.x * 48 - 240
+		GameState.view_y = roundi(float(special_source.y + ice_source.y) * 16.0) - 260
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_PROPAGATED_SCREENSHOT"))
+	if OS.has_environment("MIR2X_LASER_SCREENSHOT"):
+		var laser_now := Time.get_ticks_msec()
+		var laser_capture := laser_effect.duplicate(true)
+		laser_capture["x"] = ice_source.x
+		laser_capture["y"] = ice_source.y
+		laser_capture["start_time"] = laser_now - 300 - 200
+		GameState.magic_effects = [laser_capture]
+		GameState.view_x = ice_source.x * 48 - 240
+		GameState.view_y = ice_source.y * 32 - 260
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_LASER_SCREENSHOT"))
+	print("MAGIC EFFECT PASS: attachments, firewall, hellfire/ice composites, wind chain and caster-grid laser")
 	get_tree().quit()
 
 

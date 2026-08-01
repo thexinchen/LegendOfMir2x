@@ -418,6 +418,10 @@ func _special_magic_kind(magic_id: int) -> String:
 		return "hellfire"
 	if magic_id == actor_resource.magic_id("冰沙掌"):
 		return "ice_thrust"
+	if magic_id == actor_resource.magic_id("风震天"):
+		return "wind_chain"
+	if magic_id == actor_resource.magic_id("疾光电影"):
+		return "laser"
 	return ""
 
 
@@ -426,8 +430,17 @@ func _resolve_special_action_magic(effect: Dictionary, magic_id: int, kind: Stri
 	if run_meta.is_empty():
 		return {}
 	var speed := clampi(effect.get("speed", 100), 20, 500)
-	var trigger_delay := roundi(3.0 * 100.0 * 100.0 / speed)
-	var resolved := _resolve_special_magic(effect, magic_id, kind, run_meta, elapsed - trigger_delay)
+	var trigger_frame := 4 if kind == "wind_chain" else 3
+	var trigger_delay := roundi(float(trigger_frame) * 100.0 * 100.0 / speed)
+	var run_elapsed := elapsed - trigger_delay
+	var resolved: Dictionary = {}
+	match kind:
+		"hellfire", "ice_thrust":
+			resolved = _resolve_special_magic(effect, magic_id, kind, run_meta, run_elapsed)
+		"wind_chain":
+			resolved = _resolve_wind_chain(effect, magic_id, run_meta, run_elapsed)
+		"laser":
+			resolved = _resolve_caster_laser(effect, magic_id, run_meta, run_elapsed)
 	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
 	if not startup_meta.is_empty():
 		var startup_duration := _magic_stage_duration(startup_meta, effect)
@@ -440,6 +453,53 @@ func _resolve_special_action_magic(effect: Dictionary, magic_id: int, kind: Stri
 			components.append(_resolved_component(startup.meta, startup.frame, startup.direction, startup.position))
 			resolved["components"] = components
 	return resolved
+
+
+func _resolve_wind_chain(effect: Dictionary, magic_id: int, run_meta: PackedInt32Array, elapsed: int) -> Dictionary:
+	var explode_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_EXPLODE)
+	if explode_meta.is_empty():
+		return {}
+	var run_duration := _magic_frame_duration(run_meta)
+	var explode_duration := _magic_frame_duration(explode_meta)
+	var total_duration := 7 * run_duration + explode_duration
+	if elapsed >= total_duration:
+		return {}
+	var components: Array = []
+	if elapsed >= 0:
+		var source := Vector2(effect.get("x", 0), effect.get("y", 0))
+		var step := Vector2(_direction_step(effect.get("direction", 1)))
+		var segment := floori(float(elapsed) / run_duration)
+		if segment < 7:
+			var segment_elapsed := elapsed - segment * run_duration
+			var position := source + step * (segment + 1)
+			_play_propagated_seff(effect, magic_id, segment, MAGIC_STAGE_RUN, position)
+			components.append(_resolved_component(run_meta, mini(_magic_absolute_frame(run_meta, segment_elapsed), run_meta[2] - 1), 0, position))
+		else:
+			var explode_elapsed := elapsed - 7 * run_duration
+			var position := source + step * 8
+			_play_propagated_seff(effect, magic_id, 7, MAGIC_STAGE_EXPLODE, position)
+			components.append(_resolved_component(explode_meta, mini(_magic_absolute_frame(explode_meta, explode_elapsed), explode_meta[2] - 1), 0, position))
+	return {"special_kind": "wind_chain", "components": components, "underlays": [], "on_ground": false}
+
+
+func _resolve_caster_laser(effect: Dictionary, magic_id: int, run_meta: PackedInt32Array, elapsed: int) -> Dictionary:
+	if elapsed >= _magic_frame_duration(run_meta):
+		return {}
+	var components: Array = []
+	if elapsed >= 0:
+		var position := Vector2(effect.get("x", 0), effect.get("y", 0))
+		_play_propagated_seff(effect, magic_id, 0, MAGIC_STAGE_RUN, position)
+		components.append(_resolved_component(run_meta, mini(_magic_absolute_frame(run_meta, elapsed), run_meta[2] - 1), clampi(effect.get("direction", 1), 1, 8) - 1, position))
+	return {"special_kind": "laser", "components": components, "underlays": [], "on_ground": false}
+
+
+func _play_propagated_seff(effect: Dictionary, magic_id: int, segment: int, stage: int, position: Vector2) -> void:
+	var mask: int = effect.get("_propagated_seff_mask", 0)
+	var bit := 1 << segment
+	if mask & bit:
+		return
+	effect["_propagated_seff_mask"] = mask | bit
+	AudioService.play_seff_at(actor_resource.magic_seff(magic_id, stage), roundi(position.x), roundi(position.y), game_state.player_x, game_state.player_y)
 
 
 func _resolve_special_magic(effect: Dictionary, magic_id: int, kind: String, run_meta: PackedInt32Array, run_elapsed: int) -> Dictionary:
