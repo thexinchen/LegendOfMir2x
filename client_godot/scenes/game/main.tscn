@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/main.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/game/world_renderer.gd" id="2_renderer"]
@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://scenes/game/control_panel.tscn" id="9_control"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000061.png" id="10_quick_close"]
 [ext_resource type="FontFile" path="res://assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf" id="11_world_font"]
+[ext_resource type="Script" path="res://scripts/game/quick_bar.gd" id="12_quick_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000062.png" id="13_quick_close_down"]
 
 [node name="GameMain" type="Control"]
 layout_mode = 3
@@ -44,10 +46,11 @@ text = "未知地图: 0 0"
 [node name="QuickBar" type="Control" parent="."]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 259.0
-offset_top = 397.0
-offset_right = 541.0
-offset_bottom = 440.0
+offset_top = 400.0
+offset_right = 282.0
+offset_bottom = 443.0
+mouse_filter = 0
+script = ExtResource("12_quick_script")
 
 [node name="Background" type="TextureRect" parent="QuickBar"]
 layout_mode = 1
@@ -59,6 +62,23 @@ grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("3_quick")
 
+[node name="Hover" type="ColorRect" parent="QuickBar"]
+visible = false
+layout_mode = 0
+offset_right = 36.0
+offset_bottom = 36.0
+mouse_filter = 2
+color = Color(1, 1, 1, 0.25098)
+
+[node name="Slots" type="Control" parent="QuickBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
 [node name="CloseButton" type="TextureButton" parent="QuickBar"]
 layout_mode = 0
 offset_left = 263.0
@@ -66,7 +86,13 @@ offset_top = 27.0
 offset_right = 279.0
 offset_bottom = 43.0
 texture_normal = ExtResource("10_quick_close")
+texture_pressed = ExtResource("13_quick_close_down")
 ignore_texture_size = true
+
+[node name="GrabbedItemIcon" type="TextureRect" parent="."]
+layout_mode = 0
+z_index = 100
+mouse_filter = 2
 
 [node name="InventoryPanel" parent="." instance=ExtResource("6_inventory")]
 unique_name_in_owner = true

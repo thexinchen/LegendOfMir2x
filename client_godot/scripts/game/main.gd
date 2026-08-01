@@ -15,6 +15,7 @@ const WorldPathfinderScript = preload("res://scripts/game/world_pathfinder.gd")
 @onready var quick_bar: Control = %QuickBar
 @onready var location_label: Label = $Location
 @onready var control_panel: Control = $ControlPanel
+@onready var grabbed_item_icon: TextureRect = $GrabbedItemIcon
 
 var game_state: Node = null
 var protocol: RefCounted = null
@@ -85,6 +86,8 @@ func _ready() -> void:
 	location_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 	
 	NetworkClient.message_received.connect(_on_server_message)
+	game_state.state_changed.connect(_refresh_grabbed_item_icon)
+	_refresh_grabbed_item_icon()
 	
 	if OS.has_environment("MIR2X_GAME_SCREENSHOT"):
 		inventory_panel.show()
@@ -115,11 +118,35 @@ func _process(delta: float) -> void:
 	
 	# Redraw world
 	world_renderer.queue_redraw()
+	if grabbed_item_icon.visible:
+		grabbed_item_icon.position = get_viewport().get_mouse_position() - grabbed_item_icon.size * 0.5
+
+
+func _refresh_grabbed_item_icon() -> void:
+	var item: Dictionary = game_state.grabbed_item
+	if item.is_empty():
+		grabbed_item_icon.hide()
+		grabbed_item_icon.texture = null
+		return
+	var icon: Dictionary = _resources.item_icon(int(item.get("itemID", 0)))
+	if icon.is_empty():
+		grabbed_item_icon.hide()
+		grabbed_item_icon.texture = null
+		return
+	grabbed_item_icon.texture = icon.texture
+	grabbed_item_icon.size = icon.texture.get_size()
+	grabbed_item_icon.show()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
+	if quick_bar.visible and event is InputEventKey:
+		var quick_slot: int = event.keycode - KEY_1
+		if quick_slot >= 0 and quick_slot < 6:
+			quick_bar.call("activate_slot", quick_slot, MOUSE_BUTTON_RIGHT)
+			get_viewport().set_input_as_handled()
+			return
 	
 	# C++ key bindings: ESC=center hero, TAB=pickup, Alt+E=exit, Alt+F=fullscreen
 	if event.keycode == KEY_ESCAPE:
