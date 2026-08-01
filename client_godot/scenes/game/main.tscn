@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/main.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/game/world_renderer.gd" id="2_renderer"]
@@ -11,6 +11,7 @@
 [ext_resource type="FontFile" path="res://assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf" id="11_world_font"]
 [ext_resource type="Script" path="res://scripts/game/quick_bar.gd" id="12_quick_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000062.png" id="13_quick_close_down"]
+[ext_resource type="Script" path="res://scripts/game/skill_buff_hud.gd" id="14_skill_buff_hud"]
 
 [node name="GameMain" type="Control"]
 layout_mode = 3
@@ -30,6 +31,16 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
 script = ExtResource("2_renderer")
+
+[node name="SkillBuffHUD" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("14_skill_buff_hud")
 
 [node name="Location" type="Label" parent="."]
 layout_mode = 0
@@ -127,3 +138,4 @@ offset_bottom = 600.0
 [connection signal="pressed" from="QuickBar/CloseButton" to="." method="_on_quick_bar_close_pressed"]
 [connection signal="panel_requested" from="ControlPanel" to="." method="_on_control_panel_panel_requested"]
 [connection signal="quick_bar_toggled" from="ControlPanel" to="." method="_on_control_panel_quick_bar_toggled"]
+[connection signal="magic_key_hud_toggled" from="ControlPanel" to="." method="_on_control_panel_magic_key_hud_toggled"]

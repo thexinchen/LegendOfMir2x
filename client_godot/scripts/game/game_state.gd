@@ -70,6 +70,8 @@ var chat_messages: Dictionary = {} # DB message id -> SDChatMessage
 # Magic/skill list
 var learned_magic: Array = []  # list of magic IDs
 var magic_keys: Dictionary = {}  # magicID -> key char
+var magic_cast_times: Dictionary = {}  # magicID -> local monotonic milliseconds
+var magic_key_hud_visible := true
 var runtime_config: Dictionary = {}
 
 # Panel-backed gameplay state

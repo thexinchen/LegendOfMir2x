@@ -35,9 +35,6 @@ func _ready() -> void:
 	if panel.get_node("%Face").texture == null:
 		_fail("player face missing")
 		return
-	if panel.get_node("%BuffContainer").get_child_count() != 1:
-		_fail("buff icon missing")
-		return
 	if absf(panel.get_node("%Experience").value - GameState.level_ratio() * 100.0) > 0.01:
 		_fail("experience meter mismatch: panel=%s expected=%s" % [panel.get_node("%Experience").value, GameState.level_ratio() * 100.0])
 		return
@@ -70,7 +67,7 @@ func _ready() -> void:
 	if panel.get_node("%ACValue").text != "%d-%d" % [combat.mac[0], combat.mac[1]] or panel.get_node("%DCValue").text != "%d-%d" % [combat.mc[0], combat.mc[1]]:
 		_fail("AC/MA or DC/MC toggle mismatch")
 		return
-	print("HUD STATE PASS: face, HP, experience, load, buff and combat toggles")
+	print("HUD STATE PASS: face, HP, experience, load and combat toggles")
 	get_tree().quit()
 
 

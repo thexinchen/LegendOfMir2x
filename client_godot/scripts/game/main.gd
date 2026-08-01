@@ -16,6 +16,7 @@ const WorldPathfinderScript = preload("res://scripts/game/world_pathfinder.gd")
 @onready var location_label: Label = $Location
 @onready var control_panel: Control = $ControlPanel
 @onready var grabbed_item_icon: TextureRect = $GrabbedItemIcon
+@onready var skill_buff_hud: Control = $SkillBuffHUD
 
 var game_state: Node = null
 var protocol: RefCounted = null
@@ -288,6 +289,9 @@ func _update_magic_focus(mouse_grid: Vector2i) -> int:
 
 
 func _cast_magic(magic_id: int, mouse_grid: Vector2i) -> bool:
+	if not _magic_ready(magic_id):
+		game_state.add_chat_log("%s尚未冷却" % _resources.magic_names.get(magic_id, "技能"), 2)
+		return false
 	var magic_name: String = _resources.magic_names.get(magic_id, "")
 	if magic_name in SWING_MAGIC_NAMES:
 		_swing_magic[magic_id] = not bool(_swing_magic.get(magic_id, false))
@@ -334,6 +338,7 @@ func _send_spell_action(action_type: int, magic_id: int, aim_grid: Vector2i, aim
 		"magicID": magic_id,
 	}
 	NetworkClient.send_action(Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action))
+	game_state.magic_cast_times[magic_id] = Time.get_ticks_msec()
 	if action_type == 9:
 		var effect := action.duplicate(true)
 		effect["uid"] = game_state.player_uid
@@ -454,6 +459,8 @@ func _send_attack_action(target_uid: int) -> void:
 	}
 	var action_data := Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action)
 	NetworkClient.send_action(action_data)
+	if action.magicID > 0:
+		game_state.magic_cast_times[action.magicID] = Time.get_ticks_msec()
 	game_state.player_direction = action.direction
 	_set_player_action(7, action.speed, action.magicID)
 	_player_action_timer = _action_duration(7, action.speed, 2, action.magicID)
@@ -473,6 +480,14 @@ func _consume_attack_magic_id() -> int:
 			return swing_magic
 	var physical_magic: int = _resources.magic_id("物理攻击")
 	return physical_magic
+
+
+func _magic_ready(magic_id: int) -> bool:
+	var layout: PackedInt32Array = _resources.skill_layout(magic_id)
+	var cool_down := layout[5] if layout.size() >= 6 else 0
+	if cool_down <= 0 or not game_state.magic_cast_times.has(magic_id):
+		return true
+	return Time.get_ticks_msec() - int(game_state.magic_cast_times[magic_id]) >= cool_down
 
 
 func _direction_to(from_x: int, from_y: int, to_x: int, to_y: int) -> int:
@@ -1432,6 +1447,19 @@ func _on_control_panel_quick_bar_toggled() -> void:
 	quick_bar.visible = not quick_bar.visible
 
 
+func _on_control_panel_magic_key_hud_toggled() -> void:
+	game_state.magic_key_hud_visible = not game_state.magic_key_hud_visible
+	game_state.state_changed.emit()
+
+
+func minimap_hud_width() -> float:
+	var panel := _extra_panel_nodes.get("res://scenes/game/panels/minimap.tscn") as Control
+	if panel == null or not panel.visible:
+		return 0.0
+	var texture_rect := panel.get_node_or_null("MapViewport/MapTexture") as TextureRect
+	return panel.size.x if texture_rect != null and texture_rect.texture != null else 0.0
+
+
 func _on_quick_bar_close_pressed() -> void:
 	quick_bar.hide()
 
@@ -1458,7 +1486,7 @@ func _ensure_extra_panel(scene_path: String) -> Control:
 		return null
 	panel = packed.instantiate() as Control
 	add_child(panel)
-	panel.position = (size - panel.size) * 0.5
+	panel.position = Vector2(size.x - panel.size.x, 0.0) if scene_path.ends_with("/minimap.tscn") else (size - panel.size) * 0.5
 	panel.hide()
 	_extra_panel_nodes[scene_path] = panel
 	if scene_path.ends_with("/input_string.tscn") and panel.has_signal("committed"):

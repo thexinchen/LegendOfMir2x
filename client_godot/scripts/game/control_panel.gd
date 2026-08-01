@@ -9,6 +9,7 @@ const MC_TEXTURE := preload("res://assets/ui/game/control_panel/00000049.png")
 
 signal panel_requested(scene_path: String)
 signal quick_bar_toggled
+signal magic_key_hud_toggled
 
 @onready var body: Control = %Body
 @onready var command: LineEdit = %Command
@@ -27,7 +28,6 @@ signal quick_bar_toggled
 @onready var load_bar: TextureProgressBar = %Load
 @onready var face: TextureRect = %Face
 @onready var face_health: ColorRect = %FaceHealth
-@onready var buff_container: Control = %BuffContainer
 
 var game_state: Node = null
 var _minimized := false
@@ -58,6 +58,7 @@ func _ready() -> void:
 	chat_scroll_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_refresh_static()
 	_update_chat_display()
+	$Body/MagicKey.pressed.connect(magic_key_hud_toggled.emit)
 
 
 func _process(_delta: float) -> void:
@@ -89,38 +90,6 @@ func _refresh_static() -> void:
 	var face_frame: Dictionary = _resources.frame("proguse", face_id)
 	if not face_frame.is_empty():
 		face.texture = face_frame.texture
-	for child in buff_container.get_children():
-		child.free()
-	var draw_count := 0
-	for buff_value in game_state.buff_list:
-		var buff_id: int = buff_value if buff_value is int else buff_value.get("id", 0)
-		var layout: PackedInt32Array = _resources.buff_layout(buff_id)
-		if layout.size() != 2:
-			continue
-		var icon: Dictionary = _resources.frame("proguse", layout[0])
-		if icon.is_empty():
-			continue
-		var panel := Panel.new()
-		panel.position = Vector2((draw_count % 5) * 16, 79 - (draw_count / 5) * 16)
-		panel.size = Vector2(16, 16)
-		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var style := StyleBoxFlat.new()
-		style.bg_color = Color.TRANSPARENT
-		style.border_width_left = 1
-		style.border_width_top = 1
-		style.border_width_right = 1
-		style.border_width_bottom = 1
-		style.border_color = Color.GREEN if layout[1] > 0 else (Color.YELLOW if layout[1] == 0 else Color.RED)
-		panel.add_theme_stylebox_override("panel", style)
-		var image := TextureRect.new()
-		image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		image.texture = icon.texture
-		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		image.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		panel.add_child(image)
-		buff_container.add_child(panel)
-		draw_count += 1
 
 
 func _update_chat_display() -> void:

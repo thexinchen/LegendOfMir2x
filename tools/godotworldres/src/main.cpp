@@ -110,6 +110,7 @@ struct SkillMetaRecord
 {
     uint32_t magicID = 0;
     uint32_t iconID = 0;
+    int32_t coolDown = 0;
     uint8_t page = 0;
     uint8_t x = 0;
     uint8_t y = 0;
@@ -147,7 +148,7 @@ static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
 static_assert(sizeof(MonsterMetaRecord) == 24);
 static_assert(sizeof(ItemMetaRecord) == 156);
-static_assert(sizeof(SkillMetaRecord) == 12);
+static_assert(sizeof(SkillMetaRecord) == 16);
 static_assert(sizeof(BuffMetaRecord) == 12);
 static_assert(sizeof(MagicEffectMetaRecord) == 26);
 
@@ -472,6 +473,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             metaList.push_back({
                 gfx.magicID,
                 gfx.magicIcon,
+                record.coolDown,
                 check_cast<uint8_t>(page),
                 check_cast<uint8_t>(gfx.x),
                 check_cast<uint8_t>(gfx.y),
@@ -479,7 +481,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             });
         }
         std::ofstream metaFile(outputDir / "sprites" / "skill.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 2, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
 

@@ -276,17 +276,19 @@ func _load_skill_meta() -> void:
 	var file := FileAccess.open("%s/sprites/skill.m2xmeta" % base_path, FileAccess.READ)
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
-	if file.get_32() != 1:
+	var version := file.get_32()
+	if version not in [1, 2]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
 		var magic_id := file.get_32()
 		var icon_id := file.get_32()
+		var cool_down := file.get_32() if version >= 2 else 0
 		var page := file.get_8()
 		var x := file.get_8()
 		var y := file.get_8()
 		var flags := file.get_8()
-		skill_meta[magic_id] = PackedInt32Array([icon_id, page, x, y, flags])
+		skill_meta[magic_id] = PackedInt32Array([icon_id, page, x, y, flags, cool_down])
 
 
 func _load_buff_meta() -> void:

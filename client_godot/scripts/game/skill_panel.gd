@@ -64,7 +64,7 @@ func _refresh_learned_skills() -> void:
 		var magic: Dictionary = magic_value
 		var magic_id: int = magic.get("magicID", 0)
 		var layout: PackedInt32Array = _resources.skill_layout(magic_id)
-		if layout.size() != 5 or layout[1] != _selected_tab:
+		if layout.size() < 5 or layout[1] != _selected_tab:
 			continue
 		var frame: Dictionary = _resources.frame("proguse", layout[0])
 		if frame.is_empty():
@@ -151,7 +151,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if not ((key >= 48 and key <= 57) or (key >= 97 and key <= 122)):
 		return
 	var layout: PackedInt32Array = _resources.skill_layout(_hovered_magic_id)
-	if layout.size() == 5 and (layout[4] & 1) != 0:
+	if layout.size() >= 5 and (layout[4] & 1) != 0:
 		selection_label.text = "被动技能不能设置快捷键"
 		get_viewport().set_input_as_handled()
 		return
