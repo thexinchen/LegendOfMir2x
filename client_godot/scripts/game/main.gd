@@ -140,6 +140,8 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 
 
 func _send_move_action(aim_x: int, aim_y: int) -> void:
+	if not world_renderer.can_walk(aim_x, aim_y):
+		return
 	# ACTION_MOVE = 3
 	var action := {
 		"type": 3,  # ACTION_MOVE
@@ -175,14 +177,15 @@ func _send_attack_action(target_uid: int) -> void:
 
 
 func _direction_to(from_x: int, from_y: int, to_x: int, to_y: int) -> int:
-	var dx := to_x - from_x
-	var dy := to_y - from_y
+	var dx := signi(to_x - from_x)
+	var dy := signi(to_y - from_y)
 	if dx == 0 and dy == 0:
 		return 0
-	if abs(dx) > abs(dy):
-		return 3 if dx > 0 else 7  # right : left
-	else:
-		return 4 if dy > 0 else 1  # down : up
+	if dy < 0:
+		return 8 if dx < 0 else (2 if dx > 0 else 1)
+	if dy > 0:
+		return 6 if dx < 0 else (4 if dx > 0 else 5)
+	return 7 if dx < 0 else 3
 
 
 func _center_hero() -> void:
@@ -324,9 +327,7 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 		push_error("SM_STARTGAMESCENE identity mismatch")
 		return
 	game_state.start_game_scene(data)
-	# Set placeholder map size based on known map dimensions
-	# C++ loads from mapbin.zsdb, Godot uses placeholder for now
-	world_renderer.set_map_data(100, 100)
+	world_renderer.load_map(game_state.player_map_id)
 	_center_hero()
 
 
@@ -348,20 +349,26 @@ func _handle_action(payload: PackedByteArray) -> void:
 		# Update or create creature
 		var creature: Dictionary = game_state.get_creature(uid)
 		if creature.is_empty():
+			var inferred_type := _creature_type_from_uid(uid)
 			creature = {
 				"uid": uid,
 				"x": x,
 				"y": y,
-				"type": 0,
+				"type": inferred_type,
 				"name": "",
 				"action_type": action_type,
-				"direction": direction,
+				"direction": direction if direction >= 1 else (1 if inferred_type == 3 else _direction_to(x, y, action.get("aimX", x), action.get("aimY", y))),
 			}
+			if inferred_type == 1:
+				creature["monster_id"] = (uid >> 35) & 0xFFFFFF
+			elif inferred_type == 3:
+				creature["npc_id"] = (uid >> 35) & 0xFFFFFF
 		else:
 			creature["x"] = x
 			creature["y"] = y
 			creature["action_type"] = action_type
-			creature["direction"] = direction
+			if direction >= 1:
+				creature["direction"] = direction
 		game_state.update_creature(uid, creature)
 
 
@@ -373,13 +380,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	# Determine creature type from UID type bits
 	# UID type is in bits 59-62 (4 bits at offset 59)
 	# UID_NPC=3, UID_MON=4, UID_PLY=5
-	var uid_type: int = (uid >> 59) & 0xF
-	var c_type: int = 0
-	match uid_type:
-		3: c_type = 3  # NPC
-		4: c_type = 1  # Monster
-		5: c_type = 2  # Player
-		_: c_type = 0
+	var c_type := _creature_type_from_uid(uid)
 	
 	var creature: Dictionary = game_state.get_creature(uid)
 	if creature.is_empty():
@@ -414,6 +415,14 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 				creature["npc_id"] = union_data.decode_u32(0)
 	
 	game_state.update_creature(uid, creature)
+
+
+func _creature_type_from_uid(uid: int) -> int:
+	match (uid >> 59) & 0xF:
+		3: return 3 # NPC
+		4: return 1 # Monster
+		5: return 2 # Player
+		_: return 0
 
 
 func _handle_health(payload: PackedByteArray) -> void:

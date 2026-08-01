@@ -5,6 +5,7 @@ add_subdirectory(pkgviewer)
 add_subdirectory(mapinfo)
 add_subdirectory(mapdbmaker)
 add_subdirectory(mapconverter)
+add_subdirectory(godotworldres)
 
 add_subdirectory(monstergen)
 add_subdirectory(mapwil2png)

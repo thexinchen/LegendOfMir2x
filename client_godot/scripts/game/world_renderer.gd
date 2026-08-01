@@ -10,41 +10,38 @@ const SCREEN_W := 800
 const SCREEN_H := 600
 const OBJMAXW := 3
 const OBJMAXH := 25
+const WorldResourceScript = preload("res://scripts/game/world_resource.gd")
+const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const ANIMATION_DELAYS := [150, 200, 250, 300, 350, 400, 420, 450]
 
 var game_state: Node = null
 
 # Map data
 var map_width: int = 0
 var map_height: int = 0
-var map_tiles: Dictionary = {}  # "x,y" -> texture_id
-var map_objects: Dictionary = {}  # "x,y" -> list of {tex_id, depth, animated, alpha}
-
-# Placeholder tile colors (checkerboard pattern)
-var _tile_colors: Array = [
-	Color(0.25, 0.30, 0.20, 1.0),
-	Color(0.30, 0.35, 0.25, 1.0),
-]
+var world_resource: RefCounted = WorldResourceScript.new()
+var actor_resource: RefCounted = ActorResourceScript.new()
 
 
 func _ready() -> void:
 	pass
 
 
-func set_map_data(w: int, h: int) -> void:
-	map_width = w
-	map_height = h
-	_generate_placeholder_tiles()
-	queue_redraw()
+func load_map(map_id: int) -> bool:
+	if world_resource.load_map(map_id):
+		map_width = world_resource.width
+		map_height = world_resource.height
+		actor_resource.configure(world_resource.base_path)
+		queue_redraw()
+		return true
+	map_width = 0
+	map_height = 0
+	push_error(world_resource.last_error)
+	return false
 
 
-func _generate_placeholder_tiles() -> void:
-	map_tiles.clear()
-	map_objects.clear()
-	for y in range(map_height):
-		for x in range(map_width):
-			if x % 2 == 0 and y % 2 == 0:
-				var color_idx := ((x / 2) + (y / 2)) % 2
-				map_tiles["%d,%d" % [x, y]] = color_idx
+func can_walk(x: int, y: int) -> bool:
+	return world_resource.can_walk(x, y)
 
 
 func _draw() -> void:
@@ -55,60 +52,28 @@ func _draw() -> void:
 	var view_y: int = int(game_state.view_y)
 	
 	# Compute visible grid range (same as C++ draw())
-	var x0 := maxi(0, (view_x / GRID_XP) - OBJMAXW)
-	var y0 := maxi(0, (view_y / GRID_YP) - OBJMAXH)
-	var x1 := ((view_x + SCREEN_W) / GRID_XP) + OBJMAXW
-	var y1 := ((view_y + SCREEN_H) / GRID_YP) + OBJMAXH
+	var x0 := maxi(0, floori(float(view_x) / GRID_XP) - OBJMAXW)
+	var y0 := maxi(0, floori(float(view_y) / GRID_YP) - OBJMAXH)
+	var x1 := floori(float(view_x + SCREEN_W) / GRID_XP) + OBJMAXW
+	var y1 := floori(float(view_y + SCREEN_H) / GRID_YP) + OBJMAXH
 	if map_width > 0:
 		x1 = mini(x1, map_width - 1)
 	if map_height > 0:
 		y1 = mini(y1, map_height - 1)
 	
-	# 1. Draw tiles (every 2x2 grid, same as C++)
+	# Tiles and ground objects are below every actor.
 	for gy in range(y0, y1 + 1):
 		for gx in range(x0, x1 + 1):
 			if gy % 2 != 0 or gx % 2 != 0:
 				continue
-			var sx := gx * GRID_XP - view_x
-			var sy := gy * GRID_YP - view_y
-			var color_idx: int = map_tiles.get("%d,%d" % [gx, gy], 0)
-			var color: Color = _tile_colors[color_idx % _tile_colors.size()]
-			draw_rect(Rect2(sx, sy, GRID_XP, GRID_YP), color)
-	
-	# 2. Draw strike grids (red flash for 1 second)
-	var now := Time.get_ticks_msec()
-	var to_remove: Array = []
-	for grid_key in game_state.strike_grids:
-		var ts: int = game_state.strike_grids[grid_key]
-		var age := now - ts
-		if age > 1000:
-			to_remove.append(grid_key)
-			continue
-		var parts: PackedStringArray = grid_key.split(",")
-		var gx := int(parts[0])
-		var gy := int(parts[1])
-		var sx := gx * GRID_XP - view_x
-		var sy := gy * GRID_YP - view_y
-		var alpha := 1.0 - float(age) / 1000.0
-		draw_rect(Rect2(sx, sy, GRID_XP, GRID_YP), Color(1, 0.2, 0.2, alpha * 0.5))
-	for k in to_remove:
-		game_state.strike_grids.erase(k)
-	
-	# 3. Draw creatures sorted by Y (row order, same as C++)
-	var creatures_to_draw: Array = []
-	for uid in game_state.creatures:
-		var c: Dictionary = game_state.creatures[uid]
-		creatures_to_draw.append(c)
-	# Sort by Y
-	creatures_to_draw.sort_custom(func(a, b): return a.get("y", 0) < b.get("y", 0))
-	
-	for c in creatures_to_draw:
-		_draw_creature(c, view_x, view_y)
-	
-	# 3. Draw player (always on top of same-row creatures)
-	_draw_player(view_x, view_y)
-	
-	# 4. Draw ground items
+			var texture_id: int = world_resource.tiles.get(gx + gy * map_width, -1)
+			if texture_id >= 0:
+				var texture: Texture2D = world_resource.texture(texture_id)
+				if texture:
+					draw_texture(texture, Vector2(gx * GRID_XP - view_x, gy * GRID_YP - view_y))
+	_draw_object_depth(0, x0, y0, x1, y1, view_x, view_y)
+
+	# Ground items precede living actors in the original renderer.
 	for grid_key in game_state.ground_items:
 		var parts: PackedStringArray = grid_key.split(",")
 		var gx := int(parts[0])
@@ -116,8 +81,27 @@ func _draw() -> void:
 		var sx := gx * GRID_XP - view_x + GRID_XP / 2 - 8
 		var sy := gy * GRID_YP - view_y + GRID_YP / 2 - 8
 		draw_rect(Rect2(sx, sy, 16, 16), Color(1, 0.85, 0.3, 0.7))
-	
-	# 5. Draw ascend strings (floating damage/heal text)
+
+	# Overground objects and actors are interleaved one map row at a time.
+	var creatures_by_row: Dictionary = {}
+	for uid in game_state.creatures:
+		var creature: Dictionary = game_state.creatures[uid]
+		var row: int = creature.get("y", 0)
+		var row_creatures: Array = creatures_by_row.get(row, [])
+		row_creatures.append(creature)
+		creatures_by_row[row] = row_creatures
+	var now := Time.get_ticks_msec()
+	for gy in range(y0, y1 + 1):
+		_draw_object_row(1, gy, x0, x1, view_x, view_y)
+		_draw_strike_row(gy, x0, x1, view_x, view_y, now)
+		for creature in creatures_by_row.get(gy, []):
+			_draw_creature(creature, view_x, view_y)
+		if game_state.player_y == gy:
+			_draw_player(view_x, view_y)
+		_draw_object_row(2, gy, x0, x1, view_x, view_y)
+	_draw_object_depth(3, x0, y0, x1, y1, view_x, view_y)
+
+	# Floating combat text is a screen overlay.
 	game_state.update_ascend_strings()
 	var font := get_theme_default_font()
 	if font:
@@ -134,57 +118,57 @@ func _draw() -> void:
 			font.draw_string(get_canvas_item(), Vector2(sx - tw.x * 0.5, sy), text, HORIZONTAL_ALIGNMENT_CENTER, -1, 13, color)
 
 
+func _draw_object_depth(depth: int, x0: int, y0: int, x1: int, y1: int, view_x: int, view_y: int) -> void:
+	for y in range(y0, y1 + 1):
+		_draw_object_row(depth, y, x0, x1, view_x, view_y)
+
+
+func _draw_object_row(depth: int, y: int, x0: int, x1: int, view_x: int, view_y: int) -> void:
+	if depth < 0 or depth >= world_resource.objects.size():
+		return
+	var depth_objects: Dictionary = world_resource.objects[depth]
+	for x in range(x0, x1 + 1):
+		for object_data in depth_objects.get(x + y * map_width, []):
+			var texture_id: int = object_data[0]
+			var flags: int = object_data[1]
+			var frame_count: int = object_data[3]
+			if flags & 1 and frame_count > 0:
+				var tick_type: int = clampi(object_data[2], 0, ANIMATION_DELAYS.size() - 1)
+				texture_id += floori(float(Time.get_ticks_msec()) / ANIMATION_DELAYS[tick_type]) % frame_count
+			var texture: Texture2D = world_resource.texture(texture_id)
+			if texture == null:
+				continue
+			var alpha := 96.0 / 255.0 if flags & 2 else 1.0
+			var position := Vector2(x * GRID_XP - view_x, (y + 1) * GRID_YP - view_y - texture.get_height())
+			draw_texture(texture, position, Color(1.0, 1.0, 1.0, alpha))
+
+
+func _draw_strike_row(y: int, x0: int, x1: int, view_x: int, view_y: int, now: int) -> void:
+	var to_remove: Array[String] = []
+	for x in range(x0, x1 + 1):
+		var key := "%d,%d" % [x, y]
+		if not game_state.strike_grids.has(key):
+			continue
+		var age: int = now - game_state.strike_grids[key]
+		if age > 1000:
+			to_remove.append(key)
+			continue
+		var alpha := 1.0 - float(age) / 1000.0
+		draw_rect(Rect2(x * GRID_XP - view_x, y * GRID_YP - view_y, GRID_XP, GRID_YP), Color(1, 0.2, 0.2, alpha * 0.5))
+	for key in to_remove:
+		game_state.strike_grids.erase(key)
+
+
 func _draw_player(view_x: int, view_y: int) -> void:
 	var px: int = game_state.player_x * GRID_XP - view_x
 	var py: int = game_state.player_y * GRID_YP - view_y
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
 	
-	# Shadow
-	draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
+	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, px, py):
+		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
+		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
 	
-	# Body - color by job
-	var body_color: Color
-	match game_state.player_job:
-		1: body_color = Color(0.2, 0.7, 0.3, 1.0)  # warrior - green
-		2: body_color = Color(0.5, 0.3, 0.8, 1.0)  # taoist - purple
-		4: body_color = Color(0.3, 0.5, 0.9, 1.0)  # wizard - blue
-		_: body_color = Color(0.5, 0.5, 0.5, 1.0)
-	
-	draw_circle(center, 14, body_color)
-	draw_arc(center, 14, 0, TAU, 32, Color(1, 1, 1, 0.8), 1.5)
-	
-	# Direction indicator
-	var dir: int = game_state.player_direction
-	var dir_angle := 0.0
-	match dir:
-		1: dir_angle = -PI / 2    # up
-		2: dir_angle = -PI / 4    # up-right
-		3: dir_angle = 0           # right
-		4: dir_angle = PI / 4      # down-right
-		5: dir_angle = PI / 2      # down
-		6: dir_angle = 3 * PI / 4  # down-left
-		7: dir_angle = PI          # left
-		8: dir_angle = -3 * PI / 4 # up-left
-	var dir_x := center.x + cos(dir_angle) * 18
-	var dir_y := center.y + sin(dir_angle) * 18
-	draw_line(center, Vector2(dir_x, dir_y), Color(1, 1, 0, 0.9), 2.0)
-	
-	# Name
-	var font := get_theme_default_font()
-	if font:
-		var name: String = game_state.player_name
-		if not name.is_empty():
-			var tw := font.get_string_size(name, HORIZONTAL_ALIGNMENT_CENTER, -1, 12)
-			font.draw_string(get_canvas_item(), Vector2(center.x - tw.x * 0.5, py - 4), name, HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color(1, 1, 0, 1))
-	
-	# HP bar above player
-	if game_state.player_hp_max > 0:
-		var hp_ratio := float(game_state.player_hp) / float(game_state.player_hp_max)
-		var bar_w := 30.0
-		var bar_x := center.x - bar_w * 0.5
-		var bar_y := py - 18.0
-		draw_rect(Rect2(bar_x, bar_y, bar_w, 4), Color(0, 0, 0, 0.7))
-		draw_rect(Rect2(bar_x, bar_y, bar_w * hp_ratio, 4), Color(0.8, 0.2, 0.2, 1.0))
+	# The C++ client only enables actor HP/name overlays through debug/runtime flags.
 
 
 func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
@@ -196,42 +180,15 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 	if cx < -GRID_XP or cx > SCREEN_W or cy < -GRID_YP or cy > SCREEN_H:
 		return
 	
-	# Shadow
-	draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3))
-	
-	# Body color by type
 	var c_type: int = c.get("type", 0)
-	var body_color: Color
+	var sprite_drawn := false
 	match c_type:
-		1: body_color = Color(0.8, 0.2, 0.2, 0.9)  # monster - red
-		2: body_color = Color(0.3, 0.5, 0.9, 0.9)  # player - blue
-		3: body_color = Color(0.8, 0.6, 0.2, 0.9)  # NPC - yellow
-		_: body_color = Color(0.5, 0.5, 0.5, 0.9)
-	
-	draw_circle(center, 12, body_color)
-	draw_arc(center, 12, 0, TAU, 24, Color(1, 1, 1, 0.6), 1.0)
-	
-	# Direction indicator
-	var dir: int = c.get("direction", 0)
-	if dir > 0:
-		var dir_angle := 0.0
-		match dir:
-			1: dir_angle = -PI / 2    # up
-			2: dir_angle = -PI / 4    # up-right
-			3: dir_angle = 0           # right
-			4: dir_angle = PI / 4      # down-right
-			5: dir_angle = PI / 2      # down
-			6: dir_angle = 3 * PI / 4  # down-left
-			7: dir_angle = PI          # left
-			8: dir_angle = -3 * PI / 4 # up-left
-		var dir_x := center.x + cos(dir_angle) * 16
-		var dir_y := center.y + sin(dir_angle) * 16
-		draw_line(center, Vector2(dir_x, dir_y), Color(1, 1, 0.5, 0.7), 1.5)
-	
-	# Attack indicator: if action_type is ACTION_ATTACK(7), draw red flash
-	var action_type: int = c.get("action_type", 0)
-	if action_type == 7:  # ACTION_ATTACK
-		draw_arc(center, 16, 0, TAU, 24, Color(1, 0.3, 0.3, 0.8), 2.0)
+		1: sprite_drawn = _draw_monster_sprite(c, cx, cy)
+		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), cx, cy)
+		3: sprite_drawn = _draw_npc_sprite(c, cx, cy)
+	if not sprite_drawn:
+		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3))
+		draw_circle(center, 12, Color(0.7, 0.2, 0.2, 0.9))
 	
 	# Name
 	var font := get_theme_default_font()
@@ -240,6 +197,63 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 		if not c_name.is_empty():
 			var tw := font.get_string_size(c_name, HORIZONTAL_ALIGNMENT_CENTER, -1, 11)
 			font.draw_string(get_canvas_item(), Vector2(center.x - tw.x * 0.5, cy - 4), c_name, HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(1, 1, 1, 0.9))
+
+
+func _draw_hero_sprite(gender: int, direction: int, start_x: int, start_y: int) -> bool:
+	var direction_index := clampi(direction, 1, 8) - 1
+	var frame_index := floori(float(Time.get_ticks_msec()) / 150.0) % 4
+	var body_key := (gender << 22) | (direction_index << 5) | frame_index
+	var shadow: Dictionary = actor_resource.frame("hero", body_key | (1 << 23))
+	var body: Dictionary = actor_resource.frame("hero", body_key)
+	_draw_sprite_frame(shadow, start_x, start_y, 0.5)
+	_draw_sprite_frame(body, start_x, start_y, 1.0)
+	var layer: Dictionary = actor_resource.frame("hero", body_key | (1 << 24))
+	_draw_sprite_frame(layer, start_x, start_y, 1.0)
+	return not body.is_empty()
+
+
+func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int) -> bool:
+	var monster_id: int = creature.get("monster_id", 0)
+	var look_id: int = actor_resource.monster_look(monster_id)
+	var direction_index := clampi(creature.get("direction", 5), 1, 8) - 1
+	var motion_data := _monster_motion(creature.get("action_type", 2))
+	var frame_index := floori(float(Time.get_ticks_msec()) / 150.0) % motion_data[1]
+	var body_key: int = (look_id << 12) | (motion_data[0] << 8) | (direction_index << 5) | frame_index
+	if actor_resource.monster_has_shadow(monster_id):
+		_draw_sprite_frame(actor_resource.frame("monster", body_key | (1 << 23)), start_x, start_y, 0.5)
+	var body: Dictionary = actor_resource.frame("monster", body_key)
+	_draw_sprite_frame(body, start_x, start_y, 1.0)
+	return not body.is_empty()
+
+
+func _draw_npc_sprite(creature: Dictionary, start_x: int, start_y: int) -> bool:
+	var npc_id: int = creature.get("npc_id", 0)
+	# NPC resources store the first/second/third available view, not eight compass directions.
+	var direction_index := clampi(creature.get("direction", 1), 1, 3) - 1
+	var frame_index := floori(float(Time.get_ticks_msec()) / 200.0) % 4
+	var body_key: int = (npc_id << 12) | (direction_index << 5) | frame_index
+	_draw_sprite_frame(actor_resource.frame("npc", body_key | (1 << 23)), start_x, start_y, 0.5)
+	var body: Dictionary = actor_resource.frame("npc", body_key)
+	_draw_sprite_frame(body, start_x, start_y, 1.0)
+	return not body.is_empty()
+
+
+func _draw_sprite_frame(sprite: Dictionary, start_x: int, start_y: int, alpha: float) -> void:
+	if sprite.is_empty():
+		return
+	var offset: Vector2i = sprite.offset
+	draw_texture(sprite.texture, Vector2(start_x + offset.x, start_y + offset.y), Color(1.0, 1.0, 1.0, alpha))
+
+
+func _monster_motion(action_type: int) -> PackedInt32Array:
+	match action_type:
+		3, 4, 5: return PackedInt32Array([1, 6])
+		7: return PackedInt32Array([2, 6])
+		11: return PackedInt32Array([3, 2])
+		13: return PackedInt32Array([4, 10])
+		9: return PackedInt32Array([6, 10])
+		1: return PackedInt32Array([8, 10])
+		_: return PackedInt32Array([0, 4])
 
 
 func grid_from_screen(screen_x: int, screen_y: int) -> Vector2i:

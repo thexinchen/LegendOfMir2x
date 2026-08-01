@@ -226,9 +226,8 @@ func _center_camera_on_player() -> void:
 
 
 func _map_id_from_uid(map_uid: int) -> int:
-	# Map UID format: high bits contain map ID
-	# Avoid signed overflow by masking
-	return (map_uid >> 32) & 0xFFFF
+	# UID layout matches uidf::getUID(): the 24-bit record ID starts at bit 35.
+	return (map_uid >> 35) & 0xFFFFFF
 
 
 func _level_from_exp(exp: int) -> int:
