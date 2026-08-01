@@ -49,7 +49,8 @@ fi
     weapon "$repo_dir/build/Release/res/texture/weapon.zsdb" \
     monster "$repo_dir/build/Release/res/texture/monster.zsdb" \
     npc "$repo_dir/build/Release/res/texture/npc.zsdb" \
-    item "$repo_dir/build/Release/res/texture/item.zsdb"
+    item "$repo_dir/build/Release/res/texture/item.zsdb" \
+    equip "$repo_dir/build/Release/res/texture/equip.zsdb"
 
 mkdir -p "$project_dir/build"
 "$godot_bin" --headless --editor --path "$project_dir" --quit

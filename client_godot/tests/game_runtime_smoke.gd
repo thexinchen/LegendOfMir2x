@@ -50,8 +50,10 @@ func _verify() -> void:
 	if GameState.player_hp_max <= 0 or GameState.inventory.size() != 6 or GameState.belt.size() != 6:
 		_fail("incomplete state hp=%d inventory=%d belt=%d" % [GameState.player_hp_max, GameState.inventory.size(), GameState.belt.size()], 6)
 		return
-	if OS.get_environment("MIR2X_TEST_PANEL") == "inventory":
-		_main.get_node("%InventoryPanel").show()
+	var panel_name := OS.get_environment("MIR2X_TEST_PANEL")
+	if panel_name in ["inventory", "player_state", "skill"]:
+		var panel_nodes := {"inventory": "%InventoryPanel", "player_state": "%PlayerStatePanel", "skill": "%SkillPanel"}
+		_main.get_node(panel_nodes[panel_name]).show()
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 	if OS.has_environment("MIR2X_GAME_RUNTIME_SCREENSHOT"):

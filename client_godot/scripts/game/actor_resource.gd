@@ -13,7 +13,7 @@ var _textures: Dictionary = {}
 func configure(path: String) -> bool:
 	base_path = path
 	var loaded := false
-	for family in ["hero", "hair", "helmet", "weapon", "monster", "npc", "item"]:
+	for family in ["hero", "hair", "helmet", "weapon", "monster", "npc", "item", "equip"]:
 		loaded = _load_index(family) or loaded
 	_load_monster_meta()
 	_load_item_meta()

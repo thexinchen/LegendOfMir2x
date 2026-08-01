@@ -20,7 +20,7 @@ func _ready() -> void:
 	if not actors.configure(world.base_path):
 		_fail("failed to load actor indices")
 		return
-	if actors.offsets.size() < 300000 or actors.monster_look(224) <= 0 or actors.item_meta.size() < 1000:
+	if actors.offsets.size() < 345000 or actors.monster_look(224) <= 0 or actors.item_meta.size() < 1000:
 		_fail("incomplete actor indices")
 		return
 	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size()])
