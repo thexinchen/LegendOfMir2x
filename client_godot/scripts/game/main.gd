@@ -248,6 +248,8 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			pass  # TODO: remove from inventory
 		NetworkClient.SM_REMOVEGROUNDITEM:
 			pass  # TODO: remove ground item
+		NetworkClient.SM_GROUNDITEMIDLIST:
+			_handle_ground_item_id_list(payload)
 		NetworkClient.SM_EQUIPWEAR, NetworkClient.SM_GRABWEAR, NetworkClient.SM_EQUIPBELT, NetworkClient.SM_GRABBELT:
 			pass  # TODO: update equipment
 		NetworkClient.SM_UPDATEITEM:
@@ -400,6 +402,22 @@ func _handle_inventory(payload: PackedByteArray) -> void:
 func _handle_belt(payload: PackedByteArray) -> void:
 	# TODO: parse cereal SDBelt
 	pass
+
+
+func _handle_ground_item_id_list(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_ground_item_id_list()
+	var map_uid: int = data.get("mapUID", 0)
+	if map_uid != game_state.player_map_uid:
+		return
+	# Clear existing ground items and populate new ones
+	game_state.ground_items.clear()
+	for grid in data.get("grids", []):
+		var x: int = grid.get("x", 0)
+		var y: int = grid.get("y", 0)
+		var items: Array = grid.get("items", [])
+		if items.size() > 0:
+			game_state.ground_items["%d,%d" % [x, y]] = items
 
 
 func _handle_cast_magic(payload: PackedByteArray) -> void:

@@ -171,14 +171,6 @@ func read_sd_inventory() -> Array:
 		items[i] = read_sd_item()
 	return items
 
-# SDBuffIDList: count(VLQ) + list of buff IDs (u32 each)
-func read_sd_buff_id_list() -> Array:
-	var count := read_vlq()
-	var ids := []
-	for i in range(count):
-		ids.append(read_u32())
-	return ids
-
 # SDPlayerName: uid(u64) + name(string) + nameColor(u32)
 func read_sd_player_name() -> Dictionary:
 	return {
@@ -190,6 +182,29 @@ func read_sd_player_name() -> Dictionary:
 # SDText: text content (string)
 func read_sd_text() -> String:
 	return read_string()
+
+# SDGroundItemIDList: mapUID(u64) + list of {x(s32), y(s32), itemIDList(vector<u32>)}
+func read_sd_ground_item_id_list() -> Dictionary:
+	var map_uid := read_u64()
+	var count := read_vlq()
+	var grids: Array = []
+	for i in range(count):
+		var x := read_s32()
+		var y := read_s32()
+		var item_count := read_vlq()
+		var items: Array = []
+		for j in range(item_count):
+			items.append(read_u32())
+		grids.append({"x": x, "y": y, "items": items})
+	return {"mapUID": map_uid, "grids": grids}
+
+# SDBuffIDList: count(VLQ) + list of buff IDs (u32 each)
+func read_sd_buff_id_list() -> Array:
+	var count := read_vlq()
+	var ids := []
+	for i in range(count):
+		ids.append(read_u32())
+	return ids
 
 func _decode_float(bytes: PackedByteArray) -> float:
 	# IEEE 754 little-endian
