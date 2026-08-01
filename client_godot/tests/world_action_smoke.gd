@@ -65,9 +65,11 @@ func _ready() -> void:
 		return
 	if not _test_chase_retry(main):
 		return
+	if not _test_exact_frame_input(main):
+		return
 	if not _test_pickup_action(main, resources):
 		return
-	print("WORLD ACTION PASS: action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
+	print("WORLD ACTION PASS: exact-frame focus, action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
 
 
@@ -203,6 +205,7 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 		_fail("self spell did not target player UID")
 		return false
 	GameState.update_creature(505, {"uid": 505, "x": 12, "y": 10, "type": 1, "action_type": 2})
+	main.get_node("WorldRenderer")._actor_target_rects = {505: {"rect": Rect2(-100, -100, 200, 200), "map_y": 10}}
 	if not main.call("_cast_magic", fireball_id, Vector2i(12, 10)) or GameState.magic_effects.back().get("aimUID", 0) != 505:
 		_fail("target spell did not retain focused creature UID")
 		return false
@@ -214,6 +217,7 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 		return false
 	main.set("_swing_magic", {})
 	main.call("_cancel_movement")
+	main.get_node("WorldRenderer")._actor_target_rects.clear()
 	return true
 
 
@@ -351,6 +355,38 @@ func _test_chase_retry(main: Control) -> bool:
 		_fail("local attack did not return to stand")
 		return false
 	main.call("_cancel_movement")
+	return true
+
+
+func _test_exact_frame_input(main: Control) -> bool:
+	GameState.player_uid = 101
+	GameState.player_x = 0
+	GameState.player_y = 0
+	GameState.grabbed_item = {"itemID": 1, "seqID": 2, "count": 1}
+	GameState.update_creature(707, {"uid": 707, "x": 5, "y": 5, "type": 1, "action_type": 2})
+	var renderer: Control = main.get_node("WorldRenderer")
+	renderer._actor_target_rects = {707: {"rect": Rect2(90, 90, 20, 20), "map_y": 5}}
+	var left_click := InputEventMouseButton.new()
+	left_click.button_index = MOUSE_BUTTON_LEFT
+	left_click.position = Vector2(100, 100)
+	left_click.pressed = true
+	main.call("_handle_mouse_click", left_click)
+	if main.get("_chase_target_uid") != 707 or GameState.grabbed_item.is_empty():
+		_fail("exact-frame monster click did not outrank grabbed-item drop")
+		return false
+	main.call("_cancel_movement")
+	var right_click := InputEventMouseButton.new()
+	right_click.button_index = MOUSE_BUTTON_RIGHT
+	right_click.position = Vector2(100, 100)
+	right_click.pressed = true
+	main.call("_handle_mouse_click", right_click)
+	if main.get("_follow_focus_uid") != 707 or not main.get("_move_path").is_empty():
+		_fail("right-click focused creature incorrectly issued ground movement")
+		return false
+	main.call("_cancel_movement")
+	GameState.grabbed_item = {}
+	GameState.creatures.erase(707)
+	renderer._actor_target_rects.clear()
 	return true
 
 

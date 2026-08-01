@@ -49,6 +49,7 @@ var _magic_focus_uid := 0
 var _move_path: Array[Vector2i] = []
 var _move_step_timer := 0.0
 var _chase_target_uid := 0
+var _follow_focus_uid := 0
 var _pickup_target := Vector2i(-1, -1)
 var _pickup_action_timer := -1.0
 var _player_action_timer := -1.0
@@ -181,35 +182,31 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _handle_mouse_click(event: InputEventMouseButton) -> void:
 	var grid: Vector2i = world_renderer.grid_from_screen(int(event.position.x), int(event.position.y))
-	if event.button_index == MOUSE_BUTTON_LEFT and not game_state.grabbed_item.is_empty():
-		var grabbed: Dictionary = game_state.grabbed_item
-		if NetworkClient.send_drop_item(grabbed.get("itemID", 0), grabbed.get("seqID", 0), grabbed.get("count", 0)) == OK:
-			game_state.grabbed_item = {}
-			game_state.state_changed.emit()
-		return
-	
+	var focus_uid: int = world_renderer.focus_uid_at_screen(event.position, event.button_index == MOUSE_BUTTON_LEFT)
 	if event.button_index == MOUSE_BUTTON_RIGHT:
-		_start_move_to(grid)
+		if focus_uid != 0:
+			_cancel_movement()
+			_follow_focus_uid = focus_uid
+		else:
+			_start_move_to(grid)
 	elif event.button_index == MOUSE_BUTTON_LEFT:
-		# Left click: check for creatures/items at grid
-		# C++: if monster -> attack, if NPC -> interact, if ground item -> pickup
-		var found_creature := false
-		for uid in game_state.creatures:
-			var c: Dictionary = game_state.creatures[uid]
-			var cx: int = c.get("x", -1)
-			var cy: int = c.get("y", -1)
-			if cx == grid.x and cy == grid.y:
-				found_creature = true
-				if c.get("type", 0) == 3:
-					_cancel_movement()
-					NetworkClient.send_npc_event(uid, "", "_RSVD_NAME_ENTER_90360178872")
-				elif c.get("type", 0) == 1:
-					_start_chase(uid)
-				break
-		if not found_creature:
-			var ground_key := "%d,%d" % [grid.x, grid.y]
-			if game_state.ground_items.has(ground_key):
-				_start_pickup_at(grid)
+		if focus_uid != 0:
+			var creature: Dictionary = game_state.get_creature(focus_uid)
+			if creature.get("type", 0) == 3:
+				_cancel_movement()
+				NetworkClient.send_npc_event(focus_uid, "", "_RSVD_NAME_ENTER_90360178872")
+			elif creature.get("type", 0) == 1:
+				_start_chase(focus_uid)
+			return
+		if not game_state.grabbed_item.is_empty():
+			var grabbed: Dictionary = game_state.grabbed_item
+			if NetworkClient.send_drop_item(grabbed.get("itemID", 0), grabbed.get("seqID", 0), grabbed.get("count", 0)) == OK:
+				game_state.grabbed_item = {}
+				game_state.state_changed.emit()
+			return
+		var ground_key := "%d,%d" % [grid.x, grid.y]
+		if game_state.ground_items.has(ground_key):
+			_start_pickup_at(grid)
 
 
 func _start_move_to(destination: Vector2i) -> void:
@@ -239,6 +236,7 @@ func _cancel_movement() -> void:
 	_move_path.clear()
 	_move_step_timer = 0.0
 	_chase_target_uid = 0
+	_follow_focus_uid = 0
 	_pickup_target = Vector2i(-1, -1)
 
 
@@ -275,12 +273,11 @@ func _mouse_grid() -> Vector2i:
 	return world_renderer.grid_from_screen(int(mouse.x), int(mouse.y))
 
 
-func _update_magic_focus(mouse_grid: Vector2i) -> int:
-	for uid_value in game_state.creatures:
-		var creature: Dictionary = game_state.creatures[uid_value]
-		if creature.get("action_type", 0) != 13 and Vector2i(creature.get("x", -1), creature.get("y", -1)) == mouse_grid:
-			_magic_focus_uid = int(uid_value)
-			return _magic_focus_uid
+func _update_magic_focus(_mouse_grid: Vector2i) -> int:
+	var focus_uid: int = world_renderer.focus_uid_at_screen(get_viewport().get_mouse_position())
+	if focus_uid != 0:
+		_magic_focus_uid = focus_uid
+		return _magic_focus_uid
 	if _magic_focus_uid != 0:
 		var focus: Dictionary = game_state.get_creature(_magic_focus_uid)
 		if focus.is_empty() or focus.get("action_type", 0) == 13:

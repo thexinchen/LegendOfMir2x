@@ -677,6 +677,7 @@ func _draw_npc_sprite(creature: Dictionary, start_x: int, start_y: int) -> bool:
 	var body_key: int = (npc_id << 12) | (direction_index << 5) | frame_index
 	_draw_sprite_frame(actor_resource.frame("npc", body_key | (1 << 23)), start_x, start_y, 0.5)
 	var body: Dictionary = actor_resource.frame("npc", body_key)
+	_record_actor_target(creature.get("uid", 0), 3, creature.get("y", 0), creature.get("action_type", 2), body, start_x, start_y)
 	_draw_sprite_frame(body, start_x, start_y, 1.0)
 	return not body.is_empty()
 
