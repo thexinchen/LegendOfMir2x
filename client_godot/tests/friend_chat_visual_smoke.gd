@@ -50,13 +50,39 @@ func _ready() -> void:
 	panel.set("_search_show_candidates", false)
 	panel.call("_render_search_results")
 	await get_tree().process_frame
-	if panel.get_node("Page/SearchPage/Results").get_child(0).size.y != 30:
+	var search_results := panel.get_node("Page/SearchPage/SearchScroll/Results")
+	if search_results.get_child(0).size.y != 30:
 		_fail("search suggestion row mismatch")
 		return
 	panel.call("_show_search_candidates", "清")
 	await get_tree().process_frame
-	if panel.get_node("Page/SearchPage/Results").get_child(0).size.y != 52:
+	if search_results.get_child(0).size.y != 52:
 		_fail("search candidate row mismatch")
+		return
+	var first_candidate := search_results.get_child(0) as Button
+	if first_candidate.get_node_or_null("Add") == null or first_candidate.get_node("Add").text != "添加" or first_candidate.get_child(1).position.y != 10:
+		_fail("search candidate did not use the original independent Add control")
+		return
+	var input_frame := panel.get_node("Page/SearchPage/InputFrame") as NinePatchRect
+	if input_frame.size != Vector2(332, 30) or panel.get_node("Page/SearchPage/SearchIcon").position != Vector2(8, 5) or panel.get_node("Page/SearchPage/Clear").get_theme_font_size("font_size") != 15:
+		_fail("native search frame, icon or clear-control geometry mismatch")
+		return
+	var many_results: Array = [friend]
+	for index in range(8):
+		many_results.append({"id": 300 + index, "cpid": (2 << 32) | (300 + index), "type": 2, "name": "清风%d" % index, "gender": bool(index % 2), "job": index % 3})
+	panel.set("_search_results", many_results)
+	panel.call("_render_search_results")
+	await get_tree().process_frame
+	var search_bar: VScrollBar = panel.get_node("Page/SearchPage/SearchScroll").get_v_scroll_bar()
+	if search_bar.max_value - search_bar.page <= 0 or panel.call("_current_scrollbar") != search_bar:
+		_fail("search results did not use the shared native-thumb scroll path")
+		return
+	if OS.has_environment("MIR2X_FRIEND_SEARCH_SCREENSHOT"):
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FRIEND_SEARCH_SCREENSHOT"))
+	panel.get_node("Page/SearchPage/Clear").emit_signal("pressed")
+	if not panel.get_node("Page/SearchPage/Query").text.is_empty() or search_results.get_child_count() != 0 or panel.get("_search_show_candidates"):
+		_fail("search clear control did not reset input, candidates and results")
 		return
 	panel.call("_open_group_page")
 	await get_tree().process_frame

@@ -41,6 +41,7 @@ func _ready() -> void:
 	$Toolbar/Invert.pressed.connect(_invert_group_selection)
 	$Page/SearchPage/Query.text_changed.connect(_search)
 	$Page/SearchPage/Query.text_submitted.connect(_show_search_candidates)
+	$Page/SearchPage/Clear.pressed.connect(_clear_search)
 	$Page/ChatPage/Composer/Send.pressed.connect(_send)
 	$Page/ChatPage/Composer/Input.gui_input.connect(_chat_input)
 	$SliderHit.gui_input.connect(_on_slider_input)
@@ -58,7 +59,7 @@ func _process(_delta: float) -> void:
 
 
 func _hide_stock_scrollbars() -> void:
-	for scroll in [$Page/ListScroll, $Page/ChatPage/Messages]:
+	for scroll in [$Page/ListScroll, $Page/ChatPage/Messages, $Page/SearchPage/SearchScroll]:
 		var bar: VScrollBar = scroll.get_v_scroll_bar()
 		bar.modulate = Color.TRANSPARENT
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -83,6 +84,8 @@ func _current_scrollbar() -> VScrollBar:
 		return $Page/ListScroll.get_v_scroll_bar()
 	if _page == PAGE_CHAT:
 		return $Page/ChatPage/Messages.get_v_scroll_bar()
+	if _page == PAGE_SEARCH:
+		return $Page/SearchPage/SearchScroll.get_v_scroll_bar()
 	return null
 
 
@@ -535,7 +538,7 @@ func _send() -> void:
 func _search(text: String) -> void:
 	_search_serial += 1
 	var serial := _search_serial
-	var results := $Page/SearchPage/Results
+	var results := $Page/SearchPage/SearchScroll/Results
 	_clear(results)
 	_search_results.clear()
 	_search_show_candidates = false
@@ -562,20 +565,45 @@ func _show_search_candidates(_text: String) -> void:
 	_render_search_results()
 
 
+func _clear_search() -> void:
+	$Page/SearchPage/Query.clear()
+	_search_results.clear()
+	_search_show_candidates = false
+	_clear($Page/SearchPage/SearchScroll/Results)
+	_page_scroll[PAGE_SEARCH] = 0.0
+	$Page/SearchPage/SearchScroll.scroll_vertical = 0
+	$Page/SearchPage/Query.grab_focus()
+
+
 func _render_search_results() -> void:
-	var results := $Page/SearchPage/Results
+	var results := $Page/SearchPage/SearchScroll/Results
 	_clear(results)
 	var query: String = $Page/SearchPage/Query.text.strip_edges()
 	for peer_value in _search_results:
 		var peer: Dictionary = peer_value
 		var cpid := int(peer.get("cpid", 0))
 		if _search_show_candidates:
-			var action: Callable = func(): pass
-			if cpid != _state.self_chat_cpid():
-				action = _request_friend.bind(cpid)
-			_add_row(results, peer, "%s（%d）" % [peer.get("name", "未知"), peer.get("id", 0)], "点击发送好友申请" if cpid != _state.self_chat_cpid() else "", action)
+			_add_search_candidate(results, peer, cpid)
 		else:
 			_add_search_suggestion(results, peer, query)
+
+
+func _add_search_candidate(parent: Node, peer: Dictionary, cpid: int) -> void:
+	var row := _add_row(parent, peer, "%s（%d）" % [peer.get("name", "未知"), peer.get("id", 0)], "", func(): pass)
+	row.mouse_default_cursor_shape = Control.CURSOR_ARROW
+	var title := row.get_child(1) as Label
+	title.position.y = 10
+	if cpid == _state.self_chat_cpid():
+		return
+	var add := Button.new()
+	add.name = "Add"
+	add.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	add.position = Vector2(-48, 17)
+	add.size = Vector2(44, 24)
+	add.text = "添加"
+	add.add_theme_font_size_override("font_size", 12)
+	add.pressed.connect(_request_friend.bind(cpid))
+	row.add_child(add)
 
 
 func _add_search_suggestion(parent: Node, peer: Dictionary, query: String) -> void:

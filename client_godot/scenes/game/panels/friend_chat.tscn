@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/friend_chat_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000810.png" id="2"]
@@ -12,6 +12,8 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000170.png" id="12"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000171.png" id="13"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/common/00000089.png" id="14"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000460.png" id="15_search_frame"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/friend/00001200.png" id="16_search_icon"]
 
 [node name="FriendChatPanel" type="Control"]
 custom_minimum_size = Vector2(451, 464)
@@ -181,7 +183,7 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 13
 text = "发送"
 
-[node name="SearchPage" type="VBoxContainer" parent="Page"]
+[node name="SearchPage" type="Control" parent="Page"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -189,17 +191,64 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 5
+
+[node name="InputFrame" type="NinePatchRect" parent="Page/SearchPage"]
+layout_mode = 0
+offset_right = 332.0
+offset_bottom = 30.0
+mouse_filter = 2
+texture = ExtResource("15_search_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+
+[node name="SearchIcon" type="TextureRect" parent="Page/SearchPage"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 5.0
+offset_right = 28.0
+offset_bottom = 25.0
+mouse_filter = 2
+texture = ExtResource("16_search_icon")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Query" type="LineEdit" parent="Page/SearchPage"]
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
+layout_mode = 0
+offset_left = 33.0
+offset_top = 3.0
+offset_right = 329.0
+offset_bottom = 27.0
+theme_override_colors/font_placeholder_color = Color(0.501961, 0.501961, 0.501961, 1)
 theme_override_font_sizes/font_size = 14
 placeholder_text = "输入用户ID或角色名"
+flat = true
 
-[node name="Results" type="VBoxContainer" parent="Page/SearchPage"]
+[node name="Clear" type="Button" parent="Page/SearchPage"]
+layout_mode = 0
+offset_left = 342.0
+offset_right = 392.0
+offset_bottom = 30.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 0, 0, 1)
+theme_override_font_sizes/font_size = 15
+text = "清空"
+flat = true
+
+[node name="SearchScroll" type="ScrollContainer" parent="Page/SearchPage"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+
+[node name="Results" type="VBoxContainer" parent="Page/SearchPage/SearchScroll"]
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_horizontal = 3
 theme_override_constants/separation = 2
 
 [node name="Status" type="Label" parent="."]
