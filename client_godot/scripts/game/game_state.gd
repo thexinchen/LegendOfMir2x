@@ -140,6 +140,16 @@ func update_gold(gold: int) -> void:
 	state_changed.emit()
 
 
+func level_ratio() -> float:
+	var current_base := 0 if player_level == 0 else _sum_exp(player_level - 1)
+	var required := _sum_exp(player_level) - current_base
+	return clampf(float(player_exp - current_base) / float(required), 0.0, 1.0)
+
+
+func inventory_ratio() -> float:
+	return clampf(float(inventory.size()) / 100.0, 0.0, 1.0)
+
+
 func add_chat_log(text: String, log_type: int = 0) -> void:
 	var color := Color.WHITE
 	match log_type:
@@ -237,11 +247,15 @@ func _map_id_from_uid(map_uid: int) -> int:
 func _level_from_exp(exp: int) -> int:
 	var level := 0
 	while true:
-		var sum_exp := 100 * level * level * level + 100 * level * level + 100 * level + 1000
+		var sum_exp := _sum_exp(level)
 		if sum_exp > exp:
 			return level
 		level += 1
 	return 0
+
+
+func _sum_exp(level: int) -> int:
+	return 100 * level * level * level + 100 * level * level + 100 * level + 1000
 
 
 func scroll_camera() -> void:

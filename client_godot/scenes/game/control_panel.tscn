@@ -116,6 +116,53 @@ value = 0.0
 fill_mode = 3
 texture_progress = ExtResource("5_mana")
 
+[node name="Experience" type="TextureProgressBar" parent="Body"]
+unique_name_in_owner = true
+offset_left = 151.5
+offset_top = 45.0
+offset_right = 154.5
+offset_bottom = 134.0
+mouse_filter = 2
+fill_mode = 3
+step = 0.01
+
+[node name="Load" type="TextureProgressBar" parent="Body"]
+unique_name_in_owner = true
+offset_left = 164.5
+offset_top = 45.0
+offset_right = 167.5
+offset_bottom = 134.0
+mouse_filter = 2
+fill_mode = 3
+step = 0.01
+
+[node name="Face" type="TextureRect" parent="Body"]
+unique_name_in_owner = true
+offset_left = 533.0
+offset_top = 36.0
+offset_right = 615.0
+offset_bottom = 118.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="FaceHealth" type="ColorRect" parent="Body"]
+unique_name_in_owner = true
+offset_left = 533.0
+offset_top = 33.0
+offset_right = 615.0
+offset_bottom = 36.0
+mouse_filter = 2
+color = Color(1, 0, 0, 1)
+
+[node name="BuffContainer" type="Control" parent="Body"]
+unique_name_in_owner = true
+offset_left = 553.0
+offset_top = 33.0
+offset_right = 633.0
+offset_bottom = 129.0
+mouse_filter = 2
+
 [node name="ChatLog" type="Label" parent="Body"]
 unique_name_in_owner = true
 layout_mode = 0

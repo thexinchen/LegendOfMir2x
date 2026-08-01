@@ -89,6 +89,14 @@ struct SkillMetaRecord
     uint8_t y = 0;
     uint8_t flags = 0;
 };
+
+struct BuffMetaRecord
+{
+    uint32_t buffID = 0;
+    uint32_t iconID = 0;
+    int8_t favor = 0;
+    uint8_t reserved[3] {};
+};
 #pragma pack(pop)
 
 static_assert(sizeof(MapHeader) == 28);
@@ -99,6 +107,7 @@ static_assert(sizeof(SpriteRecord) == 8);
 static_assert(sizeof(MonsterMetaRecord) == 8);
 static_assert(sizeof(ItemMetaRecord) == 12);
 static_assert(sizeof(SkillMetaRecord) == 12);
+static_assert(sizeof(BuffMetaRecord) == 12);
 
 static bool animatedTextureSet(uint32_t textureID)
 {
@@ -339,6 +348,18 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
         const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
+
+        std::vector<BuffMetaRecord> buffList;
+        for(uint32_t buffID = 1; buffID < DBCOM_BUFFENDID(); ++buffID){
+            const auto &record = DBCOM_BUFFRECORD(buffID);
+            if(record.name && record.icon.show && record.icon.gfxID != SYS_U32NIL){
+                buffList.push_back({buffID, record.icon.gfxID, check_cast<int8_t>(record.favor)});
+            }
+        }
+        std::ofstream buffFile(outputDir / "sprites" / "buff.m2xmeta", std::ios::binary);
+        const SpriteHeader buffHeader {.spriteCount = to_u32(buffList.size())};
+        buffFile.write(reinterpret_cast<const char *>(&buffHeader), sizeof(buffHeader));
+        writeVector(buffFile, buffList);
     }
     std::printf("sprite family %s: %zu frames\n", family, spriteList.size());
     return spriteList.size();

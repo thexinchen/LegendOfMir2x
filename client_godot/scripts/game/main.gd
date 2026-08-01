@@ -244,7 +244,9 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 				target_buffs.append(buff_type)
 			elif buff_state == 2:
 				target_buffs.erase(buff_type)
-			if buff_uid != game_state.player_uid and not game_state.get_creature(buff_uid).is_empty():
+			if buff_uid == game_state.player_uid:
+				game_state.state_changed.emit()
+			elif not game_state.get_creature(buff_uid).is_empty():
 				var creature: Dictionary = game_state.get_creature(buff_uid)
 				creature["buffs"] = target_buffs
 				game_state.update_creature(buff_uid, creature)

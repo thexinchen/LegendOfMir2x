@@ -9,6 +9,7 @@ var monster_meta: Dictionary = {}
 var item_meta: Dictionary = {}
 var item_names: Dictionary = {}
 var skill_meta: Dictionary = {}
+var buff_meta: Dictionary = {}
 var _textures: Dictionary = {}
 
 
@@ -21,6 +22,7 @@ func configure(path: String) -> bool:
 	_load_item_meta()
 	_load_item_names()
 	_load_skill_meta()
+	_load_buff_meta()
 	return loaded
 
 
@@ -88,6 +90,10 @@ func item_icon(item_id: int) -> Dictionary:
 
 func skill_layout(magic_id: int) -> PackedInt32Array:
 	return skill_meta.get(magic_id, PackedInt32Array())
+
+
+func buff_layout(buff_id: int) -> PackedInt32Array:
+	return buff_meta.get(buff_id, PackedInt32Array())
 
 
 func _load_index(family: String) -> bool:
@@ -167,3 +173,20 @@ func _load_skill_meta() -> void:
 		var y := file.get_8()
 		var flags := file.get_8()
 		skill_meta[magic_id] = PackedInt32Array([icon_id, page, x, y, flags])
+
+
+func _load_buff_meta() -> void:
+	var file := FileAccess.open("%s/sprites/buff.m2xmeta" % base_path, FileAccess.READ)
+	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
+		return
+	if file.get_32() != 1:
+		return
+	var count := file.get_32()
+	for _index in range(count):
+		var buff_id := file.get_32()
+		var icon_id := file.get_32()
+		var favor := file.get_8()
+		if favor & 0x80:
+			favor -= 0x100
+		file.get_buffer(3)
+		buff_meta[buff_id] = PackedInt32Array([icon_id, favor])

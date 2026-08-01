@@ -1,5 +1,11 @@
 extends Control
 
+const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const AC_TEXTURE := preload("res://assets/ui/game/control_panel/00000046.png")
+const DC_TEXTURE := preload("res://assets/ui/game/control_panel/00000047.png")
+const MA_TEXTURE := preload("res://assets/ui/game/control_panel/00000048.png")
+const MC_TEXTURE := preload("res://assets/ui/game/control_panel/00000049.png")
+
 signal panel_requested(scene_path: String)
 signal quick_bar_toggled
 
@@ -15,12 +21,18 @@ signal quick_bar_toggled
 @onready var dc_icon: TextureRect = %DCIcon
 @onready var health_bar: TextureProgressBar = %Health
 @onready var mana_bar: TextureProgressBar = %Mana
+@onready var exp_bar: TextureProgressBar = %Experience
+@onready var load_bar: TextureProgressBar = %Load
+@onready var face: TextureRect = %Face
+@onready var face_health: ColorRect = %FaceHealth
+@onready var buff_container: Control = %BuffContainer
 
 var game_state: Node = null
 var _minimized := false
 var _expanded := false
 var _ac_magic := false
 var _dc_magic := false
+var _resources: RefCounted = ActorResourceScript.new()
 
 # Chat log display
 var _chat_lines: Array = []
@@ -29,11 +41,18 @@ const CHAT_MAX_LINES := 8
 
 func _ready() -> void:
 	game_state = get_node("/root/GameState")
+	_resources.configure_default()
+	var meter_frame: Dictionary = _resources.frame("proguse", 0x000000A0)
+	if not meter_frame.is_empty():
+		exp_bar.texture_progress = meter_frame.texture
+		load_bar.texture_progress = meter_frame.texture
+	game_state.state_changed.connect(_refresh_static)
 	for button in %BoardButtons.get_children():
 		if button is BaseButton:
 			button.pressed.connect(
 				panel_requested.emit.bind(str(button.get_meta("scene_path"))),
 			)
+	_refresh_static()
 
 
 func _process(_delta: float) -> void:
@@ -44,13 +63,57 @@ func _process(_delta: float) -> void:
 		health_bar.value = float(game_state.player_hp) / float(game_state.player_hp_max) * 100.0
 	if game_state.player_mp_max > 0:
 		mana_bar.value = float(game_state.player_mp) / float(game_state.player_mp_max) * 100.0
+	exp_bar.value = game_state.level_ratio() * 100.0
+	load_bar.value = game_state.inventory_ratio() * 100.0
+	face_health.size.x = 82.0 * (float(game_state.player_hp) / float(game_state.player_hp_max) if game_state.player_hp_max > 0 else 0.0)
 	# Update level
 	level_label.text = str(game_state.player_level)
-	# Update AC/DC
-	ac_value.text = "%d-%d" % [game_state.ac_min, game_state.ac_max]
-	dc_value.text = "%d-%d" % [game_state.dc_min, game_state.dc_max]
 	# Update chat log from game_state
 	_update_chat_display()
+
+
+func _refresh_static() -> void:
+	_update_ac_dc()
+	exp_bar.value = game_state.level_ratio() * 100.0
+	load_bar.value = game_state.inventory_ratio() * 100.0
+	face_health.size.x = 82.0 * (float(game_state.player_hp) / float(game_state.player_hp_max) if game_state.player_hp_max > 0 else 0.0)
+	var job_index := 0 if (game_state.player_job & 1) != 0 else (1 if (game_state.player_job & 2) != 0 else 2)
+	var face_id := 0x02000000 + job_index * 2 + (0 if game_state.player_gender else 1)
+	var face_frame: Dictionary = _resources.frame("proguse", face_id)
+	if not face_frame.is_empty():
+		face.texture = face_frame.texture
+	for child in buff_container.get_children():
+		child.free()
+	var draw_count := 0
+	for buff_value in game_state.buff_list:
+		var buff_id: int = buff_value if buff_value is int else buff_value.get("id", 0)
+		var layout: PackedInt32Array = _resources.buff_layout(buff_id)
+		if layout.size() != 2:
+			continue
+		var icon: Dictionary = _resources.frame("proguse", layout[0])
+		if icon.is_empty():
+			continue
+		var panel := Panel.new()
+		panel.position = Vector2((draw_count % 5) * 16, 79 - (draw_count / 5) * 16)
+		panel.size = Vector2(16, 16)
+		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color.TRANSPARENT
+		style.border_width_left = 1
+		style.border_width_top = 1
+		style.border_width_right = 1
+		style.border_width_bottom = 1
+		style.border_color = Color.GREEN if layout[1] > 0 else (Color.YELLOW if layout[1] == 0 else Color.RED)
+		panel.add_theme_stylebox_override("panel", style)
+		var image := TextureRect.new()
+		image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		image.texture = icon.texture
+		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(image)
+		buff_container.add_child(panel)
+		draw_count += 1
 
 
 func _update_chat_display() -> void:
@@ -94,9 +157,13 @@ func _on_command_submitted(text: String) -> void:
 	if text.begins_with("!"):
 		NetworkClient.send_player_broadcast(text.substr(1))
 	elif text.begins_with("@"):
-		pass  # TODO: user command
+		var user_command := text.substr(1).strip_edges()
+		if user_command == "help":
+			game_state.add_chat_log("可用命令：@help", 1)
+		else:
+			game_state.add_chat_log("无效的本地命令：%s" % user_command, 3)
 	elif text.begins_with("$"):
-		pass  # TODO: lua command
+		game_state.add_chat_log("Godot 客户端不提供本地 Lua 执行环境", 3)
 	else:
 		NetworkClient.send_player_say(text)
 
@@ -112,9 +179,11 @@ func _on_dc_pressed() -> void:
 
 
 func _update_ac_dc() -> void:
-	# C++ toggles AC<->MA (0x46<->0x48) and DC<->MC (0x47<->0x49)
-	# TODO: swap textures when available
-	pass
+	ac_icon.texture = MA_TEXTURE if _ac_magic else AC_TEXTURE
+	dc_icon.texture = MC_TEXTURE if _dc_magic else DC_TEXTURE
+	# Matches the current C++ ProcessRun::getACNum() values.
+	ac_value.text = "3-4" if _ac_magic else "1-2"
+	dc_value.text = "4-5" if _dc_magic else "2-3"
 
 
 func add_log(text: String, log_type: int = 0) -> void:
