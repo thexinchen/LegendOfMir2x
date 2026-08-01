@@ -906,6 +906,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 			var effect := action.duplicate(true)
 			effect["uid"] = uid
 			game_state.add_magic_effect(effect, "action")
+	if action_type == 11:
+		game_state.trigger_shield_hit(uid)
 	
 	if uid == game_state.player_uid:
 		# Update player position and direction

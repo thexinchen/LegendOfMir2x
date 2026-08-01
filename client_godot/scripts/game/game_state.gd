@@ -472,6 +472,21 @@ func add_cast_magic_attachment(data: Dictionary, magic_name: String) -> bool:
 	return true
 
 
+func trigger_shield_hit(uid: int) -> bool:
+	for effect_value in attached_magic_effects:
+		var effect: Dictionary = effect_value
+		if effect.get("target_uid", 0) != uid or effect.get("kind", "") not in ["shield", "shield_hit"]:
+			continue
+		effect["stage"] = 5
+		effect["kind"] = "shield_hit"
+		effect["start_time"] = Time.get_ticks_msec()
+		effect["cycles"] = 1
+		effect.erase("_seff_played")
+		state_changed.emit()
+		return true
+	return false
+
+
 func update_entity_health(data: Dictionary) -> void:
 	var uid: int = data.get("uid", 0)
 	if uid == player_uid:

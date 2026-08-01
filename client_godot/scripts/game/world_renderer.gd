@@ -16,6 +16,7 @@ const ANIMATION_DELAYS := [150, 200, 250, 300, 350, 400, 420, 450]
 const MAGIC_STAGE_SPELL := 1
 const MAGIC_STAGE_RUN := 2
 const MAGIC_STAGE_EXPLODE := 3
+const MAGIC_STAGE_HITTED := 5
 const MAGIC_TYPE_FIXED := 1
 const MAGIC_TYPE_BOUND := 2
 const MAGIC_TYPE_FOLLOW := 3
@@ -357,7 +358,20 @@ func _resolve_attached_magic(now: int) -> Dictionary:
 		var elapsed := maxi(0, now - int(effect.get("start_time", now)))
 		var cycles := maxi(1, effect.get("cycles", 1))
 		if elapsed >= cycle_duration * cycles:
-			continue
+			if effect.get("kind", "") != "shield_hit":
+				continue
+			effect["stage"] = MAGIC_STAGE_RUN
+			effect["kind"] = "shield"
+			effect["start_time"] = int(effect.get("start_time", now)) + cycle_duration
+			effect["cycles"] = 2
+			stage = MAGIC_STAGE_RUN
+			meta = actor_resource.magic_layout(magic_id, stage)
+			if meta.is_empty() or meta[2] <= 0:
+				continue
+			speed = maxi(1, meta[4])
+			cycle_duration = maxi(100, roundi(meta[2] * 1000.0 / (10.0 * speed / 100.0)))
+			elapsed = maxi(0, now - int(effect.start_time))
+			cycles = 2
 		var cycle := floori(float(elapsed) / cycle_duration)
 		var cycle_elapsed := elapsed % cycle_duration
 		var absolute_frame := floori(float(cycle_elapsed) / 1000.0 * 10.0 * speed / 100.0)

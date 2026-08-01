@@ -43,6 +43,8 @@ func _ready() -> void:
 		return
 	if not await _test_action_seff(main, resources):
 		return
+	if not _test_shield_hit_action(main, resources):
+		return
 
 	GameState.chat_log.clear()
 	var item_id: int = resources.item_names.keys()[0]
@@ -319,6 +321,29 @@ func _u64_payload(value: int) -> PackedByteArray:
 	payload.resize(8)
 	payload.encode_u64(0, value)
 	return payload
+
+
+func _test_shield_hit_action(main: Control, resources: RefCounted) -> bool:
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	GameState.player_x = 3
+	GameState.player_y = 4
+	GameState.attached_magic_effects.clear()
+	var shield_id: int = resources.magic_id("魔法盾")
+	if not GameState.add_cast_magic_attachment({"magic": shield_id, "uid": 101}, "魔法盾"):
+		_fail("shield action fixture could not attach shield")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
+		"type": 11, "speed": 100, "direction": 5, "x": 3, "y": 4, "fromUID": 303,
+	}))
+	var shield: Dictionary = GameState.attached_magic_effects[0]
+	if GameState.player_action_type != 11 or shield.get("kind", "") != "shield_hit" or shield.get("stage", 0) != 5:
+		_fail("SM_ACTION ACTION_HITTED did not switch the shield stage: %s" % shield)
+		return false
+	GameState.attached_magic_effects.clear()
+	main.set("_player_action_timer", -1.0)
+	GameState.player_action_type = 2
+	return true
 
 
 func _test_world_displacement(main: Control, resources: RefCounted) -> bool:

@@ -398,6 +398,24 @@ func _ready() -> void:
 		_fail("magic shield alpha/layer resolution mismatch: %s" % attached)
 		return
 	var shield_meta: PackedInt32Array = resources.magic_layout(shield_id, 2)
+	var shield_hit_meta: PackedInt32Array = resources.magic_layout(shield_id, 5)
+	if shield_hit_meta.is_empty() or shield_hit_meta[2] != 3 or not GameState.trigger_shield_hit(GameState.player_uid):
+		_fail("magic shield hit stage unavailable")
+		return
+	var shield_hit_start: int = shield.get("start_time", 0)
+	var shield_hit_active: Dictionary = $WorldRenderer.call("_resolve_attached_magic", shield_hit_start)
+	if shield.get("stage", 0) != 5 or shield.get("kind", "") != "shield_hit" or shield_hit_active.get(GameState.player_uid, [])[0].meta != shield_hit_meta:
+		_fail("magic shield did not switch to the hit graphics: %s active=%s" % [shield, shield_hit_active])
+		return
+	if not GameState.trigger_shield_hit(GameState.player_uid) or GameState.trigger_shield_hit(target_uid):
+		_fail("magic shield repeated/missing-target hit handling mismatch")
+		return
+	shield_hit_start = shield.get("start_time", 0)
+	var shield_hit_duration := maxi(100, roundi(shield_hit_meta[2] * 1000.0 / (10.0 * shield_hit_meta[4] / 100.0)))
+	var shield_resumed: Dictionary = $WorldRenderer.call("_resolve_attached_magic", shield_hit_start + shield_hit_duration)
+	if shield.get("stage", 0) != 2 or shield.get("kind", "") != "shield" or shield_resumed.get(GameState.player_uid, []).is_empty() or shield_resumed[GameState.player_uid][0].meta != shield_meta:
+		_fail("magic shield did not resume its run cycle after hit: %s active=%s" % [shield, shield_resumed])
+		return
 	var shield_duration: int = maxi(100, roundi(shield_meta[2] * 1000.0 / (10.0 * shield_meta[4] / 100.0)))
 	shield.start_time = now - shield_duration
 	attached = $WorldRenderer.call("_resolve_attached_magic", now)
@@ -589,6 +607,27 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ATTACK_MAGIC_SCREENSHOT"))
+	if OS.has_environment("MIR2X_SHIELD_HIT_SCREENSHOT"):
+		var shield_visual_now := Time.get_ticks_msec()
+		GameState.player_x = 405
+		GameState.player_y = 120
+		GameState.player_action_type = 11
+		GameState.player_action_started_ms = shield_visual_now
+		GameState.player_direction = 5
+		GameState.magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.strike_grids.clear()
+		GameState.attached_magic_effects = [{
+			"magicID": shield_id, "target_uid": GameState.player_uid,
+			"stage": 5, "kind": "shield_hit", "cycles": 1,
+			"start_time": shield_visual_now,
+		}]
+		GameState.view_x = GameState.player_x * 48 - 400
+		GameState.view_y = GameState.player_y * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_SHIELD_HIT_SCREENSHOT"))
 	print("MAGIC EFFECT PASS: target/server attachments, follow/fixed/composite/propagated magic and caster-grid laser")
 	get_tree().quit()
 
