@@ -240,6 +240,14 @@ static size_t convertMap(uint32_t mapID, ZSDB &mapDB, ZSDB &textureDB, const fs:
         throw fflpanic("failed to write map: {}", mapPath.string());
     }
 
+    const auto metaPath = mapDir / str_printf("%08X.m2xmeta", mapID);
+    std::ofstream metaFile(metaPath, std::ios::binary);
+    const uint32_t miniMapID = DBCOM_MAPRECORD(mapID).miniMapID.value_or(UINT32_MAX);
+    metaFile.write(reinterpret_cast<const char *>(&miniMapID), sizeof(miniMapID));
+    if(!metaFile){
+        throw fflpanic("failed to write map metadata: {}", metaPath.string());
+    }
+
     for(const auto textureID: textureSet){
         extractTexture(textureDB, textureID, textureDir);
     }

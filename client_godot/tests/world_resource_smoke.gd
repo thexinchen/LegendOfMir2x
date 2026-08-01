@@ -12,6 +12,9 @@ func _ready() -> void:
 	if world.width != 600 or world.height != 600 or world.tiles.size() != 89993:
 		_fail("unexpected map data: %dx%d tiles=%d" % [world.width, world.height, world.tiles.size()])
 		return
+	if world.minimap_id != 0x19001003:
+		_fail("unexpected minimap ID: %08X" % world.minimap_id)
+		return
 	var first_texture_id: int = world.tiles.values()[0]
 	if world.texture(first_texture_id) == null:
 		_fail("failed to decode map texture %08X" % first_texture_id)

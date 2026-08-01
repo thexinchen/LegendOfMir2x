@@ -8,6 +8,7 @@ var base_path: String = ""
 var map_id: int = 0
 var width: int = 0
 var height: int = 0
+var minimap_id: int = -1
 var land: PackedByteArray = PackedByteArray()
 var tiles: Dictionary = {}
 var objects: Array[Dictionary] = [{}, {}, {}, {}]
@@ -43,6 +44,9 @@ func load_map(requested_map_id: int) -> bool:
 	if map_id != requested_map_id or width <= 0 or height <= 0:
 		last_error = "invalid map manifest header: %s" % map_path
 		return false
+	var meta_file := FileAccess.open("%s/maps/%08X.m2xmeta" % [base_path, requested_map_id], FileAccess.READ)
+	if meta_file != null and meta_file.get_length() >= 4:
+		minimap_id = meta_file.get_32()
 
 	land = file.get_buffer(width * height)
 	if land.size() != width * height:
@@ -74,6 +78,7 @@ func clear() -> void:
 	map_id = 0
 	width = 0
 	height = 0
+	minimap_id = -1
 	land.clear()
 	tiles.clear()
 	objects = [{}, {}, {}, {}]

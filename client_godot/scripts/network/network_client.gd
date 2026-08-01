@@ -33,6 +33,7 @@ const CM_REQUESTGRABBELT := 45
 const CM_REQUESTJOINTEAM := 46
 const CM_REQUESTLEAVETEAM := 47
 const CM_REQUESTRETRIEVESECUREDITEM := 16
+const CM_REQUESTSPACEMOVE := 17
 const CM_CREATEACCOUNT := 28
 
 # SMType enum (server -> client)
@@ -258,6 +259,15 @@ func send_pickup(x: int, y: int, map_uid: int) -> Error:
 	payload.encode_u16(2, y)
 	_encode_u64(payload, 4, map_uid)
 	return _send_fixed_message(CM_PICKUP, payload)
+
+
+func send_request_space_move(map_uid: int, x: int, y: int) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(12)
+	payload.encode_u64(0, map_uid)
+	payload.encode_u16(8, x)
+	payload.encode_u16(10, y)
+	return _send_fixed_message(CM_REQUESTSPACEMOVE, payload)
 
 
 func send_query_player_name(uid: int) -> Error:
