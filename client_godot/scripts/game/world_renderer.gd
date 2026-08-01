@@ -336,11 +336,12 @@ func _draw_magic_frame(meta: PackedInt32Array, frame: int, direction: int, grid_
 
 
 func _draw_player(view_x: int, view_y: int) -> void:
-	var px: int = game_state.player_x * GRID_XP - view_x
-	var py: int = game_state.player_y * GRID_YP - view_y
+	var draw_grid := _action_draw_grid(game_state.player_x, game_state.player_y, game_state.player_action_from_x, game_state.player_action_from_y, game_state.player_action_type, game_state.player_action_started_ms, game_state.player_action_speed)
+	var px: int = roundi(draw_grid.x * GRID_XP) - view_x
+	var py: int = roundi(draw_grid.y * GRID_YP) - view_y
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
 	
-	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py):
+	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
 	
@@ -348,8 +349,9 @@ func _draw_player(view_x: int, view_y: int) -> void:
 
 
 func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
-	var cx: int = int(c.get("x", 0)) * GRID_XP - view_x
-	var cy: int = int(c.get("y", 0)) * GRID_YP - view_y
+	var draw_grid := _action_draw_grid(c.get("x", 0), c.get("y", 0), c.get("action_from_x", c.get("x", 0)), c.get("action_from_y", c.get("y", 0)), c.get("action_type", 2), c.get("action_started_ms", 0), c.get("action_speed", 100))
+	var cx: int = roundi(draw_grid.x * GRID_XP) - view_x
+	var cy: int = roundi(draw_grid.y * GRID_YP) - view_y
 	var center := Vector2(cx + GRID_XP * 0.5, cy + GRID_YP * 0.5)
 	
 	# Cull if off-screen
@@ -360,7 +362,7 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 	var sprite_drawn := false
 	match c_type:
 		1: sprite_drawn = _draw_monster_sprite(c, cx, cy)
-		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy)
+		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100))
 		3: sprite_drawn = _draw_npc_sprite(c, cx, cy)
 	if not sprite_drawn:
 		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3))
@@ -375,10 +377,17 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 			font.draw_string(get_canvas_item(), Vector2(center.x - tw.x * 0.5, cy - 4), c_name, HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(1, 1, 1, 0.9))
 
 
-func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int) -> bool:
+func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int, action_started_ms := 0, action_speed := 100) -> bool:
 	var direction_index := clampi(direction, 1, 8) - 1
 	var motion_data := _hero_motion(action_type)
-	var frame_index := floori(float(Time.get_ticks_msec()) / 150.0) % motion_data[1]
+	var frame_index := _motion_frame(action_type, motion_data[1], action_started_ms, action_speed)
+	if action_type == 7:
+		var attack_step := _motion_step(action_started_ms, action_speed)
+		if attack_step >= 6:
+			motion_data = PackedInt32Array([7, 3])
+			frame_index = mini(attack_step - 6, 2)
+		else:
+			frame_index = attack_step
 	var wear: Dictionary = desp.get("wear", {})
 	var dress_shape := _wear_shape(wear, 1)
 	var gfx_id: int = (dress_shape << 9) | (motion_data[0] << 3) | direction_index
@@ -419,9 +428,9 @@ func _wear_shape(wear: Dictionary, location: int) -> int:
 func _hero_motion(action_type: int) -> PackedInt32Array:
 	match action_type:
 		3, 4, 5: return PackedInt32Array([21, 6])
-		7: return PackedInt32Array([8, 6])
+		7: return PackedInt32Array([9, 6])
 		8: return PackedInt32Array([8, 2])
-		9: return PackedInt32Array([2, 6])
+		9: return PackedInt32Array([2, 5])
 		11: return PackedInt32Array([15, 3])
 		12: return PackedInt32Array([18, 10])
 		13: return PackedInt32Array([19, 10])
@@ -433,7 +442,7 @@ func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int) -> b
 	var look_id: int = actor_resource.monster_look(monster_id)
 	var direction_index := clampi(creature.get("direction", 5), 1, 8) - 1
 	var motion_data := _monster_motion(creature.get("action_type", 2))
-	var frame_index := floori(float(Time.get_ticks_msec()) / 150.0) % motion_data[1]
+	var frame_index := _motion_frame(creature.get("action_type", 2), motion_data[1], creature.get("action_started_ms", 0), creature.get("action_speed", 100))
 	var body_key: int = (look_id << 12) | (motion_data[0] << 8) | (direction_index << 5) | frame_index
 	if actor_resource.monster_has_shadow(monster_id):
 		_draw_sprite_frame(actor_resource.frame("monster", body_key | (1 << 23)), start_x, start_y, 0.5)
@@ -470,6 +479,27 @@ func _monster_motion(action_type: int) -> PackedInt32Array:
 		9: return PackedInt32Array([6, 10])
 		1: return PackedInt32Array([8, 10])
 		_: return PackedInt32Array([0, 4])
+
+
+func _motion_frame(action_type: int, frame_count: int, started_ms: int, speed: int) -> int:
+	var frame := _motion_step(started_ms, speed)
+	if action_type == 2:
+		return frame % frame_count
+	return mini(frame, frame_count - 1)
+
+
+func _motion_step(started_ms: int, speed: int) -> int:
+	var frame_delay := 100.0 * 100.0 / float(clampi(speed, 20, 500))
+	var elapsed := Time.get_ticks_msec() if started_ms <= 0 else maxi(0, Time.get_ticks_msec() - started_ms)
+	return floori(float(elapsed) / frame_delay)
+
+
+func _action_draw_grid(end_x: int, end_y: int, from_x: int, from_y: int, action_type: int, started_ms: int, speed: int) -> Vector2:
+	if action_type != 3 or started_ms <= 0:
+		return Vector2(end_x, end_y)
+	var duration_ms := 600.0 * 100.0 / float(clampi(speed, 20, 500))
+	var ratio := clampf(float(Time.get_ticks_msec() - started_ms) / duration_ms, 0.0, 1.0)
+	return Vector2(from_x, from_y).lerp(Vector2(end_x, end_y), ratio)
 
 
 func grid_from_screen(screen_x: int, screen_y: int) -> Vector2i:

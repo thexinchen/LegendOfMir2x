@@ -17,6 +17,10 @@ var player_x: int = 0
 var player_y: int = 0
 var player_direction: int = 0
 var player_action_type: int = 2
+var player_action_started_ms: int = 0
+var player_action_speed: int = 100
+var player_action_from_x: int = 0
+var player_action_from_y: int = 0
 var player_hp: int = 0
 var player_hp_max: int = 0
 var player_mp: int = 0
@@ -111,6 +115,11 @@ func set_player_online(online_data: Dictionary) -> void:
 	player_x = online_data.get("x", 0)
 	player_y = online_data.get("y", 0)
 	player_direction = online_data.get("direction", 0)
+	player_action_type = online_data.get("action_type", 2)
+	player_action_started_ms = Time.get_ticks_msec()
+	player_action_speed = online_data.get("action_speed", 100)
+	player_action_from_x = player_x
+	player_action_from_y = player_y
 	player_map_id = _map_id_from_uid(player_map_uid)
 	_center_camera_on_player()
 	state_changed.emit()
@@ -124,6 +133,11 @@ func start_game_scene(scene_data: Dictionary) -> void:
 	player_x = scene_data.get("x", player_x)
 	player_y = scene_data.get("y", player_y)
 	player_direction = scene_data.get("direction", player_direction)
+	player_action_type = 2
+	player_action_started_ms = Time.get_ticks_msec()
+	player_action_speed = 100
+	player_action_from_x = player_x
+	player_action_from_y = player_y
 	player_desp = scene_data.get("desp", player_desp)
 	wear = player_desp.get("wear", wear)
 	magic_effects.clear()

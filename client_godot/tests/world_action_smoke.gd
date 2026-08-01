@@ -130,9 +130,14 @@ func _test_chase_retry(main: Control) -> bool:
 		return false
 	GameState.update_creature(404, {"uid": 404, "x": 1, "y": 0, "type": 1})
 	main.call("_process_movement", 1.0)
-	if main.get("_chase_target_uid") != 0 or main.get("_next_strike"):
+	if main.get("_chase_target_uid") != 404 or main.get("_next_strike") or GameState.player_action_type != 7 or float(main.get("_player_action_timer")) < 0.89:
 		_fail("adjacent chase did not attack and consume next strike")
 		return false
+	main.call("_process_player_action", 1.0)
+	if GameState.player_action_type != 2:
+		_fail("local attack did not return to stand")
+		return false
+	main.call("_cancel_movement")
 	return true
 
 
@@ -145,6 +150,19 @@ func _test_pickup_action(main: Control) -> bool:
 	var pickup_motion: PackedInt32Array = main.get_node("WorldRenderer").call("_hero_motion", 8)
 	if pickup_motion != PackedInt32Array([8, 2]):
 		_fail("pickup did not use C++ cut/stand combined timing")
+		return false
+	var renderer: Control = main.get_node("WorldRenderer")
+	if renderer.call("_hero_motion", 7) != PackedInt32Array([9, 6]):
+		_fail("physical attack does not use the C++ one-handed vertical swing")
+		return false
+	var now := Time.get_ticks_msec()
+	if renderer.call("_motion_frame", 8, 2, now, 100) != 0 or renderer.call("_motion_frame", 8, 2, now - 1000, 100) != 1:
+		_fail("transient motion does not start at frame zero and clamp at the last frame")
+		return false
+	var move_start: Vector2 = renderer.call("_action_draw_grid", 5, 0, 0, 0, 3, now, 100)
+	var move_end: Vector2 = renderer.call("_action_draw_grid", 5, 0, 0, 0, 3, now - 1000, 100)
+	if move_start.x > 0.2 or not is_equal_approx(move_end.x, 5.0):
+		_fail("move rendering does not interpolate from action origin to destination")
 		return false
 	main.call("_process_pickup_action", 0.21)
 	if GameState.player_action_type != 2 or float(main.get("_pickup_action_timer")) >= 0.0:

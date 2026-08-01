@@ -47,6 +47,7 @@ var _move_step_timer := 0.0
 var _chase_target_uid := 0
 var _pickup_target := Vector2i(-1, -1)
 var _pickup_action_timer := -1.0
+var _player_action_timer := -1.0
 
 # C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame).
 # Keep a small network margin before sending the next one-hop action.
@@ -80,6 +81,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_process_player_action(delta)
 	_process_pickup_action(delta)
 	_process_movement(delta)
 	# Update camera
@@ -199,7 +201,7 @@ func _cancel_movement() -> void:
 
 func _plan_chase_path() -> void:
 	var creature: Dictionary = game_state.get_creature(_chase_target_uid)
-	if creature.is_empty():
+	if creature.is_empty() or creature.get("action_type", 0) == 13:
 		_chase_target_uid = 0
 		_move_path.clear()
 		return
@@ -207,7 +209,6 @@ func _plan_chase_path() -> void:
 	if _grid_distance(Vector2i(game_state.player_x, game_state.player_y), target) <= 1:
 		_move_path.clear()
 		_send_attack_action(_chase_target_uid)
-		_chase_target_uid = 0
 		return
 	var goals: Array[Vector2i] = []
 	for direction in WorldPathfinderScript.DIRECTIONS:
@@ -230,7 +231,7 @@ func _find_path(goals: Array[Vector2i]) -> Array[Vector2i]:
 
 
 func _process_movement(delta: float) -> void:
-	if _pickup_action_timer >= 0.0:
+	if _pickup_action_timer >= 0.0 or _player_action_timer >= 0.0:
 		return
 	if _move_path.is_empty():
 		if _pickup_target.x >= 0:
@@ -243,12 +244,15 @@ func _process_movement(delta: float) -> void:
 				_begin_pickup_action()
 			return
 		if _chase_target_uid == 0:
+			if game_state.player_action_type == 3:
+				_move_step_timer -= delta
+				if _move_step_timer <= 0.0:
+					_set_player_action(2)
 			return
 		_move_step_timer -= delta
 		if _move_step_timer > 0.0:
 			return
-		game_state.player_action_type = 2
-		game_state.state_changed.emit()
+		_set_player_action(2)
 		_plan_chase_path()
 		return
 	_move_step_timer -= delta
@@ -276,10 +280,12 @@ func _send_move_action(aim_x: int, aim_y: int) -> void:
 	var action_data := Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action)
 	NetworkClient.send_action(action_data)
 	game_state.player_direction = action.direction
-	game_state.player_action_type = 3
+	game_state.player_action_from_x = game_state.player_x
+	game_state.player_action_from_y = game_state.player_y
 	game_state.player_x = aim_x
 	game_state.player_y = aim_y
-	game_state.state_changed.emit()
+	_player_action_timer = -1.0
+	_set_player_action(3, action.speed)
 
 
 func _grid_distance(from: Vector2i, to: Vector2i) -> int:
@@ -304,6 +310,9 @@ func _send_attack_action(target_uid: int) -> void:
 	}
 	var action_data := Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action)
 	NetworkClient.send_action(action_data)
+	game_state.player_direction = action.direction
+	_set_player_action(7, action.speed)
+	_player_action_timer = _action_duration(7, action.speed, 2)
 
 
 func _consume_attack_magic_id() -> int:
@@ -349,8 +358,8 @@ func _begin_pickup_action() -> void:
 		"y": game_state.player_y,
 	}
 	NetworkClient.send_action(Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action))
-	game_state.player_action_type = 8
-	game_state.state_changed.emit()
+	_player_action_timer = -1.0
+	_set_player_action(8, action.speed)
 	_pickup_action_timer = 0.2
 
 
@@ -362,8 +371,36 @@ func _process_pickup_action(delta: float) -> void:
 		return
 	_pickup_action_timer = -1.0
 	NetworkClient.send_pickup(game_state.player_x, game_state.player_y, game_state.player_map_uid)
-	game_state.player_action_type = 2
+	_set_player_action(2)
+
+
+func _process_player_action(delta: float) -> void:
+	if _player_action_timer < 0.0:
+		return
+	_player_action_timer -= delta
+	if _player_action_timer <= 0.0:
+		_player_action_timer = -1.0
+		_set_player_action(2)
+
+
+func _set_player_action(action_type: int, speed := 100) -> void:
+	game_state.player_action_type = action_type
+	game_state.player_action_speed = speed
+	game_state.player_action_started_ms = Time.get_ticks_msec()
 	game_state.state_changed.emit()
+
+
+func _action_duration(action_type: int, speed: int, creature_type: int) -> float:
+	var frame_count := 0
+	match action_type:
+		3: frame_count = 6
+		7: frame_count = 6 if creature_type == 1 else 9
+		8: frame_count = 2
+		9: frame_count = 10 if creature_type == 1 else 5
+		11: frame_count = 2 if creature_type == 1 else 3
+		12: frame_count = 10
+		_: return -1.0
+	return float(frame_count) * 0.1 * 100.0 / float(clampi(speed, 20, 500))
 
 
 func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
@@ -528,6 +565,7 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 		return
 	_cancel_movement()
 	_pickup_action_timer = -1.0
+	_player_action_timer = -1.0
 	game_state.start_game_scene(data)
 	world_renderer.load_map(game_state.player_map_id)
 	_center_hero()
@@ -548,11 +586,14 @@ func _handle_action(payload: PackedByteArray) -> void:
 	
 	if uid == game_state.player_uid:
 		# Update player position and direction
-		game_state.player_x = x
-		game_state.player_y = y
-		game_state.player_action_type = action_type
+		game_state.player_action_from_x = x
+		game_state.player_action_from_y = y
+		game_state.player_x = action.get("aimX", x) if action_type == 3 else x
+		game_state.player_y = action.get("aimY", y) if action_type == 3 else y
 		if direction >= 1:
 			game_state.player_direction = direction
+		_set_player_action(action_type, action.get("speed", 100))
+		_player_action_timer = _action_duration(action_type, action.get("speed", 100), 2)
 		if action_type == 2 and not _move_path.is_empty():
 			_move_path.clear()
 			_move_step_timer = 0.25
@@ -566,11 +607,15 @@ func _handle_action(payload: PackedByteArray) -> void:
 			var inferred_type := _creature_type_from_uid(uid)
 			creature = {
 				"uid": uid,
-				"x": x,
-				"y": y,
+				"x": action.get("aimX", x) if action_type == 3 else x,
+				"y": action.get("aimY", y) if action_type == 3 else y,
+				"action_from_x": x,
+				"action_from_y": y,
 				"type": inferred_type,
 				"name": "",
 				"action_type": action_type,
+				"action_started_ms": Time.get_ticks_msec(),
+				"action_speed": action.get("speed", 100),
 				"direction": direction if direction >= 1 else (1 if inferred_type == 3 else _direction_to(x, y, action.get("aimX", x), action.get("aimY", y))),
 			}
 			if inferred_type == 1:
@@ -578,21 +623,27 @@ func _handle_action(payload: PackedByteArray) -> void:
 			elif inferred_type == 3:
 				creature["npc_id"] = (uid >> 35) & 0xFFFFFF
 		else:
-			creature["x"] = x
-			creature["y"] = y
+			creature["action_from_x"] = x
+			creature["action_from_y"] = y
+			creature["x"] = action.get("aimX", x) if action_type == 3 else x
+			creature["y"] = action.get("aimY", y) if action_type == 3 else y
 			creature["action_type"] = action_type
+			creature["action_started_ms"] = Time.get_ticks_msec()
+			creature["action_speed"] = action.get("speed", 100)
 			if direction >= 1:
 				creature["direction"] = direction
 		game_state.update_creature(uid, creature)
-		if action_type == 8:
-			_schedule_creature_idle(uid, action_type, 0.2)
+		var duration := _action_duration(action_type, action.get("speed", 100), creature.get("type", 0))
+		if duration > 0.0:
+			_schedule_creature_idle(uid, action_type, creature.get("action_started_ms", 0), duration)
 
 
-func _schedule_creature_idle(uid: int, action_type: int, delay: float) -> void:
+func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay: float) -> void:
 	get_tree().create_timer(delay).timeout.connect(func() -> void:
 		var creature: Dictionary = game_state.get_creature(uid)
-		if not creature.is_empty() and creature.get("action_type", 0) == action_type:
+		if not creature.is_empty() and creature.get("action_type", 0) == action_type and creature.get("action_started_ms", -1) == started_ms:
 			creature["action_type"] = 2
+			creature["action_started_ms"] = Time.get_ticks_msec()
 			game_state.update_creature(uid, creature)
 	)
 
@@ -611,18 +662,26 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	if creature.is_empty():
 		creature = {
 			"uid": uid,
-			"x": action.get("x", 0),
-			"y": action.get("y", 0),
+			"x": action.get("aimX", action.get("x", 0)) if action.get("type", 0) == 3 else action.get("x", 0),
+			"y": action.get("aimY", action.get("y", 0)) if action.get("type", 0) == 3 else action.get("y", 0),
 			"type": c_type,
 			"name": "",
 			"action_type": action.get("type", 0),
+			"action_started_ms": Time.get_ticks_msec(),
+			"action_speed": action.get("speed", 100),
+			"action_from_x": action.get("x", 0),
+			"action_from_y": action.get("y", 0),
 			"direction": action.get("direction", 0),
 		}
 	else:
-		creature["x"] = action.get("x", 0)
-		creature["y"] = action.get("y", 0)
+		creature["action_from_x"] = action.get("x", 0)
+		creature["action_from_y"] = action.get("y", 0)
+		creature["x"] = action.get("aimX", action.get("x", 0)) if action.get("type", 0) == 3 else action.get("x", 0)
+		creature["y"] = action.get("aimY", action.get("y", 0)) if action.get("type", 0) == 3 else action.get("y", 0)
 		creature["type"] = c_type
 		creature["action_type"] = action.get("type", 0)
+		creature["action_started_ms"] = Time.get_ticks_msec()
+		creature["action_speed"] = action.get("speed", 100)
 		creature["direction"] = action.get("direction", 0)
 	
 	# Parse union data for additional info
@@ -640,6 +699,9 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 				creature["npc_id"] = union_data.decode_u32(0)
 	
 	game_state.update_creature(uid, creature)
+	var duration := _action_duration(action.get("type", 0), action.get("speed", 100), c_type)
+	if duration > 0.0:
+		_schedule_creature_idle(uid, action.get("type", 0), creature.get("action_started_ms", 0), duration)
 
 
 func _creature_type_from_uid(uid: int) -> int:
@@ -853,13 +915,15 @@ func _handle_notify_dead(payload: PackedByteArray) -> void:
 	if uid == game_state.player_uid:
 		_cancel_movement()
 		_pickup_action_timer = -1.0
-		game_state.player_action_type = 13
+		_player_action_timer = -1.0
+		_set_player_action(13)
 		game_state.add_chat_log("你已死亡", 3)
-		game_state.state_changed.emit()
 		return
 	var creature: Dictionary = game_state.get_creature(uid)
 	if not creature.is_empty():
 		creature["action_type"] = 13
+		creature["action_started_ms"] = Time.get_ticks_msec()
+		creature["action_speed"] = 100
 		game_state.update_creature(uid, creature)
 
 
