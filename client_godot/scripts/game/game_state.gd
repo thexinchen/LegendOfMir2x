@@ -79,6 +79,7 @@ var team_leader: int = 0
 var team_members: Array = []
 var team_candidates: Array = []
 var quests: Dictionary = {}
+var quest_reset_serial := 0
 var npc_dialog: Dictionary = {}
 var npc_sell: Dictionary = {}
 var npc_sell_detail: Dictionary = {}
@@ -137,6 +138,28 @@ func set_team_member_list(leader: int, members: Array) -> void:
 			if member.get("uid", 0) == candidate_uid:
 				team_candidates.remove_at(index)
 				break
+	state_changed.emit()
+
+
+func set_quest_list(value: Dictionary) -> void:
+	quests = value
+	quest_reset_serial += 1
+	state_changed.emit()
+
+
+func update_quest_description(name: String, fsm: String, desp: Variant, main_fsm: String) -> void:
+	if desp == null and fsm == main_fsm:
+		quests.erase(name)
+	else:
+		var state_map: Dictionary = quests.get(name, {})
+		if desp == null:
+			state_map.erase(fsm)
+		else:
+			state_map[fsm] = str(desp)
+		if state_map.is_empty():
+			quests.erase(name)
+		else:
+			quests[name] = state_map
 	state_changed.emit()
 
 

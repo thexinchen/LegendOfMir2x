@@ -8,6 +8,8 @@ const CerealReader = preload("res://scripts/network/cereal_reader.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const WorldPathfinderScript = preload("res://scripts/game/world_pathfinder.gd")
 const MINIMAP_PANEL_PATH := "res://scenes/game/panels/minimap.tscn"
+const QUEST_PANEL_PATH := "res://scenes/game/panels/quest.tscn"
+const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 
 @onready var world_renderer: Control = $WorldRenderer
 @onready var inventory_panel: Control = %InventoryPanel
@@ -1340,8 +1342,7 @@ func _handle_quest_list(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var quests := reader.read_sd_quest_desp_list()
 	if _reader_ok(reader, "SM_QUESTDESPLIST"):
-		game_state.quests = quests
-		game_state.state_changed.emit()
+		game_state.set_quest_list(quests)
 
 
 func _handle_quest_update(payload: PackedByteArray) -> void:
@@ -1349,18 +1350,10 @@ func _handle_quest_update(payload: PackedByteArray) -> void:
 	var update := reader.read_sd_quest_desp_update()
 	if not _reader_ok(reader, "SM_QUESTDESPUPDATE"):
 		return
-	var quest_name: String = update.get("name", "")
-	var state_map: Dictionary = game_state.quests.get(quest_name, {})
-	var fsm: String = update.get("fsm", "")
-	if update.get("desp") == null:
-		state_map.erase(fsm)
-	else:
-		state_map[fsm] = update.get("desp", "")
-	if state_map.is_empty():
-		game_state.quests.erase(quest_name)
-	else:
-		game_state.quests[quest_name] = state_map
-	game_state.state_changed.emit()
+	game_state.update_quest_description(update.get("name", ""), update.get("fsm", ""), update.get("desp"), SYS_QSTFSM)
+	var quest_panel := _extra_panel_nodes.get(QUEST_PANEL_PATH) as Control
+	if quest_panel == null or not quest_panel.visible:
+		control_panel.call("start_button_blink", "Quest")
 
 
 func _handle_learned_magic(payload: PackedByteArray) -> void:

@@ -43,6 +43,7 @@ var _combat: Dictionary = {}
 
 var _chat_signature := ""
 var _focus_hud_signature := ""
+var _button_blinks: Dictionary = {}
 
 
 func _ready() -> void:
@@ -55,9 +56,7 @@ func _ready() -> void:
 	game_state.state_changed.connect(_refresh_static)
 	for button in %BoardButtons.get_children():
 		if button is BaseButton:
-			button.pressed.connect(
-				panel_requested.emit.bind(str(button.get_meta("scene_path"))),
-			)
+			button.pressed.connect(_on_board_button_pressed.bind(button))
 	var chat_scroll_bar := chat_log.get_v_scroll_bar()
 	chat_scroll_bar.modulate = Color.TRANSPARENT
 	chat_scroll_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -65,6 +64,33 @@ func _ready() -> void:
 	_update_chat_display()
 	$Body/MagicKey.pressed.connect(magic_key_hud_toggled.emit)
 	title.gui_input.connect(_on_title_gui_input)
+	_update_button_blinks()
+
+
+func start_button_blink(button_name: String, duration_ms := 5000) -> void:
+	_button_blinks[button_name] = Time.get_ticks_msec() + duration_ms
+
+
+func stop_button_blink(button_name: String) -> void:
+	_button_blinks.erase(button_name)
+	var button := %BoardButtons.get_node_or_null(button_name) as BaseButton
+	if button:
+		button.modulate.a = 1.0
+
+
+func _update_button_blinks() -> void:
+	var now := Time.get_ticks_msec()
+	for button_name in _button_blinks.keys():
+		var button := %BoardButtons.get_node_or_null(button_name) as BaseButton
+		if now >= int(_button_blinks[button_name]):
+			stop_button_blink(button_name)
+		elif button:
+			button.modulate.a = 1.0 if now % 200 < 100 else 0.0
+
+
+func _on_board_button_pressed(button: BaseButton) -> void:
+	stop_button_blink(button.name)
+	panel_requested.emit(str(button.get_meta("scene_path")))
 
 
 func _process(_delta: float) -> void:
@@ -81,6 +107,7 @@ func _process(_delta: float) -> void:
 	level_label.text = str(game_state.player_level)
 	# Update chat log from game_state
 	_update_chat_display()
+	_update_button_blinks()
 
 
 func _refresh_static() -> void:
