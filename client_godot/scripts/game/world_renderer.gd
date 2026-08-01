@@ -1319,7 +1319,7 @@ func _hero_double_handed(desp: Dictionary) -> bool:
 
 func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int, alpha := 1.0) -> bool:
 	var monster_id: int = creature.get("monster_id", 0)
-	var look_id: int = actor_resource.monster_look(monster_id)
+	var look_id: int = creature.get("monster_stand_look", actor_resource.monster_look(monster_id))
 	var direction_index := clampi(creature.get("direction", 5), 1, 8) - 1
 	var motion_data := _monster_motion(creature.get("action_type", 2))
 	var frame_index := _motion_frame(creature.get("action_type", 2), motion_data[1], creature.get("action_started_ms", 0), creature.get("action_speed", 100))

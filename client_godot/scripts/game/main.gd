@@ -689,6 +689,11 @@ func _set_player_action(action_type: int, speed := 100, magic_id := 0) -> void:
 func _action_duration(action_type: int, speed: int, creature_type: int, magic_id := 0) -> float:
 	var frame_count := 0
 	match action_type:
+		1:
+			if creature_type == 1:
+				frame_count = 10
+			else:
+				return -1.0
 		3, 5: frame_count = 6
 		6: return 0.01
 		7:
@@ -1007,7 +1012,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 	else:
 		# Update or create creature
 		var creature_type: int = creature.get("type", _creature_type_from_uid(uid))
-		var stored_action_type := _creature_stored_action_type(action_type, creature_type)
+		var monster_id: int = creature.get("monster_id", (uid >> 35) & 0xFFFFFF if creature_type == 1 else 0)
+		var stored_action_type := _creature_stored_action_type(action_type, creature_type, monster_id)
 		if creature.is_empty():
 			var inferred_type := creature_type
 			creature = {
@@ -1025,7 +1031,9 @@ func _handle_action(payload: PackedByteArray) -> void:
 				"direction": direction if direction >= 1 else (1 if inferred_type == 3 else _direction_to(x, y, action.get("aimX", x), action.get("aimY", y))),
 			}
 			if inferred_type == 1:
-				creature["monster_id"] = (uid >> 35) & 0xFFFFFF
+				creature["monster_id"] = monster_id
+				if action_type == 1 and _resources.monster_spawn_look(monster_id) > 0:
+					creature["monster_stand_look"] = _resources.monster_spawn_look(monster_id)
 			elif inferred_type == 3:
 				creature["npc_id"] = (uid >> 35) & 0xFFFFFF
 		else:
@@ -1095,11 +1103,19 @@ func _action_uses_aim_position(action_type: int) -> bool:
 	return action_type in [3, 5, 6]
 
 
-func _creature_stored_action_type(action_type: int, creature_type: int) -> int:
+func _creature_stored_action_type(action_type: int, creature_type: int, monster_id := 0) -> int:
 	# C++ ClientMonster::onActionJump() immediately replaces the jump with a
 	# standing motion at action.x/y. Keeping ACTION_JUMP here would freeze the
 	# stand sprite at its final frame because only ACTION_STAND loops.
-	return 2 if creature_type == 1 and action_type == 4 else action_type
+	if creature_type != 1:
+		return action_type
+	if action_type == 4:
+		return 2
+	# Generic monsters are born standing. ClientTaoDog is the sole constructor
+	# that redirects its initial spawn to a real ten-frame spawn sequence.
+	if action_type == 1 and _resources.monster_spawn_look(monster_id) == 0:
+		return 2
+	return action_type
 
 
 func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay: float) -> void:
@@ -1123,6 +1139,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	# UID type is in bits 59-62 (4 bits at offset 59)
 	# UID_NPC=3, UID_MON=4, UID_PLY=5
 	var c_type := _creature_type_from_uid(uid)
+	var action_type: int = action.get("type", 0)
 	
 	var creature: Dictionary = game_state.get_creature(uid)
 	var is_new := creature.is_empty()
@@ -1135,7 +1152,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 			"y": action.get("aimY", action.get("y", 0)) if _action_uses_aim_position(action.get("type", 0)) else action.get("y", 0),
 			"type": c_type,
 			"name": "",
-			"action_type": action.get("type", 0),
+			"action_type": action_type,
 			"action_started_ms": Time.get_ticks_msec(),
 			"action_speed": action.get("speed", 100),
 			"action_magic_id": action.get("magicID", 0),
@@ -1149,7 +1166,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 		creature["x"] = action.get("aimX", action.get("x", 0)) if _action_uses_aim_position(action.get("type", 0)) else action.get("x", 0)
 		creature["y"] = action.get("aimY", action.get("y", 0)) if _action_uses_aim_position(action.get("type", 0)) else action.get("y", 0)
 		creature["type"] = c_type
-		creature["action_type"] = action.get("type", 0)
+		creature["action_type"] = action_type
 		creature["action_started_ms"] = Time.get_ticks_msec()
 		creature["action_speed"] = action.get("speed", 100)
 		creature["action_magic_id"] = action.get("magicID", 0)
@@ -1168,13 +1185,19 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 				creature["level"] = union_data.decode_u32(1) if union_data.size() >= 5 else 0
 			3:  # NPC: NPCID (u32)
 				creature["npc_id"] = union_data.decode_u32(0)
+	if c_type == 1:
+		var monster_id: int = creature.get("monster_id", (uid >> 35) & 0xFFFFFF)
+		creature["action_type"] = _creature_stored_action_type(action_type, c_type, monster_id)
+		if is_new and action_type == 1 and _resources.monster_spawn_look(monster_id) > 0:
+			creature["monster_stand_look"] = _resources.monster_spawn_look(monster_id)
 	
 	game_state.update_creature(uid, creature)
 	if is_new and c_type == 2:
 		NetworkClient.send_query_player_wldesp(uid)
-	var duration := _action_duration(action.get("type", 0), action.get("speed", 100), c_type, action.get("magicID", 0))
+	var stored_action_type: int = creature.get("action_type", action_type)
+	var duration := _action_duration(stored_action_type, action.get("speed", 100), c_type, action.get("magicID", 0))
 	if duration > 0.0:
-		_schedule_creature_idle(uid, action.get("type", 0), creature.get("action_started_ms", 0), duration)
+		_schedule_creature_idle(uid, stored_action_type, creature.get("action_started_ms", 0), duration)
 	_play_action_seff(uid, action, creature)
 
 

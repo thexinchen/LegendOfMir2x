@@ -55,6 +55,8 @@ func _ready() -> void:
 		return
 	if not _test_actor_record_lifecycle(main):
 		return
+	if not _test_monster_spawn_actions(main, resources):
+		return
 	if not _test_monster_jump_stands(main):
 		return
 	if not _test_self_action_map_transition(main):
@@ -564,13 +566,71 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(new_npc_uid, 202, {
 		"type": 1, "speed": 100, "direction": 1, "x": 13, "y": 14,
 	}))
-	if GameState.get_creature(new_monster_uid).get("monster_id", 0) != 225 or GameState.get_creature(new_npc_uid).get("npc_id", 0) != 7:
+	if GameState.get_creature(new_monster_uid).get("monster_id", 0) != 225 or GameState.get_creature(new_monster_uid).get("action_type", 0) != 2 or GameState.get_creature(new_npc_uid).get("npc_id", 0) != 7:
 		_fail("player-specific record query suppressed unknown monster or NPC creation")
 		return false
 	GameState.remove_creature(monster_uid)
 	GameState.remove_creature(player_uid)
 	GameState.remove_creature(new_monster_uid)
 	GameState.remove_creature(new_npc_uid)
+	return true
+
+
+func _test_monster_spawn_actions(main: Control, resources: RefCounted) -> bool:
+	var special_id := 0
+	for monster_id_value in resources.monster_meta:
+		if resources.monster_spawn_look(int(monster_id_value)) > 0:
+			special_id = int(monster_id_value)
+			break
+	if special_id == 0:
+		_fail("special monster spawn metadata unavailable")
+		return false
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	var special_uid: int = (4 << 59) | (special_id << 35) | 703
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(special_uid, 202, {
+		"type": 1, "speed": 100, "direction": 5, "x": 32, "y": 33,
+	}))
+	var special: Dictionary = GameState.get_creature(special_uid)
+	if special.get("action_type", 0) != 1 or special.get("monster_stand_look", 0) != resources.monster_spawn_look(special_id):
+		_fail("TaoDog spawn did not retain its redirected special motion/look: %s" % special)
+		return false
+	if not is_equal_approx(float(main.call("_action_duration", 1, 100, 1)), 1.0):
+		_fail("special monster spawn did not use the C++ ten-frame duration")
+		return false
+	var renderer: Control = main.get_node("WorldRenderer")
+	if renderer.call("_monster_motion", special.get("action_type", 0)) != PackedInt32Array([8, 10]):
+		_fail("special monster spawn did not select MOTION_MON_SPAWN graphics")
+		return false
+	var ordinary_id := 0
+	for monster_id_value in resources.monster_meta:
+		var candidate_id: int = monster_id_value
+		if resources.monster_spawn_look(candidate_id) == 0:
+			ordinary_id = candidate_id
+			break
+	if ordinary_id == 0:
+		_fail("ordinary monster spawn fixture unavailable")
+		return false
+	var runtime_resources: RefCounted = main.get("_resources")
+	var ordinary_meta: PackedInt32Array = runtime_resources.monster_meta[ordinary_id]
+	var ordinary_spawn_seff: int = ordinary_meta[2]
+	ordinary_meta[2] = 0xFFFFFFFF
+	runtime_resources.monster_meta[ordinary_id] = ordinary_meta
+	var ordinary_uid: int = (4 << 59) | (ordinary_id << 35) | 704
+	var ordinary_union := PackedByteArray()
+	ordinary_union.resize(4)
+	ordinary_union.encode_u32(0, ordinary_id)
+	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(ordinary_uid, 202, {
+		"type": 1, "speed": 100, "direction": 3, "x": 34, "y": 35,
+	}, ordinary_union))
+	var ordinary: Dictionary = GameState.get_creature(ordinary_uid)
+	ordinary_meta[2] = ordinary_spawn_seff
+	runtime_resources.monster_meta[ordinary_id] = ordinary_meta
+	if ordinary.get("monster_id", 0) != ordinary_id or ordinary.get("action_type", 0) != 2:
+		_fail("ordinary SM_COREORD spawn did not create a standing monster: %s" % ordinary)
+		return false
+	GameState.remove_creature(special_uid)
+	GameState.remove_creature(ordinary_uid)
 	return true
 
 

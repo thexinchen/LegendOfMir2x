@@ -35,6 +35,12 @@ func _ready() -> void:
 	if actors.monster_seff(224, 7) == 0xFFFFFFFF:
 		_fail("monster SEFF metadata unavailable")
 		return
+	var special_spawn_count := 0
+	for monster_id_value in actors.monster_meta:
+		special_spawn_count += 1 if actors.monster_spawn_look(int(monster_id_value)) > 0 else 0
+	if special_spawn_count != 1:
+		_fail("monster meta v4 special spawn look mismatch: %d" % special_spawn_count)
+		return
 	var fade_monster_count := 0
 	var persistent_corpse_count := 0
 	for monster_id_value in actors.monster_meta:
@@ -71,7 +77,7 @@ func _ready() -> void:
 	if mine_weapon_count == 0:
 		_fail("item meta v5 did not export mine-capable weapons")
 		return
-	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d magic_seff=%d magic_target_offsets=%d fade_monster=%d persistent_corpse=%d weapon_sound=%d mine_weapon=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size(), magic_seff_count, magic_target_offset_count, fade_monster_count, persistent_corpse_count, weapon_sound_count, mine_weapon_count])
+	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d magic_seff=%d magic_target_offsets=%d fade_monster=%d persistent_corpse=%d special_spawn=%d weapon_sound=%d mine_weapon=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size(), magic_seff_count, magic_target_offset_count, fade_monster_count, persistent_corpse_count, special_spawn_count, weapon_sound_count, mine_weapon_count])
 	get_tree().quit()
 
 

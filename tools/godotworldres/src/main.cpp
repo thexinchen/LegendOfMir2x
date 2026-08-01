@@ -74,6 +74,7 @@ struct MonsterMetaRecord
     uint32_t attackSeffID = UINT32_MAX;
     uint32_t hittedSeffID = UINT32_MAX;
     uint32_t dieSeffID = UINT32_MAX;
+    uint16_t spawnLookID = 0;
 };
 
 struct ItemMetaRecord
@@ -148,7 +149,7 @@ static_assert(sizeof(TileRecord) == 8);
 static_assert(sizeof(ObjectRecord) == 12);
 static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
-static_assert(sizeof(MonsterMetaRecord) == 24);
+static_assert(sizeof(MonsterMetaRecord) == 26);
 static_assert(sizeof(ItemMetaRecord) == 156);
 static_assert(sizeof(SkillMetaRecord) == 16);
 static_assert(sizeof(BuffMetaRecord) == 12);
@@ -388,11 +389,12 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
                     .attackSeffID = monsterSeffID(record.name, MONSEFF_ATTACK),
                     .hittedSeffID = monsterSeffID(record.name, MONSEFF_HITTED),
                     .dieSeffID = monsterSeffID(record.name, MONSEFF_DIE),
+                    .spawnLookID = check_cast<uint16_t>(std::u8string_view(record.name) == u8"神兽" ? 0X59 : 0),
                 });
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "monster.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 3, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 4, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
     }
