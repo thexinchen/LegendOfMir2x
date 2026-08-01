@@ -8,10 +8,12 @@ var offsets: Dictionary = {}
 var monster_meta: Dictionary = {}
 var item_meta: Dictionary = {}
 var item_attributes: Dictionary = {}
+var item_details: Dictionary = {}
 var item_names: Dictionary = {}
 var item_types: Dictionary = {}
 var skill_meta: Dictionary = {}
 var buff_meta: Dictionary = {}
+var buff_names: Dictionary = {}
 var magic_meta: Dictionary = {}
 var magic_names: Dictionary = {}
 var magic_ids_by_name: Dictionary = {}
@@ -25,10 +27,12 @@ func configure(path: String) -> bool:
 		loaded = _load_index(family) or loaded
 	_load_monster_meta()
 	_load_item_meta()
+	_load_item_details()
 	_load_item_names()
 	_load_item_types()
 	_load_skill_meta()
 	_load_buff_meta()
+	_load_buff_names()
 	_load_magic_meta()
 	_load_magic_names()
 	return loaded
@@ -142,6 +146,10 @@ func item_weight(item_id: int) -> int:
 	return item_attribute(item_id).get("weight", 0)
 
 
+func item_detail(item_id: int) -> Dictionary:
+	return item_details.get(item_id, {})
+
+
 func item_name(item_id: int) -> String:
 	return item_names.get(item_id, "物品 %d" % item_id)
 
@@ -166,6 +174,10 @@ func skill_layout(magic_id: int) -> PackedInt32Array:
 
 func buff_layout(buff_id: int) -> PackedInt32Array:
 	return buff_meta.get(buff_id, PackedInt32Array())
+
+
+func buff_name(buff_id: int) -> String:
+	return buff_names.get(buff_id, "")
 
 
 func magic_layout(magic_id: int, stage: int) -> PackedInt32Array:
@@ -298,6 +310,28 @@ func _read_values(file: FileAccess, count: int) -> PackedInt32Array:
 	return result
 
 
+func _load_item_details() -> void:
+	var file := FileAccess.open("%s/sprites/item_detail.m2xmeta" % base_path, FileAccess.READ)
+	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
+		return
+	if file.get_32() != 1:
+		return
+	var count := file.get_32()
+	for _index in range(count):
+		var item_id := file.get_32()
+		var detail := {
+			"duration": _read_s32(file),
+			"hp": _read_values(file, 3),
+			"mp": _read_values(file, 3),
+			"req": _read_values(file, 4),
+		}
+		var description_length := file.get_16()
+		detail["description"] = file.get_buffer(description_length).get_string_from_utf8()
+		var job_length := file.get_16()
+		detail["job"] = file.get_buffer(job_length).get_string_from_utf8()
+		item_details[item_id] = detail
+
+
 func _load_item_names() -> void:
 	var file := FileAccess.open("%s/sprites/item_name.m2xmeta" % base_path, FileAccess.READ)
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
@@ -358,6 +392,19 @@ func _load_buff_meta() -> void:
 			favor -= 0x100
 		file.get_buffer(3)
 		buff_meta[buff_id] = PackedInt32Array([icon_id, favor])
+
+
+func _load_buff_names() -> void:
+	var file := FileAccess.open("%s/sprites/buff_name.m2xmeta" % base_path, FileAccess.READ)
+	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
+		return
+	if file.get_32() != 1:
+		return
+	var count := file.get_32()
+	for _index in range(count):
+		var buff_id := file.get_32()
+		var length := file.get_16()
+		buff_names[buff_id] = file.get_buffer(length).get_string_from_utf8()
 
 
 func _load_magic_meta() -> void:

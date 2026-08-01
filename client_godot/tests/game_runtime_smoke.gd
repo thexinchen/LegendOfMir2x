@@ -114,6 +114,10 @@ func _verify() -> void:
 		GameState.add_chat_log("广播消息", 2)
 		GameState.add_chat_log("错误消息", 3)
 		await get_tree().process_frame
+		if panel_name == "inventory" and OS.has_environment("MIR2X_TEST_ITEM_TOOLTIP") and not GameState.inventory.is_empty():
+			Input.warp_mouse(Vector2(520.0, 100.0))
+			await get_tree().process_frame
+			_main.get_node("%InventoryPanel").call("_show_item_tooltip", GameState.inventory[0])
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_GAME_RUNTIME_SCREENSHOT"))
 	print("GAME RUNTIME PASS: name=%s hp=%d/%d inventory=%d creatures=%d" % [GameState.player_name, GameState.player_hp, GameState.player_hp_max, GameState.inventory.size(), GameState.creatures.size()])

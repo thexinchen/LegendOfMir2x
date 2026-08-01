@@ -119,6 +119,15 @@ struct ItemMetaRecord
     uint8_t metaReserved = 0;
 };
 
+struct ItemDetailRecord
+{
+    uint32_t itemID = 0;
+    int32_t duration = 0;
+    int32_t hp[3] {};
+    int32_t mp[3] {};
+    int32_t req[4] {};
+};
+
 struct SkillMetaRecord
 {
     uint32_t magicID = 0;
@@ -162,6 +171,7 @@ static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
 static_assert(sizeof(MonsterMetaRecord) == 38);
 static_assert(sizeof(ItemMetaRecord) == 156);
+static_assert(sizeof(ItemDetailRecord) == 48);
 static_assert(sizeof(SkillMetaRecord) == 16);
 static_assert(sizeof(BuffMetaRecord) == 12);
 static_assert(sizeof(MagicEffectMetaRecord) == 90);
@@ -528,6 +538,31 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             typeFile.write(reinterpret_cast<const char *>(&typeLength), sizeof(typeLength));
             typeFile.write(type.data(), typeLength);
         }
+
+        std::ofstream detailFile(outputDir / "sprites" / "item_detail.m2xmeta", std::ios::binary);
+        detailFile.write(reinterpret_cast<const char *>(&textMetaHeader), sizeof(textMetaHeader));
+        for(const auto &meta: metaList){
+            const auto &record = DBCOM_ITEMRECORD(meta.itemID);
+            const ItemDetailRecord detail
+            {
+                .itemID = meta.itemID,
+                .duration = record.equip.duration,
+                .hp = {record.equip.hp.add, record.equip.hp.steal, record.equip.hp.recover},
+                .mp = {record.equip.mp.add, record.equip.mp.steal, record.equip.mp.recover},
+                .req = {record.equip.req.dc, record.equip.req.mc, record.equip.req.sc, record.equip.req.level},
+            };
+            detailFile.write(reinterpret_cast<const char *>(&detail), sizeof(detail));
+
+            const std::string description = str_haschar(record.description) ? to_cstr(record.description) : "";
+            const auto descriptionLength = check_cast<uint16_t>(description.size());
+            detailFile.write(reinterpret_cast<const char *>(&descriptionLength), sizeof(descriptionLength));
+            detailFile.write(description.data(), descriptionLength);
+
+            const std::string job = str_haschar(record.equip.req.job) ? to_cstr(record.equip.req.job) : "";
+            const auto jobLength = check_cast<uint16_t>(job.size());
+            detailFile.write(reinterpret_cast<const char *>(&jobLength), sizeof(jobLength));
+            detailFile.write(job.data(), jobLength);
+        }
     }
     if(std::strcmp(family, "proguse") == 0){
         std::vector<SkillMetaRecord> metaList;
@@ -569,6 +604,23 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
         const SpriteHeader buffHeader {.spriteCount = to_u32(buffList.size())};
         buffFile.write(reinterpret_cast<const char *>(&buffHeader), sizeof(buffHeader));
         writeVector(buffFile, buffList);
+
+        std::vector<uint32_t> namedBuffList;
+        for(uint32_t buffID = 1; buffID < DBCOM_BUFFENDID(); ++buffID){
+            if(str_haschar(DBCOM_BUFFRECORD(buffID).name)){
+                namedBuffList.push_back(buffID);
+            }
+        }
+        std::ofstream buffNameFile(outputDir / "sprites" / "buff_name.m2xmeta", std::ios::binary);
+        const SpriteHeader buffNameHeader {.spriteCount = to_u32(namedBuffList.size())};
+        buffNameFile.write(reinterpret_cast<const char *>(&buffNameHeader), sizeof(buffNameHeader));
+        for(const auto buffID: namedBuffList){
+            const std::string name(to_cstr(DBCOM_BUFFRECORD(buffID).name));
+            const auto length = check_cast<uint16_t>(name.size());
+            buffNameFile.write(reinterpret_cast<const char *>(&buffID), sizeof(buffID));
+            buffNameFile.write(reinterpret_cast<const char *>(&length), sizeof(length));
+            buffNameFile.write(name.data(), length);
+        }
     }
     if(std::strcmp(family, "magic") == 0){
         std::vector<MagicEffectMetaRecord> metaList;

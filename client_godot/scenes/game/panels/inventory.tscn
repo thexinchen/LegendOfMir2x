@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/inventory_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001b.png" id="2"]
@@ -14,6 +14,18 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000b4.png" id="12"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000b5.png" id="13"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/000000b6.png" id="14"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tooltip"]
+bg_color = Color(0, 0, 0, 0.784314)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.905882, 0.905882, 0.741176, 0.784314)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
 
 [node name="InventoryPanel" type="Control"]
 custom_minimum_size = Vector2(434, 543)
@@ -124,3 +136,12 @@ offset_bottom = 517.0
 theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
+
+[node name="ItemTooltip" type="Panel" parent="."]
+visible = false
+z_index = 4096
+z_as_relative = false
+offset_right = 220.0
+offset_bottom = 40.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tooltip")

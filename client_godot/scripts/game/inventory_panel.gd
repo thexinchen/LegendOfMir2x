@@ -1,6 +1,7 @@
 extends "res://scripts/game/closable_panel.gd"
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const ItemTooltipFormatterScript = preload("res://scripts/game/item_tooltip_formatter.gd")
 const GRID_COLUMNS := 10
 const GRID_VISIBLE_ROWS := 10
 const CELL_SIZE := 38
@@ -9,6 +10,11 @@ const SLIDER_BAR_TOP := 63.0
 const SLIDER_TRAVEL := 368.0
 const EMBLEM_FPS := 8.0
 const EMBLEM_FRAME_COUNT := 10
+const TOOLTIP_WIDTH := 220.0
+const TOOLTIP_MIN_HEIGHT := 40.0
+const TOOLTIP_PADDING := 10.0
+const TOOLTIP_LINE_HEIGHT := 15.0
+const TOOLTIP_FONT_SIZE := 10
 
 const OP_NONE := 0
 const OP_TRADE := 1
@@ -32,6 +38,7 @@ var _scroll_value := 0.0
 var _slider_dragging := false
 var _emblem_time := 0.0
 var _emblem_frame := -1
+var _tooltip_key := ""
 
 
 func _ready() -> void:
@@ -58,6 +65,11 @@ func _process(delta: float) -> void:
 	var frame := int(_emblem_time * EMBLEM_FPS) % EMBLEM_FRAME_COUNT
 	if frame != _emblem_frame:
 		_update_emblem(frame)
+	if $ItemTooltip.visible:
+		if is_visible_in_tree():
+			_update_tooltip_position()
+		else:
+			_hide_item_tooltip()
 
 
 func _bind_overlay_button(button: TextureButton) -> void:
@@ -95,6 +107,7 @@ func _update_emblem(frame := 0) -> void:
 
 
 func _refresh() -> void:
+	var tooltip_key := _tooltip_key
 	_sync_bins()
 	_refresh_operation()
 	_update_scroll_from_value()
@@ -116,12 +129,8 @@ func _refresh() -> void:
 		var icon: Dictionary = _inventory_icon(item_id)
 		if not icon.is_empty():
 			button.texture_normal = icon.texture
-		button.tooltip_text = "%s\n类型 %s\n数量 %d\n序号 %d" % [
-			_resources.item_name(item_id),
-			_resources.item_type(item_id),
-			item.get("count", 0),
-			item.get("seqID", 0),
-		]
+		button.mouse_entered.connect(_show_item_tooltip.bind(item))
+		button.mouse_exited.connect(_hide_item_tooltip)
 		button.gui_input.connect(func(event: InputEvent): _on_item_input(event, key))
 		$ItemGrid.add_child(button)
 		if key == _selected_key:
@@ -140,6 +149,46 @@ func _refresh() -> void:
 			count_label.add_theme_font_size_override("font_size", 10)
 			count_label.add_theme_color_override("font_color", Color(1, 0.9, 0.25))
 			button.add_child(count_label)
+	if not tooltip_key.is_empty() and _bins.has(tooltip_key):
+		_show_item_tooltip(_bins[tooltip_key].item)
+	else:
+		_hide_item_tooltip()
+
+
+func _show_item_tooltip(item: Dictionary) -> void:
+	_tooltip_key = _item_key(item)
+	for child in $ItemTooltip.get_children():
+		child.free()
+	var lines: Array[String] = ItemTooltipFormatterScript.plain_layout_lines(item, _resources)
+	var tooltip_height := maxf(TOOLTIP_MIN_HEIGHT, TOOLTIP_PADDING * 2.0 + lines.size() * TOOLTIP_LINE_HEIGHT)
+	$ItemTooltip.size = Vector2(TOOLTIP_WIDTH, tooltip_height)
+	for index in range(lines.size()):
+		var label := Label.new()
+		label.position = Vector2(TOOLTIP_PADDING, TOOLTIP_PADDING + index * TOOLTIP_LINE_HEIGHT)
+		label.size = Vector2(TOOLTIP_WIDTH - TOOLTIP_PADDING * 2.0, TOOLTIP_LINE_HEIGHT)
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		label.add_theme_font_size_override("font_size", TOOLTIP_FONT_SIZE)
+		label.add_theme_color_override("font_color", Color.WHITE)
+		label.text = lines[index]
+		$ItemTooltip.add_child(label)
+	$ItemTooltip.show()
+	_update_tooltip_position()
+
+
+func _hide_item_tooltip() -> void:
+	_tooltip_key = ""
+	$ItemTooltip.hide()
+
+
+func _update_tooltip_position(mouse_position: Variant = null) -> void:
+	var viewport_size := get_viewport_rect().size
+	var tooltip_size: Vector2 = $ItemTooltip.size
+	var mouse: Vector2 = get_viewport().get_mouse_position() if mouse_position == null else mouse_position
+	var clamped := Vector2(
+		clampf(mouse.x, 0.0, maxf(0.0, viewport_size.x - tooltip_size.x)),
+		clampf(mouse.y, 0.0, maxf(0.0, viewport_size.y - tooltip_size.y)),
+	)
+	$ItemTooltip.position = clamped - global_position
 
 
 func _sync_bins() -> void:
