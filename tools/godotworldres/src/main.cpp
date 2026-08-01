@@ -97,6 +97,8 @@ struct ItemMetaRecord
     int32_t dcElem[7] {};
     int32_t acElem[7] {};
     int32_t load[3] {};
+    uint8_t doubleHand = 0;
+    uint8_t metaReserved[3] {};
 };
 
 struct SkillMetaRecord
@@ -138,7 +140,7 @@ static_assert(sizeof(ObjectRecord) == 12);
 static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
 static_assert(sizeof(MonsterMetaRecord) == 8);
-static_assert(sizeof(ItemMetaRecord) == 152);
+static_assert(sizeof(ItemMetaRecord) == 156);
 static_assert(sizeof(SkillMetaRecord) == 12);
 static_assert(sizeof(BuffMetaRecord) == 12);
 static_assert(sizeof(MagicEffectMetaRecord) == 22);
@@ -374,11 +376,12 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
                         record.equip.acElem.phantom,
                     },
                     .load = {record.equip.load.body, record.equip.load.weapon, record.equip.load.inventory},
+                    .doubleHand = to_u8(record.equip.weapon.doubleHand),
                 });
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "item.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 2, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 3, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
 

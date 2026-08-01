@@ -167,7 +167,7 @@ func _load_item_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version != 1 and version != 2:
+	if version not in [1, 2, 3]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -176,7 +176,7 @@ func _load_item_meta() -> void:
 		var flags := file.get_16()
 		var package_gfx_id := file.get_32()
 		item_meta[item_id] = PackedInt32Array([shape, package_gfx_id, flags])
-		if version == 2:
+		if version >= 2:
 			item_attributes[item_id] = {
 				"weight": _read_s32(file),
 				"dc": _read_pair(file),
@@ -195,6 +195,9 @@ func _load_item_meta() -> void:
 				"ac_elem": _read_values(file, 7),
 				"load": _read_values(file, 3),
 			}
+			if version >= 3:
+				item_attributes[item_id]["double_hand"] = file.get_8() != 0
+				file.get_buffer(3)
 
 
 func _read_s32(file: FileAccess) -> int:

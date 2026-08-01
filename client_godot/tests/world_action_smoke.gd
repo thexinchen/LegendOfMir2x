@@ -53,7 +53,7 @@ func _ready() -> void:
 		return
 	if not _test_chase_retry(main):
 		return
-	if not _test_pickup_action(main):
+	if not _test_pickup_action(main, resources):
 		return
 	print("WORLD ACTION PASS: attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
@@ -187,7 +187,7 @@ func _test_chase_retry(main: Control) -> bool:
 	return true
 
 
-func _test_pickup_action(main: Control) -> bool:
+func _test_pickup_action(main: Control, resources: RefCounted) -> bool:
 	GameState.player_action_type = 2
 	main.call("_begin_pickup_action")
 	if GameState.player_action_type != 8 or float(main.get("_pickup_action_timer")) <= 0.0:
@@ -200,6 +200,33 @@ func _test_pickup_action(main: Control) -> bool:
 	var renderer: Control = main.get_node("WorldRenderer")
 	if renderer.call("_hero_motion", 7) != PackedInt32Array([9, 6]):
 		_fail("physical attack does not use the C++ one-handed vertical swing")
+		return false
+	var sky_sword_id: int = resources.magic_id("翔空剑法")
+	var half_moon_id: int = resources.magic_id("半月弯刀")
+	var wheel_id: int = resources.magic_id("十方斩")
+	if renderer.call("_hero_motion", 7, sky_sword_id, {}) != PackedInt32Array([17, 10]):
+		_fail("sky sword attack does not use C++ random swing motion")
+		return false
+	if renderer.call("_hero_motion", 7, half_moon_id, {}) != PackedInt32Array([11, 6]):
+		_fail("half moon attack does not use C++ one-handed horizontal swing")
+		return false
+	if renderer.call("_hero_motion", 7, wheel_id, {}) != PackedInt32Array([16, 10]):
+		_fail("wheel attack does not use C++ whirlwind motion")
+		return false
+	var double_hand_weapon := 0
+	for item_id_value in resources.item_attributes:
+		if resources.item_attribute(item_id_value).get("double_hand", false):
+			double_hand_weapon = int(item_id_value)
+			break
+	if double_hand_weapon == 0:
+		_fail("item meta v3 did not export any double-handed weapon")
+		return false
+	var double_hand_desp := {"wear": {3: {"itemID": double_hand_weapon}}}
+	if renderer.call("_hero_motion", 7, 0, double_hand_desp) != PackedInt32Array([10, 6]) or renderer.call("_hero_motion", 7, half_moon_id, double_hand_desp) != PackedInt32Array([12, 6]):
+		_fail("double-handed weapon did not select C++ vertical/horizontal swing motions")
+		return false
+	if not is_equal_approx(float(main.call("_action_duration", 7, 100, 2, sky_sword_id)), 1.3) or not is_equal_approx(float(main.call("_action_duration", 7, 100, 2, wheel_id)), 0.9666667):
+		_fail("special attack action timing mismatch")
 		return false
 	var now := Time.get_ticks_msec()
 	if renderer.call("_motion_frame", 8, 2, now, 100) != 0 or renderer.call("_motion_frame", 8, 2, now - 1000, 100) != 1:

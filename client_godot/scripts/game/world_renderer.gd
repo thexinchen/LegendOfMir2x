@@ -341,7 +341,7 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	var py: int = roundi(draw_grid.y * GRID_YP) - view_y
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
 	
-	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed):
+	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
 	
@@ -362,7 +362,7 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 	var sprite_drawn := false
 	match c_type:
 		1: sprite_drawn = _draw_monster_sprite(c, cx, cy)
-		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100))
+		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100), c.get("action_magic_id", 0))
 		3: sprite_drawn = _draw_npc_sprite(c, cx, cy)
 	if not sprite_drawn:
 		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3))
@@ -377,15 +377,19 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 			font.draw_string(get_canvas_item(), Vector2(center.x - tw.x * 0.5, cy - 4), c_name, HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(1, 1, 1, 0.9))
 
 
-func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int, action_started_ms := 0, action_speed := 100) -> bool:
+func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int, action_started_ms := 0, action_speed := 100, magic_id := 0) -> bool:
 	var direction_index := clampi(direction, 1, 8) - 1
-	var motion_data := _hero_motion(action_type)
+	var motion_data := _hero_motion(action_type, magic_id, desp)
 	var frame_index := _motion_frame(action_type, motion_data[1], action_started_ms, action_speed)
 	if action_type == 7:
-		var attack_step := _motion_step(action_started_ms, action_speed)
-		if attack_step >= 6:
+		var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+		var primary_speed := 150 if magic_name == "十方斩" else action_speed
+		var attack_step := _motion_step(action_started_ms, primary_speed)
+		if attack_step >= motion_data[1]:
+			var primary_ms := float(motion_data[1]) * 100.0 * 100.0 / float(clampi(primary_speed, 20, 500))
+			var elapsed_ms := maxi(0, Time.get_ticks_msec() - action_started_ms)
 			motion_data = PackedInt32Array([7, 3])
-			frame_index = mini(attack_step - 6, 2)
+			frame_index = mini(floori((float(elapsed_ms) - primary_ms) / 100.0), 2)
 		else:
 			frame_index = attack_step
 	var wear: Dictionary = desp.get("wear", {})
@@ -425,16 +429,31 @@ func _wear_shape(wear: Dictionary, location: int) -> int:
 	return actor_resource.item_shape(item.get("itemID", 0))
 
 
-func _hero_motion(action_type: int) -> PackedInt32Array:
+func _hero_motion(action_type: int, magic_id := 0, desp: Dictionary = {}) -> PackedInt32Array:
 	match action_type:
 		3, 4, 5: return PackedInt32Array([21, 6])
-		7: return PackedInt32Array([9, 6])
+		7:
+			var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+			if magic_name in ["翔空剑法", "莲月剑法"]:
+				return PackedInt32Array([17, 10])
+			if magic_name == "十方斩":
+				return PackedInt32Array([16, 10])
+			var double_handed := _hero_double_handed(desp)
+			if magic_name == "半月弯刀":
+				return PackedInt32Array([12 if double_handed else 11, 6])
+			return PackedInt32Array([10 if double_handed else 9, 6])
 		8: return PackedInt32Array([8, 2])
 		9: return PackedInt32Array([2, 5])
 		11: return PackedInt32Array([15, 3])
 		12: return PackedInt32Array([18, 10])
 		13: return PackedInt32Array([19, 10])
 		_: return PackedInt32Array([0, 4])
+
+
+func _hero_double_handed(desp: Dictionary) -> bool:
+	var wear: Dictionary = desp.get("wear", {})
+	var weapon: Dictionary = wear.get(3, {})
+	return bool(actor_resource.item_attribute(weapon.get("itemID", 0)).get("double_hand", false))
 
 
 func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int) -> bool:

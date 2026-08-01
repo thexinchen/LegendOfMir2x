@@ -70,6 +70,7 @@ func _ready() -> void:
 	game_state = get_node("/root/GameState")
 	protocol = Protocol.new()
 	_resources.configure_default()
+	world_renderer.actor_resource = _resources
 	world_renderer.game_state = game_state
 	
 	inventory_panel.hide()
@@ -310,8 +311,8 @@ func _send_spell_action(action_type: int, magic_id: int, aim_grid: Vector2i, aim
 		var effect := action.duplicate(true)
 		effect["uid"] = game_state.player_uid
 		game_state.add_magic_effect(effect, "local_action")
-	_set_player_action(action_type, action.speed)
-	_player_action_timer = _action_duration(action_type, action.speed, 2)
+	_set_player_action(action_type, action.speed, magic_id)
+	_player_action_timer = _action_duration(action_type, action.speed, 2, magic_id)
 	return true
 
 
@@ -427,8 +428,8 @@ func _send_attack_action(target_uid: int) -> void:
 	var action_data := Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action)
 	NetworkClient.send_action(action_data)
 	game_state.player_direction = action.direction
-	_set_player_action(7, action.speed)
-	_player_action_timer = _action_duration(7, action.speed, 2)
+	_set_player_action(7, action.speed, action.magicID)
+	_player_action_timer = _action_duration(7, action.speed, 2, action.magicID)
 
 
 func _consume_attack_magic_id() -> int:
@@ -505,18 +506,26 @@ func _process_player_action(delta: float) -> void:
 		_set_player_action(2)
 
 
-func _set_player_action(action_type: int, speed := 100) -> void:
+func _set_player_action(action_type: int, speed := 100, magic_id := 0) -> void:
 	game_state.player_action_type = action_type
 	game_state.player_action_speed = speed
+	game_state.player_action_magic_id = magic_id
 	game_state.player_action_started_ms = Time.get_ticks_msec()
 	game_state.state_changed.emit()
 
 
-func _action_duration(action_type: int, speed: int, creature_type: int) -> float:
+func _action_duration(action_type: int, speed: int, creature_type: int, magic_id := 0) -> float:
 	var frame_count := 0
 	match action_type:
 		3: frame_count = 6
-		7: frame_count = 6 if creature_type == 1 else 9
+		7:
+			if creature_type == 1:
+				frame_count = 6
+			else:
+				var magic_name: String = _resources.magic_names.get(magic_id, "")
+				var primary_frames := 10 if magic_name in ["翔空剑法", "莲月剑法", "十方斩"] else 6
+				var primary_speed := 150 if magic_name == "十方斩" else speed
+				return float(primary_frames) * 0.1 * 100.0 / float(clampi(primary_speed, 20, 500)) + 0.3
 		8: frame_count = 2
 		9: frame_count = 10 if creature_type == 1 else 5
 		11: frame_count = 2 if creature_type == 1 else 3
@@ -715,8 +724,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 		game_state.player_y = action.get("aimY", y) if action_type == 3 else y
 		if direction >= 1:
 			game_state.player_direction = direction
-		_set_player_action(action_type, action.get("speed", 100))
-		_player_action_timer = _action_duration(action_type, action.get("speed", 100), 2)
+		_set_player_action(action_type, action.get("speed", 100), action.get("magicID", 0))
+		_player_action_timer = _action_duration(action_type, action.get("speed", 100), 2, action.get("magicID", 0))
 		if action_type == 2 and not _move_path.is_empty():
 			_move_path.clear()
 			_move_step_timer = 0.25
@@ -739,6 +748,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 				"action_type": action_type,
 				"action_started_ms": Time.get_ticks_msec(),
 				"action_speed": action.get("speed", 100),
+				"action_magic_id": action.get("magicID", 0),
 				"direction": direction if direction >= 1 else (1 if inferred_type == 3 else _direction_to(x, y, action.get("aimX", x), action.get("aimY", y))),
 			}
 			if inferred_type == 1:
@@ -753,10 +763,11 @@ func _handle_action(payload: PackedByteArray) -> void:
 			creature["action_type"] = action_type
 			creature["action_started_ms"] = Time.get_ticks_msec()
 			creature["action_speed"] = action.get("speed", 100)
+			creature["action_magic_id"] = action.get("magicID", 0)
 			if direction >= 1:
 				creature["direction"] = direction
 		game_state.update_creature(uid, creature)
-		var duration := _action_duration(action_type, action.get("speed", 100), creature.get("type", 0))
+		var duration := _action_duration(action_type, action.get("speed", 100), creature.get("type", 0), action.get("magicID", 0))
 		if duration > 0.0:
 			_schedule_creature_idle(uid, action_type, creature.get("action_started_ms", 0), duration)
 
@@ -801,6 +812,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 			"action_type": action.get("type", 0),
 			"action_started_ms": Time.get_ticks_msec(),
 			"action_speed": action.get("speed", 100),
+			"action_magic_id": action.get("magicID", 0),
 			"action_from_x": action.get("x", 0),
 			"action_from_y": action.get("y", 0),
 			"direction": action.get("direction", 0),
@@ -814,6 +826,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 		creature["action_type"] = action.get("type", 0)
 		creature["action_started_ms"] = Time.get_ticks_msec()
 		creature["action_speed"] = action.get("speed", 100)
+		creature["action_magic_id"] = action.get("magicID", 0)
 		creature["direction"] = action.get("direction", 0)
 	
 	# Parse union data for additional info
@@ -831,7 +844,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 				creature["npc_id"] = union_data.decode_u32(0)
 	
 	game_state.update_creature(uid, creature)
-	var duration := _action_duration(action.get("type", 0), action.get("speed", 100), c_type)
+	var duration := _action_duration(action.get("type", 0), action.get("speed", 100), c_type, action.get("magicID", 0))
 	if duration > 0.0:
 		_schedule_creature_idle(uid, action.get("type", 0), creature.get("action_started_ms", 0), duration)
 
