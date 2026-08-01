@@ -6,15 +6,17 @@ const MAGIC := "M2SP"
 var base_path: String = ""
 var offsets: Dictionary = {}
 var monster_meta: Dictionary = {}
+var item_shapes: Dictionary = {}
 var _textures: Dictionary = {}
 
 
 func configure(path: String) -> bool:
 	base_path = path
 	var loaded := false
-	for family in ["hero", "monster", "npc"]:
+	for family in ["hero", "hair", "helmet", "weapon", "monster", "npc"]:
 		loaded = _load_index(family) or loaded
 	_load_monster_meta()
+	_load_item_meta()
 	return loaded
 
 
@@ -42,6 +44,10 @@ func monster_look(monster_id: int) -> int:
 
 func monster_has_shadow(monster_id: int) -> bool:
 	return bool(monster_meta.get(monster_id, PackedInt32Array([monster_id, 1]))[1])
+
+
+func item_shape(item_id: int) -> int:
+	return item_shapes.get(item_id, 0)
 
 
 func _load_index(family: String) -> bool:
@@ -76,3 +82,17 @@ func _load_monster_meta() -> void:
 		var shadow := file.get_8()
 		file.get_8()
 		monster_meta[monster_id] = PackedInt32Array([look_id, shadow])
+
+
+func _load_item_meta() -> void:
+	var file := FileAccess.open("%s/sprites/item.m2xmeta" % base_path, FileAccess.READ)
+	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
+		return
+	if file.get_32() != 1:
+		return
+	var count := file.get_32()
+	for _index in range(count):
+		var item_id := file.get_32()
+		var shape := file.get_16()
+		file.get_16()
+		item_shapes[item_id] = shape

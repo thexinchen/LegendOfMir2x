@@ -344,7 +344,9 @@ func _handle_action(payload: PackedByteArray) -> void:
 		# Update player position and direction
 		game_state.player_x = x
 		game_state.player_y = y
-		game_state.player_direction = direction
+		game_state.player_action_type = action_type
+		if direction >= 1:
+			game_state.player_direction = direction
 	else:
 		# Update or create creature
 		var creature: Dictionary = game_state.get_creature(uid)
@@ -535,7 +537,8 @@ func _handle_player_wl_desp(payload: PackedByteArray) -> void:
 		return
 	var uid: int = data.get("uid", 0)
 	if uid == game_state.player_uid:
-		game_state.wear = data.get("desp", {}).get("wear", {})
+		game_state.player_desp = data.get("desp", {})
+		game_state.wear = game_state.player_desp.get("wear", {})
 		game_state.state_changed.emit()
 	elif not game_state.get_creature(uid).is_empty():
 		var creature: Dictionary = game_state.get_creature(uid)

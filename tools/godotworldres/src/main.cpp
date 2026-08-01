@@ -70,6 +70,13 @@ struct MonsterMetaRecord
     uint8_t shadow = 0;
     uint8_t reserved = 0;
 };
+
+struct ItemMetaRecord
+{
+    uint32_t itemID = 0;
+    uint16_t shape = 0;
+    uint16_t reserved = 0;
+};
 #pragma pack(pop)
 
 static_assert(sizeof(MapHeader) == 28);
@@ -78,6 +85,7 @@ static_assert(sizeof(ObjectRecord) == 12);
 static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
 static_assert(sizeof(MonsterMetaRecord) == 8);
+static_assert(sizeof(ItemMetaRecord) == 8);
 
 static bool animatedTextureSet(uint32_t textureID)
 {
@@ -263,6 +271,19 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "monster.m2xmeta", std::ios::binary);
+        const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
+        metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
+        writeVector(metaFile, metaList);
+    }
+    if(std::strcmp(family, "hero") == 0){
+        std::vector<ItemMetaRecord> metaList;
+        for(uint32_t itemID = 1; itemID < DBCOM_ITEMENDID(); ++itemID){
+            const auto &record = DBCOM_ITEMRECORD(itemID);
+            if(record.name){
+                metaList.push_back({itemID, check_cast<uint16_t>(record.shape)});
+            }
+        }
+        std::ofstream metaFile(outputDir / "sprites" / "item.m2xmeta", std::ios::binary);
         const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);

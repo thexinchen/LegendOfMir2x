@@ -164,7 +164,7 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	var py: int = game_state.player_y * GRID_YP - view_y
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
 	
-	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, px, py):
+	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
 	
@@ -184,7 +184,7 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 	var sprite_drawn := false
 	match c_type:
 		1: sprite_drawn = _draw_monster_sprite(c, cx, cy)
-		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), cx, cy)
+		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy)
 		3: sprite_drawn = _draw_npc_sprite(c, cx, cy)
 	if not sprite_drawn:
 		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3))
@@ -199,17 +199,56 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 			font.draw_string(get_canvas_item(), Vector2(center.x - tw.x * 0.5, cy - 4), c_name, HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(1, 1, 1, 0.9))
 
 
-func _draw_hero_sprite(gender: int, direction: int, start_x: int, start_y: int) -> bool:
+func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int) -> bool:
 	var direction_index := clampi(direction, 1, 8) - 1
-	var frame_index := floori(float(Time.get_ticks_msec()) / 150.0) % 4
-	var body_key := (gender << 22) | (direction_index << 5) | frame_index
+	var motion_data := _hero_motion(action_type)
+	var frame_index := floori(float(Time.get_ticks_msec()) / 150.0) % motion_data[1]
+	var wear: Dictionary = desp.get("wear", {})
+	var dress_shape := _wear_shape(wear, 1)
+	var gfx_id: int = (dress_shape << 9) | (motion_data[0] << 3) | direction_index
+	var body_key := (gender << 22) | ((gfx_id & 0x1FFFF) << 5) | frame_index
 	var shadow: Dictionary = actor_resource.frame("hero", body_key | (1 << 23))
 	var body: Dictionary = actor_resource.frame("hero", body_key)
 	_draw_sprite_frame(shadow, start_x, start_y, 0.5)
+	var weapon_shape := _wear_shape(wear, 3)
+	var weapon_key := 0
+	if weapon_shape > 0:
+		var weapon_gfx: int = ((weapon_shape - 1) << 9) | (motion_data[0] << 3) | direction_index
+		weapon_key = (gender << 22) | ((weapon_gfx & 0x1FFFF) << 5) | frame_index
+		_draw_sprite_frame(actor_resource.frame("weapon", weapon_key | (1 << 23)), start_x, start_y, 0.5)
 	_draw_sprite_frame(body, start_x, start_y, 1.0)
 	var layer: Dictionary = actor_resource.frame("hero", body_key | (1 << 24))
 	_draw_sprite_frame(layer, start_x, start_y, 1.0)
+	var helmet_shape := _wear_shape(wear, 2)
+	if helmet_shape > 0:
+		var helmet_gfx: int = ((helmet_shape - 1) << 9) | (motion_data[0] << 3) | direction_index
+		var helmet_key: int = (gender << 22) | ((helmet_gfx & 0x1FFFF) << 5) | frame_index
+		_draw_sprite_frame(actor_resource.frame("helmet", helmet_key), start_x, start_y, 1.0)
+	else:
+		var hair: int = desp.get("hair", 0)
+		if hair > 0:
+			var hair_gfx: int = ((hair - 1) << 9) | (motion_data[0] << 3) | direction_index
+			var hair_key: int = (gender << 22) | ((hair_gfx & 0x1FFFF) << 5) | frame_index
+			_draw_sprite_frame(actor_resource.frame("hair", hair_key), start_x, start_y, 1.0)
+	if weapon_key != 0:
+		_draw_sprite_frame(actor_resource.frame("weapon", weapon_key), start_x, start_y, 1.0)
 	return not body.is_empty()
+
+
+func _wear_shape(wear: Dictionary, location: int) -> int:
+	var item: Dictionary = wear.get(location, {})
+	return actor_resource.item_shape(item.get("itemID", 0))
+
+
+func _hero_motion(action_type: int) -> PackedInt32Array:
+	match action_type:
+		3, 4, 5: return PackedInt32Array([21, 6])
+		7: return PackedInt32Array([8, 6])
+		9: return PackedInt32Array([2, 6])
+		11: return PackedInt32Array([15, 3])
+		12: return PackedInt32Array([18, 10])
+		13: return PackedInt32Array([19, 10])
+		_: return PackedInt32Array([0, 4])
 
 
 func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int) -> bool:

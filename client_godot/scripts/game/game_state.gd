@@ -16,6 +16,7 @@ var player_gold: int = 0
 var player_x: int = 0
 var player_y: int = 0
 var player_direction: int = 0
+var player_action_type: int = 2
 var player_hp: int = 0
 var player_hp_max: int = 0
 var player_mp: int = 0
@@ -23,6 +24,7 @@ var player_mp_max: int = 0
 var player_map_uid: int = 0
 var player_map_id: int = 0
 var player_map_name: String = ""
+var player_desp: Dictionary = {}
 
 # Combat stats
 var ac_min: int = 0
@@ -112,7 +114,8 @@ func start_game_scene(scene_data: Dictionary) -> void:
 	player_x = scene_data.get("x", player_x)
 	player_y = scene_data.get("y", player_y)
 	player_direction = scene_data.get("direction", player_direction)
-	wear = scene_data.get("desp", {}).get("wear", wear)
+	player_desp = scene_data.get("desp", player_desp)
+	wear = player_desp.get("wear", wear)
 	_center_camera_on_player()
 	state_changed.emit()
 
