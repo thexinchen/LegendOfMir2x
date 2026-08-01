@@ -311,26 +311,51 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	var data := Protocol.decode_sm_corecord(payload)
 	var uid: int = data.get("uid", 0)
 	var action: Dictionary = data.get("action", {})
-	var creature := {
-		"uid": uid,
-		"x": action.get("x", 0),
-		"y": action.get("y", 0),
-		"type": 0,
-		"name": "",
-	}
-	# Determine type from union data
+	
+	# Determine creature type from UID type bits
+	# UID type is in bits 59-62 (4 bits at offset 59)
+	# UID_NPC=3, UID_MON=4, UID_PLY=5
+	var uid_type: int = (uid >> 59) & 0xF
+	var c_type: int = 0
+	match uid_type:
+		3: c_type = 3  # NPC
+		4: c_type = 1  # Monster
+		5: c_type = 2  # Player
+		_: c_type = 0
+	
+	var creature: Dictionary = game_state.get_creature(uid)
+	if creature.is_empty():
+		creature = {
+			"uid": uid,
+			"x": action.get("x", 0),
+			"y": action.get("y", 0),
+			"type": c_type,
+			"name": "",
+			"action_type": action.get("type", 0),
+			"direction": action.get("direction", 0),
+		}
+	else:
+		creature["x"] = action.get("x", 0)
+		creature["y"] = action.get("y", 0)
+		creature["type"] = c_type
+		creature["action_type"] = action.get("type", 0)
+		creature["direction"] = action.get("direction", 0)
+	
+	# Parse union data for additional info
 	var union_data: PackedByteArray = data.get("union_data", PackedByteArray())
-	if union_data.size() >= 8:
-		# Check if it looks like a monster (MonsterID at offset 0, 4 bytes)
-		# or player (gender:1, job:3, Level:32)
-		# or NPC (NPCID, 4 bytes)
-		# We can't reliably distinguish without more context, default to monster
-		creature["type"] = 1
-		creature["monster_id"] = union_data.decode_u32(0)
+	if union_data.size() >= 4:
+		match c_type:
+			1:  # Monster: MonsterID (u32)
+				creature["monster_id"] = union_data.decode_u32(0)
+			2:  # Player: gender:1, job:3, Level:32
+				var gj: int = union_data[0]
+				creature["gender"] = gj & 1
+				creature["job"] = (gj >> 1) & 7
+				creature["level"] = union_data.decode_u32(4) if union_data.size() >= 8 else 0
+			3:  # NPC: NPCID (u32)
+				creature["npc_id"] = union_data.decode_u32(0)
 	
 	game_state.update_creature(uid, creature)
-	# TODO: Query name - disabled until format verified
-	# NetworkClient.send_query_player_name(uid)
 
 
 func _handle_health(payload: PackedByteArray) -> void:
