@@ -1,6 +1,8 @@
 extends Node
 
 const Protocol = preload("res://scripts/network/protocol.gd")
+const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const CombatCalculatorScript = preload("res://scripts/game/combat_calculator.gd")
 
 var _main: Control
 var _online := false
@@ -49,6 +51,13 @@ func _verify() -> void:
 		return
 	if GameState.player_hp_max <= 0 or GameState.inventory.size() != 6 or GameState.belt.size() != 6:
 		_fail("incomplete state hp=%d inventory=%d belt=%d" % [GameState.player_hp_max, GameState.inventory.size(), GameState.belt.size()], 6)
+		return
+	var resources: RefCounted = ActorResourceScript.new()
+	resources.configure_default()
+	var combat := CombatCalculatorScript.calculate(GameState, resources)
+	var control_panel: Control = _main.get_node("ControlPanel")
+	if control_panel.get_node("%ACValue").text != "%d-%d" % [combat.ac[0], combat.ac[1]] or control_panel.get_node("%DCValue").text != "%d-%d" % [combat.dc[0], combat.dc[1]]:
+		_fail("HUD combat values do not match equipped state", 8)
 		return
 	var panel_name := OS.get_environment("MIR2X_TEST_PANEL")
 	if panel_name in ["inventory", "player_state", "skill"]:

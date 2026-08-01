@@ -1,6 +1,7 @@
 extends Control
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const CombatCalculatorScript = preload("res://scripts/game/combat_calculator.gd")
 const AC_TEXTURE := preload("res://assets/ui/game/control_panel/00000046.png")
 const DC_TEXTURE := preload("res://assets/ui/game/control_panel/00000047.png")
 const MA_TEXTURE := preload("res://assets/ui/game/control_panel/00000048.png")
@@ -33,6 +34,7 @@ var _expanded := false
 var _ac_magic := false
 var _dc_magic := false
 var _resources: RefCounted = ActorResourceScript.new()
+var _combat: Dictionary = {}
 
 # Chat log display
 var _chat_lines: Array = []
@@ -64,7 +66,6 @@ func _process(_delta: float) -> void:
 	if game_state.player_mp_max > 0:
 		mana_bar.value = float(game_state.player_mp) / float(game_state.player_mp_max) * 100.0
 	exp_bar.value = game_state.level_ratio() * 100.0
-	load_bar.value = game_state.inventory_ratio() * 100.0
 	face_health.size.x = 82.0 * (float(game_state.player_hp) / float(game_state.player_hp_max) if game_state.player_hp_max > 0 else 0.0)
 	# Update level
 	level_label.text = str(game_state.player_level)
@@ -73,9 +74,12 @@ func _process(_delta: float) -> void:
 
 
 func _refresh_static() -> void:
+	_combat = CombatCalculatorScript.calculate(game_state, _resources)
 	_update_ac_dc()
 	exp_bar.value = game_state.level_ratio() * 100.0
-	load_bar.value = game_state.inventory_ratio() * 100.0
+	var max_load: int = _combat.get("load", PackedInt32Array([0, 0, 0]))[2]
+	var current_load := CombatCalculatorScript.inventory_load(game_state, _resources)
+	load_bar.value = clampf(float(current_load) / float(max_load) * 100.0, 0.0, 100.0) if max_load > 0 else 0.0
 	face_health.size.x = 82.0 * (float(game_state.player_hp) / float(game_state.player_hp_max) if game_state.player_hp_max > 0 else 0.0)
 	var job_index := 0 if (game_state.player_job & 1) != 0 else (1 if (game_state.player_job & 2) != 0 else 2)
 	var face_id := 0x02000000 + job_index * 2 + (0 if game_state.player_gender else 1)
@@ -181,9 +185,12 @@ func _on_dc_pressed() -> void:
 func _update_ac_dc() -> void:
 	ac_icon.texture = MA_TEXTURE if _ac_magic else AC_TEXTURE
 	dc_icon.texture = MC_TEXTURE if _dc_magic else DC_TEXTURE
-	# Matches the current C++ ProcessRun::getACNum() values.
-	ac_value.text = "3-4" if _ac_magic else "1-2"
-	dc_value.text = "4-5" if _dc_magic else "2-3"
+	if _combat.is_empty():
+		return
+	var ac_pair: PackedInt32Array = _combat.mac if _ac_magic else _combat.ac
+	var dc_pair: PackedInt32Array = _combat.mc if _dc_magic else _combat.dc
+	ac_value.text = "%d-%d" % [ac_pair[0], ac_pair[1]]
+	dc_value.text = "%d-%d" % [dc_pair[0], dc_pair[1]]
 
 
 func add_log(text: String, log_type: int = 0) -> void:

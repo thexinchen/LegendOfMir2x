@@ -598,6 +598,9 @@ func _handle_equip_wear(payload: PackedByteArray) -> void:
 	var uid: int = data.get("uid", 0)
 	if uid == game_state.player_uid:
 		game_state.wear[data.get("wltype", 0)] = data.get("item", {})
+		var equipped: Dictionary = data.get("item", {})
+		if game_state.grabbed_item.get("itemID", 0) == equipped.get("itemID", 0) and game_state.grabbed_item.get("seqID", 0) == equipped.get("seqID", 0):
+			game_state.grabbed_item = {}
 		game_state.state_changed.emit()
 	elif not game_state.get_creature(uid).is_empty():
 		var creature: Dictionary = game_state.get_creature(uid)
@@ -614,6 +617,8 @@ func _handle_grab_wear(payload: PackedByteArray) -> void:
 	var data := reader.read_sd_grab_wear()
 	if _reader_ok(reader, "SM_GRABWEAR"):
 		game_state.wear.erase(data.get("wltype", 0))
+		if not game_state.grabbed_item.is_empty():
+			game_state.inventory.append(game_state.grabbed_item)
 		game_state.grabbed_item = data.get("item", {})
 		game_state.state_changed.emit()
 

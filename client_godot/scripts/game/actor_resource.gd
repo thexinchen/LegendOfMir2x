@@ -7,6 +7,7 @@ var base_path: String = ""
 var offsets: Dictionary = {}
 var monster_meta: Dictionary = {}
 var item_meta: Dictionary = {}
+var item_attributes: Dictionary = {}
 var item_names: Dictionary = {}
 var item_types: Dictionary = {}
 var skill_meta: Dictionary = {}
@@ -85,6 +86,14 @@ func item_is_packable(item_id: int) -> bool:
 	return bool(item_meta.get(item_id, PackedInt32Array([0, 0, 0]))[2])
 
 
+func item_attribute(item_id: int) -> Dictionary:
+	return item_attributes.get(item_id, {})
+
+
+func item_weight(item_id: int) -> int:
+	return item_attribute(item_id).get("weight", 0)
+
+
 func item_name(item_id: int) -> String:
 	return item_names.get(item_id, "物品 %d" % item_id)
 
@@ -157,7 +166,8 @@ func _load_item_meta() -> void:
 	var file := FileAccess.open("%s/sprites/item.m2xmeta" % base_path, FileAccess.READ)
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
-	if file.get_32() != 1:
+	var version := file.get_32()
+	if version != 1 and version != 2:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -166,6 +176,41 @@ func _load_item_meta() -> void:
 		var flags := file.get_16()
 		var package_gfx_id := file.get_32()
 		item_meta[item_id] = PackedInt32Array([shape, package_gfx_id, flags])
+		if version == 2:
+			item_attributes[item_id] = {
+				"weight": _read_s32(file),
+				"dc": _read_pair(file),
+				"mc": _read_pair(file),
+				"sc": _read_pair(file),
+				"ac": _read_pair(file),
+				"mac": _read_pair(file),
+				"dc_hit": _read_s32(file),
+				"mc_hit": _read_s32(file),
+				"dc_dodge": _read_s32(file),
+				"mc_dodge": _read_s32(file),
+				"speed": _read_s32(file),
+				"comfort": _read_s32(file),
+				"luck_curse": _read_s32(file),
+				"dc_elem": _read_values(file, 7),
+				"ac_elem": _read_values(file, 7),
+				"load": _read_values(file, 3),
+			}
+
+
+func _read_s32(file: FileAccess) -> int:
+	var value := file.get_32()
+	return value - 0x100000000 if value >= 0x80000000 else value
+
+
+func _read_pair(file: FileAccess) -> PackedInt32Array:
+	return PackedInt32Array([_read_s32(file), _read_s32(file)])
+
+
+func _read_values(file: FileAccess, count: int) -> PackedInt32Array:
+	var result := PackedInt32Array()
+	for _index in range(count):
+		result.append(_read_s32(file))
+	return result
 
 
 func _load_item_names() -> void:

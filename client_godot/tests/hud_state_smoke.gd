@@ -1,6 +1,7 @@
 extends Node
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const CombatCalculatorScript = preload("res://scripts/game/combat_calculator.gd")
 
 
 func _ready() -> void:
@@ -15,7 +16,13 @@ func _ready() -> void:
 	GameState.player_mp = 50
 	GameState.player_mp_max = 100
 	GameState.update_exp(1100)
-	GameState.inventory.resize(25)
+	var weighted_item := 0
+	for item_id in resources.item_attributes:
+		if resources.item_weight(item_id) > 0:
+			weighted_item = item_id
+			break
+	GameState.inventory = [{"itemID": weighted_item, "seqID": 1, "count": 1, "extAttrList": {}}]
+	GameState.wear = {}
 	GameState.buff_list = [resources.buff_meta.keys()[0]]
 	var panel: Control = load("res://scenes/game/control_panel.tscn").instantiate()
 	add_child(panel)
@@ -29,9 +36,14 @@ func _ready() -> void:
 	if absf(panel.get_node("%Experience").value - GameState.level_ratio() * 100.0) > 0.01:
 		_fail("experience meter mismatch: panel=%s expected=%s" % [panel.get_node("%Experience").value, GameState.level_ratio() * 100.0])
 		return
+	var combat := CombatCalculatorScript.calculate(GameState, resources)
+	var expected_load := float(resources.item_weight(weighted_item)) / float(combat.load[2]) * 100.0
+	if absf(panel.get_node("%Load").value - expected_load) > 0.01:
+		_fail("load meter mismatch: panel=%s expected=%s" % [panel.get_node("%Load").value, expected_load])
+		return
 	panel.call("_on_ac_pressed")
 	panel.call("_on_dc_pressed")
-	if panel.get_node("%ACValue").text != "3-4" or panel.get_node("%DCValue").text != "4-5":
+	if panel.get_node("%ACValue").text != "%d-%d" % [combat.mac[0], combat.mac[1]] or panel.get_node("%DCValue").text != "%d-%d" % [combat.mc[0], combat.mc[1]]:
 		_fail("AC/MA or DC/MC toggle mismatch")
 		return
 	print("HUD STATE PASS: face, HP, experience, load, buff and combat toggles")

@@ -78,6 +78,25 @@ struct ItemMetaRecord
     uint16_t shape = 0;
     uint16_t reserved = 0;
     uint32_t pkgGfxID = 0;
+
+    int32_t weight = 0;
+    int32_t dc[2] {};
+    int32_t mc[2] {};
+    int32_t sc[2] {};
+    int32_t ac[2] {};
+    int32_t mac[2] {};
+
+    int32_t dcHit = 0;
+    int32_t mcHit = 0;
+    int32_t dcDodge = 0;
+    int32_t mcDodge = 0;
+    int32_t speed = 0;
+    int32_t comfort = 0;
+    int32_t luckCurse = 0;
+
+    int32_t dcElem[7] {};
+    int32_t acElem[7] {};
+    int32_t load[3] {};
 };
 
 struct SkillMetaRecord
@@ -119,7 +138,7 @@ static_assert(sizeof(ObjectRecord) == 12);
 static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
 static_assert(sizeof(MonsterMetaRecord) == 8);
-static_assert(sizeof(ItemMetaRecord) == 12);
+static_assert(sizeof(ItemMetaRecord) == 152);
 static_assert(sizeof(SkillMetaRecord) == 12);
 static_assert(sizeof(BuffMetaRecord) == 12);
 static_assert(sizeof(MagicEffectMetaRecord) == 22);
@@ -326,18 +345,48 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
         for(uint32_t itemID = 1; itemID < DBCOM_ITEMENDID(); ++itemID){
             const auto &record = DBCOM_ITEMRECORD(itemID);
             if(record.name){
-                metaList.push_back({itemID, check_cast<uint16_t>(record.shape), to_u16(record.packable()), check_cast<uint32_t>(record.pkgGfxID)});
+                metaList.push_back({
+                    .itemID = itemID,
+                    .shape = check_cast<uint16_t>(record.shape),
+                    .reserved = to_u16(record.packable()),
+                    .pkgGfxID = check_cast<uint32_t>(record.pkgGfxID),
+                    .weight = record.weight,
+                    .dc = {record.equip.dc[0], record.equip.dc[1]},
+                    .mc = {record.equip.mc[0], record.equip.mc[1]},
+                    .sc = {record.equip.sc[0], record.equip.sc[1]},
+                    .ac = {record.equip.ac[0], record.equip.ac[1]},
+                    .mac = {record.equip.mac[0], record.equip.mac[1]},
+                    .dcHit = record.equip.dcHit,
+                    .mcHit = record.equip.mcHit,
+                    .dcDodge = record.equip.dcDodge,
+                    .mcDodge = record.equip.mcDodge,
+                    .speed = record.equip.speed,
+                    .comfort = record.equip.comfort,
+                    .luckCurse = record.equip.luckCurse,
+                    .dcElem = {
+                        record.equip.dcElem.fire, record.equip.dcElem.ice, record.equip.dcElem.light,
+                        record.equip.dcElem.wind, record.equip.dcElem.holy, record.equip.dcElem.dark,
+                        record.equip.dcElem.phantom,
+                    },
+                    .acElem = {
+                        record.equip.acElem.fire, record.equip.acElem.ice, record.equip.acElem.light,
+                        record.equip.acElem.wind, record.equip.acElem.holy, record.equip.acElem.dark,
+                        record.equip.acElem.phantom,
+                    },
+                    .load = {record.equip.load.body, record.equip.load.weapon, record.equip.load.inventory},
+                });
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "item.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 2, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
 
+        const SpriteHeader textMetaHeader {.spriteCount = to_u32(metaList.size())};
         std::ofstream nameFile(outputDir / "sprites" / "item_name.m2xmeta", std::ios::binary);
-        nameFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
+        nameFile.write(reinterpret_cast<const char *>(&textMetaHeader), sizeof(textMetaHeader));
         std::ofstream typeFile(outputDir / "sprites" / "item_type.m2xmeta", std::ios::binary);
-        typeFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
+        typeFile.write(reinterpret_cast<const char *>(&textMetaHeader), sizeof(textMetaHeader));
         for(const auto &meta: metaList){
             const std::string name(to_cstr(DBCOM_ITEMRECORD(meta.itemID).name));
             const auto length = check_cast<uint16_t>(name.size());
