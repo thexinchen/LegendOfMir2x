@@ -709,9 +709,65 @@ func _test_monster_transform_actions(main: Control, resources: RefCounted) -> bo
 	if creature.get("action_type", 0) != 10 or creature.get("monster_stand_mode", true) or sequence.motion != transform.hidden_transform[0] or sequence.begin != transform.hidden_transform[1] or sequence.reverse != transform.hidden_reverse or sequence.focusable:
 		_fail("ACTION_TRANSF did not enter the hidden form: creature=%s sequence=%s" % [creature, sequence])
 		return false
+	main.call("_finish_creature_action", uid, 10, creature.action_started_ms)
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 7, "speed": 100, "direction": 5, "x": 40, "y": 41,
+	}))
+	creature = GameState.get_creature(uid)
+	sequence = renderer.call("_monster_render_sequence", creature)
+	if creature.get("action_type", 0) != 10 or not creature.get("monster_stand_mode", false) or creature.get("monster_pending_action", {}).get("type", 0) != 7 or sequence.motion != transform.active_transform[0]:
+		_fail("hidden monster attack did not queue transformation before attack: %s" % creature)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 2, "speed": 100, "direction": 5, "x": 40, "y": 41, "extParam": ext_hidden,
+	}))
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 10 or creature.get("monster_stand_mode", true) or creature.has("monster_pending_action"):
+		_fail("new stand request did not cancel the queued monster attack: %s" % creature)
+		return false
+	main.call("_finish_creature_action", uid, 10, creature.action_started_ms)
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 7, "speed": 100, "direction": 5, "x": 40, "y": 41,
+	}))
+	creature = GameState.get_creature(uid)
+	if creature.get("monster_pending_action", {}).get("type", 0) != 7:
+		_fail("hidden monster attack was not queued after interruption recovery: %s" % creature)
+		return false
+	main.call("_finish_creature_action", uid, 10, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 7 or creature.has("monster_pending_action"):
+		_fail("queued monster attack did not start after transformation: %s" % creature)
+		return false
+	var reveal_on_hit_id := 0
+	for monster_id_value in resources.monster_meta:
+		if resources.monster_transform(int(monster_id_value)).get("reveal_on_hit", false):
+			reveal_on_hit_id = int(monster_id_value)
+			break
+	if reveal_on_hit_id == 0:
+		_fail("reveal-on-hit monster fixture unavailable")
+		return false
+	var hit_meta: PackedInt32Array = runtime_resources.monster_meta[reveal_on_hit_id]
+	var hit_spawn_seff: int = hit_meta[2]
+	hit_meta[2] = 0xFFFFFFFF
+	runtime_resources.monster_meta[reveal_on_hit_id] = hit_meta
+	var hit_uid: int = (4 << 59) | (reveal_on_hit_id << 35) | 706
+	GameState.update_creature(hit_uid, {
+		"uid": hit_uid, "type": 1, "monster_id": reveal_on_hit_id, "x": 42, "y": 43,
+		"direction": 1, "action_type": 2, "action_started_ms": Time.get_ticks_msec(), "monster_stand_mode": false,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(hit_uid, 202, {
+		"type": 11, "speed": 100, "direction": 1, "x": 42, "y": 43,
+	}))
+	var hit_creature: Dictionary = GameState.get_creature(hit_uid)
+	if hit_creature.get("action_type", 0) != 10 or hit_creature.get("monster_pending_action", {}).get("type", 0) != 11:
+		_fail("EvilCentipede hit did not queue transformation before reaction: %s" % hit_creature)
+		return false
 	meta[2] = spawn_seff
 	runtime_resources.monster_meta[monster_id] = meta
+	hit_meta[2] = hit_spawn_seff
+	runtime_resources.monster_meta[reveal_on_hit_id] = hit_meta
 	GameState.remove_creature(uid)
+	GameState.remove_creature(hit_uid)
 	return true
 
 

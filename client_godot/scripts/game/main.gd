@@ -1150,6 +1150,7 @@ func _configure_monster_form(creature: Dictionary, action_type: int, stored_acti
 	if transform.is_empty():
 		return stored_action_type
 	var current_mode := bool(creature.get("monster_stand_mode", false))
+	creature.erase("monster_pending_action")
 	var requested_mode := current_mode
 	match action_type:
 		1:
@@ -1160,18 +1161,43 @@ func _configure_monster_form(creature: Dictionary, action_type: int, stored_acti
 			requested_mode = true
 	if action_type == 2 and not constructor_state and requested_mode != current_mode:
 		stored_action_type = 10
+	elif not constructor_state and not current_mode and (action_type == 7 or (action_type == 11 and transform.reveal_on_hit)):
+		creature["monster_pending_action"] = {
+			"type": stored_action_type,
+			"speed": action.get("speed", 100),
+			"magic_id": action.get("magicID", 0),
+			"action": action.duplicate(true),
+		}
+		stored_action_type = 10
 	creature["monster_stand_mode"] = requested_mode
 	return stored_action_type
 
 
 func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay: float) -> void:
 	get_tree().create_timer(delay).timeout.connect(func() -> void:
-		var creature: Dictionary = game_state.get_creature(uid)
-		if not creature.is_empty() and creature.get("action_type", 0) == action_type and creature.get("action_started_ms", -1) == started_ms:
-			creature["action_type"] = 2
-			creature["action_started_ms"] = Time.get_ticks_msec()
-			game_state.update_creature(uid, creature)
+		_finish_creature_action(uid, action_type, started_ms)
 	)
+
+
+func _finish_creature_action(uid: int, action_type: int, started_ms: int) -> void:
+	var creature: Dictionary = game_state.get_creature(uid)
+	if creature.is_empty() or creature.get("action_type", 0) != action_type or creature.get("action_started_ms", -1) != started_ms:
+		return
+	var pending: Dictionary = creature.get("monster_pending_action", {})
+	creature.erase("monster_pending_action")
+	creature["action_started_ms"] = Time.get_ticks_msec()
+	if action_type == 10 and not pending.is_empty():
+		creature["action_type"] = pending.get("type", 2)
+		creature["action_speed"] = pending.get("speed", 100)
+		creature["action_magic_id"] = pending.get("magic_id", 0)
+		game_state.update_creature(uid, creature)
+		_play_action_seff(uid, pending.get("action", {}), creature)
+		var duration := _creature_action_duration(creature.action_type, creature.action_speed, creature, creature.action_magic_id)
+		if duration > 0.0:
+			_schedule_creature_idle(uid, creature.action_type, creature.action_started_ms, duration)
+		return
+	creature["action_type"] = 2
+	game_state.update_creature(uid, creature)
 
 
 func _handle_corecord(payload: PackedByteArray) -> void:

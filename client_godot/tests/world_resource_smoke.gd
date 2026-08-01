@@ -43,17 +43,19 @@ func _ready() -> void:
 		return
 	var transform_count := 0
 	var hidden_focusable_count := 0
+	var reveal_on_hit_count := 0
 	for monster_id_value in actors.monster_meta:
 		var transform: Dictionary = actors.monster_transform(int(monster_id_value))
 		if transform.is_empty():
 			continue
 		transform_count += 1
 		hidden_focusable_count += 1 if transform.hidden_focusable else 0
+		reveal_on_hit_count += 1 if transform.reveal_on_hit else 0
 		if transform.hidden_stand[2] <= 0 or transform.active_transform[2] <= 0 or transform.hidden_transform[2] <= 0:
 			_fail("monster meta v5 contains an empty transformation sequence")
 			return
-	if transform_count != 10 or hidden_focusable_count != 1:
-		_fail("monster meta v5 transformation rules mismatch: transform=%d hidden_focusable=%d" % [transform_count, hidden_focusable_count])
+	if transform_count != 10 or hidden_focusable_count != 1 or reveal_on_hit_count != 1:
+		_fail("monster meta v5 transformation rules mismatch: transform=%d hidden_focusable=%d reveal_on_hit=%d" % [transform_count, hidden_focusable_count, reveal_on_hit_count])
 		return
 	var fade_monster_count := 0
 	var persistent_corpse_count := 0

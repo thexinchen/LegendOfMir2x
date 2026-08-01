@@ -98,6 +98,7 @@ func monster_transform(monster_id: int) -> Dictionary:
 		"hidden_reverse": bool(flags & 2),
 		"hidden_focusable": bool(flags & 4),
 		"fixed_direction": bool(flags & 8),
+		"reveal_on_hit": bool(flags & 16),
 	}
 
 

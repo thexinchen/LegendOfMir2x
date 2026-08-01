@@ -199,7 +199,8 @@ static MonsterMetaRecord monsterMetaRecord(uint32_t monsterID)
     };
 
     // transfFlags: bit 0/1 reverse active/hidden transform, bit 2 hidden
-    // form can be focused, bit 3 transformation uses DIR_BEGIN.
+    // form can be focused, bit 3 transformation uses DIR_BEGIN, bit 4
+    // ACTION_HITTED forces an active-form transformation.
     const auto setTransf = [&result](uint16_t hiddenLook, int standMotion, int standBegin, int standCount,
                                     int activeMotion, int activeBegin, int activeCount,
                                     int hiddenMotion, int hiddenBegin, int hiddenCount, int flags)
@@ -222,7 +223,7 @@ static MonsterMetaRecord monsterMetaRecord(uint32_t monsterID)
         setTransf(0, 8, 7, 1, 8, 7, 8, 8, 0, 8, 0X09);
     }
     else if(name == u8"触龙神"){
-        setTransf(0, 8, 0, 1, 8, 0, 10, 8, 9, 10, 0X0A);
+        setTransf(0, 8, 0, 1, 8, 0, 10, 8, 9, 10, 0X1A);
     }
     else if(name == u8"僵尸_1" || name == u8"僵尸_2" || name == u8"腐僵"){
         setTransf(0, 4, 9, 1, 8, 0, 10, 4, 0, 10, 0X00);
