@@ -45,6 +45,8 @@ var _next_strike := false
 var _move_path: Array[Vector2i] = []
 var _move_step_timer := 0.0
 var _chase_target_uid := 0
+var _pickup_target := Vector2i(-1, -1)
+var _pickup_action_timer := -1.0
 
 # C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame).
 # Keep a small network margin before sending the next one-hop action.
@@ -78,6 +80,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_process_pickup_action(delta)
 	_process_movement(delta)
 	# Update camera
 	game_state.scroll_camera()
@@ -161,10 +164,7 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 		if not found_creature:
 			var ground_key := "%d,%d" % [grid.x, grid.y]
 			if game_state.ground_items.has(ground_key):
-				if grid == Vector2i(game_state.player_x, game_state.player_y):
-					_request_pickup()
-				else:
-					_start_move_to(grid)
+				_start_pickup_at(grid)
 
 
 func _start_move_to(destination: Vector2i) -> void:
@@ -178,10 +178,23 @@ func _start_chase(target_uid: int) -> void:
 	_plan_chase_path()
 
 
+func _start_pickup_at(target: Vector2i) -> void:
+	_cancel_movement()
+	_pickup_target = target
+	if target == Vector2i(game_state.player_x, game_state.player_y):
+		_pickup_target = Vector2i(-1, -1)
+		_begin_pickup_action()
+		return
+	_move_path = _find_path([target])
+	if _move_path.is_empty():
+		_pickup_target = Vector2i(-1, -1)
+
+
 func _cancel_movement() -> void:
 	_move_path.clear()
 	_move_step_timer = 0.0
 	_chase_target_uid = 0
+	_pickup_target = Vector2i(-1, -1)
 
 
 func _plan_chase_path() -> void:
@@ -217,7 +230,18 @@ func _find_path(goals: Array[Vector2i]) -> Array[Vector2i]:
 
 
 func _process_movement(delta: float) -> void:
+	if _pickup_action_timer >= 0.0:
+		return
 	if _move_path.is_empty():
+		if _pickup_target.x >= 0:
+			_move_step_timer -= delta
+			if _move_step_timer > 0.0:
+				return
+			var target := _pickup_target
+			_pickup_target = Vector2i(-1, -1)
+			if target == Vector2i(game_state.player_x, game_state.player_y):
+				_begin_pickup_action()
+			return
 		if _chase_target_uid == 0:
 			return
 		_move_step_timer -= delta
@@ -312,6 +336,34 @@ func _center_hero() -> void:
 
 func _request_pickup() -> void:
 	NetworkClient.send_pickup(game_state.player_x, game_state.player_y, game_state.player_map_uid)
+
+
+func _begin_pickup_action() -> void:
+	if _pickup_action_timer >= 0.0:
+		return
+	var action := {
+		"type": 8,
+		"speed": 100,
+		"direction": game_state.player_direction,
+		"x": game_state.player_x,
+		"y": game_state.player_y,
+	}
+	NetworkClient.send_action(Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action))
+	game_state.player_action_type = 8
+	game_state.state_changed.emit()
+	_pickup_action_timer = 0.2
+
+
+func _process_pickup_action(delta: float) -> void:
+	if _pickup_action_timer < 0.0:
+		return
+	_pickup_action_timer -= delta
+	if _pickup_action_timer > 0.0:
+		return
+	_pickup_action_timer = -1.0
+	NetworkClient.send_pickup(game_state.player_x, game_state.player_y, game_state.player_map_uid)
+	game_state.player_action_type = 2
+	game_state.state_changed.emit()
 
 
 func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
@@ -475,6 +527,7 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 		push_error("SM_STARTGAMESCENE identity mismatch")
 		return
 	_cancel_movement()
+	_pickup_action_timer = -1.0
 	game_state.start_game_scene(data)
 	world_renderer.load_map(game_state.player_map_id)
 	_center_hero()
@@ -531,6 +584,17 @@ func _handle_action(payload: PackedByteArray) -> void:
 			if direction >= 1:
 				creature["direction"] = direction
 		game_state.update_creature(uid, creature)
+		if action_type == 8:
+			_schedule_creature_idle(uid, action_type, 0.2)
+
+
+func _schedule_creature_idle(uid: int, action_type: int, delay: float) -> void:
+	get_tree().create_timer(delay).timeout.connect(func() -> void:
+		var creature: Dictionary = game_state.get_creature(uid)
+		if not creature.is_empty() and creature.get("action_type", 0) == action_type:
+			creature["action_type"] = 2
+			game_state.update_creature(uid, creature)
+	)
 
 
 func _handle_corecord(payload: PackedByteArray) -> void:
@@ -788,6 +852,7 @@ func _handle_notify_dead(payload: PackedByteArray) -> void:
 		return
 	if uid == game_state.player_uid:
 		_cancel_movement()
+		_pickup_action_timer = -1.0
 		game_state.player_action_type = 13
 		game_state.add_chat_log("你已死亡", 3)
 		game_state.state_changed.emit()

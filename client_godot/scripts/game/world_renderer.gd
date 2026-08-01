@@ -420,6 +420,7 @@ func _hero_motion(action_type: int) -> PackedInt32Array:
 	match action_type:
 		3, 4, 5: return PackedInt32Array([21, 6])
 		7: return PackedInt32Array([8, 6])
+		8: return PackedInt32Array([8, 2])
 		9: return PackedInt32Array([2, 6])
 		11: return PackedInt32Array([15, 3])
 		12: return PackedInt32Array([18, 10])

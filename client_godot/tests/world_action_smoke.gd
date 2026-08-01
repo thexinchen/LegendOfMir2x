@@ -51,7 +51,9 @@ func _ready() -> void:
 		return
 	if not _test_chase_retry(main):
 		return
-	print("WORLD ACTION PASS: attack, one-hop pathing, operation feedback, death and map filtering")
+	if not _test_pickup_action(main):
+		return
+	print("WORLD ACTION PASS: attack/chase, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
 
 
@@ -130,6 +132,23 @@ func _test_chase_retry(main: Control) -> bool:
 	main.call("_process_movement", 1.0)
 	if main.get("_chase_target_uid") != 0 or main.get("_next_strike"):
 		_fail("adjacent chase did not attack and consume next strike")
+		return false
+	return true
+
+
+func _test_pickup_action(main: Control) -> bool:
+	GameState.player_action_type = 2
+	main.call("_begin_pickup_action")
+	if GameState.player_action_type != 8 or float(main.get("_pickup_action_timer")) <= 0.0:
+		_fail("pickup did not enter delayed action state")
+		return false
+	var pickup_motion: PackedInt32Array = main.get_node("WorldRenderer").call("_hero_motion", 8)
+	if pickup_motion != PackedInt32Array([8, 2]):
+		_fail("pickup did not use C++ cut/stand combined timing")
+		return false
+	main.call("_process_pickup_action", 0.21)
+	if GameState.player_action_type != 2 or float(main.get("_pickup_action_timer")) >= 0.0:
+		_fail("pickup action did not finish and return to stand")
 		return false
 	return true
 
