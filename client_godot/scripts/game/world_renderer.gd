@@ -75,7 +75,26 @@ func _draw() -> void:
 			var color: Color = _tile_colors[color_idx % _tile_colors.size()]
 			draw_rect(Rect2(sx, sy, GRID_XP, GRID_YP), color)
 	
-	# 2. Draw creatures sorted by Y (row order, same as C++)
+	# 2. Draw strike grids (red flash for 1 second)
+	var now := Time.get_ticks_msec()
+	var to_remove: Array = []
+	for grid_key in game_state.strike_grids:
+		var ts: int = game_state.strike_grids[grid_key]
+		var age := now - ts
+		if age > 1000:
+			to_remove.append(grid_key)
+			continue
+		var parts := grid_key.split(",")
+		var gx := int(parts[0])
+		var gy := int(parts[1])
+		var sx := gx * GRID_XP - view_x
+		var sy := gy * GRID_YP - view_y
+		var alpha := 1.0 - float(age) / 1000.0
+		draw_rect(Rect2(sx, sy, GRID_XP, GRID_YP), Color(1, 0.2, 0.2, alpha * 0.5))
+	for k in to_remove:
+		game_state.strike_grids.erase(k)
+	
+	# 3. Draw creatures sorted by Y (row order, same as C++)
 	var creatures_to_draw: Array = []
 	for uid in game_state.creatures:
 		var c: Dictionary = game_state.creatures[uid]

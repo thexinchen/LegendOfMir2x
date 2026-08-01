@@ -57,6 +57,9 @@ var magic_keys: Dictionary = {}  # magicID -> key char
 var view_x: float = 0.0
 var view_y: float = 0.0
 
+# Strike grids (recently attacked grid cells, for red flash overlay)
+var strike_grids: Dictionary = {}  # "x,y" -> timestamp_msec
+
 # System constants
 const GRID_XP := 48
 const GRID_YP := 32

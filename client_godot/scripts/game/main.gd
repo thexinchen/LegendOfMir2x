@@ -232,7 +232,9 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_BELT:
 			_handle_belt(payload)
 		NetworkClient.SM_STRIKEGRID:
-			pass  # TODO: flash grid red
+			var sg := Protocol.decode_sm_strike_grid(payload)
+			# Flash grid red briefly (C++ stores timestamp, draws red overlay for 1s)
+			game_state.strike_grids["%d,%d" % [sg.get("x", 0), sg.get("y", 0)]] = Time.get_ticks_msec()
 		NetworkClient.SM_CASTMAGIC:
 			pass  # TODO: render magic effect
 		NetworkClient.SM_COREORD:
