@@ -25,15 +25,22 @@ offset_left = 23.0
 offset_top = 25.0
 offset_right = 260.0
 offset_bottom = 177.0
+clip_contents = true
 
 [node name="Slider" type="TextureRect" parent="."]
-offset_left = 266.0
-offset_top = 25.0
-offset_right = 282.0
-offset_bottom = 177.0
+offset_left = 259.0
+offset_top = 18.0
+offset_right = 274.0
+offset_bottom = 33.0
 mouse_filter = 2
 texture = ExtResource("6")
 expand_mode = 1
+
+[node name="Detail" type="Control" parent="."]
+layout_mode = 0
+offset_right = 514.0
+offset_bottom = 224.0
+mouse_filter = 1
 
 [node name="SelectButton" type="TextureButton" parent="."]
 offset_left = 105.0

@@ -66,6 +66,7 @@ var team_candidates: Array = []
 var quests: Dictionary = {}
 var npc_dialog: Dictionary = {}
 var npc_sell: Dictionary = {}
+var npc_sell_detail: Dictionary = {}
 var pending_input: Dictionary = {}
 var firewalls: Array = []
 

@@ -7,6 +7,7 @@ var base_path: String = ""
 var offsets: Dictionary = {}
 var monster_meta: Dictionary = {}
 var item_meta: Dictionary = {}
+var item_names: Dictionary = {}
 var skill_meta: Dictionary = {}
 var _textures: Dictionary = {}
 
@@ -18,6 +19,7 @@ func configure(path: String) -> bool:
 		loaded = _load_index(family) or loaded
 	_load_monster_meta()
 	_load_item_meta()
+	_load_item_names()
 	_load_skill_meta()
 	return loaded
 
@@ -70,6 +72,20 @@ func item_package_gfx_id(item_id: int) -> int:
 	return item_meta.get(item_id, PackedInt32Array([0, 0]))[1]
 
 
+func item_is_packable(item_id: int) -> bool:
+	return bool(item_meta.get(item_id, PackedInt32Array([0, 0, 0]))[2])
+
+
+func item_name(item_id: int) -> String:
+	return item_names.get(item_id, "物品 %d" % item_id)
+
+
+func item_icon(item_id: int) -> Dictionary:
+	var package_gfx_id := item_package_gfx_id(item_id)
+	var icon := frame("item", package_gfx_id | 0x02000000)
+	return frame("item", package_gfx_id | 0x01000000) if icon.is_empty() else icon
+
+
 func skill_layout(magic_id: int) -> PackedInt32Array:
 	return skill_meta.get(magic_id, PackedInt32Array())
 
@@ -118,9 +134,22 @@ func _load_item_meta() -> void:
 	for _index in range(count):
 		var item_id := file.get_32()
 		var shape := file.get_16()
-		file.get_16()
+		var flags := file.get_16()
 		var package_gfx_id := file.get_32()
-		item_meta[item_id] = PackedInt32Array([shape, package_gfx_id])
+		item_meta[item_id] = PackedInt32Array([shape, package_gfx_id, flags])
+
+
+func _load_item_names() -> void:
+	var file := FileAccess.open("%s/sprites/item_name.m2xmeta" % base_path, FileAccess.READ)
+	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
+		return
+	if file.get_32() != 1:
+		return
+	var count := file.get_32()
+	for _index in range(count):
+		var item_id := file.get_32()
+		var length := file.get_16()
+		item_names[item_id] = file.get_buffer(length).get_string_from_utf8()
 
 
 func _load_skill_meta() -> void:

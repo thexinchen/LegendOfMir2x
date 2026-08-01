@@ -294,13 +294,23 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
         for(uint32_t itemID = 1; itemID < DBCOM_ITEMENDID(); ++itemID){
             const auto &record = DBCOM_ITEMRECORD(itemID);
             if(record.name){
-                metaList.push_back({itemID, check_cast<uint16_t>(record.shape), 0, check_cast<uint32_t>(record.pkgGfxID)});
+                metaList.push_back({itemID, check_cast<uint16_t>(record.shape), to_u16(record.packable()), check_cast<uint32_t>(record.pkgGfxID)});
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "item.m2xmeta", std::ios::binary);
         const SpriteHeader metaHeader {.spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
+
+        std::ofstream nameFile(outputDir / "sprites" / "item_name.m2xmeta", std::ios::binary);
+        nameFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
+        for(const auto &meta: metaList){
+            const std::string name(to_cstr(DBCOM_ITEMRECORD(meta.itemID).name));
+            const auto length = check_cast<uint16_t>(name.size());
+            nameFile.write(reinterpret_cast<const char *>(&meta.itemID), sizeof(meta.itemID));
+            nameFile.write(reinterpret_cast<const char *>(&length), sizeof(length));
+            nameFile.write(name.data(), length);
+        }
     }
     if(std::strcmp(family, "proguse") == 0){
         std::vector<SkillMetaRecord> metaList;

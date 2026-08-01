@@ -22,16 +22,20 @@ func _refresh() -> void:
 	var columns := 10
 	for index in range(_state.inventory.size()):
 		var item: Dictionary = _state.inventory[index]
+		var item_id: int = item.get("itemID", 0)
 		var button := TextureButton.new()
 		button.position = Vector2((index % columns) * 38, floori(float(index) / columns) * 38)
 		button.size = Vector2(36, 36)
 		button.ignore_texture_size = true
 		button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
-		var package_gfx_id: int = _resources.item_package_gfx_id(item.get("itemID", 0))
-		var icon: Dictionary = _resources.frame("item", package_gfx_id | 0x01000000)
+		var icon: Dictionary = _resources.item_icon(item_id)
 		if not icon.is_empty():
 			button.texture_normal = icon.texture
-		button.tooltip_text = "物品 %d\n数量 %d\n序号 %d" % [item.get("itemID", 0), item.get("count", 0), item.get("seqID", 0)]
+		button.tooltip_text = "%s\n数量 %d\n序号 %d" % [
+			_resources.item_name(item_id),
+			item.get("count", 0),
+			item.get("seqID", 0),
+		]
 		$ItemGrid.add_child(button)
 		if item.get("count", 1) > 1:
 			var count_label := Label.new()

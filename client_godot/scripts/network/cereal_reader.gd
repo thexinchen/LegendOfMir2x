@@ -391,6 +391,18 @@ func read_sd_npc_sell() -> Dictionary:
 	return {"npcUID": read_u64(), "itemList": read_u32_vector()}
 
 
+func read_sd_sell_item_list() -> Dictionary:
+	var result := {"npcUID": read_u64(), "list": []}
+	var count := read_size()
+	for _index in range(count):
+		var sell_item := {"item": read_sd_item(), "costList": []}
+		var cost_count := read_size()
+		for _cost_index in range(cost_count):
+			sell_item.costList.append({"itemID": read_u32(), "count": read_size()})
+		result.list.append(sell_item)
+	return result
+
+
 func read_sd_runtime_config() -> Dictionary:
 	var result := {}
 	var count := read_size()

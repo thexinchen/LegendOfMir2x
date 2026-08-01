@@ -36,6 +36,7 @@ const EXTRA_PANELS := {
 }
 
 var _extra_panel_nodes: Dictionary = {}
+var _pending_purchase: Dictionary = {}
 
 
 func _ready() -> void:
@@ -314,6 +315,12 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			_handle_npc_xml(payload)
 		NetworkClient.SM_NPCSELL:
 			_handle_npc_sell(payload)
+		NetworkClient.SM_SELLITEMLIST:
+			_handle_sell_item_list(payload)
+		NetworkClient.SM_BUYSUCCEED:
+			_handle_buy_succeed(payload)
+		NetworkClient.SM_BUYERROR:
+			_handle_buy_error(payload)
 		NetworkClient.SM_STARTINPUT:
 			_handle_start_input(payload)
 
@@ -698,6 +705,37 @@ func _handle_npc_sell(payload: PackedByteArray) -> void:
 		_ensure_extra_panel("res://scenes/game/panels/purchase.tscn").show()
 
 
+func _handle_sell_item_list(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var data := reader.read_sd_sell_item_list()
+	if _reader_ok(reader, "SM_SELLITEMLIST"):
+		game_state.npc_sell_detail = data
+		game_state.state_changed.emit()
+
+
+func _handle_buy_succeed(payload: PackedByteArray) -> void:
+	if payload.size() < 16:
+		return
+	var npc_uid := payload.decode_u64(0)
+	var item_id := payload.decode_u32(8)
+	var seq_id := payload.decode_u32(12)
+	if game_state.npc_sell_detail.get("npcUID", 0) == npc_uid:
+		var list: Array = game_state.npc_sell_detail.get("list", [])
+		for index in range(list.size() - 1, -1, -1):
+			var item: Dictionary = list[index].get("item", {})
+			if item.get("itemID", 0) == item_id and item.get("seqID", 0) == seq_id and seq_id != 0:
+				list.remove_at(index)
+		game_state.npc_sell_detail["list"] = list
+	game_state.add_chat_log("购买成功", 1)
+	game_state.state_changed.emit()
+
+
+func _handle_buy_error(payload: PackedByteArray) -> void:
+	if payload.size() < 18:
+		return
+	game_state.add_chat_log("购买失败，错误码 %d" % payload.decode_u16(16), 3)
+
+
 func _handle_start_input(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var data := reader.read_sd_start_input()
@@ -770,10 +808,31 @@ func _ensure_extra_panel(scene_path: String) -> Control:
 	_extra_panel_nodes[scene_path] = panel
 	if scene_path.ends_with("/input_string.tscn") and panel.has_signal("committed"):
 		panel.committed.connect(_on_input_committed)
+	if scene_path.ends_with("/purchase.tscn") and panel.has_signal("quantity_requested"):
+		panel.quantity_requested.connect(_on_purchase_quantity_requested)
 	return panel
 
 
 func _on_input_committed(value: String) -> void:
+	if not _pending_purchase.is_empty():
+		var count := value.to_int()
+		if count > 0:
+			NetworkClient.send_buy(
+				_pending_purchase.get("npcUID", 0),
+				_pending_purchase.get("itemID", 0),
+				0,
+				count,
+			)
+		else:
+			game_state.add_chat_log("无效的购买数量：%s" % value, 3)
+		_pending_purchase = {}
+		return
 	var input: Dictionary = game_state.pending_input
 	NetworkClient.send_npc_event(input.get("uid", 0), "", input.get("commitTag", ""), value)
 	game_state.pending_input = {}
+
+
+func _on_purchase_quantity_requested(npc_uid: int, item_id: int, item_name: String) -> void:
+	_pending_purchase = {"npcUID": npc_uid, "itemID": item_id}
+	var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
+	panel.configure("请输入购买 %s 的数量" % item_name, true)
