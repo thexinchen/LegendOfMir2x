@@ -55,6 +55,8 @@ func _ready() -> void:
 		return
 	if not _test_actor_record_lifecycle(main):
 		return
+	if not _test_monster_jump_stands(main):
+		return
 	if not _test_self_action_map_transition(main):
 		return
 
@@ -569,6 +571,40 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 	GameState.remove_creature(player_uid)
 	GameState.remove_creature(new_monster_uid)
 	GameState.remove_creature(new_npc_uid)
+	return true
+
+
+func _test_monster_jump_stands(main: Control) -> bool:
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	var known_uid: int = (4 << 59) | (224 << 35) | 701
+	GameState.update_creature(known_uid, {
+		"uid": known_uid, "type": 1, "monster_id": 224,
+		"x": 5, "y": 6, "direction": 3, "action_type": 7,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(known_uid, 202, {
+		"type": 4, "speed": 100, "direction": 7, "x": 20, "y": 21,
+	}))
+	var known: Dictionary = GameState.get_creature(known_uid)
+	if known.get("x", 0) != 20 or known.get("y", 0) != 21 or known.get("direction", 0) != 7 or known.get("action_type", 0) != 2:
+		_fail("known monster ACTION_JUMP did not become stand at action position: %s" % known)
+		return false
+
+	var new_uid: int = (4 << 59) | (225 << 35) | 702
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(new_uid, 202, {
+		"type": 4, "speed": 100, "direction": 5, "x": 30, "y": 31,
+	}))
+	var created: Dictionary = GameState.get_creature(new_uid)
+	if created.get("monster_id", 0) != 225 or created.get("x", 0) != 30 or created.get("y", 0) != 31 or created.get("direction", 0) != 5 or created.get("action_type", 0) != 2:
+		_fail("new monster ACTION_JUMP did not create a standing actor: %s" % created)
+		return false
+	var renderer: Control = main.get_node("WorldRenderer")
+	var now := Time.get_ticks_msec()
+	if renderer.call("_motion_frame", created.get("action_type", 0), 4, now - 500, 100) != 1:
+		_fail("monster jump stand motion did not remain cyclic")
+		return false
+	GameState.remove_creature(known_uid)
+	GameState.remove_creature(new_uid)
 	return true
 
 

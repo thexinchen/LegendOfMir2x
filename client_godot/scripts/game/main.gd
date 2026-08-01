@@ -1006,8 +1006,10 @@ func _handle_action(payload: PackedByteArray) -> void:
 		_play_action_seff(uid, action, {"uid": uid, "type": 2, "gender": game_state.player_gender, "desp": game_state.player_desp, "action_started_ms": game_state.player_action_started_ms})
 	else:
 		# Update or create creature
+		var creature_type: int = creature.get("type", _creature_type_from_uid(uid))
+		var stored_action_type := _creature_stored_action_type(action_type, creature_type)
 		if creature.is_empty():
-			var inferred_type := _creature_type_from_uid(uid)
+			var inferred_type := creature_type
 			creature = {
 				"uid": uid,
 				"x": action.get("aimX", x) if _action_uses_aim_position(action_type) else x,
@@ -1016,7 +1018,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 				"action_from_y": y,
 				"type": inferred_type,
 				"name": "",
-				"action_type": action_type,
+				"action_type": stored_action_type,
 				"action_started_ms": Time.get_ticks_msec(),
 				"action_speed": action.get("speed", 100),
 				"action_magic_id": action.get("magicID", 0),
@@ -1031,16 +1033,16 @@ func _handle_action(payload: PackedByteArray) -> void:
 			creature["action_from_y"] = y
 			creature["x"] = action.get("aimX", x) if _action_uses_aim_position(action_type) else x
 			creature["y"] = action.get("aimY", y) if _action_uses_aim_position(action_type) else y
-			creature["action_type"] = action_type
+			creature["action_type"] = stored_action_type
 			creature["action_started_ms"] = Time.get_ticks_msec()
 			creature["action_speed"] = action.get("speed", 100)
 			creature["action_magic_id"] = action.get("magicID", 0)
 			if direction >= 1:
 				creature["direction"] = direction
 		game_state.update_creature(uid, creature)
-		var duration := _action_duration(action_type, action.get("speed", 100), creature.get("type", 0), action.get("magicID", 0))
+		var duration := _action_duration(stored_action_type, action.get("speed", 100), creature.get("type", 0), action.get("magicID", 0))
 		if duration > 0.0:
-			_schedule_creature_idle(uid, action_type, creature.get("action_started_ms", 0), duration)
+			_schedule_creature_idle(uid, stored_action_type, creature.get("action_started_ms", 0), duration)
 		_play_action_seff(uid, action, creature)
 
 
@@ -1091,6 +1093,13 @@ func _has_pending_local_magic(magic_id: int) -> bool:
 
 func _action_uses_aim_position(action_type: int) -> bool:
 	return action_type in [3, 5, 6]
+
+
+func _creature_stored_action_type(action_type: int, creature_type: int) -> int:
+	# C++ ClientMonster::onActionJump() immediately replaces the jump with a
+	# standing motion at action.x/y. Keeping ACTION_JUMP here would freeze the
+	# stand sprite at its final frame because only ACTION_STAND loops.
+	return 2 if creature_type == 1 and action_type == 4 else action_type
 
 
 func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay: float) -> void:
