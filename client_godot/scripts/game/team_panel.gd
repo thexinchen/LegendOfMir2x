@@ -1,41 +1,142 @@
 extends "res://scripts/game/closable_panel.gd"
 
+const LINE_HEIGHT := 16
+const MIN_VISIBLE_ROWS := 5
+const MAX_VISIBLE_ROWS := 10
+const ROW_WIDTH := 231
+const BASE_HEIGHT := 146
+
 var _state: Node
 var _show_candidates := false
-var _selected_uid: int = 0
+var _selected_uids := [0, 0]
+var _start_indices := [0, 0]
 
 
 func _ready() -> void:
 	super._ready()
 	_state = get_node("/root/GameState")
 	_state.state_changed.connect(_refresh)
-	$SwitchButton.pressed.connect(func(): _show_candidates = not _show_candidates; _refresh())
+	$SwitchButton.pressed.connect(_toggle_mode)
 	$AddButton.pressed.connect(_join_selected)
 	$DeleteButton.pressed.connect(_leave_selected)
-	$RefreshButton.pressed.connect(_refresh)
+	$RefreshButton.pressed.connect(_reset_scroll)
+	$MemberRows.gui_input.connect(_on_rows_input)
 	_refresh()
 
 
 func _refresh() -> void:
-	$Title.text = "申请列表" if _show_candidates else "当前队伍"
+	var rows := _current_rows()
+	var mode := _mode_index()
+	var visible_count := clampi(rows.size(), MIN_VISIBLE_ROWS, MAX_VISIBLE_ROWS)
+	var max_start := maxi(0, rows.size() - visible_count)
+	_start_indices[mode] = clampi(_start_indices[mode], 0, max_start)
+	_apply_layout(visible_count)
 	for child in $MemberRows.get_children():
 		child.free()
-	var rows: Array = _state.team_candidates if _show_candidates else _state.team_members
-	for index in range(rows.size()):
-		var member: Dictionary = rows[index]
-		var button := Button.new()
-		button.position = Vector2(4, index * 28)
-		button.size = Vector2(238, 26)
-		button.text = "%s  Lv.%d%s" % [member.get("name", ""), member.get("level", 0), "  [队长]" if member.get("uid", 0) == _state.team_leader else ""]
-		button.pressed.connect(func(): _selected_uid = member.get("uid", 0))
-		$MemberRows.add_child(button)
+	for visible_index in visible_count:
+		var item_index: int = visible_index + _start_indices[mode]
+		if item_index >= rows.size():
+			break
+		_add_row(rows[item_index], item_index, visible_index, mode)
+	$Title.text = "申请加入" if _show_candidates else "当前队伍"
+	$AddButton.disabled = not _show_candidates
+	$DeleteButton.disabled = _show_candidates
+	$AddButton.modulate = Color.WHITE if _show_candidates else Color(0.5, 0.5, 0.5, 1.0)
+	$DeleteButton.modulate = Color(0.5, 0.5, 0.5, 1.0) if _show_candidates else Color.WHITE
+
+
+func _current_rows() -> Array:
+	return _state.team_candidates if _show_candidates else _state.team_members
+
+
+func _mode_index() -> int:
+	return 1 if _show_candidates else 0
+
+
+func _apply_layout(visible_count: int) -> void:
+	var panel_height := BASE_HEIGHT + visible_count * LINE_HEIGHT
+	custom_minimum_size = Vector2(258, panel_height)
+	size = custom_minimum_size
+	$Background.size = size
+	$MemberRows.size = Vector2(ROW_WIDTH, visible_count * LINE_HEIGHT)
+	var button_y := 94 + visible_count * LINE_HEIGHT
+	$SwitchButton.position.y = button_y
+	$AddButton.position.y = button_y
+	$DeleteButton.position.y = button_y
+	$RefreshButton.position.y = button_y
+	$CloseButton.position.y = button_y + 8
+
+
+func _add_row(member: Dictionary, item_index: int, visible_index: int, mode: int) -> void:
+	var uid: int = member.get("uid", 0)
+	var button := Button.new()
+	button.name = "Row%d" % item_index
+	button.position = Vector2(0, visible_index * LINE_HEIGHT)
+	button.size = Vector2(ROW_WIDTH, LINE_HEIGHT)
+	button.text = "%d %s" % [item_index, member.get("name", str(uid))]
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.flat = false
+	button.add_theme_font_size_override("font_size", 12)
+	button.add_theme_color_override("font_color", Color.WHITE)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_color_override("font_pressed_color", Color.WHITE)
+	button.add_theme_stylebox_override("normal", _row_style(Color.TRANSPARENT))
+	button.add_theme_stylebox_override("hover", _row_style(Color(0, 0, 1, 0.4)))
+	button.add_theme_stylebox_override("pressed", _row_style(Color(1, 0, 0, 0.4)))
+	button.add_theme_stylebox_override("focus", _row_style(Color.TRANSPARENT))
+	if _selected_uids[mode] == uid:
+		button.add_theme_stylebox_override("normal", _row_style(Color(1, 0, 0, 0.4)))
+	button.pressed.connect(_select_uid.bind(mode, uid))
+	$MemberRows.add_child(button)
+
+
+func _row_style(color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.content_margin_left = 5.0
+	return style
+
+
+func _select_uid(mode: int, uid: int) -> void:
+	_selected_uids[mode] = uid
+	_refresh()
+
+
+func _toggle_mode() -> void:
+	_show_candidates = not _show_candidates
+	_refresh()
+
+
+func _reset_scroll() -> void:
+	_start_indices[_mode_index()] = 0
+	_refresh()
+
+
+func _on_rows_input(event: InputEvent) -> void:
+	if not event is InputEventMouseButton or not event.pressed:
+		return
+	var delta := 0
+	if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		delta = -1
+	elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		delta = 1
+	if delta == 0:
+		return
+	var rows := _current_rows()
+	var mode := _mode_index()
+	var visible_count := clampi(rows.size(), MIN_VISIBLE_ROWS, MAX_VISIBLE_ROWS)
+	_start_indices[mode] = clampi(_start_indices[mode] + delta, 0, maxi(0, rows.size() - visible_count))
+	_refresh()
+	accept_event()
 
 
 func _join_selected() -> void:
-	if _selected_uid:
-		NetworkClient.send_request_join_team(_selected_uid)
+	var uid: int = _selected_uids[1]
+	if _show_candidates and uid:
+		NetworkClient.send_request_join_team(uid)
 
 
 func _leave_selected() -> void:
-	var uid: int = _selected_uid if _selected_uid else _state.player_uid
-	NetworkClient.send_request_leave_team(uid)
+	var uid: int = _selected_uids[0]
+	if not _show_candidates and uid:
+		NetworkClient.send_request_leave_team(uid)

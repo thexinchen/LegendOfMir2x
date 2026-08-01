@@ -114,6 +114,32 @@ func _ready() -> void:
 		belt[i] = null
 
 
+func add_team_candidate(candidate: Dictionary) -> void:
+	var candidate_uid: int = candidate.get("uid", 0)
+	for member_value in team_members:
+		var member: Dictionary = member_value
+		if member.get("uid", 0) == candidate_uid:
+			return
+	for index in range(team_candidates.size() - 1, -1, -1):
+		if team_candidates[index].get("uid", 0) == candidate_uid:
+			team_candidates.remove_at(index)
+	team_candidates.push_front(candidate)
+	state_changed.emit()
+
+
+func set_team_member_list(leader: int, members: Array) -> void:
+	team_leader = leader
+	team_members = members
+	for index in range(team_candidates.size() - 1, -1, -1):
+		var candidate_uid: int = team_candidates[index].get("uid", 0)
+		for member_value in team_members:
+			var member: Dictionary = member_value
+			if member.get("uid", 0) == candidate_uid:
+				team_candidates.remove_at(index)
+				break
+	state_changed.emit()
+
+
 func set_player_online(online_data: Dictionary) -> void:
 	hud_minimized = false
 	player_uid = online_data.get("uid", 0)

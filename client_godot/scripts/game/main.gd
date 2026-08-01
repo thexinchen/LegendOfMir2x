@@ -1326,17 +1326,14 @@ func _handle_team_candidate(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var candidate := reader.read_sd_team_candidate()
 	if _reader_ok(reader, "SM_TEAMCANDIDATE"):
-		game_state.team_candidates.append(candidate)
-		game_state.state_changed.emit()
+		game_state.add_team_candidate(candidate)
 
 
 func _handle_team_members(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var team := reader.read_sd_team_member_list()
 	if _reader_ok(reader, "SM_TEAMMEMBERLIST"):
-		game_state.team_leader = team.get("teamLeader", 0)
-		game_state.team_members = team.get("members", [])
-		game_state.state_changed.emit()
+		game_state.set_team_member_list(team.get("teamLeader", 0), team.get("members", []))
 
 
 func _handle_quest_list(payload: PackedByteArray) -> void:

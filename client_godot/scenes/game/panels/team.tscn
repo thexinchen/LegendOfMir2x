@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/team_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000150.png" id="2"]
@@ -10,14 +10,6 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000201.png" id="8"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="9"]
 
-[sub_resource type="AtlasTexture" id="Header"]
-atlas = ExtResource("2")
-region = Rect2(0, 0, 258, 80)
-
-[sub_resource type="AtlasTexture" id="Footer"]
-atlas = ExtResource("2")
-region = Rect2(0, 178, 258, 66)
-
 [node name="TeamPanel" type="Control"]
 custom_minimum_size = Vector2(258, 226)
 offset_right = 258.0
@@ -25,25 +17,14 @@ offset_bottom = 226.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
 
-[node name="Header" type="TextureRect" parent="."]
-offset_right = 258.0
-offset_bottom = 80.0
-mouse_filter = 2
-texture = SubResource("Header")
-
-[node name="RowsBackground" type="ColorRect" parent="."]
-offset_top = 80.0
-offset_right = 258.0
-offset_bottom = 160.0
-mouse_filter = 2
-color = Color(0.055, 0.043, 0.027, 0.96)
-
-[node name="Footer" type="TextureRect" parent="."]
-offset_top = 160.0
+[node name="Background" type="NinePatchRect" parent="."]
 offset_right = 258.0
 offset_bottom = 226.0
 mouse_filter = 2
-texture = SubResource("Footer")
+texture = ExtResource("2")
+patch_margin_top = 94
+patch_margin_bottom = 80
+axis_stretch_vertical = 1
 
 [node name="Title" type="Label" parent="."]
 offset_left = 13.0
