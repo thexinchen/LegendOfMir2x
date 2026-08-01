@@ -226,7 +226,18 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_MISS:
 			_handle_miss(payload)
 		NetworkClient.SM_BUFF:
-			pass  # TODO: update buff
+			var buff := Protocol.decode_sm_buff(payload)
+			# SMBuff: uid(u64) + type(u32) + state(u32)
+			# state: 1=ON, 2=OFF
+			var buff_uid: int = buff.get("uid", 0)
+			var buff_type: int = buff.get("type", 0)
+			var buff_state: int = buff.get("state", 0)
+			if buff_uid == game_state.player_uid:
+				if buff_state == 1:  # BFS_ON
+					if not game_state.buff_list.has(buff_type):
+						game_state.buff_list.append(buff_type)
+				elif buff_state == 2:  # BFS_OFF
+					game_state.buff_list.erase(buff_type)
 		NetworkClient.SM_INVENTORY:
 			_handle_inventory(payload)
 		NetworkClient.SM_BELT:
@@ -247,7 +258,17 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 		NetworkClient.SM_REMOVEITEM:
 			pass  # TODO: remove from inventory
 		NetworkClient.SM_REMOVEGROUNDITEM:
-			pass  # TODO: remove ground item
+			# SMRemoveGroundItem: X(u16) + Y(u16) + ID(u32) + DBID(u32)
+			if payload.size() >= 12:
+				var rx: int = payload.decode_u16(0)
+				var ry: int = payload.decode_u16(2)
+				var rid: int = payload.decode_u32(4)
+				var key := "%d,%d" % [rx, ry]
+				if game_state.ground_items.has(key):
+					var items: Array = game_state.ground_items[key]
+					items.erase(rid)
+					if items.is_empty():
+						game_state.ground_items.erase(key)
 		NetworkClient.SM_GROUNDITEMIDLIST:
 			_handle_ground_item_id_list(payload)
 		NetworkClient.SM_EQUIPWEAR, NetworkClient.SM_GRABWEAR, NetworkClient.SM_EQUIPBELT, NetworkClient.SM_GRABBELT:
