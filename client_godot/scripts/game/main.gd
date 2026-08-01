@@ -957,6 +957,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 	var y: int = action.get("y", 0)
 	var action_type: int = action.get("type", 0)
 	var direction: int = action.get("direction", 0)
+	if action_type == 12 and direction < 1:
+		direction = _spinkick_direction(uid, action)
 	if action_type == 6:
 		var space_magic_id: int = _resources.magic_id("瞬息移动")
 		if space_magic_id > 0:
@@ -1028,6 +1030,25 @@ func _handle_action(payload: PackedByteArray) -> void:
 		if duration > 0.0:
 			_schedule_creature_idle(uid, action_type, creature.get("action_started_ms", 0), duration)
 		_play_action_seff(uid, action, creature)
+
+
+func _spinkick_direction(uid: int, action: Dictionary) -> int:
+	var fallback: int = game_state.player_direction if uid == game_state.player_uid else int(game_state.get_creature(uid).get("direction", 5))
+	var aim_uid := int(action.get("aimUID", 0))
+	var aim: Dictionary
+	if aim_uid == game_state.player_uid:
+		aim = {"x": game_state.player_x, "y": game_state.player_y}
+	else:
+		aim = game_state.get_creature(aim_uid)
+	if aim.is_empty():
+		return fallback
+	var x := int(action.get("x", 0))
+	var y := int(action.get("y", 0))
+	var aim_x := int(aim.get("x", 0))
+	var aim_y := int(aim.get("y", 0))
+	if maxi(absi(x - aim_x), absi(y - aim_y)) != 1:
+		return fallback
+	return _direction_to(aim_x, aim_y, x, y)
 
 
 func _has_pending_local_magic(magic_id: int) -> bool:

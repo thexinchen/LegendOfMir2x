@@ -51,6 +51,8 @@ func _ready() -> void:
 		return
 	if not _test_shield_hit_action(main, resources):
 		return
+	if not _test_spinkick_direction(main):
+		return
 
 	GameState.chat_log.clear()
 	var item_id: int = resources.item_names.keys()[0]
@@ -473,6 +475,37 @@ func _test_shield_hit_action(main: Control, resources: RefCounted) -> bool:
 		_fail("SM_ACTION ACTION_HITTED did not switch the shield stage: %s" % shield)
 		return false
 	GameState.attached_magic_effects.clear()
+	main.set("_player_action_timer", -1.0)
+	GameState.player_action_type = 2
+	return true
+
+
+func _test_spinkick_direction(main: Control) -> bool:
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	GameState.player_x = 3
+	GameState.player_y = 4
+	GameState.player_direction = 5
+	GameState.update_creature(303, {
+		"uid": 303, "type": 1, "x": 4, "y": 4, "direction": 5, "action_type": 2,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
+		"type": 12, "speed": 100, "x": 3, "y": 4, "aimUID": 303,
+	}))
+	if GameState.player_action_type != 12 or GameState.player_direction != 7:
+		_fail("ACTION_SPINKICK did not face away from its adjacent target like C++")
+		return false
+	GameState.player_direction = 5
+	GameState.update_creature(303, {
+		"uid": 303, "type": 1, "x": 8, "y": 4, "direction": 5, "action_type": 2,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
+		"type": 12, "speed": 100, "x": 3, "y": 4, "aimUID": 303,
+	}))
+	if GameState.player_direction != 5:
+		_fail("non-adjacent ACTION_SPINKICK incorrectly replaced the retained direction")
+		return false
+	GameState.remove_creature(303)
 	main.set("_player_action_timer", -1.0)
 	GameState.player_action_type = 2
 	return true
