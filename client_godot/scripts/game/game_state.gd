@@ -54,6 +54,12 @@ var ground_items: Dictionary = {}  # "x,y" -> list of item IDs
 var chat_log: Array = []  # list of {type, text, color}
 const CHAT_LOG_MAX := 100
 
+# Persistent friend-chat state (separate from nearby/world chat).
+var chat_friends: Array = []
+var chat_peers: Dictionary = {} # CPID -> SDChatPeer
+var chat_conversations: Array = [] # newest conversation first
+var chat_messages: Dictionary = {} # DB message id -> SDChatMessage
+
 # Magic/skill list
 var learned_magic: Array = []  # list of magic IDs
 var magic_keys: Dictionary = {}  # magicID -> key char
@@ -163,6 +169,112 @@ func add_chat_log(text: String, log_type: int = 0) -> void:
 	if chat_log.size() > CHAT_LOG_MAX:
 		chat_log.pop_front()
 	state_changed.emit()
+
+
+func self_chat_cpid() -> int:
+	var dbid := (player_uid >> 35) & 0xFFFFFF
+	return (2 << 32) | dbid
+
+
+func set_chat_friends(friends: Array) -> void:
+	chat_friends = friends.duplicate(true)
+	for peer in chat_friends:
+		chat_peers[int(peer.get("cpid", 0))] = peer
+	state_changed.emit()
+
+
+func add_chat_peer(peer: Dictionary, friend: bool = false) -> void:
+	var cpid := int(peer.get("cpid", 0))
+	if cpid == 0:
+		return
+	chat_peers[cpid] = peer
+	if friend:
+		var found := false
+		for current in chat_friends:
+			if int(current.get("cpid", 0)) == cpid:
+				found = true
+				break
+		if not found:
+			chat_friends.append(peer)
+	state_changed.emit()
+
+
+func add_chat_message(message: Dictionary) -> void:
+	var seq: Variant = message.get("seq")
+	if seq == null:
+		return
+	var message_id := int(seq.get("id", 0))
+	if message_id == 0 or chat_messages.has(message_id):
+		return
+	chat_messages[message_id] = message
+	var self_cpid := self_chat_cpid()
+	var from_cpid := int(message.get("from", 0))
+	var to_cpid := int(message.get("to", 0))
+	var peer_cpid := to_cpid if from_cpid == self_cpid else from_cpid
+	if ((to_cpid >> 32) & 0xFFFFFFFF) == 3:
+		peer_cpid = to_cpid
+	if peer_cpid == 0:
+		return
+	var conversation: Dictionary = {}
+	var existing_index := -1
+	for index in range(chat_conversations.size()):
+		if int(chat_conversations[index].get("cpid", 0)) == peer_cpid:
+			conversation = chat_conversations[index]
+			existing_index = index
+			break
+	if existing_index >= 0:
+		chat_conversations.remove_at(existing_index)
+	else:
+		conversation = {"cpid": peer_cpid, "messages": [], "unread": 0}
+	var messages: Array = conversation.get("messages", [])
+	messages.append(message)
+	messages.sort_custom(func(a: Dictionary, b: Dictionary):
+		var a_seq: Dictionary = a.get("seq", {})
+		var b_seq: Dictionary = b.get("seq", {})
+		var a_time := int(a_seq.get("timestamp", 0))
+		var b_time := int(b_seq.get("timestamp", 0))
+		return a_time < b_time or (a_time == b_time and int(a_seq.get("id", 0)) < int(b_seq.get("id", 0)))
+	)
+	conversation["messages"] = messages
+	conversation["preview"] = chat_message_text(message)
+	conversation["unread"] = int(conversation.get("unread", 0)) + 1
+	chat_conversations.push_front(conversation)
+	state_changed.emit()
+
+
+func mark_chat_read(cpid: int) -> void:
+	for conversation in chat_conversations:
+		if int(conversation.get("cpid", 0)) == cpid:
+			conversation["unread"] = 0
+			state_changed.emit()
+			return
+
+
+func chat_message_text(message: Dictionary) -> String:
+	var xml := chat_message_xml(message)
+	if xml.is_empty():
+		return "[无效消息]"
+	var result := ""
+	var in_tag := false
+	for character in xml:
+		if character == "<":
+			in_tag = true
+		elif character == ">":
+			in_tag = false
+		elif not in_tag and character != "\r" and character != "\n":
+			result += character
+	return result
+
+
+func chat_message_xml(message: Dictionary) -> String:
+	var payload: PackedByteArray = message.get("message", PackedByteArray())
+	if payload.is_empty():
+		return ""
+	var reader_script = load("res://scripts/network/cereal_reader.gd")
+	var reader = reader_script.new(payload)
+	if not reader.valid:
+		return ""
+	return reader.read_string()
 
 
 func update_creature(uid: int, data: Dictionary) -> void:

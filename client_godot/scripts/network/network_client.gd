@@ -2,6 +2,7 @@ extends Node
 
 signal connection_changed(connected: bool, message: String)
 signal message_received(head_code: int, payload: PackedByteArray)
+signal response_received(response_id: int, head_code: int, payload: PackedByteArray)
 
 # CMType enum (client -> server)
 const CM_PING := 1
@@ -19,11 +20,19 @@ const CM_PICKUP := 19
 const CM_QUERYGOLD := 21
 const CM_QUERYPLAYERNAME := 23
 const CM_QUERYPLAYERWLDESP := 24
+const CM_QUERYCHATPEERLIST := 25
+const CM_QUERYCHATMESSAGE := 26
+const CM_CREATECHATGROUP := 27
 const CM_NPCEVENT := 29
 const CM_QUERYSELLITEMLIST := 30
 const CM_DROPITEM := 31
 const CM_CONSUMEITEM := 32
 const CM_BUY := 34
+const CM_ADDFRIEND := 35
+const CM_ACCEPTADDFRIEND := 36
+const CM_REJECTADDFRIEND := 37
+const CM_BLOCKPLAYER := 38
+const CM_CHATMESSAGE := 39
 const CM_PLAYERSAY := 40
 const CM_PLAYERBROADCAST := 41
 const CM_REQUESTEQUIPWEAR := 42
@@ -32,6 +41,7 @@ const CM_REQUESTEQUIPBELT := 44
 const CM_REQUESTGRABBELT := 45
 const CM_REQUESTJOINTEAM := 46
 const CM_REQUESTLEAVETEAM := 47
+const CM_REQUESTLATESTCHATMESSAGE := 48
 const CM_REQUESTRETRIEVESECUREDITEM := 16
 const CM_REQUESTSPACEMOVE := 17
 const CM_CREATEACCOUNT := 28
@@ -138,9 +148,12 @@ const SYS_U64NIL := -1           # 0xFFFFFFFFFFFFFFFF as signed int64
 var _peer := StreamPeerTCP.new()
 var _receive_buffer := PackedByteArray()
 var _last_status := StreamPeerTCP.STATUS_NONE
+var _next_response_id := 1
+var _response_callbacks: Dictionary = {}
 
 
 func _process(_delta: float) -> void:
+	_expire_responses()
 	_peer.poll()
 	var status := _peer.get_status()
 	if status != _last_status:
@@ -184,6 +197,7 @@ func is_connected_to_server() -> bool:
 func disconnect_from_server() -> void:
 	_peer.disconnect_from_host()
 	_receive_buffer.clear()
+	_response_callbacks.clear()
 
 
 func login(account: String, password: String) -> Error:
@@ -397,6 +411,76 @@ func send_request_leave_team(uid: int) -> Error:
 	return _send_u64_message(CM_REQUESTLEAVETEAM, uid)
 
 
+func query_chat_peers(query: String, callback: Callable) -> Error:
+	return _send_request(CM_QUERYCHATPEERLIST, _make_static_buffer_capacity(query, 128), false, callback)
+
+
+func query_chat_message(message_id: int, callback: Callable) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(8)
+	_encode_u64(payload, 0, message_id)
+	return _send_request(CM_QUERYCHATMESSAGE, payload, false, callback)
+
+
+func create_chat_group(group_name: String, player_ids: Array, callback: Callable) -> Error:
+	var payload := _make_static_buffer_capacity(group_name, 128)
+	var list := PackedByteArray()
+	# StaticVector<uint32_t, 512>: uint16 size + 2-byte alignment pad + data.
+	list.resize(4 + 512 * 4)
+	list.fill(0)
+	list.encode_u16(0, mini(player_ids.size(), 512))
+	for index in range(mini(player_ids.size(), 512)):
+		list.encode_u32(4 + index * 4, int(player_ids[index]))
+	payload.append_array(list)
+	return _send_request(CM_CREATECHATGROUP, payload, false, callback)
+
+
+func send_add_friend(cpid: int, callback: Callable) -> Error:
+	return _send_u64_request(CM_ADDFRIEND, cpid, callback)
+
+
+func send_accept_friend(cpid: int, callback: Callable = Callable()) -> Error:
+	return _send_u64_request(CM_ACCEPTADDFRIEND, cpid, callback)
+
+
+func send_reject_friend(cpid: int, callback: Callable = Callable()) -> Error:
+	return _send_u64_request(CM_REJECTADDFRIEND, cpid, callback)
+
+
+func send_block_player(cpid: int, callback: Callable = Callable()) -> Error:
+	return _send_u64_request(CM_BLOCKPLAYER, cpid, callback)
+
+
+func send_chat_message(cpid: int, text: String, refer_id: Variant, callback: Callable) -> Error:
+	var serialized := _serialize_cereal_string("<layout><par>%s</par></layout>" % text)
+	var payload := PackedByteArray()
+	payload.resize(16)
+	_encode_u64(payload, 0, cpid)
+	var ref_bits := 0
+	if refer_id != null:
+		ref_bits = (int(refer_id) << 1) | 1
+	_encode_u64(payload, 8, ref_bits)
+	payload.append_array(serialized)
+	return _send_request(CM_CHATMESSAGE, payload, true, callback)
+
+
+func request_latest_chat_messages(cpids: Array, limit_count: int = 50, include_send: bool = true, include_recv: bool = true) -> Error:
+	var payload := PackedByteArray()
+	# StaticVector<uint64_t, 128>: uint16 size + 6-byte alignment pad + data.
+	payload.resize(8 + 128 * 8 + 4)
+	payload.fill(0)
+	payload.encode_u16(0, mini(cpids.size(), 128))
+	for index in range(mini(cpids.size(), 128)):
+		_encode_u64(payload, 8 + index * 8, int(cpids[index]))
+	var flags := clampi(limit_count, 0, 0x3FFFFFFF)
+	if include_send:
+		flags |= 1 << 30
+	if include_recv:
+		flags |= 1 << 31
+	payload.encode_u32(8 + 128 * 8, flags)
+	return _send_fixed_message(CM_REQUESTLATESTCHATMESSAGE, payload)
+
+
 func _send_item_pair(head_code: int, item_id: int, seq_id: int) -> Error:
 	var payload := PackedByteArray()
 	payload.resize(8)
@@ -442,11 +526,16 @@ func _make_account_payload(account: String, password: String) -> PackedByteArray
 
 
 func _make_static_buffer(value: String) -> PackedByteArray:
+	return _make_static_buffer_capacity(value, 64)
+
+
+func _make_static_buffer_capacity(value: String, capacity: int) -> PackedByteArray:
 	var encoded := value.to_utf8_buffer()
-	if encoded.size() > 64:
-		encoded = encoded.slice(0, 64)
+	if encoded.size() > capacity:
+		encoded = encoded.slice(0, capacity)
 	var result := PackedByteArray()
-	result.resize(STATIC_ID_SIZE)
+	# StaticBuffer itself has uint16 alignment, so its odd field size gets one tail pad byte.
+	result.resize((2 + capacity + 1 + 1) & ~1)
 	result.fill(0)
 	result[0] = encoded.size() & 0xff
 	result[1] = (encoded.size() >> 8) & 0xff
@@ -455,16 +544,72 @@ func _make_static_buffer(value: String) -> PackedByteArray:
 	return result
 
 
-func _send_fixed_message(head_code: int, payload: PackedByteArray) -> Error:
+func _send_u64_request(head_code: int, value: int, callback: Callable) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(8)
+	_encode_u64(payload, 0, value)
+	return _send_request(head_code, payload, false, callback)
+
+
+func _send_request(head_code: int, payload: PackedByteArray, variable: bool, callback: Callable) -> Error:
+	var response_id := _next_response_id
+	_next_response_id += 1
+	if callback.is_valid():
+		_response_callbacks[response_id] = {"callback": callback, "expires": Time.get_ticks_msec() + 1000}
+	var error := _send_variable_message(head_code, payload, response_id) if variable else _send_fixed_message(head_code, payload, response_id)
+	if error != OK:
+		_response_callbacks.erase(response_id)
+	return error
+
+
+func _expire_responses() -> void:
+	var now := Time.get_ticks_msec()
+	var expired: Array[int] = []
+	for response_id in _response_callbacks:
+		if now >= int(_response_callbacks[response_id].get("expires", 0)):
+			expired.append(response_id)
+	for response_id in expired:
+		var entry: Dictionary = _response_callbacks.get(response_id, {})
+		_response_callbacks.erase(response_id)
+		var callback: Callable = entry.get("callback", Callable())
+		if callback.is_valid():
+			callback.call(SM_ERROR, PackedByteArray())
+
+
+func _serialize_cereal_string(value: String) -> PackedByteArray:
+	var encoded := value.to_utf8_buffer()
+	var result := PackedByteArray([1])
+	var size_offset := result.size()
+	result.resize(size_offset + 8)
+	_encode_u64(result, size_offset, encoded.size())
+	result.append_array(encoded)
+	result.append(0) # cerealf::CF_NONE
+	return result
+
+
+func _send_fixed_message(head_code: int, payload: PackedByteArray, response_id: int = 0) -> Error:
 	if not is_connected_to_server():
 		var connect_error := connect_to_server()
 		if connect_error != OK:
 			return connect_error
 		return ERR_BUSY
 	var compressed := _xor_encode(payload)
-	var packet := PackedByteArray([head_code])
+	var packet := PackedByteArray([head_code | 0x80 if response_id > 0 else head_code])
+	if response_id > 0:
+		packet.append_array(_encode_vlq(response_id))
 	packet.append_array(_encode_vlq(compressed[0]))
 	packet.append_array(compressed[1])
+	return _peer.put_data(packet)
+
+
+func _send_variable_message(head_code: int, payload: PackedByteArray, response_id: int = 0) -> Error:
+	if not is_connected_to_server():
+		return ERR_UNCONFIGURED
+	var packet := PackedByteArray([head_code | 0x80 if response_id > 0 else head_code])
+	if response_id > 0:
+		packet.append_array(_encode_vlq(response_id))
+	packet.append_array(_encode_vlq(payload.size()))
+	packet.append_array(payload)
 	return _peer.put_data(packet)
 
 
@@ -522,7 +667,16 @@ func _parse_packets() -> void:
 		if not parsed[0]:
 			return
 		var consumed: int = parsed[1]
-		message_received.emit(parsed[2], parsed[3])
+		var response_id: int = parsed[4]
+		if response_id > 0:
+			response_received.emit(response_id, parsed[2], parsed[3])
+			var entry: Dictionary = _response_callbacks.get(response_id, {})
+			var callback: Callable = entry.get("callback", Callable())
+			_response_callbacks.erase(response_id)
+			if callback.is_valid():
+				callback.call(parsed[2], parsed[3])
+		else:
+			message_received.emit(parsed[2], parsed[3])
 		_receive_buffer = _receive_buffer.slice(consumed)
 
 
@@ -531,11 +685,13 @@ func _try_parse_packet() -> Array:
 	var encoded_head := _receive_buffer[cursor]
 	cursor += 1
 	var head_code := encoded_head & 0x7f
+	var response_id := 0
 	if encoded_head & 0x80:
 		var response_result := _try_decode_vlq(cursor)
 		if not response_result[0]:
 			return [false]
 		cursor = response_result[2]
+		response_id = response_result[1]
 	var attribute := _server_message_attribute(head_code)
 	if attribute.is_empty():
 		push_error("暂不支持服务器消息: %d" % head_code)
@@ -544,11 +700,11 @@ func _try_parse_packet() -> Array:
 	var message_type: int = attribute[0]
 	var data_length: int = attribute[1]
 	if message_type == 0:
-		return [true, cursor, head_code, PackedByteArray()]
+		return [true, cursor, head_code, PackedByteArray(), response_id]
 	if message_type == 2:
 		if _receive_buffer.size() < cursor + data_length:
 			return [false]
-		return [true, cursor + data_length, head_code, _receive_buffer.slice(cursor, cursor + data_length)]
+		return [true, cursor + data_length, head_code, _receive_buffer.slice(cursor, cursor + data_length), response_id]
 	var size_result := _try_decode_vlq(cursor)
 	if not size_result[0]:
 		return [false]
@@ -557,14 +713,14 @@ func _try_parse_packet() -> Array:
 	if message_type == 3:
 		if _receive_buffer.size() < cursor + body_size:
 			return [false]
-		return [true, cursor + body_size, head_code, _receive_buffer.slice(cursor, cursor + body_size)]
+		return [true, cursor + body_size, head_code, _receive_buffer.slice(cursor, cursor + body_size), response_id]
 	var mask_size := (data_length + 7) / 8
 	if _receive_buffer.size() < cursor + mask_size + body_size:
 		return [false]
 	var mask := _receive_buffer.slice(cursor, cursor + mask_size)
 	cursor += mask_size
 	var body := _receive_buffer.slice(cursor, cursor + body_size)
-	return [true, cursor + body_size, head_code, _xor_decode(data_length, mask, body)]
+	return [true, cursor + body_size, head_code, _xor_decode(data_length, mask, body), response_id]
 
 
 func _try_decode_vlq(offset: int) -> Array:

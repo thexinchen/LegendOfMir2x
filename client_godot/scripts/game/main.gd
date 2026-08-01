@@ -327,6 +327,16 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			_handle_buy_error(payload)
 		NetworkClient.SM_STARTINPUT:
 			_handle_start_input(payload)
+		NetworkClient.SM_FRIENDLIST:
+			_handle_friend_list(payload)
+		NetworkClient.SM_CHATMESSAGELIST:
+			_handle_chat_message_list(payload)
+		NetworkClient.SM_CREATECHATGROUP:
+			_handle_chat_group(payload)
+		NetworkClient.SM_ADDFRIENDACCEPTED:
+			_handle_friend_result(payload, true)
+		NetworkClient.SM_ADDFRIENDREJECTED:
+			_handle_friend_result(payload, false)
 
 
 func _handle_start_game_scene(payload: PackedByteArray) -> void:
@@ -743,6 +753,38 @@ func _handle_start_input(payload: PackedByteArray) -> void:
 		game_state.state_changed.emit()
 		var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
 		panel.configure(data.get("title", ""), data.get("show", false))
+
+
+func _handle_friend_list(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var friends := reader.read_sd_chat_peer_list()
+	if _reader_ok(reader, "SM_FRIENDLIST"):
+		game_state.set_chat_friends(friends)
+
+
+func _handle_chat_message_list(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var messages := reader.read_sd_chat_message_list()
+	if not _reader_ok(reader, "SM_CHATMESSAGELIST"):
+		return
+	for message in messages:
+		game_state.add_chat_message(message)
+
+
+func _handle_chat_group(payload: PackedByteArray) -> void:
+	var reader := CerealReader.new(payload)
+	var peer := reader.read_sd_chat_peer()
+	if _reader_ok(reader, "SM_CREATECHATGROUP"):
+		game_state.add_chat_peer(peer, true)
+
+
+func _handle_friend_result(payload: PackedByteArray, accepted: bool) -> void:
+	var reader := CerealReader.new(payload)
+	var peer := reader.read_sd_chat_peer()
+	if not _reader_ok(reader, "SM_ADDFRIEND"):
+		return
+	game_state.add_chat_peer(peer, accepted)
+	game_state.add_chat_log("%s已%s你的好友申请" % [peer.get("name", "对方"), "通过" if accepted else "拒绝"], 1 if accepted else 3)
 
 
 func _reader_ok(reader: RefCounted, packet_name: String) -> bool:

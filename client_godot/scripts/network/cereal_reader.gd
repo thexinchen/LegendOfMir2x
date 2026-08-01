@@ -142,7 +142,8 @@ func read_byte_array() -> PackedByteArray:
 
 
 func read_optional(read_value: Callable) -> Variant:
-	if not read_bool():
+	# cereal writes a `nullopt` flag: true means no value follows.
+	if read_bool():
 		return null
 	return read_value.call()
 
@@ -267,6 +268,74 @@ func read_sd_player_name() -> Dictionary:
 		"name": read_string(),
 		"nameColor": read_u32(),
 	}
+
+
+func read_sd_chat_peer() -> Dictionary:
+	var peer := {
+		"id": read_u32(),
+		"name": read_string(),
+		"avatar": read_optional(func(): return read_u64()),
+		"type": 0,
+		"gender": false,
+		"job": 0,
+		"creator": 0,
+		"createtime": 0,
+		"members": [],
+	}
+	# cereal serializes std::variant's active index as int32.
+	var variant_index := read_s32()
+	match variant_index:
+		0:
+			peer.type = 1 # CPR_SPECIAL
+		1:
+			peer.type = 2 # CPR_PLAYER
+			peer.gender = read_bool()
+			peer.job = read_s32()
+		2:
+			peer.type = 3 # CPR_GROUP
+			peer.creator = read_u32()
+			peer.createtime = read_u64()
+			var member_count := read_size()
+			for _index in range(member_count):
+				peer.members.append({"dbid": read_u32(), "priority": read_u16()})
+		_:
+			_fail("invalid SDChatPeer variant index: %d" % variant_index)
+	peer["cpid"] = (int(peer.type) << 32) | int(peer.id)
+	return peer
+
+
+func read_sd_chat_peer_list() -> Array:
+	var result: Array = []
+	var count := read_size()
+	for _index in range(count):
+		result.append(read_sd_chat_peer())
+	return result
+
+
+func read_sd_chat_message_db_seq() -> Dictionary:
+	return {"id": read_u64(), "timestamp": read_u64()}
+
+
+func read_sd_chat_message() -> Dictionary:
+	return {
+		"seq": read_optional(func(): return read_sd_chat_message_db_seq()),
+		"refer": read_optional(func(): return read_u64()),
+		"from": read_u64(),
+		"to": read_u64(),
+		"message": read_byte_array(),
+	}
+
+
+func read_sd_chat_message_list() -> Array:
+	var result: Array = []
+	var count := read_size()
+	for _index in range(count):
+		result.append(read_sd_chat_message())
+	return result
+
+
+func read_sd_add_friend_notif() -> int:
+	return read_s32()
 
 
 func read_sd_ground_item_id_list() -> Dictionary:
