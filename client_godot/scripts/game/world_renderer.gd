@@ -25,6 +25,16 @@ const GROUND_ITEM_STAR_STEP := 0.05
 const DEAD_ACTION := 13
 const DEAD_FRAME_COUNT := 10
 const DEAD_FADE_STEP := 10
+const FIRE_ASH_TEXTURE_ID := 0x0F0000DC
+const ICE_SLAG_TEXTURE_IDS := [0x0F000105, 0x0F000104]
+const SPECIAL_WAVE_COUNT := 8
+const SPECIAL_WAVE_DELAY_MS := 100
+const FIRE_ASH_FADE_IN_MS := 1000
+const FIRE_ASH_HOLD_MS := 5000
+const FIRE_ASH_FADE_OUT_MS := 3000
+const ICE_SLAG_FADE_IN_FRAMES := 10
+const ICE_SLAG_HOLD_FRAMES := 30
+const ICE_SLAG_FADE_OUT_FRAMES := 15
 const PLAYER_SAY_WIDTH := 160
 const PLAYER_SAY_FONT_SIZE := 15
 const PLAYER_SAY_SHOW_TIME := 5000
@@ -116,6 +126,7 @@ func _draw() -> void:
 	var now := Time.get_ticks_msec()
 	var active_magic := _resolve_magic_effects(now)
 	_active_attached_magic = _resolve_attached_magic(now)
+	_draw_special_ground_underlays(active_magic, view_x, view_y)
 	_draw_dead_actors(view_x, view_y, now)
 
 	# Ground items precede living actors in the original renderer.
@@ -385,7 +396,10 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 	if magic_id <= 0:
 		return {}
 	var stages := [MAGIC_STAGE_RUN, MAGIC_STAGE_EXPLODE] if effect.get("source", "") == "cast" else [MAGIC_STAGE_SPELL, MAGIC_STAGE_RUN, MAGIC_STAGE_EXPLODE]
+	var special_kind := _special_magic_kind(magic_id)
 	var elapsed := maxi(0, now - int(effect.get("start_time", now)))
+	if not special_kind.is_empty() and effect.get("source", "") != "cast":
+		return _resolve_special_action_magic(effect, magic_id, special_kind, elapsed)
 	for stage in stages:
 		var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, stage)
 		if meta.is_empty():
@@ -397,6 +411,193 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 			return resolved
 		elapsed -= duration
 	return {}
+
+
+func _special_magic_kind(magic_id: int) -> String:
+	if magic_id == actor_resource.magic_id("地狱火"):
+		return "hellfire"
+	if magic_id == actor_resource.magic_id("冰沙掌"):
+		return "ice_thrust"
+	return ""
+
+
+func _resolve_special_action_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
+	var run_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	if run_meta.is_empty():
+		return {}
+	var speed := clampi(effect.get("speed", 100), 20, 500)
+	var trigger_delay := roundi(3.0 * 100.0 * 100.0 / speed)
+	var resolved := _resolve_special_magic(effect, magic_id, kind, run_meta, elapsed - trigger_delay)
+	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
+	if not startup_meta.is_empty():
+		var startup_duration := _magic_stage_duration(startup_meta, effect)
+		if elapsed < startup_duration:
+			var startup := _make_resolved_magic(effect, startup_meta, MAGIC_STAGE_SPELL, elapsed, startup_duration)
+			_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_SPELL, startup.position)
+			if resolved.is_empty():
+				resolved = {"special_kind": kind, "components": [], "underlays": [], "on_ground": false}
+			var components: Array = resolved.get("components", [])
+			components.append(_resolved_component(startup.meta, startup.frame, startup.direction, startup.position))
+			resolved["components"] = components
+	return resolved
+
+
+func _resolve_special_magic(effect: Dictionary, magic_id: int, kind: String, run_meta: PackedInt32Array, run_elapsed: int) -> Dictionary:
+	var auxiliary_name := "魔法特效_火焰灰烬" if kind == "hellfire" else "魔法特效_冰刺"
+	var auxiliary_meta: PackedInt32Array = actor_resource.magic_layout(actor_resource.magic_id(auxiliary_name), MAGIC_STAGE_RUN)
+	if auxiliary_meta.is_empty() or auxiliary_meta[2] <= 0:
+		return {}
+	var wave_lifetime := 0
+	if kind == "hellfire":
+		var ash_trigger := _magic_frame_reach_duration(run_meta, 10)
+		wave_lifetime = maxi(_magic_frame_duration(run_meta), ash_trigger + FIRE_ASH_FADE_IN_MS + FIRE_ASH_HOLD_MS + FIRE_ASH_FADE_OUT_MS)
+	else:
+		wave_lifetime = _magic_frame_reach_duration(auxiliary_meta, ICE_SLAG_FADE_IN_FRAMES + ICE_SLAG_HOLD_FRAMES + ICE_SLAG_FADE_OUT_FRAMES)
+	if run_elapsed >= SPECIAL_WAVE_COUNT * SPECIAL_WAVE_DELAY_MS + wave_lifetime:
+		return {}
+	_ensure_special_variants(effect)
+	var direction := clampi(effect.get("direction", 1), 1, 8)
+	var step := _direction_step(direction)
+	var source := Vector2(effect.get("x", 0), effect.get("y", 0))
+	var components: Array = []
+	var underlays: Array = []
+	for distance in range(1, SPECIAL_WAVE_COUNT + 1):
+		var wave_elapsed := run_elapsed - distance * SPECIAL_WAVE_DELAY_MS
+		if wave_elapsed < 0:
+			continue
+		var wave_position := source + Vector2(step * distance)
+		if not can_walk(roundi(wave_position.x), roundi(wave_position.y)):
+			continue
+		_play_special_wave_seff(effect, magic_id, distance, wave_position)
+		var variants: Array = effect.get("_special_variants", [])
+		var variant: Dictionary = variants[distance - 1]
+		if kind == "hellfire":
+			_resolve_hellfire_wave(run_meta, auxiliary_meta, direction, wave_position, wave_elapsed, variant, components, underlays)
+		else:
+			_resolve_ice_wave(auxiliary_meta, direction, wave_position, wave_elapsed, variant, components, underlays)
+	return {
+		"special_kind": kind,
+		"components": components,
+		"underlays": underlays,
+		"on_ground": false,
+	}
+
+
+func _play_special_wave_seff(effect: Dictionary, magic_id: int, distance: int, position: Vector2) -> void:
+	var mask: int = effect.get("_special_seff_mask", 0)
+	var bit := 1 << (distance - 1)
+	if mask & bit:
+		return
+	effect["_special_seff_mask"] = mask | bit
+	AudioService.play_seff_at(actor_resource.magic_seff(magic_id, MAGIC_STAGE_RUN), roundi(position.x), roundi(position.y), game_state.player_x, game_state.player_y)
+
+
+func _ensure_special_variants(effect: Dictionary) -> void:
+	if effect.has("_special_variants"):
+		return
+	var variants: Array = []
+	for _index in SPECIAL_WAVE_COUNT:
+		variants.append({
+			"ash_direction": randi_range(0, 4),
+			"frame_offset": randi_range(0, 9),
+			"rotation": randi_range(0, 359),
+			"slag_indices": [randi_range(0, 1), randi_range(0, 1)],
+			"ice_rotations": [randi_range(0, 359), randi_range(0, 359)],
+		})
+	effect["_special_variants"] = variants
+
+
+func _direction_step(direction: int) -> Vector2i:
+	const STEPS := [
+		Vector2i(0, -1), Vector2i(1, -1), Vector2i(1, 0), Vector2i(1, 1),
+		Vector2i(0, 1), Vector2i(-1, 1), Vector2i(-1, 0), Vector2i(-1, -1),
+	]
+	return STEPS[clampi(direction, 1, 8) - 1]
+
+
+func _magic_absolute_frame(meta: PackedInt32Array, elapsed: int) -> int:
+	return roundi(float(maxi(0, elapsed)) / 1000.0 * 10.0 * maxi(1, meta[4]) / 100.0)
+
+
+func _magic_frame_duration(meta: PackedInt32Array) -> int:
+	return _magic_frame_reach_duration(meta, meta[2])
+
+
+func _magic_frame_reach_duration(meta: PackedInt32Array, frame_count: int) -> int:
+	if frame_count <= 0:
+		return 0
+	return maxi(1, ceili((float(frame_count) - 0.5) * 1000.0 / (10.0 * maxi(1, meta[4]) / 100.0)))
+
+
+func _resolved_component(meta: PackedInt32Array, frame: int, direction: int, position: Vector2, alpha_mod := 1.0) -> Dictionary:
+	return {"meta": meta, "frame": frame, "direction": direction, "position": position, "alpha_mod": alpha_mod, "on_ground": bool(meta[7] & 2)}
+
+
+func _resolve_hellfire_wave(run_meta: PackedInt32Array, ash_meta: PackedInt32Array, direction: int, position: Vector2, elapsed: int, variant: Dictionary, components: Array, underlays: Array) -> void:
+	var primary_frame := _magic_absolute_frame(run_meta, elapsed)
+	if elapsed < _magic_frame_duration(run_meta):
+		components.append(_resolved_component(run_meta, mini(primary_frame, run_meta[2] - 1), direction % 2, position))
+		components.append(_resolved_component(run_meta, mini(primary_frame, run_meta[2] - 1), (direction + 1) % 2, position - Vector2(_direction_step(direction)) * 0.5))
+	var ash_trigger := _magic_frame_reach_duration(run_meta, 10)
+	var ash_elapsed := elapsed - ash_trigger
+	var ash_duration := FIRE_ASH_FADE_IN_MS + FIRE_ASH_HOLD_MS + FIRE_ASH_FADE_OUT_MS
+	if ash_elapsed < 0 or ash_elapsed >= ash_duration:
+		return
+	var alpha := _fire_ash_alpha(ash_elapsed)
+	var ash_frame := _magic_absolute_frame(ash_meta, ash_elapsed) + int(variant.get("frame_offset", 0))
+	if ash_meta[7] & 1:
+		ash_frame %= ash_meta[2]
+	components.append(_resolved_component(ash_meta, ash_frame, int(variant.get("ash_direction", 0)), position, alpha))
+	underlays.append({
+		"texture_id": FIRE_ASH_TEXTURE_ID,
+		"crop": Vector2i(102, 72),
+		"position": position,
+		"rotation": int(variant.get("rotation", 0)),
+		"alpha_mod": alpha,
+		"meta": ash_meta,
+	})
+
+
+func _fire_ash_alpha(elapsed: int) -> float:
+	if elapsed < FIRE_ASH_FADE_IN_MS:
+		return float(elapsed) / FIRE_ASH_FADE_IN_MS
+	if elapsed < FIRE_ASH_FADE_IN_MS + FIRE_ASH_HOLD_MS:
+		return 1.0
+	return 1.0 - float(elapsed - FIRE_ASH_FADE_IN_MS - FIRE_ASH_HOLD_MS) / FIRE_ASH_FADE_OUT_MS
+
+
+func _resolve_ice_wave(child_meta: PackedInt32Array, direction: int, position: Vector2, elapsed: int, variant: Dictionary, components: Array, underlays: Array) -> void:
+	var absolute_frame := _magic_absolute_frame(child_meta, elapsed)
+	var total_frames := ICE_SLAG_FADE_IN_FRAMES + ICE_SLAG_HOLD_FRAMES + ICE_SLAG_FADE_OUT_FRAMES
+	if absolute_frame >= total_frames:
+		return
+	var shifted_position := position - Vector2(_direction_step(direction)) * 0.5
+	if absolute_frame < child_meta[2]:
+		components.append(_resolved_component(child_meta, absolute_frame, direction % 2, position))
+		components.append(_resolved_component(child_meta, absolute_frame, (direction + 1) % 2, shifted_position))
+	var alpha := _ice_slag_alpha(absolute_frame)
+	var slag_indices: Array = variant.get("slag_indices", [0, 0])
+	var ice_rotations: Array = variant.get("ice_rotations", [0, 0])
+	var ground_positions := [position, shifted_position]
+	for child_index in 2:
+		var slag_index := clampi(slag_indices[child_index], 0, 1)
+		var crop := Vector2i(76, 43) if slag_index == 0 else Vector2i(83, 53)
+		underlays.append({
+			"texture_id": ICE_SLAG_TEXTURE_IDS[slag_index],
+			"crop": crop,
+			"position": ground_positions[child_index],
+			"rotation": int(ice_rotations[child_index]),
+			"alpha_mod": alpha,
+			"meta": child_meta,
+		})
+
+
+func _ice_slag_alpha(frame: int) -> float:
+	if frame < ICE_SLAG_FADE_IN_FRAMES:
+		return float(frame) / ICE_SLAG_FADE_IN_FRAMES
+	if frame < ICE_SLAG_FADE_IN_FRAMES + ICE_SLAG_HOLD_FRAMES:
+		return 1.0
+	return 1.0 - float(frame - ICE_SLAG_FADE_IN_FRAMES - ICE_SLAG_HOLD_FRAMES) / ICE_SLAG_FADE_OUT_FRAMES
 
 
 func _play_magic_stage_seff(effect: Dictionary, magic_id: int, stage: int, position: Vector2) -> void:
@@ -472,12 +673,48 @@ func _magic_direction_index(dir_type: int, source: Vector2, target: Vector2, net
 func _draw_magic_row(active: Array, y: int, on_ground: bool, view_x: int, view_y: int) -> void:
 	for magic_value in active:
 		var magic: Dictionary = magic_value
+		if magic.has("components"):
+			for component_value in magic.get("components", []):
+				var component: Dictionary = component_value
+				if component.get("on_ground", false) != on_ground:
+					continue
+				var component_position: Vector2 = component.position
+				if on_ground and floori(component_position.y) != y:
+					continue
+				_draw_magic_frame(component.meta, component.frame, component.direction, component.position, view_x, view_y, component.get("alpha_mod", 1.0))
+			continue
 		if magic.on_ground != on_ground:
 			continue
 		var position: Vector2 = magic.position
 		if on_ground and floori(position.y) != y:
 			continue
 		_draw_magic_frame(magic.meta, magic.frame, magic.direction, position, view_x, view_y)
+
+
+func _draw_special_ground_underlays(active: Array, view_x: int, view_y: int) -> void:
+	for magic_value in active:
+		var magic: Dictionary = magic_value
+		for underlay_value in magic.get("underlays", []):
+			var underlay: Dictionary = underlay_value
+			_draw_rotated_magic_region(underlay, view_x, view_y)
+
+
+func _draw_rotated_magic_region(underlay: Dictionary, view_x: int, view_y: int) -> void:
+	var sprite: Dictionary = actor_resource.frame("magic", underlay.get("texture_id", 0))
+	var texture := sprite.get("texture") as Texture2D
+	if texture == null:
+		return
+	var requested_crop: Vector2i = underlay.get("crop", Vector2i(texture.get_width(), texture.get_height()))
+	var crop := Vector2i(mini(requested_crop.x, texture.get_width()), mini(requested_crop.y, texture.get_height()))
+	var position: Vector2 = underlay.get("position", Vector2.ZERO)
+	var offset: Vector2i = sprite.get("offset", Vector2i.ZERO)
+	var draw_position := Vector2(position.x * GRID_XP - view_x + offset.x, position.y * GRID_YP - view_y + offset.y)
+	var center := Vector2(crop) * 0.5
+	var meta: PackedInt32Array = underlay.get("meta", PackedInt32Array())
+	var color := _magic_mod_color(meta, float(underlay.get("alpha_mod", 1.0)) * 150.0 / 255.0)
+	draw_set_transform(draw_position + center, deg_to_rad(float(underlay.get("rotation", 0))), Vector2.ONE)
+	draw_texture_rect_region(texture, Rect2(-center, Vector2(crop)), Rect2(Vector2.ZERO, Vector2(crop)), color)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_firewall_row(y: int, x0: int, x1: int, view_x: int, view_y: int, now: int) -> void:
@@ -497,18 +734,13 @@ func _draw_firewall_row(y: int, x0: int, x1: int, view_x: int, view_y: int, now:
 
 
 func _draw_magic_frame(meta: PackedInt32Array, frame: int, direction: int, grid_position: Vector2, view_x: int, view_y: int, alpha_mod := 1.0, mirror_vertical := false) -> void:
+	if meta.size() < 8 or meta[7] & 4:
+		return
 	var texture_id: int = meta[0] + direction * meta[3] + frame
 	var sprite: Dictionary = actor_resource.frame("magic", texture_id)
 	if sprite.is_empty():
 		return
-	var packed_color: int = meta[1]
-	var color := Color(
-		float(packed_color & 0xFF) / 255.0,
-		float((packed_color >> 8) & 0xFF) / 255.0,
-		float((packed_color >> 16) & 0xFF) / 255.0,
-		float((packed_color >> 24) & 0xFF) / 255.0,
-	)
-	color.a *= alpha_mod
+	var color := _magic_mod_color(meta, alpha_mod)
 	var offset: Vector2i = sprite.offset
 	var draw_position := Vector2(grid_position.x * GRID_XP - view_x + offset.x, grid_position.y * GRID_YP - view_y + offset.y)
 	draw_texture(sprite.texture, draw_position, color)
@@ -516,6 +748,18 @@ func _draw_magic_frame(meta: PackedInt32Array, frame: int, direction: int, grid_
 		draw_set_transform(draw_position, 0.0, Vector2(1.0, -1.0))
 		draw_texture(sprite.texture, Vector2.ZERO, color)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _magic_mod_color(meta: PackedInt32Array, alpha_mod: float) -> Color:
+	if meta.size() < 2:
+		return Color(1, 1, 1, alpha_mod)
+	var packed_color: int = meta[1]
+	return Color(
+		float(packed_color & 0xFF) / 255.0,
+		float((packed_color >> 8) & 0xFF) / 255.0,
+		float((packed_color >> 16) & 0xFF) / 255.0,
+		float((packed_color >> 24) & 0xFF) / 255.0 * alpha_mod,
+	)
 
 
 func _draw_attached_magic(uid: int, start_x: int, start_y: int) -> void:

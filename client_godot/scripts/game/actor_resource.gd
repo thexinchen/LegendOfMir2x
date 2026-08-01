@@ -328,7 +328,7 @@ func _load_magic_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2]:
+	if version not in [1, 2, 3]:
 		return
 	var count := file.get_32()
 	for _index in range(count):

@@ -509,7 +509,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             }
             for(int stage = MST_BEGIN; stage < MST_END; ++stage){
                 const auto [gfxEntry, gfxRef] = DBCOM_MAGICGFXENTRY(magicID, magicStageName(stage));
-                if(!(gfxEntry && gfxEntry->gfxID != SYS_U32NIL && gfxEntry->frameCount > 0)){
+                if(!gfxEntry){
                     continue;
                 }
                 metaList.push_back({
@@ -522,13 +522,13 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
                     check_cast<uint8_t>(stage),
                     check_cast<uint8_t>(magicGfxEntryID(gfxEntry->type)),
                     check_cast<uint8_t>(gfxEntry->gfxDirType),
-                    to_u8((gfxEntry->loop ? 1 : 0) | (gfxEntry->onGround ? 2 : 0)),
+                    to_u8((gfxEntry->loop ? 1 : 0) | (gfxEntry->onGround ? 2 : 0) | ((gfxEntry->gfxID == SYS_U32NIL || gfxEntry->frameCount <= 0) ? 4 : 0)),
                     DBCOM_MAGICGFXSEFFID(magicID, magicStageName(stage)).value_or(UINT32_MAX),
                 });
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "magic.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 2, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 3, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
 

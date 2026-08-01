@@ -14,7 +14,11 @@ func _ready() -> void:
 	var firewall_id: int = resources.magic_id("火墙")
 	var shield_id: int = resources.magic_id("魔法盾")
 	var ring_id: int = resources.magic_id("阴阳法环")
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0:
+	var hellfire_id: int = resources.magic_id("地狱火")
+	var ice_thrust_id: int = resources.magic_id("冰沙掌")
+	var fire_ash_id: int = resources.magic_id("魔法特效_火焰灰烬")
+	var ice_thorn_id: int = resources.magic_id("魔法特效_冰刺")
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0:
 		_fail("magic name metadata incomplete")
 		return
 	var fireball_run: PackedInt32Array = resources.magic_layout(fireball_id, 2)
@@ -51,6 +55,72 @@ func _ready() -> void:
 	$WorldRenderer.game_state = GameState
 	if not $WorldRenderer.load_map(24):
 		_fail("map 24 failed to load")
+		return
+	if resources.frame("magic", 0x0F0000DC).is_empty() or resources.frame("magic", 0x0F000104).is_empty() or resources.frame("magic", 0x0F000105).is_empty():
+		_fail("special ground textures missing")
+		return
+	var special_source := _find_open_wave_source($WorldRenderer, 8, $WorldRenderer.map_height - 8)
+	if special_source.x < 0:
+		_fail("no open eight-grid line for special magic fixture")
+		return
+	var ice_source := _find_open_wave_source($WorldRenderer, special_source.y + 2, mini($WorldRenderer.map_height - 8, special_source.y + 12))
+	if ice_source.x < 0:
+		ice_source = special_source + Vector2i(8, 0)
+	var variants: Array = []
+	for index in 8:
+		variants.append({
+			"ash_direction": index % 5,
+			"frame_offset": index % 10,
+			"rotation": index * 31,
+			"slag_indices": [index % 2, (index + 1) % 2],
+			"ice_rotations": [index * 23, index * 29],
+		})
+	var hellfire_meta: PackedInt32Array = resources.magic_layout(hellfire_id, 2)
+	var ice_thrust_meta: PackedInt32Array = resources.magic_layout(ice_thrust_id, 2)
+	var ice_thorn_meta: PackedInt32Array = resources.magic_layout(ice_thorn_id, 2)
+	if hellfire_meta.is_empty() or ice_thrust_meta.is_empty() or ice_thorn_meta.is_empty() or not bool(ice_thrust_meta[7] & 4):
+		_fail("special composite run metadata missing: hell=%d ice_parent=%s ice_child=%d" % [hellfire_meta.size(), ice_thrust_meta, ice_thorn_meta.size()])
+		return
+	var special_effect := {
+		"source": "action", "magicID": hellfire_id, "x": special_source.x, "y": special_source.y,
+		"aimX": special_source.x + 8, "aimY": special_source.y, "direction": 3, "speed": 100,
+		"_special_variants": variants, "_special_seff_mask": 0xFF,
+	}
+	var pending_special: Dictionary = $WorldRenderer.call("_resolve_special_magic", special_effect, hellfire_id, "hellfire", hellfire_meta, 0)
+	if pending_special.is_empty() or not pending_special.get("components", []).is_empty():
+		_fail("special wave was not retained before its first 100ms delay")
+		return
+	var hellfire_trigger: int = $WorldRenderer.call("_magic_frame_reach_duration", hellfire_meta, 10)
+	var hellfire_state: Dictionary = $WorldRenderer.call("_resolve_special_magic", special_effect, hellfire_id, "hellfire", hellfire_meta, 100 + hellfire_trigger + 500)
+	if hellfire_state.get("underlays", []).is_empty() or hellfire_state.get("components", []).is_empty():
+		_fail("hellfire ash composite missing: %s" % hellfire_state)
+		return
+	var first_ash: Dictionary = hellfire_state.get("underlays", [])[0]
+	if first_ash.get("texture_id", 0) != 0x0F0000DC or first_ash.get("crop", Vector2i.ZERO) != Vector2i(102, 72):
+		_fail("hellfire ash texture/crop mismatch: %s" % first_ash)
+		return
+	var ice_effect := special_effect.duplicate(true)
+	ice_effect["magicID"] = ice_thrust_id
+	var ice_state: Dictionary = $WorldRenderer.call("_resolve_special_magic", ice_effect, ice_thrust_id, "ice_thrust", ice_thrust_meta, 1100)
+	if ice_state.get("components", []).size() < 2 or ice_state.get("underlays", []).size() < 2:
+		_fail("ice thrust child/slag composite missing: %s" % ice_state)
+		return
+	var ice_underlay: Dictionary = ice_state.get("underlays", [])[0]
+	if int(ice_underlay.get("texture_id", 0)) not in [0x0F000104, 0x0F000105]:
+		_fail("ice slag texture mismatch: %s" % ice_underlay)
+		return
+	if $WorldRenderer.call("_direction_step", 3) != Vector2i(1, 0):
+		_fail("special wave direction mapping mismatch")
+		return
+	var ice_lifetime: int = $WorldRenderer.call("_magic_frame_reach_duration", ice_thorn_meta, 55)
+	if not $WorldRenderer.call("_resolve_special_magic", ice_effect, ice_thrust_id, "ice_thrust", ice_thrust_meta, 800 + ice_lifetime).is_empty():
+		_fail("ice thrust composite did not expire after the eighth slag lifetime")
+		return
+	if resources.magic_seff(ice_thrust_id, 2) < 0:
+		_fail("invisible ice thrust parent lost its run SEFF metadata")
+		return
+	if not is_equal_approx(float($WorldRenderer.call("_fire_ash_alpha", 500)), 0.5) or not is_equal_approx(float($WorldRenderer.call("_ice_slag_alpha", 5)), 0.5):
+		_fail("special ground alpha envelope mismatch")
 		return
 
 	var now := Time.get_ticks_msec()
@@ -132,7 +202,38 @@ func _ready() -> void:
 		return
 
 	# Restore effects because the render pass consumes expired source records.
-	GameState.magic_effects = [fireball]
+	var visual_now := Time.get_ticks_msec()
+	var hellfire_visual := special_effect.duplicate(true)
+	hellfire_visual["start_time"] = visual_now - 300 - 100 - hellfire_trigger - 700
+	var ice_visual := ice_effect.duplicate(true)
+	ice_visual["x"] = ice_source.x
+	ice_visual["y"] = ice_source.y
+	ice_visual["aimX"] = ice_source.x + 8
+	ice_visual["aimY"] = ice_source.y
+	ice_visual["direction"] = 7 if ice_source.y == special_source.y else 3
+	ice_visual["start_time"] = visual_now - 300 - 100 - 500
+	var visual_ice_state: Dictionary = $WorldRenderer.call("_resolve_magic_effect", ice_visual, visual_now)
+	if visual_ice_state.get("components", []).is_empty() or visual_ice_state.get("underlays", []).is_empty():
+		_fail("ice visual phase resolved empty: state=%s kind=%s source=%s id=%d run=%d elapsed=%d" % [visual_ice_state, $WorldRenderer.call("_special_magic_kind", int(ice_visual.get("magicID", 0))), ice_visual.get("source", ""), ice_visual.get("magicID", 0), resources.magic_layout(int(ice_visual.get("magicID", 0)), 2).size(), visual_now - int(ice_visual.get("start_time", visual_now))])
+		return
+	var on_ground_component_count := 0
+	for component_value in visual_ice_state.get("components", []):
+		var component: Dictionary = component_value
+		if component.get("on_ground", false):
+			on_ground_component_count += 1
+		var component_meta: PackedInt32Array = component.meta
+		var texture_id: int = component_meta[0] + int(component.direction) * component_meta[3] + int(component.frame)
+		if resources.frame("magic", texture_id).is_empty():
+			_fail("ice visual component texture missing: %08X" % texture_id)
+			return
+	if on_ground_component_count < 2:
+		_fail("ice thorn components lost original on-ground row depth")
+		return
+	GameState.player_x = special_source.x
+	GameState.player_y = special_source.y
+	GameState.view_x = special_source.x * 48 - 240
+	GameState.view_y = roundi(float(special_source.y + ice_source.y) * 16.0) - 260
+	GameState.magic_effects = [hellfire_visual, ice_visual, fireball]
 	GameState.attached_magic_effects = [shield, thunder]
 	shield.start_time = now
 	thunder.start_time = now
@@ -141,10 +242,31 @@ func _ready() -> void:
 	if OS.has_environment("MIR2X_MAGIC_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MAGIC_SCREENSHOT"))
-	print("MAGIC EFFECT PASS: action spell, original cast attachments, firewall loop and original frames")
+	if OS.has_environment("MIR2X_ICE_SCREENSHOT"):
+		GameState.magic_effects = [ice_visual]
+		GameState.view_x = ice_source.x * 48 - 240
+		GameState.view_y = ice_source.y * 32 - 260
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ICE_SCREENSHOT"))
+	print("MAGIC EFFECT PASS: action spell, attachments, firewall, eight-grid hellfire/ice composites and ground underlays")
 	get_tree().quit()
 
 
 func _fail(message: String) -> void:
 	push_error("MAGIC_EFFECT_SMOKE %s" % message)
 	get_tree().quit(1)
+
+
+func _find_open_wave_source(renderer, start_y: int, end_y: int) -> Vector2i:
+	for y in range(start_y, end_y):
+		for x in range(8, renderer.map_width - 16):
+			var open := true
+			for distance in range(0, 9):
+				if not renderer.can_walk(x + distance, y):
+					open = false
+					break
+			if open:
+				return Vector2i(x, y)
+	return Vector2i(-1, -1)
