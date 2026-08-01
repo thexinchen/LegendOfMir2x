@@ -2,6 +2,7 @@ extends Node
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const CombatCalculatorScript = preload("res://scripts/game/combat_calculator.gd")
+const WorldRendererScript = preload("res://scripts/game/world_renderer.gd")
 
 
 func _ready() -> void:
@@ -35,6 +36,32 @@ func _ready() -> void:
 	if panel.get_node("%Face").texture == null:
 		_fail("player face missing")
 		return
+	if panel.get_node("%BuffContainer").get_child_count() != 1:
+		_fail("compact self buff missing")
+		return
+	var monster_id: int = resources.monster_meta.keys()[0]
+	panel.call("_apply_focus_hud", {"uid": 101, "type": 1, "monster_id": monster_id, "hp": 25, "hp_max": 100, "buffs": GameState.buff_list})
+	if absf(panel.get_node("%FaceHealth").size.x - 20.5) > 0.01 or panel.get_node("%Face").texture == null:
+		_fail("focused monster portrait or health mismatch")
+		return
+	if panel.get_node("%BuffContainer").get_child_count() != 1:
+		_fail("focused monster buff missing")
+		return
+	var renderer: Control = WorldRendererScript.new()
+	renderer.game_state = GameState
+	renderer._actor_target_rects = {
+		GameState.player_uid: {"rect": Rect2(10, 10, 40, 40), "map_y": 99},
+		101: {"rect": Rect2(10, 10, 40, 40), "map_y": 100},
+		102: {"rect": Rect2(10, 10, 40, 40), "map_y": 101},
+	}
+	if renderer.focus_uid_at_screen(Vector2(20, 20)) != 102:
+		_fail("focus overlap did not select greatest map Y")
+		return
+	renderer._actor_target_rects.erase(102)
+	if renderer.focus_uid_at_screen(Vector2(20, 20)) != 101:
+		_fail("focus query did not exclude self")
+		return
+	renderer.free()
 	if absf(panel.get_node("%Experience").value - GameState.level_ratio() * 100.0) > 0.01:
 		_fail("experience meter mismatch: panel=%s expected=%s" % [panel.get_node("%Experience").value, GameState.level_ratio() * 100.0])
 		return
@@ -62,12 +89,20 @@ func _ready() -> void:
 	if chat_log.get_v_scroll_bar().modulate.a != 0.0:
 		_fail("default chat scrollbar is visible")
 		return
+	panel.call("_on_expand_pressed")
+	if panel.get_node("%Face").visible or panel.get_node("%FaceHealth").visible or panel.get_node("%BuffContainer").visible:
+		_fail("compact focus HUD remains visible while chat is expanded")
+		return
+	panel.call("_on_expand_pressed")
+	if not panel.get_node("%Face").visible or not panel.get_node("%FaceHealth").visible or not panel.get_node("%BuffContainer").visible:
+		_fail("compact focus HUD did not return after collapsing chat")
+		return
 	panel.call("_on_ac_pressed")
 	panel.call("_on_dc_pressed")
 	if panel.get_node("%ACValue").text != "%d-%d" % [combat.mac[0], combat.mac[1]] or panel.get_node("%DCValue").text != "%d-%d" % [combat.mc[0], combat.mc[1]]:
 		_fail("AC/MA or DC/MC toggle mismatch")
 		return
-	print("HUD STATE PASS: face, HP, experience, load and combat toggles")
+	print("HUD STATE PASS: self/focus face, HP, compact buffs, target depth, experience, load and combat toggles")
 	get_tree().quit()
 
 

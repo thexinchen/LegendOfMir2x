@@ -32,6 +32,7 @@ var map_height: int = 0
 var world_resource: RefCounted = WorldResourceScript.new()
 var actor_resource: RefCounted = ActorResourceScript.new()
 var _active_attached_magic: Dictionary = {}
+var _actor_target_rects: Dictionary = {}
 
 
 func _ready() -> void:
@@ -58,6 +59,7 @@ func can_walk(x: int, y: int) -> bool:
 func _draw() -> void:
 	if game_state == null:
 		return
+	_actor_target_rects.clear()
 	
 	var view_x: int = int(game_state.view_x)
 	var view_y: int = int(game_state.view_y)
@@ -424,7 +426,7 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
 
 	_draw_attached_magic(game_state.player_uid, px, py)
-	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id):
+	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id, game_state.player_uid, game_state.player_y):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
 	_draw_player_say(game_state.player_uid, px, py)
@@ -449,7 +451,7 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int) -> void:
 		_draw_attached_magic(uid, cx, cy)
 	match c_type:
 		1: sprite_drawn = _draw_monster_sprite(c, cx, cy)
-		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100), c.get("action_magic_id", 0))
+		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100), c.get("action_magic_id", 0), uid, c.get("y", 0))
 		3: sprite_drawn = _draw_npc_sprite(c, cx, cy)
 	if not sprite_drawn:
 		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3))
@@ -541,7 +543,7 @@ func _wrap_player_say(text: String, font: Font) -> Array[String]:
 	return result
 
 
-func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int, action_started_ms := 0, action_speed := 100, magic_id := 0) -> bool:
+func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int, action_started_ms := 0, action_speed := 100, magic_id := 0, uid := 0, map_y := 0) -> bool:
 	var direction_index := clampi(direction, 1, 8) - 1
 	var motion_data := _hero_motion(action_type, magic_id, desp)
 	var frame_index := _motion_frame(action_type, motion_data[1], action_started_ms, action_speed)
@@ -562,6 +564,7 @@ func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dict
 	var body_key := (gender << 22) | ((gfx_id & 0x1FFFF) << 5) | frame_index
 	var shadow: Dictionary = actor_resource.frame("hero", body_key | (1 << 23))
 	var body: Dictionary = actor_resource.frame("hero", body_key)
+	_record_actor_target(uid, 2, map_y, action_type, body, start_x, start_y)
 	_draw_sprite_frame(shadow, start_x, start_y, 0.5)
 	var weapon_shape := _wear_shape(wear, 3)
 	var weapon_key := 0
@@ -631,8 +634,39 @@ func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int) -> b
 	if actor_resource.monster_has_shadow(monster_id):
 		_draw_sprite_frame(actor_resource.frame("monster", body_key | (1 << 23)), start_x, start_y, 0.5)
 	var body: Dictionary = actor_resource.frame("monster", body_key)
+	_record_actor_target(creature.get("uid", 0), 1, creature.get("y", 0), creature.get("action_type", 2), body, start_x, start_y)
 	_draw_sprite_frame(body, start_x, start_y, 1.0)
 	return not body.is_empty()
+
+
+func _record_actor_target(uid: int, creature_type: int, map_y: int, action_type: int, body: Dictionary, start_x: int, start_y: int) -> void:
+	if uid == 0 or action_type == 13 or body.is_empty():
+		return
+	var texture: Texture2D = body.texture
+	var offset: Vector2i = body.offset
+	var texture_size := texture.get_size()
+	var target_size := Vector2(minf(texture_size.x, 58.0), minf(texture_size.y, 40.0))
+	var target_position := Vector2(start_x + offset.x, start_y + offset.y)
+	target_position += (texture_size - target_size) * 0.5
+	_actor_target_rects[uid] = {
+		"rect": Rect2(target_position, target_size),
+		"type": creature_type,
+		"map_y": map_y,
+	}
+
+
+func focus_uid_at_screen(screen_position: Vector2, allow_player := false) -> int:
+	var best_uid := 0
+	var best_y := -2147483648
+	for uid_value in _actor_target_rects:
+		var uid: int = uid_value
+		if not allow_player and uid == game_state.player_uid:
+			continue
+		var target: Dictionary = _actor_target_rects[uid]
+		if target.rect.has_point(screen_position) and int(target.map_y) >= best_y:
+			best_uid = uid
+			best_y = int(target.map_y)
+	return best_uid
 
 
 func _draw_npc_sprite(creature: Dictionary, start_x: int, start_y: int) -> bool:
