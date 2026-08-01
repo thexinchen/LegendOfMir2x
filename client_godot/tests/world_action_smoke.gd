@@ -33,6 +33,8 @@ func _ready() -> void:
 	await get_tree().process_frame
 	if not _test_camera_centering(main):
 		return
+	if not _test_team_flag_cursor(main):
+		return
 	main.call("_on_server_message", NetworkClient.SM_NEXTSTRIKE, PackedByteArray())
 	if main.call("_consume_attack_magic_id") != next_strike_id or main.call("_consume_attack_magic_id") != physical_id:
 		_fail("SM_NEXTSTRIKE was not consumed exactly once")
@@ -75,7 +77,7 @@ func _ready() -> void:
 		return
 	if not _test_pickup_action(main, resources):
 		return
-	print("WORLD ACTION PASS: focus channels, mining, exact-frame focus, action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
+	print("WORLD ACTION PASS: team flag, focus channels, mining, exact-frame focus, action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
 
 
@@ -102,6 +104,56 @@ func _test_camera_centering(main: Control) -> bool:
 	if GameState.hud_minimized or not is_equal_approx(GameState.view_y, float(132 * 32 - 234)):
 		_fail("restored HUD or ESC centering did not return to the 469px viewport")
 		return false
+	return true
+
+
+func _test_team_flag_cursor(main: Control) -> bool:
+	var previous_uid := GameState.player_uid
+	var previous_members := GameState.team_members.duplicate(true)
+	var target_uid := (5 << 59) | 202
+	var monster_uid := (1 << 59) | 203
+	GameState.player_uid = (5 << 59) | 1
+	GameState.team_members = []
+	GameState.creatures[target_uid] = {"uid": target_uid, "type": 2, "name": "队旗目标"}
+	GameState.creatures[monster_uid] = {"uid": monster_uid, "type": 1, "name": "队旗非玩家"}
+	main.call("_on_control_panel_panel_requested", "res://scenes/game/panels/team.tscn")
+	main.call("_update_team_flag_cursor")
+	var cursor := main.get_node("TeamFlagCursor") as TextureRect
+	if not main.get("_team_flag_active") or not cursor.visible or cursor.texture == null:
+		_fail("no-team HUD request did not enable the original team-flag cursor")
+		return false
+	if main.call("_team_flag_frame_index", 0) != 0 or main.call("_team_flag_frame_index", 199) != 0 or main.call("_team_flag_frame_index", 200) != 1 or main.call("_team_flag_frame_index", 2600) != 0:
+		_fail("team-flag animation does not run through 13 frames at 5 FPS")
+		return false
+	if main.call("_request_team_flag_target", target_uid) != ERR_UNCONFIGURED:
+		_fail("team-flag player target did not issue the join-team request")
+		return false
+	if main.call("_request_team_flag_target", monster_uid) != ERR_INVALID_PARAMETER:
+		_fail("team-flag accepted a non-player target")
+		return false
+	var move_path: Array = main.get("_move_path")
+	move_path.append(Vector2i(10, 10))
+	var cancel_event := InputEventMouseButton.new()
+	cancel_event.button_index = MOUSE_BUTTON_RIGHT
+	cancel_event.pressed = true
+	cancel_event.position = Vector2(400, 300)
+	main.call("_handle_mouse_click", cancel_event)
+	if main.get("_team_flag_active") or cursor.visible or move_path.size() != 1:
+		_fail("team-flag right-click did not cancel without changing movement")
+		return false
+	move_path.clear()
+	GameState.team_members = [{"uid": GameState.player_uid, "name": "自己"}]
+	main.call("_on_control_panel_panel_requested", "res://scenes/game/panels/team.tscn")
+	var panels: Dictionary = main.get("_extra_panel_nodes")
+	var team_panel := panels.get("res://scenes/game/panels/team.tscn") as Control
+	if team_panel == null or not team_panel.visible or main.get("_team_flag_active"):
+		_fail("in-team HUD request did not open the team panel")
+		return false
+	team_panel.hide()
+	GameState.creatures.erase(target_uid)
+	GameState.creatures.erase(monster_uid)
+	GameState.player_uid = previous_uid
+	GameState.team_members = previous_members
 	return true
 
 

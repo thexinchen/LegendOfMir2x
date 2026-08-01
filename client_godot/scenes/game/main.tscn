@@ -135,6 +135,11 @@ offset_top = 448.0
 offset_right = 800.0
 offset_bottom = 600.0
 
+[node name="TeamFlagCursor" type="TextureRect" parent="."]
+layout_mode = 0
+z_index = 1000
+mouse_filter = 2
+
 [connection signal="pressed" from="QuickBar/CloseButton" to="." method="_on_quick_bar_close_pressed"]
 [connection signal="panel_requested" from="ControlPanel" to="." method="_on_control_panel_panel_requested"]
 [connection signal="quick_bar_toggled" from="ControlPanel" to="." method="_on_control_panel_quick_bar_toggled"]

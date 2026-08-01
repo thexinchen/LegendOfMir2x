@@ -13,6 +13,7 @@ const NPC_CHAT_PANEL_PATH := "res://scenes/game/panels/npc_chat.tscn"
 const PURCHASE_PANEL_PATH := "res://scenes/game/panels/purchase.tscn"
 const FRIEND_CHAT_PANEL_PATH := "res://scenes/game/panels/friend_chat.tscn"
 const SECURED_ITEMS_PANEL_PATH := "res://scenes/game/panels/secured_items.tscn"
+const TEAM_PANEL_PATH := "res://scenes/game/panels/team.tscn"
 const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 
 @onready var world_renderer: Control = $WorldRenderer
@@ -24,6 +25,7 @@ const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 @onready var control_panel: Control = $ControlPanel
 @onready var grabbed_item_icon: TextureRect = $GrabbedItemIcon
 @onready var skill_buff_hud: Control = $SkillBuffHUD
+@onready var team_flag_cursor: TextureRect = $TeamFlagCursor
 
 var game_state: Node = null
 var protocol: RefCounted = null
@@ -62,6 +64,7 @@ var _pickup_target := Vector2i(-1, -1)
 var _mine_target := Vector2i(-1, -1)
 var _pickup_action_timer := -1.0
 var _player_action_timer := -1.0
+var _team_flag_active := false
 
 # C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame).
 # Keep a small network margin before sending the next one-hop action.
@@ -89,6 +92,7 @@ func _ready() -> void:
 	player_state_panel.hide()
 	skill_panel.hide()
 	quick_bar.hide()
+	team_flag_cursor.hide()
 	
 	# C++ location format: "mapName: x y", font 10 size 15, white, at {4, localBaseY+110}
 	# localBaseY = screenH - 133 = 600 - 133 = 467, so y = 467 + 110 = 577
@@ -134,6 +138,12 @@ func _process(delta: float) -> void:
 	world_renderer.queue_redraw()
 	if grabbed_item_icon.visible:
 		grabbed_item_icon.position = get_viewport().get_mouse_position() - grabbed_item_icon.size * 0.5
+	_update_team_flag_cursor()
+
+
+func _exit_tree() -> void:
+	if _team_flag_active:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 
 func _refresh_grabbed_item_icon() -> void:
@@ -195,6 +205,13 @@ func _unhandled_input(event: InputEvent) -> void:
 func _handle_mouse_click(event: InputEventMouseButton) -> void:
 	var grid: Vector2i = world_renderer.grid_from_screen(int(event.position.x), int(event.position.y))
 	var focus_uid: int = world_renderer.focus_uid_at_screen(event.position, event.button_index == MOUSE_BUTTON_LEFT)
+	if _team_flag_active:
+		if event.button_index == MOUSE_BUTTON_RIGHT:
+			_set_team_flag_cursor(false)
+			return
+		if event.button_index == MOUSE_BUTTON_LEFT and focus_uid != 0:
+			_request_team_flag_target(focus_uid)
+			return
 	if event.button_index == MOUSE_BUTTON_RIGHT:
 		_attack_focus_uid = 0
 		_follow_focus_uid = 0
@@ -1554,8 +1571,53 @@ func _on_control_panel_panel_requested(scene_path: String) -> void:
 		_toggle_panel(player_state_panel)
 	elif scene_path.ends_with("/skill.tscn"):
 		_toggle_panel(skill_panel)
+	elif scene_path == TEAM_PANEL_PATH:
+		if _player_has_team():
+			_toggle_extra_panel(scene_path)
+			var team_panel := _extra_panel_nodes.get(scene_path) as Control
+			if team_panel != null and team_panel.visible:
+				team_panel.call("_reset_scroll")
+		else:
+			_set_team_flag_cursor(true)
 	else:
 		_toggle_extra_panel(scene_path)
+
+
+func _player_has_team() -> bool:
+	for member_value in game_state.team_members:
+		if member_value is Dictionary and int(member_value.get("uid", 0)) == game_state.player_uid:
+			return true
+	return false
+
+
+func _set_team_flag_cursor(active: bool) -> void:
+	_team_flag_active = active
+	team_flag_cursor.visible = active
+	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN if active else Input.MOUSE_MODE_VISIBLE)
+	if active:
+		_update_team_flag_cursor()
+
+
+func _update_team_flag_cursor() -> void:
+	if not _team_flag_active:
+		return
+	var frame_index := _team_flag_frame_index(Time.get_ticks_msec())
+	var frame: Dictionary = _resources.frame("proguse", 0x210 + frame_index)
+	if not frame.is_empty():
+		team_flag_cursor.texture = frame.texture
+		team_flag_cursor.size = frame.texture.get_size()
+	team_flag_cursor.position = get_viewport().get_mouse_position()
+
+
+func _team_flag_frame_index(now_ms: int) -> int:
+	return int(now_ms / 200) % 13
+
+
+func _request_team_flag_target(uid: int) -> Error:
+	var creature: Dictionary = game_state.get_creature(uid)
+	if creature.get("type", 0) != 2:
+		return ERR_INVALID_PARAMETER
+	return NetworkClient.send_request_join_team(uid)
 
 
 func _on_control_panel_quick_bar_toggled() -> void:
