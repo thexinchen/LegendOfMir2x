@@ -4,6 +4,7 @@
 #include <cstring>
 #include <iostream>
 #include <g3log/g3log.hpp>
+#include <g3log/filesink.hpp>
 #include <g3log/logworker.hpp>
 
 #include "strf.hpp"
@@ -49,9 +50,9 @@ class Log final
         std::string m_logFileName;
 
     public:
-        Log(const char *logArg0 = LOG_ARGV0, const char *logPath = LOG_PATH)
+        Log(const char *logArg0 = LOG_ARGV0, const char *logPath = LOG_PATH, size_t flushEveryNMessages = 100)
             : m_worker(g3::LogWorker::createLogWorker())
-            , m_handler(m_worker->addDefaultLogger(logArg0, logPath))
+            , m_handler(m_worker->addSink(std::make_unique<g3::FileSink>(logArg0, logPath, "g3log", flushEveryNMessages), &g3::FileSink::fileWrite))
         {
             g3::initializeLogging(m_worker.get());
             std::future<std::string> logFileNameFeature = m_handler->call(&g3::FileSink::fileName);

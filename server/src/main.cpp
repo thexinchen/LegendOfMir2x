@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
             });
         });
 
-        g_mir2xLog       = new Log("mir2x-server-v0.1");
+        g_mir2xLog  = new Log("mir2x-server-v0.1", LOG_PATH, 1);
         g_server    = new Server();
         g_mapBinDB  = new MapBinDB();
         g_actorPool = new ActorPool(g_serverArgParser->actorPoolThread);
