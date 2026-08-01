@@ -4,6 +4,11 @@ const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const GRID_COLUMNS := 10
 const GRID_VISIBLE_ROWS := 10
 const CELL_SIZE := 38
+const SLIDER_TRACK_TOP := 56.0
+const SLIDER_BAR_TOP := 63.0
+const SLIDER_TRAVEL := 368.0
+const EMBLEM_FPS := 8.0
+const EMBLEM_FRAME_COUNT := 10
 
 const OP_NONE := 0
 const OP_TRADE := 1
@@ -23,6 +28,10 @@ var _bins: Dictionary = {} # item key -> {x,y,w,h,item}
 var _selected_key := ""
 var _grabbed_origin := Vector2i.ZERO
 var _scroll_row := 0
+var _scroll_value := 0.0
+var _slider_dragging := false
+var _emblem_time := 0.0
+var _emblem_frame := -1
 
 
 func _ready() -> void:
@@ -31,19 +40,64 @@ func _ready() -> void:
 	_resources.configure_default()
 	_state.state_changed.connect(_refresh)
 	$SortButton.pressed.connect(_repack)
+	$SortButton.pressed.connect(AudioService.play_ui_click)
 	$CloseButton.pressed.connect(_close_operation)
-	visibility_changed.connect(func():
-		if not visible and _state and not _state.inventory_operation.is_empty():
-			_close_operation()
-	)
+	$CloseButton.pressed.connect(AudioService.play_ui_click)
 	$ItemGrid.gui_input.connect(_on_grid_input)
+	$SliderTrack.gui_input.connect(_on_slider_input)
 	$OperationButton.pressed.connect(_commit_operation)
+	$OperationButton.pressed.connect(AudioService.play_ui_click)
+	_bind_overlay_button($SortButton)
+	_bind_overlay_button($CloseButton)
 	_refresh()
+	_update_emblem()
+
+
+func _process(delta: float) -> void:
+	_emblem_time += delta
+	var frame := int(_emblem_time * EMBLEM_FPS) % EMBLEM_FRAME_COUNT
+	if frame != _emblem_frame:
+		_update_emblem(frame)
+
+
+func _bind_overlay_button(button: TextureButton) -> void:
+	button.set_meta("overlay_hovered", false)
+	button.set_meta("overlay_pressed", false)
+	button.modulate.a = 0.0
+	button.mouse_entered.connect(_set_overlay_hovered.bind(button, true))
+	button.mouse_exited.connect(_set_overlay_hovered.bind(button, false))
+	button.button_down.connect(_set_overlay_pressed.bind(button, true))
+	button.button_up.connect(_set_overlay_pressed.bind(button, false))
+
+
+func _set_overlay_hovered(button: TextureButton, hovered: bool) -> void:
+	button.set_meta("overlay_hovered", hovered)
+	_update_overlay_alpha(button)
+
+
+func _set_overlay_pressed(button: TextureButton, pressed: bool) -> void:
+	button.set_meta("overlay_pressed", pressed)
+	_update_overlay_alpha(button)
+
+
+func _update_overlay_alpha(button: TextureButton) -> void:
+	button.modulate.a = 1.0 if button.get_meta("overlay_hovered", false) or button.get_meta("overlay_pressed", false) else 0.0
+
+
+func _update_emblem(frame := 0) -> void:
+	_emblem_frame = frame
+	var resource: Dictionary = _resources.frame("proguse", 0x04000010 + frame)
+	$Emblem.visible = not resource.is_empty()
+	if resource.is_empty():
+		return
+	$Emblem.texture = resource.texture
+	$Emblem.size = resource.texture.get_size()
 
 
 func _refresh() -> void:
 	_sync_bins()
 	_refresh_operation()
+	_update_scroll_from_value()
 	$Gold.text = "%d" % _state.player_gold
 	for child in $ItemGrid.get_children():
 		child.free()
@@ -59,7 +113,7 @@ func _refresh() -> void:
 		button.size = Vector2(int(bin.w) * CELL_SIZE, int(bin.h) * CELL_SIZE)
 		button.ignore_texture_size = true
 		button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
-		var icon: Dictionary = _resources.item_icon(item_id)
+		var icon: Dictionary = _inventory_icon(item_id)
 		if not icon.is_empty():
 			button.texture_normal = icon.texture
 		button.tooltip_text = "%s\n类型 %s\n数量 %d\n序号 %d" % [
@@ -107,11 +161,15 @@ func _sync_bins() -> void:
 
 
 func _item_grid_size(item_id: int) -> Vector2i:
-	var icon: Dictionary = _resources.item_icon(item_id)
+	var icon: Dictionary = _inventory_icon(item_id)
 	if icon.is_empty():
 		return Vector2i.ONE
 	var texture: Texture2D = icon.texture
 	return Vector2i(maxi(1, ceili(float(texture.get_width()) / CELL_SIZE)), maxi(1, ceili(float(texture.get_height()) / CELL_SIZE)))
+
+
+func _inventory_icon(item_id: int) -> Dictionary:
+	return _resources.frame("item", _resources.item_package_gfx_id(item_id) | 0x01000000)
 
 
 func _find_free_position(width: int, height: int) -> Vector2i:
@@ -135,6 +193,11 @@ func _occupied(x: int, y: int, width: int, height: int, except_key: String = "")
 func _on_item_input(event: InputEvent, key: String) -> void:
 	if not event is InputEventMouseButton or not event.pressed:
 		return
+	if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		_on_grid_input(event)
+		return
+	if event.button_index not in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+		return
 	get_viewport().set_input_as_handled()
 	if event.button_index == MOUSE_BUTTON_RIGHT:
 		_consume_or_equip(key)
@@ -148,13 +211,42 @@ func _on_item_input(event: InputEvent, key: String) -> void:
 func _on_grid_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			_scroll_row = maxi(0, _scroll_row - 1)
+			var max_row := _max_scroll_row()
+			if max_row <= 0:
+				return
+			_scroll_value = maxf(0.0, _scroll_value - 1.0 / max_row)
 			_refresh()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			_scroll_row = mini(_max_scroll_row(), _scroll_row + 1)
+			var max_row := _max_scroll_row()
+			if max_row <= 0:
+				return
+			_scroll_value = minf(1.0, _scroll_value + 1.0 / max_row)
 			_refresh()
 		elif event.button_index == MOUSE_BUTTON_LEFT and not _state.grabbed_item.is_empty():
 			_place_grabbed(Vector2i(floori(event.position.x / CELL_SIZE), floori(event.position.y / CELL_SIZE) + _scroll_row))
+
+
+func _on_slider_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		_slider_dragging = event.pressed
+		$Slider.modulate = Color.WHITE if _slider_dragging else Color(0.5, 0.5, 0.5, 1.0)
+		if event.pressed:
+			_set_slider_from_track_y(event.position.y)
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion and _slider_dragging:
+		_set_slider_from_track_y(event.position.y)
+		get_viewport().set_input_as_handled()
+
+
+func _set_slider_from_track_y(track_y: float) -> void:
+	_scroll_value = clampf((track_y + SLIDER_TRACK_TOP - SLIDER_BAR_TOP) / SLIDER_TRAVEL, 0.0, 1.0)
+	_refresh()
+
+
+func _update_scroll_from_value() -> void:
+	_scroll_value = clampf(_scroll_value, 0.0, 1.0)
+	_scroll_row = roundi(_max_scroll_row() * _scroll_value)
+	$Slider.position.y = SLIDER_TRACK_TOP + _scroll_value * SLIDER_TRAVEL
 
 
 func _grab_item(key: String) -> void:
@@ -261,6 +353,7 @@ func _repack() -> void:
 	_bins.clear()
 	_sync_bins()
 	_scroll_row = 0
+	_scroll_value = 0.0
 	_refresh()
 
 

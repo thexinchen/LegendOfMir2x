@@ -105,6 +105,7 @@ func _verify() -> void:
 			panel.call("_select_tab", 7)
 			panel.call("_show_magic", 24)
 		panel.show()
+		panel.move_to_front()
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 	if OS.has_environment("MIR2X_GAME_RUNTIME_SCREENSHOT"):
