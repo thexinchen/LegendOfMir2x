@@ -75,7 +75,6 @@ func _refresh_learned_skills() -> void:
 		button.size = texture.get_size() + Vector2(8, 8)
 		button.texture_normal = texture
 		button.ignore_texture_size = true
-		button.tooltip_text = "技能 %d，经验 %d" % [magic_id, magic.get("exp", 0)]
 		button.mouse_entered.connect(_show_magic.bind(magic_id))
 		button.mouse_exited.connect(_hide_magic.bind(magic_id))
 		learned_skills.add_child(button)
@@ -116,7 +115,7 @@ func _show_tab_name(index: int) -> void:
 
 func _show_magic(magic_id: int) -> void:
 	_hovered_magic_id = magic_id
-	selection_label.text = "元素【%s】技能 %d" % [PAGE_NAMES[_selected_tab], magic_id]
+	selection_label.text = "元素【%s】%s" % [PAGE_NAMES[_selected_tab], _resources.magic_names.get(magic_id, "")]
 
 
 func _hide_magic(magic_id: int) -> void:
@@ -143,7 +142,13 @@ func _apply_scroll() -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not visible or _hovered_magic_id == 0 or not event.pressed or event.echo:
+	if not visible or not event.pressed or event.echo:
+		return
+	if event.keycode == KEY_ESCAPE:
+		hide()
+		get_viewport().set_input_as_handled()
+		return
+	if _hovered_magic_id == 0:
 		return
 	var key: int = event.unicode
 	if key >= 65 and key <= 90:
@@ -152,7 +157,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	var layout: PackedInt32Array = _resources.skill_layout(_hovered_magic_id)
 	if layout.size() >= 5 and (layout[4] & 1) != 0:
-		selection_label.text = "被动技能不能设置快捷键"
+		_state.add_chat_log("无法为被动技能设置快捷键：%s" % _resources.magic_names.get(_hovered_magic_id, ""), 1)
 		get_viewport().set_input_as_handled()
 		return
 	for magic_id in _state.magic_keys.keys():

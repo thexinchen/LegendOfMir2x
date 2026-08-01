@@ -99,6 +99,7 @@ func _verify() -> void:
 				GameState.magic_keys = {24: 49}
 				GameState.state_changed.emit()
 			panel.call("_select_tab", 7)
+			panel.call("_show_magic", 24)
 		panel.show()
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
