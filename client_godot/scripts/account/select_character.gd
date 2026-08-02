@@ -81,6 +81,7 @@ func _on_create_pressed() -> void:
 func _on_delete_pressed() -> void:
 	if has_character:
 		delete_dialog.open()
+		_update_button_visibility()
 
 
 func _on_exit_pressed() -> void:
@@ -88,6 +89,7 @@ func _on_exit_pressed() -> void:
 
 
 func _on_delete_confirmed(password: String) -> void:
+	_update_button_visibility()
 	if not has_character:
 		_show_notice("此账号没有角色")
 		return
@@ -99,7 +101,7 @@ func _on_delete_confirmed(password: String) -> void:
 
 
 func _on_delete_canceled() -> void:
-	pass
+	_update_button_visibility()
 
 
 func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
@@ -239,9 +241,11 @@ func _show_notice(message: String) -> void:
 
 
 func _update_button_visibility() -> void:
-	$StartButton.visible = _query_complete and has_character
-	$CreateButton.visible = _query_complete
-	$DeleteButton.visible = _query_complete and has_character
+	var modal_open := delete_dialog.visible
+	$StartButton.visible = not modal_open and _query_complete and has_character
+	$CreateButton.visible = not modal_open and _query_complete
+	$DeleteButton.visible = not modal_open and _query_complete and has_character
+	$ExitButton.visible = not modal_open
 
 
 func _capture_flow_if_requested() -> void:

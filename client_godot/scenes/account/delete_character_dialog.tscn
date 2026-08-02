@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/account/delete_character_dialog.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/select_character/07000000.png" id="2_background"]
@@ -8,8 +8,10 @@
 [ext_resource type="Texture2D" path="res://assets/ui/select_character/07000004.png" id="6_no_normal"]
 [ext_resource type="Texture2D" path="res://assets/ui/select_character/07000005.png" id="7_no_hover"]
 [ext_resource type="Texture2D" path="res://assets/ui/select_character/07000006.png" id="8_no_pressed"]
+[ext_resource type="FontFile" path="res://assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf" id="9_dialog_font"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_input"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input"]
+bg_color = Color(1, 1, 1, 0.12549)
 
 [node name="DeleteCharacterDialog" type="Control"]
 layout_mode = 3
@@ -36,8 +38,10 @@ offset_top = 286.0
 offset_right = 525.0
 offset_bottom = 350.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/line_spacing = -3
 theme_override_font_sizes/font_size = 12
-text = "删除的角色将无法还原，请谨慎操作。如果确定删除，请输入游戏密码，并点击YES。"
+theme_override_fonts/font = ExtResource("9_dialog_font")
+text = "删除的角色将无法还原，请谨慎操作。\n如果确定删除，请输入游戏密码，并点击YES。"
 autowrap_mode = 2
 
 [node name="YesButton" type="TextureButton" parent="."]
@@ -70,8 +74,9 @@ offset_bottom = 414.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/caret_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 14
-theme_override_styles/normal = SubResource("StyleBoxEmpty_input")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_input")
+theme_override_fonts/font = ExtResource("9_dialog_font")
+theme_override_styles/normal = SubResource("StyleBoxFlat_input")
+theme_override_styles/focus = SubResource("StyleBoxFlat_input")
 secret = true
 max_length = 63
 flat = true

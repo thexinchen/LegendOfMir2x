@@ -24,8 +24,10 @@ func open() -> void:
 
 
 func _on_yes_pressed() -> void:
-	confirmed.emit(password_input.text)
+	var password := password_input.text
 	hide()
+	confirmed.emit(password)
+	password_input.clear()
 
 
 func _on_password_text_submitted(_text: String) -> void:
@@ -34,5 +36,5 @@ func _on_password_text_submitted(_text: String) -> void:
 
 func _on_no_pressed() -> void:
 	password_input.clear()
-	canceled.emit()
 	hide()
+	canceled.emit()
