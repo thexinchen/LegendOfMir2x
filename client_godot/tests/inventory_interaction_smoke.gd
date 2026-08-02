@@ -96,6 +96,44 @@ func _ready() -> void:
 	if not panel.get_node("Emblem").visible or panel.get_node("Emblem").texture == null or panel.get_node("Emblem").position != Vector2(23, 14):
 		_fail("inventory animated emblem missing")
 		return
+	var potion_button := panel.get_node("ItemGrid").get_child(0) as TextureButton
+	var potion_icon: Dictionary = resources.frame("item", resources.item_package_gfx_id(potion_id) | 0x01000000)
+	var potion_image := potion_button.get_node_or_null("Icon") as TextureRect
+	if potion_image == null or potion_button.texture_normal != null or potion_image.size != potion_icon.texture.get_size() or potion_image.position != (potion_button.size - potion_image.size) / 2.0:
+		_fail("inventory icon was not drawn at native centered size")
+		return
+	var count_label := potion_button.get_node_or_null("Count") as Label
+	if count_label == null or count_label.position != Vector2(potion_button.size.x * 0.5, -2) or count_label.size.x != potion_button.size.x or count_label.horizontal_alignment != HORIZONTAL_ALIGNMENT_CENTER or count_label.get_theme_font_size("font_size") != 10 or count_label.get_theme_color("font_color") != Color.YELLOW:
+		_fail("inventory count anchor/style mismatch")
+		return
+	var hover_overlay := potion_button.get_node_or_null("Overlay") as ColorRect
+	if hover_overlay == null or hover_overlay.color != Color.TRANSPARENT:
+		_fail("inventory idle overlay mismatch")
+		return
+	potion_button.mouse_entered.emit()
+	if hover_overlay.color != Color(1, 1, 1, 48.0 / 255.0):
+		_fail("inventory hover overlay mismatch")
+		return
+	potion_button.mouse_exited.emit()
+	panel.set("_selected_key", "%d:1" % potion_id)
+	GameState.inventory_operation = {"invOp": 3}
+	panel.call("_refresh")
+	var selected_button := panel.get_node("ItemGrid").get_child(0) as TextureButton
+	var selected_overlay := selected_button.get_node("Overlay") as ColorRect
+	if selected_overlay.color != Color(0, 0, 1, 48.0 / 255.0):
+		_fail("inventory operation selection overlay mismatch")
+		return
+	selected_button.mouse_entered.emit()
+	selected_button.mouse_exited.emit()
+	if selected_overlay.color != Color(0, 0, 1, 48.0 / 255.0):
+		_fail("inventory hover did not restore operation selection overlay")
+		return
+	panel.set("_selected_key", "")
+	GameState.inventory_operation = {}
+	panel.call("_refresh")
+	if OS.has_environment("MIR2X_INVENTORY_SCREENSHOT"):
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_INVENTORY_SCREENSHOT"))
 	var potion_lines: Array[String] = ItemTooltipFormatter.plain_layout_lines(potion, resources)
 	if potion_lines.front() != "  " or potion_lines.back() != "  " or not potion_lines.has(" 【名称】%s " % resources.item_name(potion_id)) or not potion_lines.has(" 【重量】%d " % resources.item_weight(potion_id)):
 		_fail("ordinary item tooltip layout mismatch")

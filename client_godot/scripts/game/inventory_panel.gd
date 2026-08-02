@@ -138,30 +138,43 @@ func _refresh() -> void:
 		button.position = Vector2(int(bin.x) * CELL_SIZE, display_y)
 		button.size = Vector2(int(bin.w) * CELL_SIZE, int(bin.h) * CELL_SIZE)
 		button.ignore_texture_size = true
-		button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 		var icon: Dictionary = _inventory_icon(item_id)
 		if not icon.is_empty():
-			button.texture_normal = icon.texture
+			var image := TextureRect.new()
+			var image_size: Vector2 = icon.texture.get_size()
+			image.name = "Icon"
+			image.position = (button.size - image_size) / 2.0
+			image.size = image_size
+			image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			image.texture = icon.texture
+			image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			button.add_child(image)
 		button.mouse_entered.connect(_show_item_tooltip.bind(item))
 		button.mouse_exited.connect(_hide_item_tooltip)
 		button.gui_input.connect(func(event: InputEvent): _on_item_input(event, key))
 		$ItemGrid.add_child(button)
-		if key == _selected_key:
-			var selected := ColorRect.new()
-			selected.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			selected.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			selected.color = Color(0.1, 0.2, 1.0, 0.22)
-			button.add_child(selected)
 		if int(item.get("count", 1)) > 1:
 			var count_label := Label.new()
-			count_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			count_label.name = "Count"
+			count_label.position = Vector2(button.size.x * 0.5, -2)
+			count_label.size = Vector2(button.size.x, 16)
 			count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			count_label.text = str(item.get("count", 1))
-			count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			count_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 			count_label.add_theme_font_size_override("font_size", 10)
-			count_label.add_theme_color_override("font_color", Color(1, 0.9, 0.25))
+			count_label.add_theme_color_override("font_color", Color.YELLOW)
 			button.add_child(count_label)
+		var selected: bool = key == _selected_key and int(_state.inventory_operation.get("invOp", OP_NONE)) != OP_NONE
+		var overlay := ColorRect.new()
+		overlay.name = "Overlay"
+		overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		overlay.color = Color(0, 0, 1, 48.0 / 255.0) if selected else Color.TRANSPARENT
+		button.add_child(overlay)
+		button.mouse_entered.connect(func(): overlay.color = Color(1, 1, 1, 48.0 / 255.0))
+		button.mouse_exited.connect(func(): overlay.color = Color(0, 0, 1, 48.0 / 255.0) if selected else Color.TRANSPARENT)
 	if not tooltip_key.is_empty() and _bins.has(tooltip_key):
 		_show_item_tooltip(_bins[tooltip_key].item)
 	else:
