@@ -634,13 +634,19 @@ func _test_magic_panel_hotkey_precedence(main: Control, resources: RefCounted) -
 func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 	var fade_monster_id := 0
 	var persistent_monster_id := 0
+	var death_magic_monster_id := 0
+	var plain_death_monster_id := 0
 	for monster_id_value in resources.monster_meta:
 		var monster_id: int = monster_id_value
 		if resources.monster_dead_fade_out(monster_id) and fade_monster_id == 0:
 			fade_monster_id = monster_id
 		elif not resources.monster_dead_fade_out(monster_id) and persistent_monster_id == 0:
 			persistent_monster_id = monster_id
-	if fade_monster_id == 0 or persistent_monster_id == 0:
+		if resources.monster_death_magic_id(monster_id) > 0 and death_magic_monster_id == 0:
+			death_magic_monster_id = monster_id
+		elif resources.monster_death_magic_id(monster_id) == 0 and plain_death_monster_id == 0:
+			plain_death_monster_id = monster_id
+	if fade_monster_id == 0 or persistent_monster_id == 0 or death_magic_monster_id == 0 or plain_death_monster_id == 0:
 		_fail("death lifecycle monster metadata unavailable")
 		return false
 	GameState.player_uid = 101
@@ -657,6 +663,29 @@ func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 	var renderer: Control = main.get_node("WorldRenderer")
 	if not renderer.call("_is_dead_actor", GameState.get_creature(303)):
 		_fail("dead creature was not assigned to the pre-item draw pass")
+		return false
+	GameState.attached_magic_effects.clear()
+	GameState.update_creature(305, {
+		"uid": 305, "type": 1, "monster_id": death_magic_monster_id,
+		"x": 7, "y": 5, "direction": 5, "action_type": 2, "action_speed": 100,
+	})
+	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(305))
+	var queued_death_effect: Dictionary = GameState.attached_magic_effects.back() if not GameState.attached_magic_effects.is_empty() else {}
+	if queued_death_effect.get("kind", "") != "monster_death" or queued_death_effect.get("target_uid", 0) != 305 or queued_death_effect.get("stage", 0) != 2 or queued_death_effect.get("magicID", 0) != resources.monster_death_magic_id(death_magic_monster_id):
+		_fail("death notification did not queue the monster's metadata effect: %s" % queued_death_effect)
+		return false
+	var death_effect_count := GameState.attached_magic_effects.size()
+	main.call("_queue_monster_death_effect", 305, GameState.get_creature(305))
+	if GameState.attached_magic_effects.size() != death_effect_count:
+		_fail("same death action queued duplicate monster effects")
+		return false
+	GameState.update_creature(306, {
+		"uid": 306, "type": 1, "monster_id": plain_death_monster_id,
+		"x": 8, "y": 5, "direction": 5, "action_type": 2, "action_speed": 100,
+	})
+	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(306))
+	if GameState.attached_magic_effects.size() != death_effect_count:
+		_fail("monster without death magic queued an attachment effect")
 		return false
 	GameState.chat_log.clear()
 	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(101))
@@ -738,6 +767,9 @@ func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 		_fail("faded/persistent corpse cleanup mismatch")
 		return false
 	GameState.remove_creature(304)
+	GameState.remove_creature(305)
+	GameState.remove_creature(306)
+	GameState.attached_magic_effects.clear()
 	return true
 
 

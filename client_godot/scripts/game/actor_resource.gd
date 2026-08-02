@@ -88,6 +88,11 @@ func monster_spawn_look(monster_id: int) -> int:
 	return meta[7] if meta.size() >= 8 else 0
 
 
+func monster_death_magic_id(monster_id: int) -> int:
+	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
+	return meta[19] if meta.size() >= 20 else 0
+
+
 func monster_transform(monster_id: int) -> Dictionary:
 	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
 	if meta.size() < 19 or meta[14] <= 0:
@@ -240,7 +245,7 @@ func _load_monster_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2, 3, 4, 5]:
+	if version not in [1, 2, 3, 4, 5, 6]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -260,6 +265,8 @@ func _load_monster_meta() -> void:
 			meta.append(file.get_16())
 			for _transform_index in range(10):
 				meta.append(file.get_8())
+		if version >= 6:
+			meta.append(file.get_32())
 		monster_meta[monster_id] = meta
 
 

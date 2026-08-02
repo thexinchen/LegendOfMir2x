@@ -1078,6 +1078,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 		elif creature_type == 3:
 			_configure_npc_motion(creature, action_type, action)
 		game_state.update_creature(uid, creature)
+		if creature_type == 1 and stored_action_type == 13:
+			_queue_monster_death_effect(uid, creature)
 		if not continued_monster_action:
 			var duration := _creature_action_duration(stored_action_type, action.get("speed", 100), creature, action.get("magicID", 0))
 			if duration > 0.0:
@@ -1329,6 +1331,7 @@ func _finish_creature_action(uid: int, action_type: int, started_ms: int) -> voi
 		creature["action_speed"] = forced_pending.get("speed", 100)
 		creature["action_magic_id"] = forced_pending.get("magic_id", 0)
 		game_state.update_creature(uid, creature)
+		_queue_monster_death_effect(uid, creature)
 		_play_action_seff(uid, forced_pending.get("action", {}), creature)
 		return
 	if action_type == 10 and not pending.is_empty():
@@ -1421,10 +1424,33 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	if is_new and c_type == 2:
 		NetworkClient.send_query_player_wldesp(uid)
 	var stored_action_type: int = creature.get("action_type", action_type)
+	if c_type == 1 and stored_action_type == 13:
+		_queue_monster_death_effect(uid, creature)
 	var duration := _creature_action_duration(stored_action_type, action.get("speed", 100), creature, action.get("magicID", 0))
 	if duration > 0.0:
 		_schedule_creature_idle(uid, stored_action_type, creature.get("action_started_ms", 0), duration)
 	_play_action_seff(uid, action, creature)
+
+
+func _queue_monster_death_effect(uid: int, creature: Dictionary) -> void:
+	var magic_id: int = _resources.monster_death_magic_id(creature.get("monster_id", 0))
+	if magic_id <= 0:
+		return
+	var started_ms: int = creature.get("action_started_ms", Time.get_ticks_msec())
+	for effect_value in game_state.attached_magic_effects:
+		var effect: Dictionary = effect_value
+		if effect.get("kind", "") == "monster_death" and effect.get("target_uid", 0) == uid and effect.get("action_started_ms", -1) == started_ms:
+			return
+	game_state.attached_magic_effects.append({
+		"magicID": magic_id,
+		"target_uid": uid,
+		"start_time": started_ms,
+		"action_started_ms": started_ms,
+		"cycles": 1,
+		"kind": "monster_death",
+		"stage": 2,
+	})
+	game_state.state_changed.emit()
 
 
 func _creature_type_from_uid(uid: int) -> int:
@@ -1787,6 +1813,7 @@ func _handle_notify_dead(payload: PackedByteArray) -> void:
 		creature.erase("monster_transform_continued")
 	game_state.update_creature(uid, creature)
 	if creature.get("action_type", 0) == 13:
+		_queue_monster_death_effect(uid, creature)
 		_play_action_seff(uid, death_action, creature)
 
 

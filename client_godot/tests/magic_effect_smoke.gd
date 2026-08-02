@@ -27,6 +27,13 @@ func _ready() -> void:
 	var wedge_poison_id: int = resources.magic_id("楔蛾_喷毒")
 	var dual_axe_id: int = resources.magic_id("掷斧骷髅_掷斧")
 	var space_move_id: int = resources.magic_id("瞬息移动")
+	var monster_death_magic_id := 0
+	var monster_death_monster_id := 0
+	for monster_id_value in resources.monster_meta:
+		monster_death_magic_id = resources.monster_death_magic_id(int(monster_id_value))
+		if monster_death_magic_id > 0:
+			monster_death_monster_id = int(monster_id_value)
+			break
 	var target_attachment_ids := [
 		resources.magic_id("乾坤大挪移"), healing_id, resources.magic_id("圣言术"), resources.magic_id("云寂术"),
 		resources.magic_id("回生术"), resources.magic_id("施毒术"), resources.magic_id("诱惑之光"), resources.magic_id("移花接玉"),
@@ -43,7 +50,7 @@ func _ready() -> void:
 		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
 		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or tao_dog_fire_id == 0 or wedge_poison_id == 0 or dual_axe_id == 0 or space_move_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or tao_dog_fire_id == 0 or wedge_poison_id == 0 or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
@@ -365,6 +372,17 @@ func _ready() -> void:
 	var space_attached_active: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now + 120)
 	if space_attached_active.get(target_uid, []).size() != 1 or space_attached_active[target_uid][0].meta != resources.magic_layout(space_move_id, 3) or $WorldRenderer.call("_attached_target_grid", target_uid) != Vector2(409, 120):
 		_fail("space move explode stage was not attached at the destination actor: %s" % space_attached_active)
+		return
+	GameState.attached_magic_effects.clear()
+
+	GameState.attached_magic_effects = [{
+		"magicID": monster_death_magic_id, "target_uid": target_uid,
+		"start_time": now, "action_started_ms": now,
+		"cycles": 1, "kind": "monster_death", "stage": 2,
+	}]
+	var death_attached_active: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now + 1)
+	if death_attached_active.get(target_uid, []).size() != 1 or death_attached_active[target_uid][0].meta != resources.magic_layout(monster_death_magic_id, 2):
+		_fail("monster death attachment did not use its run-stage graphics: %s" % death_attached_active)
 		return
 	GameState.attached_magic_effects.clear()
 
@@ -740,6 +758,41 @@ func _ready() -> void:
 			await get_tree().process_frame
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_SPACE_MOVE_BASELINE_SCREENSHOT"))
+	if OS.has_environment("MIR2X_MONSTER_DEATH_SCREENSHOT"):
+		if not $WorldRenderer.load_map(6):
+			_fail("monster-death visual map failed to load")
+			return
+		var death_source := _find_open_wave_source($WorldRenderer, 8, $WorldRenderer.map_height - 8)
+		if death_source.x < 0:
+			_fail("no open monster-death visual fixture")
+			return
+		var death_visual_now := Time.get_ticks_msec()
+		GameState.creatures = {target_uid: {
+			"uid": target_uid, "x": death_source.x, "y": death_source.y,
+			"type": 1, "monster_id": monster_death_monster_id, "direction": 5,
+			"action_type": 13, "action_speed": 100, "action_started_ms": death_visual_now - 2000,
+		}}
+		GameState.magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.attached_magic_effects = [{
+			"magicID": monster_death_magic_id, "target_uid": target_uid,
+			"stage": 2, "kind": "monster_death", "cycles": 1,
+			"start_time": death_visual_now + 5000,
+		}]
+		GameState.view_x = death_source.x * 48 - 400
+		GameState.view_y = death_source.y * 32 - 440
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_DEATH_SCREENSHOT"))
+		if OS.has_environment("MIR2X_MONSTER_DEATH_BASELINE_SCREENSHOT"):
+			GameState.attached_magic_effects.clear()
+			$WorldRenderer.queue_redraw()
+			await get_tree().process_frame
+			await get_tree().process_frame
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_DEATH_BASELINE_SCREENSHOT"))
 	if OS.has_environment("MIR2X_ATTACK_MAGIC_SCREENSHOT"):
 		var attack_now := Time.get_ticks_msec()
 		GameState.player_x = 405
