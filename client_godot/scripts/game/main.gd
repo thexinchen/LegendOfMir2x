@@ -1087,7 +1087,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 	
 	if uid == game_state.player_uid:
 		# Update player position and direction
-		if action_type == 14:
+		if action_type in [11, 14]:
 			game_state.player_action_from_x = game_state.player_x
 			game_state.player_action_from_y = game_state.player_y
 		else:
@@ -1095,7 +1095,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 			game_state.player_action_from_y = y
 			game_state.player_x = action.get("aimX", x) if _action_uses_aim_position(action_type) else x
 			game_state.player_y = action.get("aimY", y) if _action_uses_aim_position(action_type) else y
-		if direction >= 1:
+		if action_type != 11 and direction >= 1:
 			game_state.player_direction = direction
 		_set_player_action(action_type, action.get("speed", 100), action.get("magicID", 0))
 		_player_action_timer = _action_duration(action_type, action.get("speed", 100), 2, action.get("magicID", 0))
@@ -1138,7 +1138,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 			elif inferred_type == 3:
 				creature["npc_id"] = (uid >> 35) & 0xFFFFFF
 		else:
-			if action_type == 14:
+			if action_type == 14 or (action_type == 11 and creature_type == 2):
 				creature["action_from_x"] = creature.get("x", x)
 				creature["action_from_y"] = creature.get("y", y)
 			else:
@@ -1150,7 +1150,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 			creature["action_started_ms"] = Time.get_ticks_msec()
 			creature["action_speed"] = action.get("speed", 100)
 			creature["action_magic_id"] = action.get("magicID", 0)
-			if direction >= 1:
+			if not (action_type == 11 and creature_type == 2) and direction >= 1:
 				creature["direction"] = direction
 		if creature_type == 1:
 			stored_action_type = _configure_monster_form(creature, action_type, stored_action_type, action, is_new_creature, previous_creature)
