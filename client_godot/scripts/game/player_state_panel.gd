@@ -136,7 +136,7 @@ func _can_wear(item_id: int, location: int) -> bool:
 func _show_item_tooltip(location: int, item: Dictionary) -> void:
 	_tooltip_location = location
 	var lines: Array[String] = ItemTooltipFormatterScript.plain_layout_lines(item, _resources)
-	ItemTooltipRendererScript.show_lines($ItemTooltip, lines, 220.0, 40.0, Vector2(10, 10), 15.0, 10)
+	ItemTooltipRendererScript.show_lines($ItemTooltip, lines, 220.0, 40.0, Vector2(10, 10), 15.0, 12)
 	ItemTooltipRendererScript.update_position($ItemTooltip, false)
 
 

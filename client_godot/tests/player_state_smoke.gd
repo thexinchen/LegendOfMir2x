@@ -57,7 +57,8 @@ func _ready() -> void:
 	var tooltip := panel.get_node("ItemTooltip") as Panel
 	var tooltip_lines := _label_texts(tooltip)
 	var tooltip_style := tooltip.get_theme_stylebox("panel") as StyleBoxFlat
-	if not tooltip.visible or tooltip.size.x != 220 or not tooltip_lines.any(func(line): return "【名称】" in line) or not tooltip_lines.any(func(line): return "攻击" in line) or tooltip_style.border_width_left != 1 or tooltip_style.corner_radius_top_left != 5:
+	var tooltip_label := tooltip.get_child(0) as Label
+	if not tooltip.visible or tooltip.size.x != 220 or tooltip_label.position != Vector2(10, 10) or tooltip_label.get_theme_font_size("font_size") != 12 or not tooltip_label.get_theme_font("font").resource_path.ends_with("/01_Yahei.ttf") or not tooltip_lines.any(func(line): return "【名称】" in line) or not tooltip_lines.any(func(line): return "攻击" in line) or tooltip_style.border_width_left != 1 or tooltip_style.corner_radius_top_left != 5:
 		_fail("equipment tooltip content/style mismatch: %s" % tooltip_lines)
 		return
 	if OS.has_environment("MIR2X_PLAYER_STATE_SCREENSHOT"):

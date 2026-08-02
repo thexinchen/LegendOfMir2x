@@ -72,7 +72,8 @@ func _ready() -> void:
 	var purchase_tooltip := panel.get_node("ItemTooltip") as Panel
 	var purchase_lines := _label_texts(purchase_tooltip)
 	var purchase_style := purchase_tooltip.get_theme_stylebox("panel") as StyleBoxFlat
-	if not purchase_tooltip.visible or not purchase_lines.any(func(line): return "【售价】1234" in line) or purchase_style.border_width_left != 0 or purchase_style.corner_radius_top_left != 0:
+	var purchase_tooltip_label := purchase_tooltip.get_child(0) as Label
+	if not purchase_tooltip.visible or purchase_tooltip_label.position != Vector2(10, 10) or purchase_tooltip_label.get_theme_font_size("font_size") != 12 or not purchase_tooltip_label.get_theme_font("font").resource_path.ends_with("/01_Yahei.ttf") or not purchase_lines.any(func(line): return "【售价】1234" in line) or purchase_style.border_width_left != 0 or purchase_style.corner_radius_top_left != 0:
 		_fail("unique purchase tooltip content/style mismatch: %s" % purchase_lines)
 		return
 	panel.set("_detail_selected", 0)

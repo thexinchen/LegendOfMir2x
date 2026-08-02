@@ -93,7 +93,8 @@ func _ready() -> void:
 	if not tooltip.visible or tooltip.size != Vector2(220, maxf(40.0, 20.0 + weapon_lines.size() * 15.0)) or tooltip.get_child_count() != weapon_lines.size():
 		_fail("custom inventory tooltip geometry mismatch")
 		return
-	if (tooltip.get_child(0) as Label).text != weapon_lines[0] or (tooltip.get_child(0) as Label).get_theme_color("font_color") != Color.WHITE or (tooltip.get_child(0) as Label).get_theme_font_size("font_size") != 10:
+	var tooltip_label := tooltip.get_child(0) as Label
+	if tooltip_label.text != weapon_lines[0] or tooltip_label.position != Vector2(10, 10) or tooltip_label.get_theme_color("font_color") != Color.WHITE or tooltip_label.get_theme_font_size("font_size") != 12 or not tooltip_label.get_theme_font("font").resource_path.ends_with("/01_Yahei.ttf"):
 		_fail("custom inventory tooltip did not render authoritative plain-white lines")
 		return
 	GameState.state_changed.emit()

@@ -52,7 +52,9 @@ func _ready() -> void:
 	var secured_tooltip := panel.get_node("ItemTooltip") as Panel
 	var secured_lines := _label_texts(secured_tooltip)
 	var secured_style := secured_tooltip.get_theme_stylebox("panel") as StyleBoxFlat
-	if not secured_tooltip.visible or secured_tooltip.size != Vector2(240, 60) or secured_lines.size() != 2 or "数量" in "".join(secured_lines) or resources.item_type(packable_id) in "".join(secured_lines) or secured_style.border_width_left != 0:
+	var secured_name := secured_tooltip.get_child(0) as Label
+	var secured_description := secured_tooltip.get_child(1) as Label
+	if not secured_tooltip.visible or secured_tooltip.size != Vector2(240, 60) or secured_lines.size() != 2 or secured_name.position != Vector2(20, 12) or secured_description.position != Vector2(20, 31) or secured_name.get_theme_font_size("font_size") != 12 or not secured_name.get_theme_font("font").resource_path.ends_with("/01_Yahei.ttf") or "数量" in "".join(secured_lines) or resources.item_type(packable_id) in "".join(secured_lines) or secured_style.border_width_left != 0:
 		_fail("secured tooltip content/style mismatch: %s" % secured_lines)
 		return
 	if OS.has_environment("MIR2X_SECURED_TOOLTIP_SCREENSHOT"):

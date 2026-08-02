@@ -252,7 +252,7 @@ func _show_item_tooltip(index: int, sell_item: Dictionary) -> void:
 	_tooltip_index = index
 	var item: Dictionary = sell_item.get("item", {})
 	var lines: Array[String] = ItemTooltipFormatterScript.plain_layout_lines(item, _resources, _gold_price(sell_item))
-	ItemTooltipRendererScript.show_lines($ItemTooltip, lines, 220.0, 40.0, Vector2(10, 10), 15.0, 10)
+	ItemTooltipRendererScript.show_lines($ItemTooltip, lines, 220.0, 40.0, Vector2(10, 10), 15.0, 12)
 	ItemTooltipRendererScript.update_position($ItemTooltip, false)
 
 

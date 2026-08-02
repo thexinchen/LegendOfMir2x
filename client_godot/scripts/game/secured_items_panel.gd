@@ -97,7 +97,7 @@ func _show_item_tooltip(index: int, item: Dictionary) -> void:
 	var item_id := int(item.get("itemID", 0))
 	var description := str(_resources.item_detail(item_id).get("description", ""))
 	var lines: Array[String] = [_resources.item_name(item_id), description if not description.is_empty() else "暂无描述"]
-	ItemTooltipRendererScript.show_lines($ItemTooltip, lines, 240.0, 60.0, Vector2(20, 12), 19.0, 10, 60.0)
+	ItemTooltipRendererScript.show_lines($ItemTooltip, lines, 240.0, 60.0, Vector2(20, 12), 19.0, 12, 60.0)
 	ItemTooltipRendererScript.update_position($ItemTooltip, false)
 
 

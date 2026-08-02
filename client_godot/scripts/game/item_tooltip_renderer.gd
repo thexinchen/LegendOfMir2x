@@ -3,6 +3,7 @@ extends RefCounted
 
 const BACKGROUND := Color(0, 0, 0, 200.0 / 255.0)
 const BORDER := Color(231.0 / 255.0, 231.0 / 255.0, 189.0 / 255.0, 200.0 / 255.0)
+const ITEM_TOOLTIP_FONT: Font = preload("res://assets/font/01_Yahei.ttf")
 
 
 static func configure(panel: Panel, bordered: bool, rounded: bool) -> void:
@@ -36,6 +37,7 @@ static func show_lines(panel: Panel, lines: Array[String], width: float, min_hei
 		label.position = Vector2(padding.x, padding.y + index * line_height)
 		label.size = Vector2(width - padding.x * 2.0, line_height)
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		label.add_theme_font_override("font", ITEM_TOOLTIP_FONT)
 		label.add_theme_font_size_override("font_size", font_size)
 		label.add_theme_color_override("font_color", Color.WHITE)
 		label.text = lines[index]
