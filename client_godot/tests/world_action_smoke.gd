@@ -31,6 +31,10 @@ func _ready() -> void:
 	var main: Control = load("res://scenes/game/main.tscn").instantiate()
 	add_child(main)
 	await get_tree().process_frame
+	var initial_inventory_panel := main.get_node("InventoryPanel") as Control
+	if initial_inventory_panel.position != Vector2(259, 58) or initial_inventory_panel.size != Vector2(434, 542):
+		_fail("inventory root geometry mismatch: position=%s size=%s" % [initial_inventory_panel.position, initial_inventory_panel.size])
+		return
 	if OS.has_environment("MIR2X_FPS_SCREENSHOT"):
 		if not await _capture_fps_visual(main):
 			return

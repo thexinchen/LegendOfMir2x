@@ -28,15 +28,15 @@ corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
 
 [node name="InventoryPanel" type="Control"]
-custom_minimum_size = Vector2(434, 543)
+custom_minimum_size = Vector2(434, 542)
 offset_right = 434.0
-offset_bottom = 543.0
+offset_bottom = 542.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
 
 [node name="Background" type="TextureRect" parent="."]
 offset_right = 434.0
-offset_bottom = 543.0
+offset_bottom = 542.0
 mouse_filter = 2
 texture = ExtResource("2")
 
