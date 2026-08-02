@@ -2126,6 +2126,8 @@ func _handle_start_input(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var data := reader.read_sd_start_input()
 	if _reader_ok(reader, "SM_STARTINPUT"):
+		_pending_purchase = {}
+		_pending_chat_group.clear()
 		game_state.pending_input = data
 		game_state.state_changed.emit()
 		var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
@@ -2416,6 +2418,7 @@ func _on_input_cancelled() -> void:
 
 func _on_purchase_quantity_requested(npc_uid: int, item_id: int, item_name: String) -> void:
 	_pending_chat_group.clear()
+	game_state.pending_input = {}
 	_pending_purchase = {"npcUID": npc_uid, "itemID": item_id}
 	var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
 	panel.configure("请输入购买 %s 的数量" % item_name, false)
@@ -2423,6 +2426,7 @@ func _on_purchase_quantity_requested(npc_uid: int, item_id: int, item_name: Stri
 
 func _on_friend_group_name_requested(ids: Array) -> void:
 	_pending_purchase = {}
+	game_state.pending_input = {}
 	_pending_chat_group = ids.duplicate()
 	var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
 	panel.configure("请输入你要建立的群名称", false)

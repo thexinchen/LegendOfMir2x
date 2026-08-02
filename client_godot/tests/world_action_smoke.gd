@@ -85,6 +85,8 @@ func _ready() -> void:
 		print("FPS OVERLAY VISUAL PASS: %s" % OS.get_environment("MIR2X_FPS_SCREENSHOT"))
 		get_tree().quit()
 		return
+	if not _test_input_dialog_ownership(main):
+		return
 	if not await _test_panel_escape_precedence(main):
 		return
 	if not _test_strike_grid_rendering(main):
@@ -199,6 +201,27 @@ func _test_panel_escape_precedence(main: Control) -> bool:
 		_fail("purchase panel consumed Escape although C++ purchase board ignores it")
 		return false
 	purchase.hide()
+	return true
+
+
+func _test_input_dialog_ownership(main: Control) -> bool:
+	GameState.pending_input = {"uid": 11, "commitTag": "old-npc"}
+	main.call("_on_purchase_quantity_requested", 22, 33, "测试商品")
+	if not GameState.pending_input.is_empty() or main.get("_pending_purchase").get("npcUID", 0) != 22 or not main.get("_pending_chat_group").is_empty():
+		_fail("purchase prompt did not replace the previous NPC input owner")
+		return false
+	GameState.pending_input = {"uid": 44, "commitTag": "old-npc-2"}
+	main.call("_on_friend_group_name_requested", [55, 66])
+	if not GameState.pending_input.is_empty() or not main.get("_pending_purchase").is_empty() or main.get("_pending_chat_group") != [55, 66]:
+		_fail("friend-group prompt did not replace the previous input owner")
+		return false
+	main.call("_on_purchase_quantity_requested", 77, 88, "旧商品")
+	main.call("_on_server_message", NetworkClient.SM_STARTINPUT, _start_input_payload(99, "新NPC输入", "new-npc", true))
+	if GameState.pending_input.get("uid", 0) != 99 or GameState.pending_input.get("commitTag", "") != "new-npc" or not main.get("_pending_purchase").is_empty() or not main.get("_pending_chat_group").is_empty():
+		_fail("server NPC prompt did not replace the previous local input owner")
+		return false
+	main.call("_on_input_cancelled")
+	(main.call("_ensure_extra_panel", "res://scenes/game/panels/input_string.tscn") as Control).hide()
 	return true
 
 
@@ -2355,6 +2378,26 @@ func _test_pickup_action(main: Control, resources: RefCounted) -> bool:
 		_fail("pickup action did not finish and return to stand")
 		return false
 	return true
+
+
+func _start_input_payload(uid: int, title: String, commit_tag: String, show: bool) -> PackedByteArray:
+	var payload := PackedByteArray([1])
+	var uid_offset := payload.size()
+	payload.resize(uid_offset + 8)
+	payload.encode_u64(uid_offset, uid)
+	_append_cereal_string(payload, title)
+	_append_cereal_string(payload, commit_tag)
+	payload.append(1 if show else 0)
+	payload.append(0)
+	return payload
+
+
+func _append_cereal_string(payload: PackedByteArray, value: String) -> void:
+	var encoded := value.to_utf8_buffer()
+	var size_offset := payload.size()
+	payload.resize(size_offset + 8)
+	payload.encode_u64(size_offset, encoded.size())
+	payload.append_array(encoded)
 
 
 func _fail(message: String) -> void:
