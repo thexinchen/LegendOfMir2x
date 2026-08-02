@@ -11,7 +11,9 @@ func _ready() -> void:
 		return
 	var weapon_id := _find_item(resources, "武器")
 	var dress_id := _find_item(resources, "衣服")
-	if weapon_id == 0 or dress_id == 0:
+	var shoe_id := _find_wear_icon(resources, "鞋")
+	var necklace_id := _find_wear_icon(resources, "项链")
+	if weapon_id == 0 or dress_id == 0 or shoe_id == 0 or necklace_id == 0:
 		_fail("wearable item metadata unavailable")
 		return
 
@@ -34,6 +36,8 @@ func _ready() -> void:
 	if combat.dc[0] != 1 / 2 + weapon_attr.dc[0] or combat.dc[1] != 1 + weapon_attr.dc[1] + 100 or combat.load[1] != 12 + weapon_attr.load[1]:
 		_fail("combat calculation mismatch: %s" % combat)
 		return
+	GameState.wear[4] = _item(shoe_id, 80)
+	GameState.wear[5] = _item(necklace_id, 81)
 
 	var panel: Control = load("res://scenes/game/panels/player_state.tscn").instantiate()
 	add_child(panel)
@@ -49,6 +53,16 @@ func _ready() -> void:
 	var shoe_slot := _slot_at(equipment_slots, Vector2(-8, 182))
 	var necklace_slot := _slot_at(equipment_slots, Vector2(150, 30))
 	var weapon_slot := _slot_at(equipment_slots, Vector2(22, 22))
+	var shoe_frame: Dictionary = resources.frame("item", resources.item_package_gfx_id(shoe_id) | 0x01000000)
+	var necklace_frame: Dictionary = resources.frame("item", resources.item_package_gfx_id(necklace_id) | 0x01000000)
+	var shoe_image := shoe_slot.get_node_or_null("Icon") as TextureRect if shoe_slot else null
+	var necklace_image := necklace_slot.get_node_or_null("Icon") as TextureRect if necklace_slot else null
+	if shoe_image == null or shoe_slot.texture_normal != null or shoe_image.size != shoe_frame.texture.get_size() or shoe_image.position != Vector2((shoe_slot.size.x - shoe_image.size.x) / 2.0, shoe_slot.size.y - shoe_image.size.y):
+		_fail("shoe icon native-size bottom alignment mismatch")
+		return
+	if necklace_image == null or necklace_slot.texture_normal != null or necklace_image.size != necklace_frame.texture.get_size() or necklace_image.position != (necklace_slot.size - necklace_image.size) / 2.0:
+		_fail("ordinary wear icon native-size centering mismatch")
+		return
 	var shoe_hover := shoe_slot.get_node_or_null("HoverOverlay") as TextureRect if shoe_slot else null
 	var necklace_hover := necklace_slot.get_node_or_null("HoverOverlay") as TextureRect if necklace_slot else null
 	if shoe_hover == null or shoe_hover.texture == null or shoe_hover.position != Vector2(-1, -6) or not is_equal_approx(shoe_hover.modulate.a, 128.0 / 255.0):
@@ -71,6 +85,13 @@ func _ready() -> void:
 	if not panel.call("_can_wear", weapon_id, 3) or panel.call("_can_wear", weapon_id, 5):
 		_fail("wear slot validation mismatch")
 		return
+	var panel_resources: RefCounted = panel.get("_resources")
+	var original_dress_name: String = panel_resources.item_names[dress_id]
+	panel_resources.item_names[dress_id] = "无性别衣服"
+	if panel.call("_can_wear", dress_id, 1):
+		_fail("unmarked dress bypassed original gender requirement")
+		return
+	panel_resources.item_names[dress_id] = original_dress_name
 	GameState.grabbed_item = _item(dress_id, 79)
 	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
 	panel.call("_on_wear_pressed", 3)
@@ -105,6 +126,14 @@ func _find_item(resources: RefCounted, type_name: String) -> int:
 	for item_id in resources.item_types:
 		if resources.item_types[item_id] == type_name and not resources.item_attribute(item_id).is_empty():
 			return int(item_id)
+	return 0
+
+
+func _find_wear_icon(resources: RefCounted, type_name: String) -> int:
+	for item_id_value in resources.item_types:
+		var item_id := int(item_id_value)
+		if resources.item_types[item_id] == type_name and not resources.frame("item", resources.item_package_gfx_id(item_id) | 0x01000000).is_empty():
+			return item_id
 	return 0
 
 

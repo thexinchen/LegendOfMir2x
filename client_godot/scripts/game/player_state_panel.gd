@@ -80,7 +80,17 @@ func _refresh() -> void:
 		if not item.is_empty() and location >= 4:
 			var frame: Dictionary = _resources.frame("item", _resources.item_package_gfx_id(item.get("itemID", 0)) | 0x01000000)
 			if not frame.is_empty():
-				icon.texture_normal = frame.texture
+				var image := TextureRect.new()
+				var image_size: Vector2 = frame.texture.get_size()
+				image.name = "Icon"
+				image.position.x = (icon.size.x - image_size.x) / 2.0
+				image.position.y = icon.size.y - image_size.y if location == 4 else (icon.size.y - image_size.y) / 2.0
+				image.size = image_size
+				image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				image.texture = frame.texture
+				image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				icon.add_child(image)
 		if not item.is_empty():
 			icon.mouse_entered.connect(_show_item_tooltip.bind(location, item))
 			icon.mouse_exited.connect(_hide_item_tooltip)
@@ -152,10 +162,11 @@ func _can_wear(item_id: int, location: int) -> bool:
 		return false
 	if location == 1:
 		var name: String = _resources.item_name(item_id)
-		if "（男）" in name and not bool(_state.player_gender):
-			return false
-		if "（女）" in name and bool(_state.player_gender):
-			return false
+		if "（男）" in name:
+			return bool(_state.player_gender)
+		if "（女）" in name:
+			return not bool(_state.player_gender)
+		return false
 	return true
 
 
