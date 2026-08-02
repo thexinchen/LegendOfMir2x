@@ -40,6 +40,20 @@ func _ready() -> void:
 	var main: Control = load("res://scenes/game/main.tscn").instantiate()
 	add_child(main)
 	await get_tree().process_frame
+	var world_renderer: Control = main.get_node("WorldRenderer")
+	if not world_renderer.has_method("_hero_dress_mod_color") or not world_renderer.has_method("_hero_hair_mod_color"):
+		_fail("hero dress/hair color modulation unavailable")
+		return
+	var dress_color: Color = world_renderer.call("_hero_dress_mod_color", {
+		1: {"extAttrList": {41: PackedByteArray([1, 0x11, 0x22, 0x33, 0x44])}},
+	})
+	var hair_color: Color = world_renderer.call("_hero_hair_mod_color", {"hairColor": 0xDDCCBBAA})
+	if not dress_color.is_equal_approx(Color(0x11 / 255.0, 0x22 / 255.0, 0x33 / 255.0, 0x44 / 255.0)) \
+			or not hair_color.is_equal_approx(Color(0xAA / 255.0, 0xBB / 255.0, 0xCC / 255.0, 0xDD / 255.0)) \
+			or not world_renderer.call("_hero_dress_mod_color", {}).is_equal_approx(Color.WHITE) \
+			or not world_renderer.call("_hero_hair_mod_color", {}).is_equal_approx(Color.WHITE):
+		_fail("hero dress/hair packed RGBA modulation mismatch")
+		return
 	var initial_inventory_panel := main.get_node("InventoryPanel") as Control
 	if initial_inventory_panel.position != Vector2(259, 58) or initial_inventory_panel.size != Vector2(434, 542):
 		_fail("inventory root geometry mismatch: position=%s size=%s" % [initial_inventory_panel.position, initial_inventory_panel.size])

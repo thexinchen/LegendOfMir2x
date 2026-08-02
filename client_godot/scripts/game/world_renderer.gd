@@ -30,6 +30,7 @@ const GROUND_ITEM_NAME_OFFSET_Y := 20
 const DEAD_ACTION := 13
 const DEAD_FRAME_COUNT := 10
 const DEAD_FADE_STEP := 10
+const ITEM_EXT_ATTR_COLOR := 41
 const FIRE_ASH_TEXTURE_ID := 0x0F0000DC
 const ICE_SLAG_TEXTURE_IDS := [0x0F000105, 0x0F000104]
 const SPECIAL_WAVE_COUNT := 8
@@ -1609,7 +1610,7 @@ func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dict
 	_draw_hero_attached_magic(uid, start_x, start_y, direction_index + 1, false)
 	_draw_sprite_frame(body, start_x, start_y, 1.0)
 	var layer: Dictionary = actor_resource.frame("hero", body_key | (1 << 24))
-	_draw_sprite_frame(layer, start_x, start_y, 1.0)
+	_draw_sprite_frame(layer, start_x, start_y, 1.0, _hero_dress_mod_color(wear))
 	var helmet_shape := _wear_shape(wear, 2)
 	if helmet_shape > 0:
 		var helmet_gfx: int = ((helmet_shape - 1) << 9) | (motion_data[0] << 3) | direction_index
@@ -1620,7 +1621,7 @@ func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dict
 		if hair > 0:
 			var hair_gfx: int = ((hair - 1) << 9) | (motion_data[0] << 3) | direction_index
 			var hair_key: int = (gender << 22) | ((hair_gfx & 0x1FFFF) << 5) | frame_index
-			_draw_sprite_frame(actor_resource.frame("hair", hair_key), start_x, start_y, 1.0)
+			_draw_sprite_frame(actor_resource.frame("hair", hair_key), start_x, start_y, 1.0, _hero_hair_mod_color(desp))
 	if weapon_key != 0 and weapon_order == 0:
 		_draw_sprite_frame(actor_resource.frame("weapon", weapon_key), start_x, start_y, 1.0)
 	_draw_hero_attached_magic(uid, start_x, start_y, direction_index + 1, true)
@@ -1663,6 +1664,29 @@ func _attack_motion_effect_state(magic_id: int, direction: int, started_ms: int)
 func _wear_shape(wear: Dictionary, location: int) -> int:
 	var item: Dictionary = wear.get(location, {})
 	return actor_resource.item_shape(item.get("itemID", 0))
+
+
+func _hero_dress_mod_color(wear: Dictionary) -> Color:
+	var dress: Dictionary = wear.get(1, {})
+	var color_data: PackedByteArray = dress.get("extAttrList", {}).get(ITEM_EXT_ATTR_COLOR, PackedByteArray())
+	if color_data.size() >= 5 and color_data[0] == 1:
+		return _packed_rgba_color(color_data.decode_u32(1))
+	if color_data.size() >= 4:
+		return _packed_rgba_color(color_data.decode_u32(0))
+	return Color.WHITE
+
+
+func _hero_hair_mod_color(desp: Dictionary) -> Color:
+	return _packed_rgba_color(int(desp.get("hairColor", 0xFFFFFFFF)))
+
+
+func _packed_rgba_color(packed_color: int) -> Color:
+	return Color(
+		float(packed_color & 0xFF) / 255.0,
+		float((packed_color >> 8) & 0xFF) / 255.0,
+		float((packed_color >> 16) & 0xFF) / 255.0,
+		float((packed_color >> 24) & 0xFF) / 255.0,
+	)
 
 
 func _hero_motion(action_type: int, magic_id := 0, desp: Dictionary = {}) -> PackedInt32Array:
@@ -1917,11 +1941,11 @@ func _npc_render_sequence(creature: Dictionary) -> Dictionary:
 	}
 
 
-func _draw_sprite_frame(sprite: Dictionary, start_x: int, start_y: int, alpha: float) -> void:
+func _draw_sprite_frame(sprite: Dictionary, start_x: int, start_y: int, alpha: float, mod_color: Color = Color.WHITE) -> void:
 	if sprite.is_empty():
 		return
 	var offset: Vector2i = sprite.offset
-	draw_texture(sprite.texture, Vector2(start_x + offset.x, start_y + offset.y), Color(1.0, 1.0, 1.0, alpha))
+	draw_texture(sprite.texture, Vector2(start_x + offset.x, start_y + offset.y), Color(mod_color.r, mod_color.g, mod_color.b, mod_color.a * alpha))
 
 
 func _monster_motion(action_type: int) -> PackedInt32Array:
