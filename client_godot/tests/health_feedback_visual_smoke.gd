@@ -12,7 +12,7 @@ func _ready() -> void:
 	GameState.creatures.clear()
 	var now := Time.get_ticks_msec()
 	GameState.ascend_strings = [
-		{"x": 370 * 48 + 24, "y": 131 * 32, "type": 0, "value": 0, "start_time": now},
+		{"x": 370 * 48 + 24 - 20, "y": 131 * 32, "type": 0, "value": 0, "start_time": now},
 		{"x": 372 * 48 + 24, "y": 131 * 32, "type": 1, "value": -128, "start_time": now},
 		{"x": 374 * 48 + 24, "y": 131 * 32, "type": 2, "value": 35, "start_time": now},
 		{"x": 376 * 48 + 24, "y": 131 * 32, "type": 3, "value": 64, "start_time": now},

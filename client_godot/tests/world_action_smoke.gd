@@ -613,13 +613,13 @@ func _test_async_combat_feedback(main: Control, resources: RefCounted) -> bool:
 		_fail("stale SM_MISS created false local-player feedback: %s" % GameState.ascend_strings)
 		return false
 	main.call("_on_server_message", NetworkClient.SM_MISS, _u64_payload(101))
-	if GameState.ascend_strings.size() != 1 or GameState.ascend_strings[0].x != 3 * 48 + 24 or GameState.ascend_strings[0].y != 3 * 32 or GameState.ascend_strings[0].type != 0:
+	if GameState.ascend_strings.size() != 1 or GameState.ascend_strings[0].x != 3 * 48 + 24 - 20 or GameState.ascend_strings[0].y != 3 * 32 or GameState.ascend_strings[0].type != 0:
 		_fail("local-player SM_MISS did not use the existing actor position: %s" % GameState.ascend_strings)
 		return false
 	var target_uid := 303
 	GameState.update_creature(target_uid, {"uid": target_uid, "type": 1, "x": 8, "y": 9})
 	main.call("_on_server_message", NetworkClient.SM_MISS, _u64_payload(target_uid))
-	if GameState.ascend_strings.size() != 2 or GameState.ascend_strings[1].x != 8 * 48 + 24 or GameState.ascend_strings[1].y != 8 * 32 or GameState.ascend_strings[1].type != 0:
+	if GameState.ascend_strings.size() != 2 or GameState.ascend_strings[1].x != 8 * 48 + 24 - 20 or GameState.ascend_strings[1].y != 8 * 32 or GameState.ascend_strings[1].type != 0:
 		_fail("creature SM_MISS did not use the existing actor position: %s" % GameState.ascend_strings)
 		return false
 	GameState.chat_log.clear()
@@ -703,6 +703,11 @@ func _test_health_feedback(main: Control, resources: RefCounted) -> bool:
 	main.call("_on_server_message", NetworkClient.SM_HEALTH, _sd_health_payload(999, 1, 1, 1, 1))
 	if not GameState.ascend_strings.is_empty():
 		_fail("unknown health target created feedback")
+		return false
+	for value in range(1, 52):
+		GameState.add_ascend_value(100, 100, 1, -value)
+	if GameState.ascend_strings.size() != 51 or GameState.ascend_strings[0].value != -1:
+		_fail("active combat feedback was capped before its C++ lifetime expired: %s" % GameState.ascend_strings.size())
 		return false
 	GameState.remove_creature(target_uid)
 	GameState.ascend_strings.clear()

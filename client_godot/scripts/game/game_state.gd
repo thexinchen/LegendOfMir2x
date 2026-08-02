@@ -690,17 +690,14 @@ func scroll_camera() -> void:
 		view_y += sign(dy) * min(abs(dy), 2.0)
 
 
-func add_ascend_string(grid_x: int, grid_y: int, text: String, color: Color = Color(1, 0.3, 0.3, 1)) -> void:
+func add_ascend_miss(pixel_x: int, pixel_y: int) -> void:
 	ascend_strings.append({
-		"x": grid_x * GRID_XP + GRID_XP / 2,
-		"y": grid_y * GRID_YP - GRID_YP,
+		"x": pixel_x,
+		"y": pixel_y,
 		"type": 0,
 		"value": 0,
-		"text": text,
-		"color": color,
 		"start_time": Time.get_ticks_msec(),
 	})
-	_trim_ascend_strings()
 
 
 func add_ascend_value(pixel_x: int, pixel_y: int, type: int, value: int) -> void:
@@ -711,12 +708,6 @@ func add_ascend_value(pixel_x: int, pixel_y: int, type: int, value: int) -> void
 		"value": value,
 		"start_time": Time.get_ticks_msec(),
 	})
-	_trim_ascend_strings()
-
-
-func _trim_ascend_strings() -> void:
-	if ascend_strings.size() > 50:
-		ascend_strings.pop_front()
 
 
 func update_ascend_strings() -> void:

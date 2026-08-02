@@ -1567,7 +1567,10 @@ func _handle_miss(payload: PackedByteArray) -> void:
 			return
 	var x: int = c.get("x", 0)
 	var y: int = c.get("y", 0)
-	game_state.add_ascend_string(x, y, "Miss", Color(1, 1, 1, 1))
+	game_state.add_ascend_miss(
+		x * GameState.GRID_XP + GameState.GRID_XP / 2 - 20,
+		y * GameState.GRID_YP - GameState.GRID_YP,
+	)
 
 
 func _handle_player_name(payload: PackedByteArray) -> void:
