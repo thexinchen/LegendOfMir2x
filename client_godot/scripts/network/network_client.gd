@@ -739,6 +739,11 @@ func _parse_packets() -> void:
 			return
 		var consumed: int = parsed[1]
 		var response_id: int = parsed[4]
+		if response_id == 0 and parsed[2] == SM_BUILDVERSION:
+			_receive_buffer = _receive_buffer.slice(consumed)
+			if not _accept_build_version(parsed[3]):
+				return
+			continue
 		if response_id > 0:
 			response_received.emit(response_id, parsed[2], parsed[3])
 			var entry: Dictionary = _response_callbacks.get(response_id, {})
@@ -749,6 +754,37 @@ func _parse_packets() -> void:
 		else:
 			message_received.emit(parsed[2], parsed[3])
 		_receive_buffer = _receive_buffer.slice(consumed)
+
+
+func _accept_build_version(payload: PackedByteArray) -> bool:
+	if "--disable-version-check" in OS.get_cmdline_args() or "--disable-version-check" in OS.get_cmdline_user_args():
+		return true
+	var server_signature := _decode_build_signature(payload)
+	if server_signature.is_empty():
+		_reject_build_version("服务端版本信息无效")
+		return false
+	var client_signature := FileAccess.get_file_as_string("res://assets/generated/build_signature.txt").strip_edges()
+	if client_signature.is_empty():
+		client_signature = "VENGINEERING-development"
+	if server_signature != client_signature:
+		_reject_build_version("客户端与服务器版本不一致：客户端 %s，服务器 %s" % [client_signature, server_signature])
+		return false
+	return true
+
+
+func _decode_build_signature(payload: PackedByteArray) -> String:
+	if payload.size() != STATIC_BIGBUF_SIZE:
+		return ""
+	var text_size := payload.decode_u16(0)
+	if text_size <= 0 or text_size > 128 or 2 + text_size > payload.size():
+		return ""
+	return payload.slice(2, 2 + text_size).get_string_from_utf8()
+
+
+func _reject_build_version(message: String) -> void:
+	disconnect_from_server()
+	_last_status = StreamPeerTCP.STATUS_NONE
+	connection_changed.emit(false, message)
 
 
 func _try_parse_packet() -> Array:
