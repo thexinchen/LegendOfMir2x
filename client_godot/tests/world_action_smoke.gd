@@ -817,6 +817,30 @@ func _test_hero_spell_gestures(main: Control, resources: RefCounted) -> bool:
 	if remote.get("action_type", 0) != 9 or remote.get("direction", 0) != 5 or GameState.magic_effects.back().get("direction", 0) != 5:
 		_fail("remote attack-mode spell did not force C++ down-facing body/effect: %s" % remote)
 		return false
+	remote["x"] = 10
+	remote["y"] = 10
+	remote["direction"] = 1
+	GameState.update_creature(remote_uid, remote)
+	main.call("_handle_action", _sm_action(remote_uid, 202, {
+		"type": 9, "speed": 100, "direction": 0, "x": 10, "y": 10,
+		"aimX": 12, "aimY": 10, "aimUID": 0, "magicID": spell0_id,
+	}))
+	remote = GameState.get_creature(remote_uid)
+	if remote.get("direction", 0) != 3 or GameState.magic_effects.back().get("direction", 0) != 3:
+		_fail("server-normalized remote coordinate spell did not face its aim grid: %s effect=%s" % [remote, GameState.magic_effects.back()])
+		return false
+	remote["x"] = 11
+	remote["y"] = 10
+	remote["direction"] = 1
+	GameState.update_creature(remote_uid, remote)
+	main.call("_handle_action", _sm_action(remote_uid, 202, {
+		"type": 9, "speed": 100, "direction": 0, "x": 11, "y": 10,
+		"aimX": 10, "aimY": 10, "aimUID": 101, "magicID": spell1_id,
+	}))
+	remote = GameState.get_creature(remote_uid)
+	if remote.get("direction", 0) != 7 or GameState.magic_effects.back().get("direction", 0) != 7:
+		_fail("server-normalized remote UID spell did not face the local hero: %s effect=%s" % [remote, GameState.magic_effects.back()])
+		return false
 	GameState.remove_creature(remote_uid)
 	GameState.magic_effects.clear()
 	main.call("_set_player_action", 2)

@@ -1050,6 +1050,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 				return
 	if action_type == 7:
 		direction = _attack_direction(uid, action)
+	elif action_type == 9 and _resources.magic_cast_motion(action.get("magicID", 0)) != 7:
+		direction = _spell_direction(uid, action)
 	elif action_type == 12 and direction < 1:
 		direction = _spinkick_direction(uid, action)
 	elif action_type in [3, 5] and direction < 1:
@@ -1236,6 +1238,28 @@ func _attack_direction(uid: int, action: Dictionary) -> int:
 	var y := int(action.get("y", 0))
 	var aim_x := int(aim.get("x", 0))
 	var aim_y := int(aim.get("y", 0))
+	if x == aim_x and y == aim_y:
+		return fallback
+	return _direction_to(x, y, aim_x, aim_y)
+
+
+func _spell_direction(uid: int, action: Dictionary) -> int:
+	var fallback: int = game_state.player_direction if uid == game_state.player_uid else int(game_state.get_creature(uid).get("direction", 5))
+	var aim_x := int(action.get("aimX", action.get("x", 0)))
+	var aim_y := int(action.get("aimY", action.get("y", 0)))
+	var aim_uid := int(action.get("aimUID", 0))
+	if aim_uid != 0:
+		var aim: Dictionary
+		if aim_uid == game_state.player_uid:
+			aim = {"x": game_state.player_x, "y": game_state.player_y}
+		else:
+			aim = game_state.get_creature(aim_uid)
+		if aim.is_empty():
+			return fallback
+		aim_x = int(aim.get("x", aim_x))
+		aim_y = int(aim.get("y", aim_y))
+	var x := int(action.get("x", 0))
+	var y := int(action.get("y", 0))
 	if x == aim_x and y == aim_y:
 		return fallback
 	return _direction_to(x, y, aim_x, aim_y)
