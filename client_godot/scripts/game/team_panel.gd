@@ -5,6 +5,7 @@ const MIN_VISIBLE_ROWS := 5
 const MAX_VISIBLE_ROWS := 10
 const ROW_WIDTH := 231
 const BASE_HEIGHT := 146
+const ROW_OVERLAY_ALPHA := 100.0 / 255.0
 
 var _state: Node
 var _show_candidates := false
@@ -25,6 +26,7 @@ func _ready() -> void:
 
 
 func _refresh() -> void:
+	_validate_selections()
 	var rows := _current_rows()
 	var mode := _mode_index()
 	var visible_count := clampi(rows.size(), MIN_VISIBLE_ROWS, MAX_VISIBLE_ROWS)
@@ -83,12 +85,17 @@ func _add_row(member: Dictionary, item_index: int, visible_index: int, mode: int
 	button.add_theme_color_override("font_color", Color.WHITE)
 	button.add_theme_color_override("font_hover_color", Color.WHITE)
 	button.add_theme_color_override("font_pressed_color", Color.WHITE)
+	var hover_color := Color(0.0, 0.0, 1.0, ROW_OVERLAY_ALPHA)
 	button.add_theme_stylebox_override("normal", _row_style(Color.TRANSPARENT))
-	button.add_theme_stylebox_override("hover", _row_style(Color(0, 0, 1, 0.4)))
-	button.add_theme_stylebox_override("pressed", _row_style(Color(1, 0, 0, 0.4)))
+	button.add_theme_stylebox_override("hover", _row_style(hover_color))
+	button.add_theme_stylebox_override("pressed", _row_style(hover_color))
 	button.add_theme_stylebox_override("focus", _row_style(Color.TRANSPARENT))
 	if _selected_uids[mode] == uid:
-		button.add_theme_stylebox_override("normal", _row_style(Color(1, 0, 0, 0.4)))
+		var selected_color := Color(1.0, 0.0, 0.0, ROW_OVERLAY_ALPHA)
+		var selected_hover_color := _source_over(hover_color, selected_color)
+		button.add_theme_stylebox_override("normal", _row_style(selected_color))
+		button.add_theme_stylebox_override("hover", _row_style(selected_hover_color))
+		button.add_theme_stylebox_override("pressed", _row_style(selected_hover_color))
 	button.pressed.connect(_select_uid.bind(mode, uid))
 	$MemberRows.add_child(button)
 
@@ -98,6 +105,32 @@ func _row_style(color: Color) -> StyleBoxFlat:
 	style.bg_color = color
 	style.content_margin_left = 5.0
 	return style
+
+
+func _source_over(top: Color, bottom: Color) -> Color:
+	var output_alpha := top.a + bottom.a * (1.0 - top.a)
+	return Color(
+		(top.r * top.a + bottom.r * bottom.a * (1.0 - top.a)) / output_alpha,
+		(top.g * top.a + bottom.g * bottom.a * (1.0 - top.a)) / output_alpha,
+		(top.b * top.a + bottom.b * bottom.a * (1.0 - top.a)) / output_alpha,
+		output_alpha,
+	)
+
+
+func _validate_selections() -> void:
+	var row_sets := [_state.team_members, _state.team_candidates]
+	for mode in 2:
+		var selected_uid: int = _selected_uids[mode]
+		if selected_uid != 0 and not _contains_uid(row_sets[mode], selected_uid):
+			_selected_uids[mode] = 0
+
+
+func _contains_uid(rows: Array, uid: int) -> bool:
+	for row_value in rows:
+		var row: Dictionary = row_value
+		if int(row.get("uid", 0)) == uid:
+			return true
+	return false
 
 
 func _select_uid(mode: int, uid: int) -> void:

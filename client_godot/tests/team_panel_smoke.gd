@@ -28,6 +28,18 @@ func _ready() -> void:
 	if panel.get("_selected_uids")[0] != GameState.team_members[3].uid:
 		_fail("member selection was not retained")
 		return
+	var overlay_alpha := 100.0 / 255.0
+	var selected_row := panel.get_node("MemberRows/Row3") as Button
+	var selected_normal := selected_row.get_theme_stylebox("normal") as StyleBoxFlat
+	var selected_hover := selected_row.get_theme_stylebox("hover") as StyleBoxFlat
+	var expected_normal := Color(1.0, 0.0, 0.0, overlay_alpha)
+	var expected_hover := _source_over(Color(0.0, 0.0, 1.0, overlay_alpha), expected_normal)
+	if not selected_normal.bg_color.is_equal_approx(expected_normal):
+		_fail("selected-row overlay does not use original alpha: %s" % selected_normal.bg_color)
+		return
+	if not selected_hover.bg_color.is_equal_approx(expected_hover):
+		_fail("selected hover does not preserve original red-then-blue layering: %s" % selected_hover.bg_color)
+		return
 	panel.call("_toggle_mode")
 	if panel.size != Vector2(258, 226) or panel.get_node("MemberRows").get_child_count() != 2:
 		_fail("candidate minimum layout mismatch: size=%s rows=%d" % [panel.size, panel.get_node("MemberRows").get_child_count()])
@@ -50,6 +62,9 @@ func _ready() -> void:
 	if GameState.team_candidates.any(func(candidate: Dictionary): return candidate.uid == accepted.uid):
 		_fail("accepted candidate was not removed")
 		return
+	if panel.get("_selected_uids")[0] != 0 or panel.get("_selected_uids")[1] != 0:
+		_fail("removed team rows left stale selections: %s" % [panel.get("_selected_uids")[0], panel.get("_selected_uids")[1]])
+		return
 	var candidate_count := GameState.team_candidates.size()
 	GameState.add_team_candidate(accepted)
 	if GameState.team_candidates.size() != candidate_count:
@@ -60,6 +75,11 @@ func _ready() -> void:
 		GameState.team_members = [{"uid": (5 << 59) | 100, "level": 20, "name": ""}]
 		panel.set("_show_candidates", false)
 		panel.call("_refresh")
+		panel.call("_select_uid", 0, GameState.team_members[0].uid)
+		await get_tree().process_frame
+		var screenshot_row := panel.get_node("MemberRows/Row0") as Button
+		get_viewport().warp_mouse(screenshot_row.global_position + Vector2(20, 8))
+		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_TEAM_SCREENSHOT"))
 	print("TEAM PANEL PASS: original variable board, mode gating, rows and independent selections")
@@ -69,3 +89,13 @@ func _ready() -> void:
 func _fail(message: String) -> void:
 	push_error("TEAM_PANEL_SMOKE %s" % message)
 	get_tree().quit(1)
+
+
+func _source_over(top: Color, bottom: Color) -> Color:
+	var output_alpha := top.a + bottom.a * (1.0 - top.a)
+	return Color(
+		(top.r * top.a + bottom.r * bottom.a * (1.0 - top.a)) / output_alpha,
+		(top.g * top.a + bottom.g * bottom.a * (1.0 - top.a)) / output_alpha,
+		(top.b * top.a + bottom.b * bottom.a * (1.0 - top.a)) / output_alpha,
+		output_alpha,
+	)
