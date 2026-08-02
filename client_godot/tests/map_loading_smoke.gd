@@ -1,0 +1,57 @@
+extends Node
+
+const WorldResourceScript = preload("res://scripts/game/world_resource.gd")
+
+var _progress: Array[int] = []
+var _map_names: Array[String] = []
+
+
+func _ready() -> void:
+	var world: RefCounted = WorldResourceScript.new()
+	if not world.load_map(24, _record_progress):
+		_fail("map resource failed to load: %s" % world.last_error)
+		return
+	if _progress.is_empty() or _progress.front() != 0 or not _progress.has(40) or _progress.back() != 100:
+		_fail("C++ progress milestones missing: %s" % _progress)
+		return
+	for index in range(1, _progress.size()):
+		if _progress[index] < _progress[index - 1]:
+			_fail("progress is not monotonic: %s" % _progress)
+			return
+	for expected in range(40, 101):
+		if not _progress.has(expected):
+			_fail("C++ integer progress update missing: %d in %s" % [expected, _progress])
+			return
+	if _map_names[0].is_empty():
+		_fail("map name was unavailable at first visible progress")
+		return
+	var main: Control = load("res://scenes/game/main.tscn").instantiate()
+	add_child(main)
+	var overlay := main.get_node("MapLoadingOverlay") as Control
+	var backdrop := overlay.get_node("Backdrop") as ColorRect
+	var panel := overlay.get_node("Panel") as Control
+	if panel.size != Vector2(358, 260) or overlay.mouse_filter != Control.MOUSE_FILTER_STOP or backdrop.color != Color.BLACK:
+		_fail("modal geometry/background/input mismatch: panel=%s background=%s filter=%d" % [panel.size, backdrop.color, overlay.mouse_filter])
+		return
+	overlay.show()
+	main.call("_on_map_load_progress", 40, _map_names[0])
+	var text: String = overlay.get_node("Panel/Text").text
+	if not text.contains("加载地图") or not text.contains("[color=red]") or not text.contains("%40"):
+		_fail("modal text/style mismatch: %s" % text)
+		return
+	if OS.has_environment("MIR2X_MAP_LOADING_SCREENSHOT"):
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MAP_LOADING_SCREENSHOT"))
+	print("MAP LOADING PASS: milestones, modal geometry, replacement font and input blocking")
+	get_tree().quit()
+
+
+func _record_progress(value: int, map_name: String) -> void:
+	_progress.append(value)
+	_map_names.append(map_name)
+
+
+func _fail(message: String) -> void:
+	push_error("MAP_LOADING_SMOKE %s" % message)
+	get_tree().quit(1)

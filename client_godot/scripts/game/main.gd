@@ -28,6 +28,8 @@ const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 @onready var team_flag_cursor: TextureRect = $TeamFlagCursor
 @onready var death_overlay: ColorRect = $DeathOverlay
 @onready var fps_label: Label = $FPS
+@onready var map_loading_overlay: Control = $MapLoadingOverlay
+@onready var map_loading_text: RichTextLabel = $MapLoadingOverlay/Panel/Text
 
 var game_state: Node = null
 var protocol: RefCounted = null
@@ -167,6 +169,9 @@ func _refresh_grabbed_item_icon() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if map_loading_overlay.visible:
+		get_viewport().set_input_as_handled()
+		return
 	if not event.is_pressed() or event.is_echo():
 		return
 	if _player_dead():
@@ -940,7 +945,7 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 	_pickup_action_timer = -1.0
 	_player_action_timer = -1.0
 	game_state.start_game_scene(data)
-	if world_renderer.load_map(game_state.player_map_id):
+	if _load_world_map(game_state.player_map_id):
 		game_state.player_map_name = world_renderer.world_resource.map_name
 		AudioService.play_map_bgm(world_renderer.world_resource.bgm_id)
 	else:
@@ -1072,12 +1077,27 @@ func _switch_player_map(map_uid: int, action: Dictionary) -> void:
 	_attack_focus_uid = 0
 	AudioService.stop_seff()
 	game_state.switch_player_map(map_uid, action.get("x", 0), action.get("y", 0))
-	if world_renderer.load_map(game_state.player_map_id):
+	if _load_world_map(game_state.player_map_id):
 		game_state.player_map_name = world_renderer.world_resource.map_name
 		AudioService.play_map_bgm(world_renderer.world_resource.bgm_id)
 	else:
 		AudioService.stop_bgm()
 	_center_hero()
+
+
+func _load_world_map(map_id: int) -> bool:
+	map_loading_overlay.show()
+	var loaded: bool = world_renderer.load_map(map_id, _on_map_load_progress)
+	map_loading_overlay.hide()
+	return loaded
+
+
+func _on_map_load_progress(progress: int, map_name: String) -> void:
+	var display_name := map_name.get_slice("_", 0)
+	if display_name.is_empty():
+		display_name = "地图%d" % game_state.player_map_id
+	map_loading_text.text = "[center]加载地图[color=red]%s[/color]\n完成[color=red]%%%d[/color][/center]" % [display_name, clampi(progress, 0, 100)]
+	RenderingServer.force_draw()
 
 
 func _spinkick_direction(uid: int, action: Dictionary) -> int:

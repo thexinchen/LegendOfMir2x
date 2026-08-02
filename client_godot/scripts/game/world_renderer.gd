@@ -71,8 +71,8 @@ func _process(_delta: float) -> void:
 	queue_redraw()
 
 
-func load_map(map_id: int) -> bool:
-	if world_resource.load_map(map_id):
+func load_map(map_id: int, progress_callback := Callable()) -> bool:
+	if world_resource.load_map(map_id, progress_callback):
 		map_width = world_resource.width
 		map_height = world_resource.height
 		actor_resource.configure(world_resource.base_path)

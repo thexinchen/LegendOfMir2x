@@ -18,7 +18,7 @@ var _texture_cache: Dictionary = {}
 var last_error: String = ""
 
 
-func load_map(requested_map_id: int) -> bool:
+func load_map(requested_map_id: int, progress_callback := Callable()) -> bool:
 	clear()
 	base_path = _find_base_path(requested_map_id)
 	if base_path.is_empty():
@@ -55,16 +55,23 @@ func load_map(requested_map_id: int) -> bool:
 				map_name = meta_file.get_buffer(name_length).get_string_from_utf8()
 				if meta_file.get_length() - meta_file.get_position() >= 4:
 					bgm_id = meta_file.get_32()
+	_report_progress(progress_callback, 0)
 
 	land = file.get_buffer(width * height)
 	if land.size() != width * height:
 		last_error = "truncated map land data: %s" % map_path
 		return false
+	_report_progress(progress_callback, 40)
+	var total_records := maxi(1, tile_count + object_count)
+	var loaded_records := 0
+	var last_progress := 40
 	for _index in range(tile_count):
 		var x := file.get_16()
 		var y := file.get_16()
 		var texture_id := file.get_32()
 		tiles[x + y * width] = texture_id
+		loaded_records += 1
+		last_progress = _report_record_progress(progress_callback, loaded_records, total_records, last_progress)
 	for _index in range(object_count):
 		var x := file.get_16()
 		var y := file.get_16()
@@ -79,7 +86,23 @@ func load_map(requested_map_id: int) -> bool:
 		var cell_objects: Array = objects[depth].get(key, [])
 		cell_objects.append(PackedInt32Array([texture_id, flags, tick_type, frame_count]))
 		objects[depth][key] = cell_objects
+		loaded_records += 1
+		last_progress = _report_record_progress(progress_callback, loaded_records, total_records, last_progress)
+	_report_progress(progress_callback, 100)
 	return true
+
+
+func _report_record_progress(callback: Callable, loaded: int, total: int, last_progress: int) -> int:
+	var progress := 40 + roundi(float(loaded) * 60.0 / float(total))
+	if progress > last_progress:
+		_report_progress(callback, progress)
+		return progress
+	return last_progress
+
+
+func _report_progress(callback: Callable, progress: int) -> void:
+	if callback.is_valid():
+		callback.call(clampi(progress, 0, 100), map_name)
 
 
 func clear() -> void:
