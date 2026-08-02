@@ -67,6 +67,10 @@ func _ready() -> void:
 	if not _has_label_text(panel.get_node("Detail"), "1,234") or _count_type(panel.get_node("Detail"), "ColorRect") < 12:
 		_fail("unique price or overlay mismatch")
 		return
+	var page_label := _find_label_text(panel.get_node("Detail"), "第1/2页")
+	if page_label == null or page_label.position != Vector2(389, 16):
+		_fail("unique page label does not match the original compact text and position")
+		return
 	get_viewport().warp_mouse(Vector2(520, 100))
 	panel.call("_show_item_tooltip", 0, unique_list[0])
 	var purchase_tooltip := panel.get_node("ItemTooltip") as Panel
@@ -146,6 +150,13 @@ func _has_label_text(parent: Node, wanted: String) -> bool:
 		if child is Label and child.text == wanted:
 			return true
 	return false
+
+
+func _find_label_text(parent: Node, wanted: String) -> Label:
+	for child in parent.get_children():
+		if child is Label and child.text == wanted:
+			return child
+	return null
 
 
 func _label_texts(parent: Node) -> Array[String]:

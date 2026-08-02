@@ -241,8 +241,8 @@ func _build_unique_detail(list: Array) -> void:
 	_add_detail_button(Vector2(405, 163), RIGHT_NORMAL, RIGHT_DOWN, func(): _detail_page += 1; _refresh_detail())
 	_add_detail_close(Vector2(448, 159))
 	var page_label := Label.new()
-	page_label.position = Vector2(382, 16)
-	page_label.text = "第 %d/%d 页" % [_detail_page + 1, page_count]
+	page_label.position = Vector2(389, 16)
+	page_label.text = "第%d/%d页" % [_detail_page + 1, page_count]
 	page_label.add_theme_font_size_override("font_size", 12)
 	page_label.add_theme_color_override("font_color", Color.YELLOW)
 	$Detail.add_child(page_label)
