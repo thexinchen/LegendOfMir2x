@@ -9,6 +9,9 @@ var _dragging := false
 
 
 func _ready() -> void:
+	get_viewport().size_changed.connect(_clamp_to_viewport)
+	resized.connect(_clamp_to_viewport)
+	_clamp_to_viewport()
 	var close_button := get_node_or_null(close_button_path) as BaseButton
 	if close_button:
 		close_button.pressed.connect(hide)
@@ -33,7 +36,16 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 	elif event is InputEventMouseMotion and _dragging:
 		position += event.relative
+		_clamp_to_viewport()
 		accept_event()
+
+
+func _clamp_to_viewport() -> void:
+	var viewport_size := get_viewport_rect().size
+	position = Vector2(
+		clampf(position.x, 0.0, maxf(0.0, viewport_size.x - size.x)),
+		clampf(position.y, 0.0, maxf(0.0, viewport_size.y - size.y)),
+	)
 
 
 func _unhandled_key_input(event: InputEvent) -> void:

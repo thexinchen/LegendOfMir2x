@@ -58,6 +58,29 @@ func _ready() -> void:
 	if panel.get_node("Gold").text != "8,500":
 		_fail("inventory gold separator mismatch: %s" % panel.get_node("Gold").text)
 		return
+	var drag_press := InputEventMouseButton.new()
+	drag_press.button_index = MOUSE_BUTTON_LEFT
+	drag_press.pressed = true
+	drag_press.position = Vector2(10, 10)
+	panel.call("_gui_input", drag_press)
+	var drag_motion := InputEventMouseMotion.new()
+	drag_motion.relative = Vector2(-1000, -1000)
+	panel.call("_gui_input", drag_motion)
+	if panel.position != Vector2.ZERO:
+		_fail("panel drag escaped viewport at top-left: %s" % panel.position)
+		return
+	drag_motion.relative = Vector2(2000, 2000)
+	panel.call("_gui_input", drag_motion)
+	var expected_drag_limit := panel.get_viewport_rect().size - panel.size
+	if panel.position != expected_drag_limit:
+		_fail("panel drag escaped viewport at bottom-right: %s expected=%s" % [panel.position, expected_drag_limit])
+		return
+	var drag_release := InputEventMouseButton.new()
+	drag_release.button_index = MOUSE_BUTTON_LEFT
+	drag_release.pressed = false
+	drag_release.position = Vector2(10, 10)
+	panel.call("_gui_input", drag_release)
+	panel.position = Vector2.ZERO
 	if panel.get_node("ItemGrid").position != Vector2(18, 59) or panel.get_node("ItemGrid").size != Vector2(380, 380):
 		_fail("inventory grid geometry mismatch")
 		return
