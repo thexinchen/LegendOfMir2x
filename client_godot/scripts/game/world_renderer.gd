@@ -36,6 +36,8 @@ const SPECIAL_WAVE_DELAY_MS := 100
 const FIRE_ASH_FADE_IN_MS := 1000
 const FIRE_ASH_HOLD_MS := 5000
 const FIRE_ASH_FADE_OUT_MS := 3000
+const MONSTER_FRAGMENT_HOLD_MS := 5000
+const MONSTER_FRAGMENT_FADE_MS := 3000
 const ICE_SLAG_FADE_IN_FRAMES := 10
 const ICE_SLAG_HOLD_FRAMES := 30
 const ICE_SLAG_FADE_OUT_FRAMES := 15
@@ -461,6 +463,8 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 	var magic_id: int = effect.get("magicID", 0)
 	if magic_id <= 0:
 		return {}
+	if effect.get("source", "") == "monster_transform":
+		return _resolve_monster_transform_effect(effect, magic_id, now - int(effect.get("start_time", now)))
 	if effect.get("source", "") == "space_move":
 		return _resolve_space_move_magic(effect, magic_id, maxi(0, now - int(effect.get("start_time", now))))
 	var monster_attack_kind := _monster_attack_magic_kind(magic_id)
@@ -544,6 +548,10 @@ func _monster_attack_magic_kind(magic_id: int) -> String:
 		return "monster_projectile_target"
 	if magic_name in ["潘夜右护卫_电魔杖", "潘夜左护卫_火魔杖"]:
 		return "motion_sync_target"
+	if magic_name == "祖玛教主_火墙":
+		return "motion_aligned"
+	if magic_name == "祖玛教主_地狱火":
+		return "motion_aligned_hellfire"
 	if magic_name in [
 		"神兽_喷火", "楔蛾_喷毒", "洞蛆_喷毒", "粪虫_喷毒",
 		"雷电僵尸_雷电", "火焰沃玛_喷火", "沃玛教主_电光",
@@ -575,6 +583,8 @@ func _monster_attack_trigger_frame(magic_id: int) -> int:
 func _resolve_monster_attack_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
 	if kind == "motion_sync_target":
 		return _resolve_monster_motion_sync_target(effect, magic_id, elapsed)
+	if kind in ["motion_aligned", "motion_aligned_hellfire"]:
+		return _resolve_monster_aligned_attack(effect, kind, elapsed)
 	if kind.begins_with("monster_"):
 		return _resolve_projectile_action_magic(effect, magic_id, kind, elapsed)
 	if kind.begins_with("target_"):
@@ -592,6 +602,51 @@ func _resolve_monster_attack_magic(effect: Dictionary, magic_id: int, kind: Stri
 	var direction := clampi(effect.get("direction", 1), 1, 8) - 1
 	_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_RUN, position)
 	resolved.components.append(_resolved_component(meta, mini(_magic_absolute_frame(meta, run_elapsed), meta[2] - 1), direction, position))
+	return resolved
+
+
+func _resolve_monster_aligned_attack(effect: Dictionary, kind: String, elapsed: int) -> Dictionary:
+	var speed := clampi(effect.get("speed", 100), 20, 500)
+	var action_duration := roundi(6.0 * 100.0 * 100.0 / speed)
+	var resolved := {"special_kind": kind, "components": [], "underlays": [], "on_ground": false}
+	if kind == "motion_aligned":
+		return resolved if elapsed < action_duration else {}
+	var trigger_delay := roundi(4.0 * 100.0 * 100.0 / speed)
+	if not effect.has("_zuma_hellfire_direction") and elapsed >= trigger_delay:
+		var source := Vector2(effect.get("x", 0), effect.get("y", 0))
+		var target := _effect_target_grid(effect)
+		var direction := clampi(effect.get("direction", 1), 1, 8)
+		if target != source:
+			var delta := target - source
+			var angle := fposmod(atan2(delta.x * GRID_YP, -delta.y * GRID_XP), TAU)
+			direction = roundi(angle / TAU * 8.0) % 8 + 1
+		effect["_zuma_hellfire_direction"] = direction
+	var hellfire_id: int = actor_resource.magic_id("地狱火")
+	var run_meta: PackedInt32Array = actor_resource.magic_layout(hellfire_id, MAGIC_STAGE_RUN)
+	if run_meta.is_empty():
+		return {}
+	var wave_effect := effect
+	if effect.has("_zuma_hellfire_direction"):
+		wave_effect["direction"] = effect["_zuma_hellfire_direction"]
+	var wave_state := _resolve_special_magic(wave_effect, hellfire_id, "hellfire", run_meta, elapsed - trigger_delay)
+	return wave_state if not wave_state.is_empty() else (resolved if elapsed < trigger_delay + SPECIAL_WAVE_DELAY_MS else {})
+
+
+func _resolve_monster_transform_effect(effect: Dictionary, magic_id: int, elapsed: int) -> Dictionary:
+	var resolved := {"special_kind": "monster_transform", "components": [], "underlays": [], "on_ground": true}
+	if elapsed < 0:
+		return resolved
+	var total_duration := MONSTER_FRAGMENT_HOLD_MS + MONSTER_FRAGMENT_FADE_MS
+	if elapsed >= total_duration:
+		return {}
+	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	if meta.is_empty():
+		return {}
+	var alpha := 1.0
+	if elapsed >= MONSTER_FRAGMENT_HOLD_MS:
+		alpha = 1.0 - float(elapsed - MONSTER_FRAGMENT_HOLD_MS) / MONSTER_FRAGMENT_FADE_MS
+	var position := Vector2(effect.get("x", 0), effect.get("y", 0))
+	resolved.components.append(_resolved_component(meta, 0, 0, position, alpha))
 	return resolved
 
 
@@ -1554,17 +1609,21 @@ func _draw_monster_attack_motion_effect(magic_id: int, direction: int, started_m
 
 func _monster_attack_motion_effect_state(magic_id: int, direction: int, started_ms: int, speed: int, motion_frame_count: int, now_ms := -1) -> Dictionary:
 	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
-	if magic_name not in ["霸王教主_火刃", "潘夜右护卫_电魔杖", "潘夜左护卫_火魔杖"]:
+	if magic_name not in ["霸王教主_火刃", "潘夜右护卫_电魔杖", "潘夜左护卫_火魔杖", "祖玛教主_火墙", "祖玛教主_地狱火"]:
 		return {}
-	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	var aligned := magic_name in ["祖玛教主_火墙", "祖玛教主_地狱火"]
+	var stage := MAGIC_STAGE_SPELL if aligned else MAGIC_STAGE_RUN
+	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, stage)
 	if meta.is_empty() or meta[2] <= 0:
 		return {}
-	var lag_frame := 3 if magic_name in ["潘夜右护卫_电魔杖", "潘夜左护卫_火魔杖"] else 0
 	var sample_now: int = Time.get_ticks_msec() if now_ms < 0 else now_ms
 	var elapsed := sample_now if started_ms <= 0 else maxi(0, sample_now - started_ms)
 	var frame_delay := 100.0 * 100.0 / float(clampi(speed, 20, 500))
-	var absolute_frame := floori(float(elapsed) / frame_delay)
+	var absolute_frame := roundi(float(elapsed) * speed * meta[2] / (10000.0 * maxi(1, motion_frame_count))) if aligned else floori(float(elapsed) / frame_delay)
+	var lag_frame := 3 if magic_name in ["潘夜右护卫_电魔杖", "潘夜左护卫_火魔杖"] else 0
 	var effect_frame_count := mini(meta[2] + lag_frame, motion_frame_count)
+	if aligned:
+		effect_frame_count = meta[2]
 	if absolute_frame >= effect_frame_count:
 		return {}
 	var gfx_frame := absolute_frame - lag_frame

@@ -1080,6 +1080,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 		game_state.update_creature(uid, creature)
 		if creature_type == 1 and stored_action_type == 13:
 			_queue_monster_death_effect(uid, creature)
+		if creature_type == 1 and stored_action_type == 10:
+			_queue_monster_transform_effect(uid, creature)
 		if not continued_monster_action:
 			var duration := _creature_action_duration(stored_action_type, action.get("speed", 100), creature, action.get("magicID", 0))
 			if duration > 0.0:
@@ -1318,6 +1320,7 @@ func _finish_creature_action(uid: int, action_type: int, started_ms: int) -> voi
 		if not pending.is_empty():
 			creature["monster_pending_action"] = pending
 		game_state.update_creature(uid, creature)
+		_queue_monster_transform_effect(uid, creature)
 		_play_action_seff(uid, {"type": 10, "x": creature.get("x", 0), "y": creature.get("y", 0)}, creature)
 		var transform_duration := _creature_action_duration(10, 100, creature)
 		_schedule_creature_idle(uid, 10, creature.action_started_ms, transform_duration)
@@ -1426,6 +1429,8 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	var stored_action_type: int = creature.get("action_type", action_type)
 	if c_type == 1 and stored_action_type == 13:
 		_queue_monster_death_effect(uid, creature)
+	if c_type == 1 and stored_action_type == 10:
+		_queue_monster_transform_effect(uid, creature)
 	var duration := _creature_action_duration(stored_action_type, action.get("speed", 100), creature, action.get("magicID", 0))
 	if duration > 0.0:
 		_schedule_creature_idle(uid, stored_action_type, creature.get("action_started_ms", 0), duration)
@@ -1449,6 +1454,28 @@ func _queue_monster_death_effect(uid: int, creature: Dictionary) -> void:
 		"cycles": 1,
 		"kind": "monster_death",
 		"stage": 2,
+	})
+	game_state.state_changed.emit()
+
+
+func _queue_monster_transform_effect(uid: int, creature: Dictionary) -> void:
+	var magic_id: int = _resources.monster_transform_effect_magic_id(creature.get("monster_id", 0))
+	if magic_id <= 0:
+		return
+	var started_ms: int = creature.get("action_started_ms", Time.get_ticks_msec())
+	for effect_value in game_state.magic_effects:
+		var effect: Dictionary = effect_value
+		if effect.get("source", "") == "monster_transform" and effect.get("uid", 0) == uid and effect.get("action_started_ms", -1) == started_ms:
+			return
+	var speed := clampi(creature.get("action_speed", 100), 20, 500)
+	game_state.magic_effects.append({
+		"magicID": magic_id,
+		"uid": uid,
+		"x": creature.get("x", 0),
+		"y": creature.get("y", 0),
+		"source": "monster_transform",
+		"start_time": started_ms + roundi(9.0 * 100.0 * 100.0 / speed),
+		"action_started_ms": started_ms,
 	})
 	game_state.state_changed.emit()
 

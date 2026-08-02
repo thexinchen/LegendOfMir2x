@@ -93,6 +93,18 @@ func _ready() -> void:
 	if attack_motion_magic_count != 1:
 		_fail("monster meta v7 attack motion magic count mismatch: %d" % attack_motion_magic_count)
 		return
+	var transform_effect_magic_count := 0
+	for monster_id_value in actors.monster_meta:
+		var transform_effect_magic_id: int = actors.monster_transform_effect_magic_id(int(monster_id_value))
+		if transform_effect_magic_id <= 0:
+			continue
+		transform_effect_magic_count += 1
+		if actors.magic_names.get(transform_effect_magic_id, "") != "祖玛教主_石像碎片" or actors.magic_layout(transform_effect_magic_id, 2).is_empty():
+			_fail("monster meta v8 references invalid transform effect: monster=%d magic=%d" % [monster_id_value, transform_effect_magic_id])
+			return
+	if transform_effect_magic_count != 1:
+		_fail("monster meta v8 transform effect count mismatch: %d" % transform_effect_magic_count)
+		return
 	var fade_monster_count := 0
 	var persistent_corpse_count := 0
 	for monster_id_value in actors.monster_meta:
@@ -129,7 +141,7 @@ func _ready() -> void:
 	if mine_weapon_count == 0:
 		_fail("item meta v5 did not export mine-capable weapons")
 		return
-	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d magic_seff=%d magic_target_offsets=%d fade_monster=%d persistent_corpse=%d special_spawn=%d transform=%d death_magic=%d weapon_sound=%d mine_weapon=%d durable=%d described=%d buffs=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size(), magic_seff_count, magic_target_offset_count, fade_monster_count, persistent_corpse_count, special_spawn_count, transform_count, death_magic_count, weapon_sound_count, mine_weapon_count, durable_item_count, described_item_count, actors.buff_names.size()])
+	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d magic_seff=%d magic_target_offsets=%d fade_monster=%d persistent_corpse=%d special_spawn=%d transform=%d death_magic=%d transform_effect=%d weapon_sound=%d mine_weapon=%d durable=%d described=%d buffs=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size(), magic_seff_count, magic_target_offset_count, fade_monster_count, persistent_corpse_count, special_spawn_count, transform_count, death_magic_count, transform_effect_magic_count, weapon_sound_count, mine_weapon_count, durable_item_count, described_item_count, actors.buff_names.size()])
 	get_tree().quit()
 
 

@@ -132,7 +132,7 @@ func _test_monster_attack_magic_queue(main: Control, resources: RefCounted, phys
 		resources.magic_id("雷电术"), resources.magic_id("暗黑战士_喷刺"), resources.magic_id("爆毒蚂蚁_喷毒"),
 		resources.magic_id("沙漠树魔_喷刺"), resources.magic_id("诺玛法老_火球术"), resources.magic_id("潘夜左护卫_火球术"),
 		resources.magic_id("祖玛弓箭手_射箭"), resources.magic_id("掷斧骷髅_掷斧"), resources.magic_id("潘夜右护卫_电魔杖"),
-		resources.magic_id("潘夜左护卫_火魔杖"),
+		resources.magic_id("潘夜左护卫_火魔杖"), resources.magic_id("祖玛教主_火墙"), resources.magic_id("祖玛教主_地狱火"),
 	]
 	if attack_magic_ids.has(0):
 		_fail("monster attack magic metadata unavailable: %s" % attack_magic_ids)
@@ -162,7 +162,7 @@ func _test_monster_attack_magic_queue(main: Control, resources: RefCounted, phys
 		return false
 	GameState.magic_effects.clear()
 	for uid in GameState.creatures.keys():
-		if ((int(uid) >> 35) & 0xFFFFFF) in range(700, 722) or ((int(uid) >> 35) & 0xFFFFFF) == 799:
+		if ((int(uid) >> 35) & 0xFFFFFF) in range(700, 724) or ((int(uid) >> 35) & 0xFFFFFF) == 799:
 			GameState.remove_creature(uid)
 	return true
 
@@ -1413,7 +1413,7 @@ func _test_monster_transform_actions(main: Control, resources: RefCounted) -> bo
 		var candidate: Dictionary = resources.monster_transform(candidate_id)
 		if not candidate.is_empty() and candidate.hidden_focusable:
 			hidden_focusable_id = candidate_id
-		if not candidate.is_empty() and not candidate.hidden_focusable:
+		if not candidate.is_empty() and not candidate.hidden_focusable and (monster_id == 0 or resources.monster_transform_effect_magic_id(candidate_id) > 0):
 			monster_id = candidate_id
 	if monster_id == 0 or hidden_focusable_id == 0:
 		_fail("transformed monster focus fixtures unavailable")
@@ -1449,6 +1449,7 @@ func _test_monster_transform_actions(main: Control, resources: RefCounted) -> bo
 	var ext_active := PackedByteArray()
 	ext_active.resize(8)
 	ext_active[0] = 1
+	GameState.magic_effects.clear()
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
 		"type": 2, "speed": 100, "direction": 5, "x": 40, "y": 41, "extParam": ext_active,
 	}))
@@ -1456,6 +1457,11 @@ func _test_monster_transform_actions(main: Control, resources: RefCounted) -> bo
 	sequence = renderer.call("_monster_render_sequence", creature)
 	if creature.get("action_type", 0) != 10 or not creature.get("monster_stand_mode", false) or sequence.motion != transform.active_transform[0] or sequence.begin != transform.active_transform[1] or sequence.reverse != transform.active_reverse or not sequence.focusable:
 		_fail("ACTION_STAND did not queue the active-form transformation: creature=%s sequence=%s" % [creature, sequence])
+		return false
+	var transform_effect_magic_id: int = resources.monster_transform_effect_magic_id(monster_id)
+	var transform_effect: Dictionary = GameState.magic_effects.back() if not GameState.magic_effects.is_empty() else {}
+	if transform_effect_magic_id <= 0 or transform_effect.get("magicID", 0) != transform_effect_magic_id or transform_effect.get("source", "") != "monster_transform" or transform_effect.get("uid", 0) != uid or transform_effect.get("start_time", 0) != creature.action_started_ms + 900:
+		_fail("ZumaTaurus transform did not queue its frame-9 fragment: %s" % transform_effect)
 		return false
 	var expected_duration := float(transform.active_transform[2]) * 0.1
 	if not is_equal_approx(float(main.call("_creature_action_duration", 10, 100, creature)), expected_duration):
@@ -1467,6 +1473,9 @@ func _test_monster_transform_actions(main: Control, resources: RefCounted) -> bo
 	}))
 	if GameState.get_creature(uid).get("action_started_ms", 0) != started_ms:
 		_fail("redundant ACTION_TRANSF restarted an existing form")
+		return false
+	if GameState.magic_effects.size() != 1:
+		_fail("redundant ACTION_TRANSF duplicated the frame-9 fragment")
 		return false
 	var ext_hidden := PackedByteArray()
 	ext_hidden.resize(8)
@@ -1483,6 +1492,9 @@ func _test_monster_transform_actions(main: Control, resources: RefCounted) -> bo
 	sequence = renderer.call("_monster_render_sequence", creature)
 	if creature.get("action_type", 0) != 10 or creature.get("monster_stand_mode", true) or sequence.motion != transform.hidden_transform[0] or sequence.begin != transform.hidden_transform[1] or sequence.reverse != transform.hidden_reverse or sequence.focusable:
 		_fail("queued hidden transformation did not start after active transformation: creature=%s sequence=%s" % [creature, sequence])
+		return false
+	if GameState.magic_effects.size() != 2 or GameState.magic_effects.back().get("action_started_ms", -1) != creature.action_started_ms:
+		_fail("queued hidden transformation did not create a distinct frame-9 fragment: %s" % GameState.magic_effects)
 		return false
 	main.call("_finish_creature_action", uid, 10, creature.action_started_ms)
 	creature = GameState.get_creature(uid)

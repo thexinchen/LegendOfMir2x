@@ -55,6 +55,9 @@ func _ready() -> void:
 		resources.magic_id("潘夜左护卫_火魔杖"),
 	]
 	var shipwreck_blade_id: int = resources.magic_id("霸王教主_火刃")
+	var zuma_firewall_id: int = resources.magic_id("祖玛教主_火墙")
+	var zuma_hellfire_id: int = resources.magic_id("祖玛教主_地狱火")
+	var zuma_fragment_id: int = resources.magic_id("祖玛教主_石像碎片")
 	var dual_axe_id: int = resources.magic_id("掷斧骷髅_掷斧")
 	var space_move_id: int = resources.magic_id("瞬息移动")
 	var monster_death_magic_id := 0
@@ -80,7 +83,7 @@ func _ready() -> void:
 		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
 		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or fixed_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or target_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_projectile_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_motion_attacks.has(0) or shipwreck_blade_id == 0 or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or fixed_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or target_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_projectile_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_motion_attacks.has(0) or shipwreck_blade_id == 0 or zuma_firewall_id == 0 or zuma_hellfire_id == 0 or zuma_fragment_id == 0 or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
@@ -415,6 +418,43 @@ func _ready() -> void:
 		_fail("monster death attachment did not use its run-stage graphics: %s" % death_attached_active)
 		return
 	GameState.attached_magic_effects.clear()
+
+	for zuma_magic_id in [zuma_firewall_id, zuma_hellfire_id]:
+		if not $WorldRenderer.supports_monster_attack_magic(zuma_magic_id):
+			_fail("ZumaTaurus aligned magic was not recognized: %d" % zuma_magic_id)
+			return
+		var aligned_frame: Dictionary = $WorldRenderer.call("_monster_attack_motion_effect_state", zuma_magic_id, 3, now, 100, 6, now + 200)
+		var aligned_done: Dictionary = $WorldRenderer.call("_monster_attack_motion_effect_state", zuma_magic_id, 3, now, 100, 6, now + 600)
+		if not aligned_frame.get("visible", false) or aligned_frame.get("frame", -1) != 3 or aligned_frame.get("direction", -1) != 2 or aligned_frame.get("meta", PackedInt32Array()) != resources.magic_layout(zuma_magic_id, 1) or not aligned_done.is_empty():
+			_fail("ZumaTaurus 8-frame spell was not aligned to its 6-frame attack: id=%d active=%s done=%s" % [zuma_magic_id, aligned_frame, aligned_done])
+			return
+	var zuma_firewall := {
+		"source": "monster_attack", "magicID": zuma_firewall_id, "uid": target_uid,
+		"x": special_source.x, "y": special_source.y, "aimX": special_source.x + 8, "aimY": special_source.y,
+		"direction": 7, "speed": 100, "start_time": now, "_seff_stage_mask": 0xFFFF,
+	}
+	var firewall_wait: Dictionary = $WorldRenderer.call("_resolve_magic_effect", zuma_firewall, now + 599)
+	var firewall_done: Dictionary = $WorldRenderer.call("_resolve_magic_effect", zuma_firewall, now + 600)
+	if firewall_wait.is_empty() or not firewall_wait.get("components", []).is_empty() or not firewall_done.is_empty():
+		_fail("ZumaTaurus firewall action fabricated a client-side wall or escaped its attack lifetime: wait=%s done=%s" % [firewall_wait, firewall_done])
+		return
+	var zuma_hellfire := zuma_firewall.duplicate(true)
+	zuma_hellfire["magicID"] = zuma_hellfire_id
+	zuma_hellfire["_special_seff_mask"] = 0xFF
+	var hellfire_wait: Dictionary = $WorldRenderer.call("_resolve_magic_effect", zuma_hellfire, now + 499)
+	var hellfire_first: Dictionary = $WorldRenderer.call("_resolve_magic_effect", zuma_hellfire, now + 500)
+	var hellfire_components: Array = hellfire_first.get("components", [])
+	if not hellfire_wait.get("components", []).is_empty() or zuma_hellfire.get("_zuma_hellfire_direction", 0) != 3 or hellfire_components.size() != 2 or hellfire_components[0].position != Vector2(special_source + Vector2i(1, 0)) or hellfire_components[0].meta != resources.magic_layout(hellfire_id, 2):
+		_fail("ZumaTaurus frame-4 hellfire propagation mismatch: wait=%s first=%s effect=%s" % [hellfire_wait, hellfire_first, zuma_hellfire])
+		return
+	var fragment_effect := {"source": "monster_transform", "magicID": zuma_fragment_id, "x": special_source.x, "y": special_source.y, "start_time": now}
+	var fragment_future: Dictionary = $WorldRenderer.call("_resolve_magic_effect", fragment_effect, now - 1)
+	var fragment_hold: Dictionary = $WorldRenderer.call("_resolve_magic_effect", fragment_effect, now + 4999)
+	var fragment_fade: Dictionary = $WorldRenderer.call("_resolve_magic_effect", fragment_effect, now + 6500)
+	var fragment_done: Dictionary = $WorldRenderer.call("_resolve_magic_effect", fragment_effect, now + 8000)
+	if fragment_future.is_empty() or not fragment_future.get("components", []).is_empty() or fragment_hold.get("components", []).size() != 1 or not is_equal_approx(fragment_hold.components[0].alpha_mod, 1.0) or not is_equal_approx(fragment_fade.components[0].alpha_mod, 0.5) or not fragment_done.is_empty():
+		_fail("ZumaTaurus fragment hold/fade lifecycle mismatch: future=%s hold=%s fade=%s done=%s" % [fragment_future, fragment_hold, fragment_fade, fragment_done])
+		return
 
 	for fixed_monster_entry in fixed_monster_attacks:
 		var fixed_monster_id: int = fixed_monster_entry.id
@@ -990,6 +1030,51 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_MOTION_SCREENSHOT"))
+	if OS.has_environment("MIR2X_ZUMA_MAGIC_SCREENSHOT"):
+		if not $WorldRenderer.load_map(6):
+			_fail("ZumaTaurus magic visual map failed to load")
+			return
+		var zuma_source := _find_open_wave_source($WorldRenderer, 8, $WorldRenderer.map_height - 8)
+		if zuma_source.x < 0:
+			_fail("no open ZumaTaurus magic visual fixture")
+			return
+		var zuma_monster_id := 0
+		for monster_id_value in resources.monster_meta:
+			if resources.monster_transform_effect_magic_id(int(monster_id_value)) == zuma_fragment_id:
+				zuma_monster_id = int(monster_id_value)
+				break
+		if zuma_monster_id == 0:
+			_fail("ZumaTaurus visual monster metadata unavailable")
+			return
+		var zuma_now := Time.get_ticks_msec()
+		var zuma_uid: int = (zuma_monster_id << 35) | 880
+		GameState.creatures = {zuma_uid: {
+			"uid": zuma_uid, "x": zuma_source.x, "y": zuma_source.y,
+			"type": 1, "monster_id": zuma_monster_id, "direction": 3,
+			"action_type": 7, "action_speed": 100,
+			"action_started_ms": zuma_now - 500, "action_magic_id": zuma_hellfire_id,
+		}}
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.magic_effects = [
+			{
+				"source": "monster_attack", "magicID": zuma_hellfire_id, "uid": zuma_uid,
+				"x": zuma_source.x, "y": zuma_source.y, "aimX": zuma_source.x + 8, "aimY": zuma_source.y,
+				"direction": 7, "speed": 100, "start_time": zuma_now - 500,
+				"_special_seff_mask": 0xFF,
+			},
+			{
+				"source": "monster_transform", "magicID": zuma_fragment_id,
+				"x": zuma_source.x + 4, "y": zuma_source.y,
+				"start_time": zuma_now - 4000,
+			},
+		]
+		GameState.view_x = zuma_source.x * 48 - 400
+		GameState.view_y = zuma_source.y * 32 - 360
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ZUMA_MAGIC_SCREENSHOT"))
 	if OS.has_environment("MIR2X_SPACE_MOVE_SCREENSHOT"):
 		if not $WorldRenderer.load_map(6):
 			_fail("space-move visual map failed to load")
