@@ -134,6 +134,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("13_notice")
 draw_background = false
+entry_limit = 1
 
 [node name="DeleteCharacterDialog" parent="." instance=ExtResource("12_delete_dialog")]
 unique_name_in_owner = true

@@ -121,6 +121,16 @@ func _ready() -> void:
 		return
 	login.queue_free()
 	await get_tree().process_frame
+
+	var select_character := load("res://scenes/account/select_character.tscn").instantiate() as Control
+	var select_notice := select_character.get_node("Notice") as Control
+	select_notice.call("show_message", "第一条提示")
+	select_notice.call("show_message", "第二条提示")
+	var select_entries: Array = select_notice.get("_entries")
+	if select_notice.get("entry_limit") != 1 or select_entries.size() != 1 or String(select_entries[0].text) != "第二条提示" or bool(select_notice.get("draw_background")):
+		_fail("select-character notice did not preserve original latest-only/background-free configuration: %s" % [select_entries])
+		return
+	select_character.free()
 	AudioService.stop_bgm()
 	(AudioService.get_node("BGMPlayer") as AudioStreamPlayer).stream = null
 	await get_tree().process_frame

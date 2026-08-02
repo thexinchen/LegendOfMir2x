@@ -1,10 +1,10 @@
 extends Control
 
 @export var draw_background := true
+@export_range(1, 100, 1) var entry_limit := 10
 
 const FONT_SIZE := 15
 const DURATION_MS := 5000.0
-const LIMIT := 10
 
 var _entries: Array[Dictionary] = []
 
@@ -26,7 +26,7 @@ func _process(delta: float) -> void:
 
 func show_message(message: String, duration_ms := DURATION_MS) -> void:
 	_entries.append({"text": message, "remaining_ms": duration_ms})
-	while _entries.size() > LIMIT:
+	while _entries.size() > entry_limit:
 		_entries.pop_front()
 	show()
 	queue_redraw()
