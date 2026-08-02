@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/quest_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/quest/00000350.png" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/quest/00000300.png" id="4"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/quest/00000302.png" id="5"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/common/00000089.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="7_close_down"]
 
 [node name="QuestPanel" type="Control"]
 custom_minimum_size = Vector2(363, 446)
@@ -13,6 +14,8 @@ offset_right = 363.0
 offset_bottom = 446.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+ui_click_button_paths = Array[NodePath]([NodePath("FoldButton"), NodePath("CloseButton")])
+overlay_button_paths = Array[NodePath]([NodePath("CloseButton")])
 
 [node name="Background" type="TextureRect" parent="."]
 offset_right = 363.0
@@ -60,4 +63,5 @@ offset_top = 108.0
 offset_right = 348.0
 offset_bottom = 142.0
 texture_hover = ExtResource("3")
+texture_pressed = ExtResource("7_close_down")
 ignore_texture_size = true

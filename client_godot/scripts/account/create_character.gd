@@ -20,6 +20,8 @@ var _last_sound_frame := -1
 
 
 func _ready() -> void:
+	for button in [$WarriorButton, $WizardButton, $TaoistButton, $SubmitButton, $ExitButton]:
+		AudioService.bind_ui_click(button)
 	_resources.configure_default()
 	AudioService.play_map_bgm(0x00040001)
 	_update_characters()

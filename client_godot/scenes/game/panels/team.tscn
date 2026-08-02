@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/team_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000150.png" id="2"]
@@ -9,6 +9,11 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000200.png" id="7"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000201.png" id="8"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="9"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/team/00000161.png" id="10_switch_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/team/00000171.png" id="11_add_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/team/00000181.png" id="12_delete_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/team/00000191.png" id="13_refresh_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="14_close_down"]
 
 [node name="TeamPanel" type="Control"]
 custom_minimum_size = Vector2(258, 226)
@@ -16,6 +21,8 @@ offset_right = 258.0
 offset_bottom = 226.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+ui_click_button_paths = Array[NodePath]([NodePath("EnableButton"), NodePath("SwitchButton"), NodePath("AddButton"), NodePath("DeleteButton"), NodePath("RefreshButton"), NodePath("CloseButton")])
+overlay_button_paths = Array[NodePath]([NodePath("EnableButton"), NodePath("SwitchButton"), NodePath("RefreshButton"), NodePath("CloseButton")])
 
 [node name="Background" type="NinePatchRect" parent="."]
 offset_right = 258.0
@@ -57,6 +64,7 @@ offset_top = 174.0
 offset_right = 53.0
 offset_bottom = 208.0
 texture_hover = ExtResource("3")
+texture_pressed = ExtResource("10_switch_down")
 ignore_texture_size = true
 
 [node name="AddButton" type="TextureButton" parent="."]
@@ -65,6 +73,7 @@ offset_top = 174.0
 offset_right = 106.0
 offset_bottom = 208.0
 texture_normal = ExtResource("4")
+texture_pressed = ExtResource("11_add_down")
 ignore_texture_size = true
 disabled = true
 
@@ -74,6 +83,7 @@ offset_top = 174.0
 offset_right = 159.0
 offset_bottom = 208.0
 texture_normal = ExtResource("5")
+texture_pressed = ExtResource("12_delete_down")
 ignore_texture_size = true
 
 [node name="RefreshButton" type="TextureButton" parent="."]
@@ -82,6 +92,7 @@ offset_top = 174.0
 offset_right = 211.0
 offset_bottom = 208.0
 texture_hover = ExtResource("6")
+texture_pressed = ExtResource("13_refresh_down")
 ignore_texture_size = true
 
 [node name="CloseButton" type="TextureButton" parent="."]
@@ -90,4 +101,5 @@ offset_top = 182.0
 offset_right = 249.0
 offset_bottom = 216.0
 texture_hover = ExtResource("9")
+texture_pressed = ExtResource("14_close_down")
 ignore_texture_size = true

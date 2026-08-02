@@ -175,6 +175,40 @@ func play_ui_click() -> bool:
 	return play_seff_at(UI_CLICK_SEFF_ID, 0, 0, 0, 0)
 
 
+func bind_ui_click(button: BaseButton) -> void:
+	var callback := Callable(self, "play_ui_click")
+	if not button.pressed.is_connected(callback):
+		button.pressed.connect(callback)
+
+
+func bind_overlay_button(button: TextureButton) -> void:
+	bind_ui_click(button)
+	if button.has_meta("original_overlay_button"):
+		return
+	button.set_meta("original_overlay_button", true)
+	button.set_meta("overlay_hovered", false)
+	button.set_meta("overlay_pressed", false)
+	button.modulate.a = 0.0
+	button.mouse_entered.connect(_set_overlay_hovered.bind(button, true))
+	button.mouse_exited.connect(_set_overlay_hovered.bind(button, false))
+	button.button_down.connect(_set_overlay_pressed.bind(button, true))
+	button.button_up.connect(_set_overlay_pressed.bind(button, false))
+
+
+func _set_overlay_hovered(button: TextureButton, hovered: bool) -> void:
+	button.set_meta("overlay_hovered", hovered)
+	_update_overlay_alpha(button)
+
+
+func _set_overlay_pressed(button: TextureButton, pressed: bool) -> void:
+	button.set_meta("overlay_pressed", pressed)
+	_update_overlay_alpha(button)
+
+
+func _update_overlay_alpha(button: TextureButton) -> void:
+	button.modulate.a = 1.0 if button.get_meta("overlay_hovered", false) or button.get_meta("overlay_pressed", false) else 0.0
+
+
 func stop_seff() -> void:
 	for player in _seff_players:
 		player.stop()

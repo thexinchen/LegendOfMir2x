@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=22 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/guild_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000500.png" id="2"]
@@ -20,6 +20,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000571.png" id="18"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000580.png" id="19"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/guild/00000581.png" id="20"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="21_close_down"]
 
 [node name="GuildPanel" type="Control"]
 custom_minimum_size = Vector2(594, 444)
@@ -27,6 +28,8 @@ offset_right = 594.0
 offset_bottom = 444.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+ui_click_button_paths = Array[NodePath]([NodePath("AnnouncementButton"), NodePath("MembersButton"), NodePath("ChatButton"), NodePath("EditButton"), NodePath("RemoveButton"), NodePath("DisbandButton"), NodePath("PositionButton"), NodePath("CovenantButton"), NodePath("CloseButton")])
+overlay_button_paths = Array[NodePath]([NodePath("AnnouncementButton"), NodePath("MembersButton"), NodePath("ChatButton"), NodePath("EditButton"), NodePath("RemoveButton"), NodePath("DisbandButton"), NodePath("PositionButton"), NodePath("CovenantButton"), NodePath("CloseButton")])
 
 [node name="Background" type="TextureRect" parent="."]
 offset_right = 594.0
@@ -132,4 +135,5 @@ offset_top = 399.0
 offset_right = 586.0
 offset_bottom = 433.0
 texture_hover = ExtResource("3")
+texture_pressed = ExtResource("21_close_down")
 ignore_texture_size = true

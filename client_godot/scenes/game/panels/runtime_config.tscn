@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/runtime_config_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/runtime_config/00000450.png" id="2"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="4_close_down"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_menu"]
 bg_color = Color(0, 0, 0, 0.501961)
@@ -22,6 +23,8 @@ offset_right = 600.0
 offset_bottom = 480.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+ui_click_button_paths = Array[NodePath]([NodePath("CloseButton")])
+overlay_button_paths = Array[NodePath]([NodePath("CloseButton")])
 
 [node name="Background" type="NinePatchRect" parent="."]
 offset_right = 600.0
@@ -101,4 +104,5 @@ offset_top = 427.0
 offset_right = 581.0
 offset_bottom = 461.0
 texture_hover = ExtResource("3")
+texture_pressed = ExtResource("4_close_down")
 ignore_texture_size = true

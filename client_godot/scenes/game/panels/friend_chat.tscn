@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/friend_chat_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000810.png" id="2"]
@@ -14,6 +14,8 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/common/00000089.png" id="14"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000460.png" id="15_search_frame"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/friend/00001200.png" id="16_search_icon"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/team/00000161.png" id="17_friends_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="18_close_down"]
 
 [node name="FriendChatPanel" type="Control"]
 custom_minimum_size = Vector2(451, 464)
@@ -21,6 +23,7 @@ offset_right = 451.0
 offset_bottom = 464.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+ui_click_button_paths = Array[NodePath]([NodePath("Toolbar/Back"), NodePath("Toolbar/Search"), NodePath("Toolbar/CreateGroup"), NodePath("Toolbar/GroupConfirm"), NodePath("Toolbar/Invert"), NodePath("Toolbar/Friends"), NodePath("CloseButton")])
 
 [node name="OuterFrame" type="NinePatchRect" parent="."]
 layout_mode = 1
@@ -116,6 +119,7 @@ stretch_mode = 5
 custom_minimum_size = Vector2(30, 24)
 layout_mode = 2
 texture_normal = ExtResource("11")
+texture_pressed = ExtResource("17_friends_down")
 ignore_texture_size = true
 stretch_mode = 5
 
@@ -295,5 +299,5 @@ offset_top = 424.0
 offset_right = 445.0
 offset_bottom = 458.0
 texture_normal = ExtResource("4")
-texture_hover = ExtResource("4")
+texture_pressed = ExtResource("18_close_down")
 ignore_texture_size = true

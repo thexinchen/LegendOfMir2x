@@ -13,6 +13,8 @@ const RIGHT_NORMAL := preload("res://assets/ui/game/purchase/08000009.png")
 const RIGHT_DOWN := preload("res://assets/ui/game/purchase/0800000a.png")
 const COUNT_NORMAL := preload("res://assets/ui/game/purchase/0800000b.png")
 const COUNT_DOWN := preload("res://assets/ui/game/purchase/0800000c.png")
+const CLOSE_NORMAL := preload("res://assets/ui/game/inventory/0000001c.png")
+const CLOSE_DOWN := preload("res://assets/ui/game/inventory/0000001d.png")
 const PAGE_SIZE := 12
 
 var _state: Node
@@ -327,13 +329,16 @@ func _add_detail_button(position: Vector2, normal: Texture2D, down: Texture2D, c
 	button.texture_pressed = down
 	button.ignore_texture_size = true
 	button.pressed.connect(callback)
+	AudioService.bind_ui_click(button)
 	$Detail.add_child(button)
 
 
 func _add_detail_close(position: Vector2) -> void:
 	var button := TextureButton.new()
 	button.position = position
-	button.texture_normal = preload("res://assets/ui/game/inventory/0000001c.png")
+	button.texture_normal = CLOSE_NORMAL
+	button.texture_pressed = CLOSE_DOWN
 	button.ignore_texture_size = true
 	button.pressed.connect(func(): _state.npc_sell_detail = {}; _refresh_detail())
+	AudioService.bind_ui_click(button)
 	$Detail.add_child(button)

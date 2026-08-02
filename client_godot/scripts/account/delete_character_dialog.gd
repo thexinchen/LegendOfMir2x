@@ -7,6 +7,8 @@ signal canceled
 
 
 func _ready() -> void:
+	AudioService.bind_ui_click($YesButton)
+	AudioService.bind_ui_click($NoButton)
 	if OS.has_environment("MIR2X_DELETE_DIALOG_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(

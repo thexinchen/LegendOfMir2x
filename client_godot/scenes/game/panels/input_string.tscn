@@ -28,6 +28,7 @@ custom_minimum_size = Vector2(358, 268)
 offset_right = 358.0
 offset_bottom = 268.0
 script = ExtResource("1")
+ui_click_button_paths = Array[NodePath]([NodePath("ConfirmButton"), NodePath("CancelButton")])
 
 [node name="Background" type="TextureRect" parent="."]
 offset_right = 358.0

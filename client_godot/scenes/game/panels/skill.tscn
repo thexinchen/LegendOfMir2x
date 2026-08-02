@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/skill_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000000.png" id="2"]
@@ -21,6 +21,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000036.png" id="19"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000027.png" id="20"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/skill/05000037.png" id="21"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="22_close_down"]
 
 [sub_resource type="ButtonGroup" id="TabGroup"]
 
@@ -30,6 +31,7 @@ offset_right = 360.0
 offset_bottom = 462.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+ui_click_button_paths = Array[NodePath]([NodePath("Tab0"), NodePath("Tab1"), NodePath("Tab2"), NodePath("Tab3"), NodePath("Tab4"), NodePath("Tab5"), NodePath("Tab6"), NodePath("Tab7"), NodePath("CloseButton")])
 
 [node name="Background" type="TextureRect" parent="."]
 offset_right = 360.0
@@ -165,5 +167,6 @@ offset_left = 317.0
 offset_top = 402.0
 offset_right = 349.0
 offset_bottom = 436.0
-texture_hover = ExtResource("3")
+texture_normal = ExtResource("3")
+texture_pressed = ExtResource("22_close_down")
 ignore_texture_size = true

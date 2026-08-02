@@ -9,6 +9,8 @@ var auto_login_sent := false
 
 
 func _ready() -> void:
+	for button in [$CreateAccountButton, $ChangePasswordButton, $ExitButton, $LoginButton]:
+		AudioService.bind_ui_click(button)
 	AudioService.play_map_bgm(0x00040007)
 	build_version.text = "编译版本号:%s" % _get_build_signature()
 	account_input.grab_focus()

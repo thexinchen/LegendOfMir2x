@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/secured_items_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/secured_items/08000001.png" id="2"]
@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/secured_items/08000009.png" id="7"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/secured_items/0800000a.png" id="8"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="9"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="10_close_down"]
 
 [sub_resource type="AtlasTexture" id="Atlas_background"]
 atlas = ExtResource("2")
@@ -20,6 +21,8 @@ offset_right = 198.0
 offset_bottom = 204.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+ui_click_button_paths = Array[NodePath]([NodePath("LeftButton"), NodePath("SelectButton"), NodePath("RightButton"), NodePath("CloseButton")])
+overlay_button_paths = Array[NodePath]([NodePath("LeftButton"), NodePath("SelectButton"), NodePath("RightButton"), NodePath("CloseButton")])
 
 [node name="Background" type="TextureRect" parent="."]
 offset_right = 198.0
@@ -78,6 +81,7 @@ offset_top = 159.0
 offset_right = 190.0
 offset_bottom = 193.0
 texture_hover = ExtResource("9")
+texture_pressed = ExtResource("10_close_down")
 ignore_texture_size = true
 
 [node name="ItemTooltip" type="Panel" parent="."]

@@ -24,6 +24,7 @@ offset_right = 200.0
 offset_bottom = 200.0
 mouse_filter = 1
 script = ExtResource("1")
+ui_click_button_paths = Array[NodePath]([NodePath("AlphaButton"), NodePath("ExtendButton"), NodePath("CenterButton"), NodePath("ConfigButton")])
 
 [node name="MapViewport" type="Control" parent="."]
 layout_mode = 1

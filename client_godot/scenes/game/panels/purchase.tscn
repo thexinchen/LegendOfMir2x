@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/purchase_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/purchase/08000000.png" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/purchase/08000003.png" id="4"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/purchase/08000004.png" id="5"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/00000080.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="7_close_down"]
 
 [node name="PurchasePanel" type="Control"]
 custom_minimum_size = Vector2(290, 224)
@@ -13,6 +14,7 @@ offset_right = 290.0
 offset_bottom = 224.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+ui_click_button_paths = Array[NodePath]([NodePath("SelectButton"), NodePath("CloseButton")])
 
 [node name="Background" type="TextureRect" parent="."]
 offset_right = 290.0
@@ -56,7 +58,7 @@ offset_left = 105.0
 offset_top = 185.0
 offset_right = 185.0
 offset_bottom = 219.0
-texture_hover = ExtResource("4")
+texture_normal = ExtResource("4")
 texture_pressed = ExtResource("5")
 ignore_texture_size = true
 
@@ -66,7 +68,7 @@ offset_top = 183.0
 offset_right = 289.0
 offset_bottom = 217.0
 texture_normal = ExtResource("3")
-texture_hover = ExtResource("3")
+texture_pressed = ExtResource("7_close_down")
 ignore_texture_size = true
 
 [node name="ItemTooltip" type="Panel" parent="."]

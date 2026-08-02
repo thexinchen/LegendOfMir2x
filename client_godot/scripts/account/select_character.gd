@@ -26,6 +26,8 @@ var _last_motion_switch_frame := 0
 
 
 func _ready() -> void:
+	for button in [$StartButton, $CreateButton, $DeleteButton, $ExitButton]:
+		AudioService.bind_ui_click(button)
 	_resources.configure_default()
 	AudioService.play_map_bgm(0x00040002)
 	if OS.has_environment("MIR2X_SCREENSHOT"):

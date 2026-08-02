@@ -15,6 +15,8 @@ const Validation = preload("res://scripts/account/account_validation.gd")
 
 
 func _ready() -> void:
+	AudioService.bind_overlay_button(submit_button)
+	AudioService.bind_overlay_button($ReturnButton)
 	status.active_changed.connect(_on_status_active_changed)
 	_update_checks()
 	account_input.grab_focus()
