@@ -1388,20 +1388,23 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 	var monster_uid: int = (4 << 59) | (224 << 35) | 303
 	var remote_player_uid: int = (5 << 59) | 404
 	var npc_uid: int = (3 << 59) | (7 << 35) | 407
-	if not main.has_method("_query_initial_uid_buff"):
-		_fail("new actors do not expose the C++ initial UID buff query")
+	if not main.has_method("_query_initial_creature_state"):
+		_fail("new actors do not expose the C++ initial state queries")
 		return false
-	if main.call("_query_initial_uid_buff", monster_uid, true) != ERR_UNCONFIGURED:
-		_fail("new monster did not attempt the initial UID buff query")
+	var monster_queries: Dictionary = main.call("_query_initial_creature_state", monster_uid, true)
+	if monster_queries.keys() != ["buff"] or monster_queries.buff != ERR_UNCONFIGURED:
+		_fail("new monster initial query mismatch: %s" % monster_queries)
 		return false
-	if main.call("_query_initial_uid_buff", remote_player_uid, true) != ERR_UNCONFIGURED:
-		_fail("new remote player did not attempt the initial UID buff query")
+	var player_queries: Dictionary = main.call("_query_initial_creature_state", remote_player_uid, true)
+	for expected: String in ["buff", "name", "appearance"]:
+		if not player_queries.has(expected) or player_queries[expected] != ERR_UNCONFIGURED:
+			_fail("new player omitted initial %s query: %s" % [expected, player_queries])
+			return false
+	if not (main.call("_query_initial_creature_state", npc_uid, true) as Dictionary).is_empty():
+		_fail("NPC incorrectly attempted initial state queries")
 		return false
-	if main.call("_query_initial_uid_buff", npc_uid, true) != OK:
-		_fail("NPC incorrectly attempted an initial UID buff query")
-		return false
-	if main.call("_query_initial_uid_buff", monster_uid, false) != OK:
-		_fail("existing actor incorrectly repeated the initial UID buff query")
+	if not (main.call("_query_initial_creature_state", monster_uid, false) as Dictionary).is_empty():
+		_fail("existing actor incorrectly repeated initial state queries")
 		return false
 	GameState.update_creature(monster_uid, {
 		"uid": monster_uid, "type": 1, "monster_id": 224,

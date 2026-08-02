@@ -1484,9 +1484,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 		creature["action_type"] = _configure_monster_form(creature, action_type, creature["action_type"], action, true, {})
 	
 	game_state.update_creature(uid, creature)
-	_query_initial_uid_buff(uid, is_new)
-	if is_new and c_type == 2:
-		NetworkClient.send_query_player_wldesp(uid)
+	_query_initial_creature_state(uid, is_new)
 	var stored_action_type: int = creature.get("action_type", action_type)
 	if c_type == 1 and stored_action_type == 13:
 		_queue_monster_death_effect(uid, creature)
@@ -1500,10 +1498,14 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	_play_action_seff(uid, action, creature)
 
 
-func _query_initial_uid_buff(uid: int, is_new: bool) -> Error:
+func _query_initial_creature_state(uid: int, is_new: bool) -> Dictionary:
 	if not is_new or _creature_type_from_uid(uid) not in [1, 2]:
-		return OK
-	return NetworkClient.send_query_uid_buff(uid)
+		return {}
+	var queries := {"buff": NetworkClient.send_query_uid_buff(uid)}
+	if _creature_type_from_uid(uid) == 2:
+		queries["name"] = NetworkClient.send_query_player_name(uid)
+		queries["appearance"] = NetworkClient.send_query_player_wldesp(uid)
+	return queries
 
 
 func _queue_monster_death_effect(uid: int, creature: Dictionary) -> void:
