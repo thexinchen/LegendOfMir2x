@@ -2000,8 +2000,16 @@ func _handle_ground_firewalls(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var data := reader.read_sd_ground_firewall_list()
 	if _reader_ok(reader, "SM_GROUNDFIREWALLLIST") and data.get("mapUID", 0) == game_state.player_map_uid:
-		game_state.firewalls = data.get("firewalls", [])
-		game_state.state_changed.emit()
+		var firewall_id: int = _resources.magic_id("火墙")
+		var changes: Dictionary = game_state.reconcile_firewalls(
+			data.get("firewalls", []),
+			Time.get_ticks_msec(),
+			_resources.magic_id("魔法特效_火焰灰烬"),
+		)
+		var seff_id: int = _resources.magic_seff(firewall_id, 2)
+		for firewall_value in changes.get("added", []):
+			var firewall: Dictionary = firewall_value
+			_play_seff(seff_id, firewall.get("x", 0), firewall.get("y", 0))
 
 
 func _handle_npc_xml(payload: PackedByteArray) -> void:

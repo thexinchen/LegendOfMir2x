@@ -133,10 +133,48 @@ func _ready() -> void:
 	GameState.view_y = 120 * 32 - 300
 	var target_uid: int = (4 << 59) | (1 << 35) | 2
 	GameState.creatures = {target_uid: {"uid": target_uid, "x": 409, "y": 120, "type": 1, "monster_id": 1, "direction": 7}}
-	GameState.firewalls = [{"x": 407, "y": 122, "count": 2}]
 	$WorldRenderer.game_state = GameState
 	if not $WorldRenderer.load_map(24):
 		_fail("map 24 failed to load")
+		return
+	GameState.firewalls.clear()
+	GameState.magic_effects.clear()
+	var firewall_now := Time.get_ticks_msec()
+	var firewall_added := GameState.reconcile_firewalls([
+		{"x": 407, "y": 122, "count": 2},
+		{"x": 411, "y": 122, "count": 1},
+	], firewall_now, fire_ash_id)
+	if firewall_added.get("added", []).size() != 3 or GameState.firewalls.size() != 3:
+		_fail("firewall snapshot did not create per-instance state: %s" % firewall_added)
+		return
+	GameState.reconcile_firewalls([{"x": 407, "y": 122, "count": 2}], firewall_now + 10, fire_ash_id)
+	if GameState.firewalls.filter(func(wall: Dictionary) -> bool: return wall.x == 411 and wall.y == 122).size() != 1:
+		_fail("incremental firewall snapshot removed an unlisted grid")
+		return
+	var firewall_removed := GameState.reconcile_firewalls([{"x": 407, "y": 122, "count": 1}], firewall_now + 100, fire_ash_id)
+	if firewall_removed.get("fading", []).size() != 1 or GameState.magic_effects.size() != 1:
+		_fail("firewall decrement did not queue fade and ash: changes=%s effects=%s" % [firewall_removed, GameState.magic_effects])
+		return
+	var fading_firewall: Dictionary = firewall_removed.get("fading", [])[0]
+	if not is_equal_approx(float($WorldRenderer.call("_firewall_alpha", fading_firewall, firewall_now + 1600)), 0.5) or float($WorldRenderer.call("_firewall_alpha", fading_firewall, firewall_now + 3100)) != 0.0:
+		_fail("firewall 3s fade-out envelope mismatch: %s" % fading_firewall)
+		return
+	var firewall_ash: Dictionary = GameState.magic_effects[0]
+	var half_ash: Dictionary = $WorldRenderer.call("_resolve_firewall_ash", firewall_ash, fire_ash_id, 1500)
+	if half_ash.get("components", []).size() != 1 or half_ash.get("underlays", []).size() != 1 or not is_equal_approx(float(half_ash.components[0].alpha_mod), 0.5):
+		_fail("firewall ash 3s fade-in mismatch: %s" % half_ash)
+		return
+	if $WorldRenderer.call("_resolve_firewall_ash", firewall_ash, fire_ash_id, 10999).get("components", []).size() != 1 or not $WorldRenderer.call("_resolve_firewall_ash", firewall_ash, fire_ash_id, 11000).is_empty():
+		_fail("firewall ash 3s/5s/3s lifetime mismatch")
+		return
+	GameState.reconcile_firewalls([{"x": 407, "y": 122, "count": 2}], firewall_now + 200, fire_ash_id)
+	var active_firewalls := GameState.firewalls.filter(func(wall: Dictionary) -> bool: return wall.x == 407 and wall.y == 122 and wall.fade_start_time < 0)
+	if active_firewalls.size() != 2 or GameState.firewalls.filter(func(wall: Dictionary) -> bool: return wall.x == 407 and wall.y == 122).size() != 3:
+		_fail("firewall rebound did not coexist with fading instance: %s" % GameState.firewalls)
+		return
+	$WorldRenderer.call("_prune_firewalls", firewall_now + 3100)
+	if GameState.firewalls.filter(func(wall: Dictionary) -> bool: return wall.x == 407 and wall.y == 122).size() != 2:
+		_fail("expired firewall fade was not pruned: %s" % GameState.firewalls)
 		return
 	if resources.frame("magic", 0x0F0000DC).is_empty() or resources.frame("magic", 0x0F000104).is_empty() or resources.frame("magic", 0x0F000105).is_empty():
 		_fail("special ground textures missing")
@@ -1448,6 +1486,31 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ATTACHMENT_LAYER_SCREENSHOT"))
+	if OS.has_environment("MIR2X_FIREWALL_FADE_SCREENSHOT"):
+		var firewall_visual_now := Time.get_ticks_msec()
+		GameState.player_x = 405
+		GameState.player_y = 120
+		GameState.player_action_type = 2
+		GameState.creatures.clear()
+		GameState.magic_effects.clear()
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.strike_grids.clear()
+		GameState.reconcile_firewalls([{"x": 407, "y": 122, "count": 2}], firewall_visual_now - 2000, fire_ash_id)
+		GameState.reconcile_firewalls([{"x": 407, "y": 122, "count": 1}], firewall_visual_now - 1500, fire_ash_id)
+		GameState.view_x = 405 * 48 - 400
+		GameState.view_y = 120 * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FIREWALL_FADE_SCREENSHOT"))
+		if OS.has_environment("MIR2X_FIREWALL_BASELINE_SCREENSHOT"):
+			GameState.firewalls = GameState.firewalls.filter(func(wall: Dictionary) -> bool: return wall.get("fade_start_time", -1) < 0)
+			GameState.magic_effects.clear()
+			$WorldRenderer.queue_redraw()
+			await get_tree().process_frame
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FIREWALL_BASELINE_SCREENSHOT"))
 	print("MAGIC EFFECT PASS: target/server attachments, follow/fixed/composite/propagated magic and caster-grid laser")
 	get_tree().quit()
 

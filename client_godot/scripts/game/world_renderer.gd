@@ -37,6 +37,8 @@ const PROJECTILE_UPDATE_HZ := 60
 const FIRE_ASH_FADE_IN_MS := 1000
 const FIRE_ASH_HOLD_MS := 5000
 const FIRE_ASH_FADE_OUT_MS := 3000
+const FIREWALL_FADE_OUT_MS := 3000
+const FIREWALL_ASH_FADE_IN_MS := 3000
 const MONSTER_FRAGMENT_HOLD_MS := 5000
 const MONSTER_FRAGMENT_FADE_MS := 3000
 const ICE_SLAG_FADE_IN_FRAMES := 10
@@ -133,6 +135,7 @@ func _draw() -> void:
 	_draw_object_depth(0, x0, y0, x1, y1, view_x, view_y)
 
 	var now := Time.get_ticks_msec()
+	_prune_firewalls(now)
 	var active_magic := _resolve_magic_effects(now)
 	_active_attached_magic = _resolve_attached_magic(now)
 	_actor_target_rects.clear()
@@ -464,6 +467,8 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 	var magic_id: int = effect.get("magicID", 0)
 	if magic_id <= 0:
 		return {}
+	if effect.get("source", "") == "firewall_ash":
+		return _resolve_firewall_ash(effect, magic_id, now - int(effect.get("start_time", now)))
 	if effect.get("source", "") == "monster_transform":
 		return _resolve_monster_transform_effect(effect, magic_id, now - int(effect.get("start_time", now)))
 	if effect.get("source", "") == "monster_spawn_ground":
@@ -1146,6 +1151,43 @@ func _fire_ash_alpha(elapsed: int) -> float:
 	return 1.0 - float(elapsed - FIRE_ASH_FADE_IN_MS - FIRE_ASH_HOLD_MS) / FIRE_ASH_FADE_OUT_MS
 
 
+func _resolve_firewall_ash(effect: Dictionary, magic_id: int, elapsed: int) -> Dictionary:
+	var total_duration := FIREWALL_ASH_FADE_IN_MS + FIRE_ASH_HOLD_MS + FIRE_ASH_FADE_OUT_MS
+	if elapsed < 0:
+		return {"special_kind": "firewall_ash", "components": [], "underlays": [], "on_ground": false}
+	if elapsed >= total_duration:
+		return {}
+	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	if meta.is_empty() or meta[2] <= 0:
+		return {}
+	var alpha := _firewall_ash_alpha(elapsed)
+	var frame := _magic_absolute_frame(meta, elapsed) + int(effect.get("frame_offset", 0))
+	if meta[7] & 1:
+		frame %= meta[2]
+	var position := Vector2(effect.get("x", 0), effect.get("y", 0))
+	return {
+		"special_kind": "firewall_ash",
+		"components": [_resolved_component(meta, frame, int(effect.get("ash_direction", 0)), position, alpha)],
+		"underlays": [{
+			"texture_id": FIRE_ASH_TEXTURE_ID,
+			"crop": Vector2i(102, 72),
+			"position": position,
+			"rotation": int(effect.get("rotation", 0)),
+			"alpha_mod": alpha,
+			"meta": meta,
+		}],
+		"on_ground": false,
+	}
+
+
+func _firewall_ash_alpha(elapsed: int) -> float:
+	if elapsed < FIREWALL_ASH_FADE_IN_MS:
+		return float(elapsed) / FIREWALL_ASH_FADE_IN_MS
+	if elapsed < FIREWALL_ASH_FADE_IN_MS + FIRE_ASH_HOLD_MS:
+		return 1.0
+	return 1.0 - float(elapsed - FIREWALL_ASH_FADE_IN_MS - FIRE_ASH_HOLD_MS) / FIRE_ASH_FADE_OUT_MS
+
+
 func _resolve_ice_wave(child_meta: PackedInt32Array, direction: int, position: Vector2, elapsed: int, variant: Dictionary, components: Array, underlays: Array) -> void:
 	var absolute_frame := _magic_absolute_frame(child_meta, elapsed)
 	var total_frames := ICE_SLAG_FADE_IN_FRAMES + ICE_SLAG_HOLD_FRAMES + ICE_SLAG_FADE_OUT_FRAMES
@@ -1308,9 +1350,24 @@ func _draw_firewall_row(y: int, x0: int, x1: int, view_x: int, view_y: int, now:
 		var x: int = firewall.get("x", -1)
 		if firewall.get("y", -1) != y or x < x0 or x > x1:
 			continue
-		for index in range(maxi(0, firewall.get("count", 0))):
-			var frame := int(now / frame_step + index * 2) % meta[2]
-			_draw_magic_frame(meta, frame, 0, Vector2(x, y), view_x, view_y)
+		var elapsed := maxi(0, now - int(firewall.get("start_time", now)))
+		var frame := (roundi(float(elapsed) / frame_step) + int(firewall.get("frame_offset", 0))) % meta[2]
+		_draw_magic_frame(meta, frame, 0, Vector2(x, y), view_x, view_y, _firewall_alpha(firewall, now))
+
+
+func _firewall_alpha(firewall: Dictionary, now: int) -> float:
+	var fade_start := int(firewall.get("fade_start_time", -1))
+	return 1.0 if fade_start < 0 else 1.0 - clampf(float(now - fade_start) / FIREWALL_FADE_OUT_MS, 0.0, 1.0)
+
+
+func _prune_firewalls(now: int) -> void:
+	var pending: Array = []
+	for firewall_value in game_state.firewalls:
+		var firewall: Dictionary = firewall_value
+		var fade_start := int(firewall.get("fade_start_time", -1))
+		if fade_start < 0 or now < fade_start + FIREWALL_FADE_OUT_MS:
+			pending.append(firewall)
+	game_state.firewalls = pending
 
 
 func _draw_magic_frame(meta: PackedInt32Array, frame: int, direction: int, grid_position: Vector2, view_x: int, view_y: int, alpha_mod := 1.0, mirror_vertical := false) -> void:

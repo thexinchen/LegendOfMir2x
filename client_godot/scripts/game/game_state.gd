@@ -90,6 +90,7 @@ var pending_input: Dictionary = {}
 var inventory_operation: Dictionary = {}
 var inventory_operation_cost: Dictionary = {}
 var firewalls: Array = []
+var _firewall_variant_serial := 0
 var magic_effects: Array = []
 var attached_magic_effects: Array = []
 
@@ -241,6 +242,7 @@ func switch_player_map(map_uid: int, x: int, y: int) -> void:
 	if not self_say.is_empty():
 		player_say_messages[player_uid] = self_say
 	firewalls.clear()
+	_firewall_variant_serial = 0
 	magic_effects.clear()
 	var self_attachments: Array = []
 	for effect_value in attached_magic_effects:
@@ -544,6 +546,55 @@ func update_ground_item_grids(grids: Array) -> void:
 		else:
 			ground_items[key] = items
 	state_changed.emit()
+
+
+func reconcile_firewalls(grids: Array, now: int, fire_ash_magic_id: int) -> Dictionary:
+	var added: Array = []
+	var fading: Array = []
+	for grid_value in grids:
+		var grid: Dictionary = grid_value
+		var x: int = grid.get("x", 0)
+		var y: int = grid.get("y", 0)
+		var desired_count := maxi(0, int(grid.get("count", 0)))
+		var active: Array = []
+		for firewall_value in firewalls:
+			var firewall: Dictionary = firewall_value
+			if firewall.get("x", 0) == x and firewall.get("y", 0) == y and firewall.get("fade_start_time", -1) < 0:
+				active.append(firewall)
+		var count_diff := active.size() - desired_count
+		if count_diff > 0:
+			for index in count_diff:
+				var firewall: Dictionary = active[index]
+				firewall["fade_start_time"] = now
+				fading.append(firewall)
+				if fire_ash_magic_id > 0:
+					var serial: int = firewall.get("variant_serial", 0)
+					magic_effects.append({
+						"magicID": fire_ash_magic_id,
+						"source": "firewall_ash",
+						"x": x,
+						"y": y,
+						"start_time": now,
+						"ash_direction": serial % 5,
+						"frame_offset": serial % 10,
+						"rotation": (serial * 73) % 360,
+					})
+		elif count_diff < 0:
+			for _index in -count_diff:
+				var serial := _firewall_variant_serial
+				_firewall_variant_serial += 1
+				var firewall := {
+					"x": x,
+					"y": y,
+					"start_time": now,
+					"frame_offset": serial % 10,
+					"variant_serial": serial,
+					"fade_start_time": -1,
+				}
+				firewalls.append(firewall)
+				added.append(firewall)
+	state_changed.emit()
+	return {"added": added, "fading": fading}
 
 
 func remove_ground_item(x: int, y: int, item_id: int) -> void:
