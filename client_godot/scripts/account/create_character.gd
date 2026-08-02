@@ -1,37 +1,26 @@
 extends Control
 
+const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const PreviewScript = preload("res://scripts/account/account_character_preview.gd")
+
 const JOB_WARRIOR := 1
 const JOB_TAOIST := 2
 const JOB_WIZARD := 4
 
-const CHARACTER_TEXTURES := {
-	Vector2i(JOB_WARRIOR, 0): preload("res://assets/characters/preview/warrior_female.png"),
-	Vector2i(JOB_WARRIOR, 1): preload("res://assets/characters/preview/warrior_male.png"),
-	Vector2i(JOB_WIZARD, 0): preload("res://assets/characters/preview/wizard_female.png"),
-	Vector2i(JOB_WIZARD, 1): preload("res://assets/characters/preview/wizard_male.png"),
-	Vector2i(JOB_TAOIST, 0): preload("res://assets/characters/preview/taoist_female.png"),
-	Vector2i(JOB_TAOIST, 1): preload("res://assets/characters/preview/taoist_male.png"),
-}
-
-const CHARACTER_POSITIONS := {
-	Vector2i(JOB_WARRIOR, 0): Vector2(527, 303),
-	Vector2i(JOB_WARRIOR, 1): Vector2(198, 288),
-	Vector2i(JOB_WIZARD, 0): Vector2(478, 296),
-	Vector2i(JOB_WIZARD, 1): Vector2(201, 282),
-	Vector2i(JOB_TAOIST, 0): Vector2(471, 302),
-	Vector2i(JOB_TAOIST, 1): Vector2(202, 276),
-}
-
-@onready var male_sprite: TextureRect = %MaleSprite
-@onready var female_sprite: TextureRect = %FemaleSprite
+@onready var male_sprite: Control = %MaleSprite
+@onready var female_sprite: Control = %FemaleSprite
 @onready var name_input: LineEdit = %NameInput
 @onready var notice: Label = %Notice
 
 var selected_job := JOB_WARRIOR
 var selected_male := true
+var _resources: RefCounted = ActorResourceScript.new()
+var _animation_time_ms := 0.0
+var _last_sound_frame := -1
 
 
 func _ready() -> void:
+	_resources.configure_default()
 	AudioService.play_map_bgm(0x00040001)
 	_update_characters()
 	if OS.has_environment("MIR2X_SCREENSHOT"):
@@ -43,28 +32,39 @@ func _ready() -> void:
 	name_input.grab_focus()
 
 
+func _process(delta: float) -> void:
+	_animation_time_ms += delta * 1000.0
+	_update_characters()
+	_play_cycle_sound()
+
+
 func _on_male_pressed() -> void:
 	selected_male = true
+	_restart_animation()
 	_update_characters()
 
 
 func _on_female_pressed() -> void:
 	selected_male = false
+	_restart_animation()
 	_update_characters()
 
 
 func _on_warrior_pressed() -> void:
 	selected_job = JOB_WARRIOR
+	_restart_animation()
 	_update_characters()
 
 
 func _on_wizard_pressed() -> void:
 	selected_job = JOB_WIZARD
+	_restart_animation()
 	_update_characters()
 
 
 func _on_taoist_pressed() -> void:
 	selected_job = JOB_TAOIST
+	_restart_animation()
 	_update_characters()
 
 
@@ -100,16 +100,36 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 func _update_characters() -> void:
 	_set_character(male_sprite, true)
 	_set_character(female_sprite, false)
-	male_sprite.modulate = Color.WHITE if selected_male else Color(0.5, 0.5, 0.5, 1.0)
-	female_sprite.modulate = Color.WHITE if not selected_male else Color(0.5, 0.5, 0.5, 1.0)
 
 
-func _set_character(sprite: TextureRect, male: bool) -> void:
-	var key := Vector2i(selected_job, 1 if male else 0)
-	var texture: Texture2D = CHARACTER_TEXTURES[key]
-	sprite.texture = texture
-	sprite.size = texture.get_size()
-	sprite.position = CHARACTER_POSITIONS[key]
+func _set_character(sprite: Control, male: bool) -> void:
+	var frame_count: int = PreviewScript.frame_count(selected_job, male, 4)
+	var frame := _absolute_frame() % frame_count if male == selected_male and frame_count > 0 else 0
+	var anchor := Vector2(193, 215) if male else Vector2(495, 220 + (40 if selected_job == JOB_WARRIOR else 0))
+	var tint := Color.WHITE if male == selected_male else Color(0.5, 0.5, 0.5, 1.0)
+	sprite.show_frame(_resources, anchor, PreviewScript.create_base_id(selected_job, male) + frame, tint)
+
+
+func _restart_animation() -> void:
+	_animation_time_ms = 0.0
+	_last_sound_frame = -1
+
+
+func _absolute_frame() -> int:
+	return roundi(_animation_time_ms / 200.0)
+
+
+func _play_cycle_sound() -> void:
+	var frame_count: int = PreviewScript.frame_count(selected_job, selected_male, 4)
+	var frame := _absolute_frame()
+	if frame_count <= 0 or frame % frame_count != 0 or frame == _last_sound_frame:
+		return
+	_last_sound_frame = frame
+	# Match the 0/1/2 job layout present in the original SEFF database. The C++
+	# `job - JOB_BEGIN` expression incorrectly maps the bit-flag wizard job (4) to 3.
+	var job_index: int = {JOB_WARRIOR: 0, JOB_TAOIST: 1, JOB_WIZARD: 2}.get(selected_job, 0)
+	var seff_id := 0x00010000 | ((1 if selected_male else 0) << 4) | (job_index << 8)
+	AudioService.play_seff_at(seff_id, 0, 0, 0, 0)
 
 
 func _show_notice(message: String) -> void:

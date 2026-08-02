@@ -63,6 +63,7 @@ fi
     item "$repo_dir/build/Release/res/texture/item.zsdb" \
     equip "$repo_dir/build/Release/res/texture/equip.zsdb" \
     proguse "$repo_dir/build/Release/res/texture/proguse.zsdb" \
+    selectchar "$repo_dir/build/Release/res/texture/selectchar.zsdb" \
     magic "$repo_dir/build/Release/res/texture/magic.zsdb"
 
 mkdir -p "$project_dir/build"

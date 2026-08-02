@@ -1,21 +1,14 @@
 extends Control
 
 const Protocol = preload("res://scripts/network/protocol.gd")
+const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const PreviewScript = preload("res://scripts/account/account_character_preview.gd")
 
 const JOB_WARRIOR := 1
 const JOB_TAOIST := 2
 const JOB_WIZARD := 4
 
-const CHARACTER_TEXTURES := {
-	Vector2i(JOB_WARRIOR, 0): preload("res://assets/characters/preview/warrior_female_idle.png"),
-	Vector2i(JOB_WARRIOR, 1): preload("res://assets/characters/preview/warrior_male_idle.png"),
-	Vector2i(JOB_WIZARD, 0): preload("res://assets/characters/preview/wizard_female_idle.png"),
-	Vector2i(JOB_WIZARD, 1): preload("res://assets/characters/preview/wizard_male_idle.png"),
-	Vector2i(JOB_TAOIST, 0): preload("res://assets/characters/preview/taoist_female_idle.png"),
-	Vector2i(JOB_TAOIST, 1): preload("res://assets/characters/preview/taoist_male_idle.png"),
-}
-
-@onready var character_sprite: TextureRect = %CharacterSprite
+@onready var character_sprite: Control = %CharacterSprite
 @onready var character_info: Label = %CharacterInfo
 @onready var notice: Label = %Notice
 @onready var delete_dialog: Control = %DeleteCharacterDialog
@@ -26,9 +19,14 @@ var character_name := "预览角色"
 var character_gender := 1
 var character_job := JOB_WARRIOR
 var character_exp := 0
+var _resources: RefCounted = ActorResourceScript.new()
+var _animation_time_ms := 0.0
+var _character_motion := 0
+var _last_motion_switch_frame := 0
 
 
 func _ready() -> void:
+	_resources.configure_default()
 	AudioService.play_map_bgm(0x00040002)
 	if OS.has_environment("MIR2X_SCREENSHOT"):
 		has_character = true
@@ -51,6 +49,13 @@ func _ready() -> void:
 		_show_notice("服务器尚未连接")
 	else:
 		_show_notice("正在下载游戏角色")
+
+
+func _process(delta: float) -> void:
+	_animation_time_ms += delta * 1000.0
+	if has_character:
+		_switch_character_motion()
+		_update_character_preview()
 
 
 func _on_start_pressed() -> void:
@@ -158,13 +163,12 @@ func _apply_character(payload: PackedByteArray) -> void:
 
 func _update_character_preview() -> void:
 	var first_job := _first_job(character_job)
-	var texture: Texture2D = CHARACTER_TEXTURES.get(
-		Vector2i(first_job, character_gender),
-		CHARACTER_TEXTURES[Vector2i(JOB_WARRIOR, 1)],
-	)
-	character_sprite.texture = texture
-	character_sprite.size = texture.get_size()
-	character_sprite.position = Vector2(462, 351)
+	var frame_count: int = PreviewScript.frame_count(first_job, bool(character_gender), _character_motion)
+	if frame_count <= 0:
+		character_sprite.hide()
+		return
+	var frame_id: int = PreviewScript.select_base_id(first_job, bool(character_gender), _character_motion) + _absolute_frame() % frame_count
+	character_sprite.show_frame(_resources, Vector2(430, 300), frame_id, Color.WHITE)
 	character_sprite.show()
 	$InfoPanel.show()
 	var jobs := {JOB_WARRIOR: "战士", JOB_WIZARD: "法师", JOB_TAOIST: "道士"}
@@ -178,6 +182,23 @@ func _update_character_preview() -> void:
 	# Godot Label uses single color, so we use the name color as the closest match
 	# The C++ also shows buttons only when has_character
 	_update_button_visibility()
+
+
+func _absolute_frame() -> int:
+	return roundi(_animation_time_ms / 200.0)
+
+
+func _switch_character_motion() -> void:
+	var frame_count: int = PreviewScript.frame_count(_first_job(character_job), bool(character_gender), _character_motion)
+	var frame := _absolute_frame()
+	if frame_count <= 0 or frame % frame_count != 0 or _last_motion_switch_frame == frame:
+		return
+	_last_motion_switch_frame = frame
+	match _character_motion:
+		0: _character_motion = 1 if randi_range(0, 1) == 0 else 2
+		1: _character_motion = 2
+		2: _character_motion = 2 if randi_range(0, 1) == 0 else 3
+		_: _character_motion = 0
 
 
 func _first_job(job: int) -> int:

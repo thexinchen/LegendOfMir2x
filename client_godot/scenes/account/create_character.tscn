@@ -2,8 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/account/create_character.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000000.png" id="2_background"]
-[ext_resource type="Texture2D" path="res://assets/characters/preview/warrior_male.png" id="3_male"]
-[ext_resource type="Texture2D" path="res://assets/characters/preview/warrior_female.png" id="4_female"]
+[ext_resource type="Script" path="res://scripts/account/account_character_preview.gd" id="3_male"]
 [ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000002.png" id="5_floor"]
 [ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000001.png" id="6_controls"]
 [ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000030.png" id="7_warrior_normal"]
@@ -52,28 +51,27 @@ mouse_filter = 2
 texture = ExtResource("2_background")
 expand_mode = 1
 
-[node name="MaleSprite" type="TextureRect" parent="."]
+[node name="MaleSprite" type="Control" parent="."]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 198.0
-offset_top = 288.0
-offset_right = 302.0
-offset_bottom = 548.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("3_male")
-expand_mode = 1
+script = ExtResource("3_male")
 
-[node name="FemaleSprite" type="TextureRect" parent="."]
+[node name="FemaleSprite" type="Control" parent="."]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 527.0
-offset_top = 303.0
-offset_right = 611.0
-offset_bottom = 543.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-modulate = Color(0.5, 0.5, 0.5, 1)
-texture = ExtResource("4_female")
-expand_mode = 1
+script = ExtResource("3_male")
 
 [node name="FloorGlow" type="TextureRect" parent="."]
 layout_mode = 0
