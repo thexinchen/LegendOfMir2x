@@ -30,12 +30,16 @@ func _ready() -> void:
 	var overlay := main.get_node("MapLoadingOverlay") as Control
 	var backdrop := overlay.get_node("Backdrop") as ColorRect
 	var panel := overlay.get_node("Panel") as Control
+	var loading_text := overlay.get_node("Panel/Text") as RichTextLabel
 	if panel.size != Vector2(358, 260) or overlay.mouse_filter != Control.MOUSE_FILTER_STOP or backdrop.color != Color.BLACK:
 		_fail("modal geometry/background/input mismatch: panel=%s background=%s filter=%d" % [panel.size, backdrop.color, overlay.mouse_filter])
 		return
+	if loading_text.get_theme_font("normal_font").resource_path != "res://assets/font/01_Yahei.ttf" or loading_text.get_theme_font_size("normal_font_size") != 12:
+		_fail("map-loading text did not use original font-1/12px replacement: font=%s size=%d" % [loading_text.get_theme_font("normal_font").resource_path, loading_text.get_theme_font_size("normal_font_size")])
+		return
 	overlay.show()
 	main.call("_on_map_load_progress", 40, _map_names[0])
-	var text: String = overlay.get_node("Panel/Text").text
+	var text: String = loading_text.text
 	if not text.contains("加载地图") or not text.contains("[color=red]") or not text.contains("%40"):
 		_fail("modal text/style mismatch: %s" % text)
 		return
