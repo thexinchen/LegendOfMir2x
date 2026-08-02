@@ -1725,10 +1725,33 @@ func _test_exact_frame_input(main: Control) -> bool:
 	if renderer.focus_color(1) != Color8(0xFF, 0x86, 0x00) or renderer.focus_color(2) != Color8(0x92, 0xC6, 0x20) or renderer.focus_color(3) != Color8(0x00, 0xC6, 0xF0) or renderer.focus_color(4) != Color8(0xD0, 0x2C, 0x70):
 		_fail("focus channel colors do not match C++")
 		return false
+	renderer._actor_target_rects.clear()
+	GameState.grabbed_item = {"itemID": 1, "seqID": 2, "count": 3}
+	left_click.position = Vector2(300, 200)
+	main.call("_handle_mouse_click", left_click)
+	if GameState.grabbed_item.get("count", 0) != 3:
+		_fail("drop request optimistically cleared the grabbed item before server acknowledgement")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_REMOVEITEM, _remove_item_payload(1, 2, 1))
+	if GameState.grabbed_item.get("count", 0) != 2:
+		_fail("partial SM_REMOVEITEM did not decrement the grabbed item")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_REMOVEITEM, _remove_item_payload(1, 2, 2))
+	if not GameState.grabbed_item.is_empty():
+		_fail("final SM_REMOVEITEM did not clear the grabbed item")
+		return false
 	GameState.grabbed_item = {}
 	GameState.creatures.erase(707)
-	renderer._actor_target_rects.clear()
 	return true
+
+
+func _remove_item_payload(item_id: int, seq_id: int, count: int) -> PackedByteArray:
+	var payload := PackedByteArray()
+	payload.resize(10)
+	payload.encode_u32(0, item_id)
+	payload.encode_u32(4, seq_id)
+	payload.encode_u16(8, count)
+	return payload
 
 
 func _test_mining(main: Control, resources: RefCounted) -> bool:

@@ -276,9 +276,7 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 			return
 		if not game_state.grabbed_item.is_empty():
 			var grabbed: Dictionary = game_state.grabbed_item
-			if NetworkClient.send_drop_item(grabbed.get("itemID", 0), grabbed.get("seqID", 0), grabbed.get("count", 0)) == OK:
-				game_state.grabbed_item = {}
-				game_state.state_changed.emit()
+			NetworkClient.send_drop_item(grabbed.get("itemID", 0), grabbed.get("seqID", 0), grabbed.get("count", 0))
 			return
 		var ground_key := "%d,%d" % [grid.x, grid.y]
 		if game_state.ground_items.has(ground_key):
