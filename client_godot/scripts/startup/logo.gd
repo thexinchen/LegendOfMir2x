@@ -1,12 +1,15 @@
 extends Control
 
+const AutoLogin = preload("res://scripts/account/auto_login.gd")
 const NEXT_SCENE := "res://scenes/startup/sync.tscn"
 const SHOW_TIME_SECONDS := 5.0
 
 var elapsed_seconds := 0.0
+var auto_login_requested := false
 
 
 func _ready() -> void:
+	auto_login_requested = _has_auto_login()
 	if OS.has_environment("MIR2X_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_SCREENSHOT"))
@@ -14,6 +17,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if auto_login_requested:
+		get_tree().change_scene_to_file(NEXT_SCENE)
+		return
 	elapsed_seconds += delta
 	if elapsed_seconds >= SHOW_TIME_SECONDS:
 		get_tree().change_scene_to_file(NEXT_SCENE)
@@ -27,6 +33,10 @@ func _process(delta: float) -> void:
 		else:
 			alpha = 1.0
 		$Background.modulate.a = alpha
+
+
+func _has_auto_login() -> bool:
+	return AutoLogin.requested()
 
 
 func _unhandled_input(event: InputEvent) -> void:

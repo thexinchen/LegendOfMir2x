@@ -1,5 +1,7 @@
 extends Control
 
+const AutoLogin = preload("res://scripts/account/auto_login.gd")
+
 @onready var account_input: LineEdit = %AccountInput
 @onready var password_input: LineEdit = %PasswordInput
 @onready var notice: Control = %Notice
@@ -69,15 +71,7 @@ func _on_connection_changed(connected: bool, _message: String) -> void:
 func _try_auto_login() -> void:
 	if auto_login_sent:
 		return
-	var credentials: Array = []
-	# Check command line argument --auto-login=user:password
-	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--auto-login="):
-			credentials = arg.substr("--auto-login=".length()).split(":", true, 1)
-			break
-	# Also check environment variable MIR2X_AUTO_LOGIN
-	if credentials.size() != 2 and OS.has_environment("MIR2X_AUTO_LOGIN"):
-		credentials = OS.get_environment("MIR2X_AUTO_LOGIN").split(":", true, 1)
+	var credentials := AutoLogin.credentials()
 	if credentials.size() != 2:
 		return
 	auto_login_sent = true

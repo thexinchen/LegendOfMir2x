@@ -3,6 +3,7 @@ extends Control
 const Protocol = preload("res://scripts/network/protocol.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const PreviewScript = preload("res://scripts/account/account_character_preview.gd")
+const AutoLogin = preload("res://scripts/account/auto_login.gd")
 
 const JOB_WARRIOR := 1
 const JOB_TAOIST := 2
@@ -161,6 +162,8 @@ func _apply_character(payload: PackedByteArray) -> void:
 	notice.clear_messages()
 	_update_character_preview()
 	_capture_flow_if_requested()
+	if AutoLogin.requested():
+		_on_start_pressed()
 
 
 func _update_character_preview() -> void:
