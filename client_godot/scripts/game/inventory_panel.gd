@@ -301,8 +301,8 @@ func _grab_item(key: String) -> void:
 func _place_grabbed(grid: Vector2i) -> void:
 	var item: Dictionary = _state.grabbed_item
 	var size := _item_grid_size(int(item.get("itemID", 0)))
-	var x := grid.x - size.x / 2
-	var y := grid.y - size.y / 2
+	var x := grid.x - floori(size.x * 0.5)
+	var y := grid.y - floori(size.y * 0.5)
 	if x < 0 or x + size.x > GRID_COLUMNS or y < 0 or _occupied(x, y, size.x, size.y):
 		var fallback := _find_free_position(size.x, size.y)
 		x = fallback.x

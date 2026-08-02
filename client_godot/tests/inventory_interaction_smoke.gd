@@ -161,13 +161,36 @@ func _ready() -> void:
 		_fail("inventory bin count mismatch")
 		return
 	var potion_key := "%d:1" % potion_id
+	var weapon_key := "%d:2" % weapon_id
+	var weapon_origin := Vector2i(int(bins[weapon_key].x), int(bins[weapon_key].y))
 	panel.call("_grab_item", potion_key)
 	if GameState.grabbed_item.get("itemID", 0) != potion_id or GameState.inventory.size() != 1:
 		_fail("grab operation mismatch")
 		return
+	panel.call("_grab_item", weapon_key)
+	var swapped_potion: Dictionary = panel.get("_bins").get(potion_key, {})
+	if GameState.grabbed_item.get("itemID", 0) != weapon_id or Vector2i(int(swapped_potion.get("x", -1)), int(swapped_potion.get("y", -1))) != weapon_origin:
+		_fail("occupied-cell grabbed item exchange mismatch")
+		return
+	panel.call("_grab_item", potion_key)
+	if GameState.grabbed_item.get("itemID", 0) != potion_id or not panel.get("_bins").has(weapon_key):
+		_fail("grabbed item exchange did not preserve the displaced item")
+		return
 	panel.call("_place_grabbed", Vector2i(5, 5))
 	if not GameState.grabbed_item.is_empty() or GameState.inventory.size() != 2:
 		_fail("place operation mismatch")
+		return
+	var placed_potion: Dictionary = panel.get("_bins").get(potion_key, {})
+	var potion_size: Vector2i = panel.call("_item_grid_size", potion_id)
+	var expected_potion_position := Vector2i(5 - floori(potion_size.x * 0.5), 5 - floori(potion_size.y * 0.5))
+	if typeof(placed_potion.get("x")) != TYPE_INT or typeof(placed_potion.get("y")) != TYPE_INT or Vector2i(placed_potion.x, placed_potion.y) != expected_potion_position:
+		_fail("empty-cell placement did not use C++ integer-centered grid coordinates")
+		return
+	panel.call("_grab_item", potion_key)
+	panel.call("_place_grabbed", Vector2i(-1, -1))
+	var fallback_potion: Dictionary = panel.get("_bins").get(potion_key, {})
+	if fallback_potion.is_empty() or int(fallback_potion.x) < 0 or int(fallback_potion.y) < 0 or typeof(fallback_potion.x) != TYPE_INT or typeof(fallback_potion.y) != TYPE_INT:
+		_fail("invalid grabbed-item target did not fall back to an integer first-fit position")
 		return
 	var no_range_wheel := InputEventMouseButton.new()
 	no_range_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
