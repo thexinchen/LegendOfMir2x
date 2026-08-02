@@ -100,6 +100,7 @@ struct MonsterMetaRecord
     uint8_t bodyFlags = 0;
     uint8_t spawnDirection = 0;
     uint8_t motionCorrectionFlags = 0;
+    uint8_t behaveMode = 0;
 };
 
 struct ItemMetaRecord
@@ -184,7 +185,7 @@ static_assert(sizeof(TileRecord) == 8);
 static_assert(sizeof(ObjectRecord) == 12);
 static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
-static_assert(sizeof(MonsterMetaRecord) == 67);
+static_assert(sizeof(MonsterMetaRecord) == 68);
 static_assert(sizeof(ItemMetaRecord) == 156);
 static_assert(sizeof(ItemDetailRecord) == 48);
 static_assert(sizeof(SkillMetaRecord) == 16);
@@ -227,6 +228,7 @@ static MonsterMetaRecord monsterMetaRecord(uint32_t monsterID)
         .transformEffectMagicID = std::u8string_view(record.name) == u8"祖玛教主" ? DBCOM_MAGICID(u8"祖玛教主_石像碎片") : 0,
         .spawnEffectMagicID = std::u8string_view(record.name) == u8"僧侣僵尸" ? DBCOM_MAGICID(u8"僧侣僵尸_地洞")
                              : std::u8string_view(record.name) == u8"沙漠石人" ? DBCOM_MAGICID(u8"沙漠石人_石坑") : 0,
+        .behaveMode = check_cast<uint8_t>(record.behaveMode),
     };
 
     // transfFlags: bit 0/1 reverse active/hidden transform, bit 2 hidden
@@ -526,7 +528,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "monster.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 11, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 12, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
     }

@@ -115,6 +115,11 @@ func monster_spawn_direction(monster_id: int) -> int:
 	return meta[31] if meta.size() >= 32 else 0
 
 
+func monster_behave_mode(monster_id: int) -> int:
+	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
+	return meta[33] if meta.size() >= 34 else 0
+
+
 func monster_body_sequence(monster_id: int, action_type: int, magic_id := 0) -> PackedInt32Array:
 	var sequence: PackedInt32Array
 	match action_type:
@@ -346,7 +351,7 @@ func _load_monster_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
+	if version not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -381,6 +386,8 @@ func _load_monster_meta() -> void:
 			for _body_index in range(4):
 				meta.append(file.get_8())
 		if version >= 11:
+			meta.append(file.get_8())
+		if version >= 12:
 			meta.append(file.get_8())
 		monster_meta[monster_id] = meta
 

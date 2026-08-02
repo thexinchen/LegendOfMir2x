@@ -1173,7 +1173,13 @@ func _handle_action(payload: PackedByteArray) -> void:
 		var mine_from_x: int = game_state.player_x if uid == game_state.player_uid else creature.get("x", x)
 		var mine_from_y: int = game_state.player_y if uid == game_state.player_uid else creature.get("y", y)
 		direction = _direction_to(mine_from_x, mine_from_y, x, y)
-	if not creature.is_empty() and creature.get("type", _creature_type_from_uid(uid)) == 1 and action_type in [2, 3, 7]:
+	if not creature.is_empty() and creature.get("type", _creature_type_from_uid(uid)) == 1 and _resources.monster_behave_mode(creature.get("monster_id", 0)) == 2:
+		for queue_key in ["motion_action_queue", "forced_action_queue", "monster_pending_action", "monster_pending_forced_action", "monster_pending_form_modes"]:
+			creature.erase(queue_key)
+		if action_type in [2, 4] and creature.get("x", x) == x and creature.get("y", y) == y:
+			game_state.update_creature(uid, creature)
+			return
+	if not creature.is_empty() and creature.get("type", _creature_type_from_uid(uid)) == 1 and action_type in [2, 3, 7] and _resources.monster_behave_mode(creature.get("monster_id", 0)) != 2:
 		var motion_monster_id: int = creature.get("monster_id", 0)
 		var motion_transform: Dictionary = _resources.monster_transform(motion_monster_id)
 		var correction_waits_for_form := false

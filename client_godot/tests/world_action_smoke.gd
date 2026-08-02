@@ -2244,6 +2244,7 @@ func _test_monster_body_profiles(main: Control, resources: RefCounted) -> bool:
 	var fixed_direction_ids: Array[int] = []
 	var tree_ids: Array[int] = []
 	var spawn_direction_ids: Array[int] = []
+	var guard_ids: Array[int] = []
 	for monster_id_value in resources.monster_meta:
 		var monster_id: int = monster_id_value
 		var physical_sequence: PackedInt32Array = resources.monster_body_sequence(monster_id, 7, physical_id)
@@ -2258,10 +2259,42 @@ func _test_monster_body_profiles(main: Control, resources: RefCounted) -> bool:
 			tree_ids.append(monster_id)
 		if resources.monster_spawn_direction(monster_id) == 6:
 			spawn_direction_ids.append(monster_id)
-	if physical_id <= 0 or savage_id <= 0 or shipwreck_id == 0 or pharaoh_id == 0 or fixed_direction_ids.size() != 4 or tree_ids.size() != 3 or spawn_direction_ids.size() != 2:
+		if resources.monster_behave_mode(monster_id) == 2:
+			guard_ids.append(monster_id)
+	if physical_id <= 0 or savage_id <= 0 or shipwreck_id == 0 or pharaoh_id == 0 or fixed_direction_ids.size() != 4 or tree_ids.size() != 3 or spawn_direction_ids.size() != 2 or guard_ids.size() != 4:
 		_fail("special monster body fixtures unavailable: ship=%d pharaoh=%d fixed=%s tree=%s spawn=%s" % [shipwreck_id, pharaoh_id, fixed_direction_ids, tree_ids, spawn_direction_ids])
 		return false
 	var renderer: Control = main.get_node("WorldRenderer")
+	var guard_id: int = guard_ids[0]
+	var guard_resources: RefCounted = main.get("_resources")
+	var guard_meta: PackedInt32Array = guard_resources.monster_meta[guard_id]
+	var guard_attack_seff: int = guard_meta[3]
+	guard_meta[3] = 0xFFFFFFFF
+	guard_resources.monster_meta[guard_id] = guard_meta
+	var guard_uid: int = (4 << 59) | (guard_id << 35) | 729
+	GameState.update_creature(guard_uid, {
+		"uid": guard_uid, "type": 1, "monster_id": guard_id, "x": 40, "y": 41,
+		"direction": 3, "action_type": 7, "action_started_ms": 12345,
+		"motion_action_queue": [{"type": 3}],
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(guard_uid, 202, {"type": 2, "speed": 100, "direction": 7, "x": 40, "y": 41}))
+	var guard: Dictionary = GameState.get_creature(guard_uid)
+	if guard.get("action_type", 0) != 7 or guard.get("action_started_ms", 0) != 12345 or guard.get("direction", 0) != 3 or guard.has("motion_action_queue"):
+		_fail("same-grid Guard stand did not preserve current motion while clearing its queue: %s" % guard)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(guard_uid, 202, {"type": 2, "speed": 100, "direction": 7, "x": 42, "y": 43}))
+	guard = GameState.get_creature(guard_uid)
+	if guard.get("action_type", 0) != 2 or Vector2i(guard.x, guard.y) != Vector2i(42, 43) or guard.get("direction", 0) != 7:
+		_fail("moved Guard stand did not synchronize immediately: %s" % guard)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(guard_uid, 202, {"type": 7, "speed": 100, "direction": 5, "x": 45, "y": 46}))
+	guard = GameState.get_creature(guard_uid)
+	if guard.get("action_type", 0) != 7 or Vector2i(guard.x, guard.y) != Vector2i(45, 46) or guard.has("motion_action_queue"):
+		_fail("Guard attack incorrectly used ordinary Monster position correction: %s" % guard)
+		return false
+	GameState.remove_creature(guard_uid)
+	guard_meta[3] = guard_attack_seff
+	guard_resources.monster_meta[guard_id] = guard_meta
 	var shipwreck_creature := {"type": 1, "monster_id": shipwreck_id, "action_type": 7, "action_magic_id": physical_id, "direction": 7}
 	var physical_render: Dictionary = renderer.call("_monster_render_sequence", shipwreck_creature)
 	shipwreck_creature["action_magic_id"] = savage_id
