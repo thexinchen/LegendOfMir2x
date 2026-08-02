@@ -127,7 +127,9 @@ func _test_monster_attack_magic_queue(main: Control, resources: RefCounted, phys
 	var attack_magic_ids := [
 		resources.magic_id("神兽_喷火"), resources.magic_id("楔蛾_喷毒"), resources.magic_id("洞蛆_喷毒"),
 		resources.magic_id("粪虫_喷毒"), resources.magic_id("雷电僵尸_雷电"), resources.magic_id("火焰沃玛_喷火"),
-		resources.magic_id("沃玛教主_电光"), resources.magic_id("掷斧骷髅_掷斧"),
+		resources.magic_id("沃玛教主_电光"), resources.magic_id("蚂蚁道士_治疗"), resources.magic_id("红衣法师_魔法"),
+		resources.magic_id("沙漠风魔_扇风"), resources.magic_id("沃玛教主_雷电术"), resources.magic_id("潘夜右护卫_雷电术"),
+		resources.magic_id("雷电术"), resources.magic_id("掷斧骷髅_掷斧"),
 	]
 	if attack_magic_ids.has(0):
 		_fail("monster attack magic metadata unavailable: %s" % attack_magic_ids)
@@ -157,7 +159,7 @@ func _test_monster_attack_magic_queue(main: Control, resources: RefCounted, phys
 		return false
 	GameState.magic_effects.clear()
 	for uid in GameState.creatures.keys():
-		if ((int(uid) >> 35) & 0xFFFFFF) in range(700, 708) or ((int(uid) >> 35) & 0xFFFFFF) == 799:
+		if ((int(uid) >> 35) & 0xFFFFFF) in range(700, 714) or ((int(uid) >> 35) & 0xFFFFFF) == 799:
 			GameState.remove_creature(uid)
 	return true
 

@@ -34,6 +34,14 @@ func _ready() -> void:
 		{"id": resources.magic_id("火焰沃玛_喷火"), "frame": 3},
 		{"id": resources.magic_id("沃玛教主_电光"), "frame": 1},
 	]
+	var target_monster_attacks := [
+		{"id": resources.magic_id("蚂蚁道士_治疗"), "frame": 3, "kind": "ant_healing"},
+		{"id": resources.magic_id("红衣法师_魔法"), "frame": 3, "kind": "attachment"},
+		{"id": resources.magic_id("沙漠风魔_扇风"), "frame": 3, "kind": "attachment"},
+		{"id": resources.magic_id("沃玛教主_雷电术"), "frame": 3, "kind": "thunderbolt"},
+		{"id": resources.magic_id("潘夜右护卫_雷电术"), "frame": 4, "kind": "thunderbolt"},
+		{"id": thunder_id, "frame": 5, "kind": "thunderbolt"},
+	]
 	var dual_axe_id: int = resources.magic_id("掷斧骷髅_掷斧")
 	var space_move_id: int = resources.magic_id("瞬息移动")
 	var monster_death_magic_id := 0
@@ -59,7 +67,7 @@ func _ready() -> void:
 		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
 		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or fixed_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or fixed_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or target_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
@@ -417,6 +425,42 @@ func _ready() -> void:
 			_fail("fixed monster attack frame-%d placement/direction mismatch: id=%d state=%s" % [trigger_frame, fixed_monster_id, active_monster_fixed])
 			return
 
+	for target_monster_entry in target_monster_attacks:
+		var target_monster_id: int = target_monster_entry.id
+		var target_trigger_frame: int = target_monster_entry.frame
+		var target_kind: String = target_monster_entry.kind
+		if not $WorldRenderer.supports_monster_attack_magic(target_monster_id):
+			_fail("target monster attack magic was not recognized: %d" % target_monster_id)
+			return
+		GameState.attached_magic_effects.clear()
+		var target_monster_effect := {
+			"source": "monster_attack", "magicID": target_monster_id, "uid": GameState.player_uid,
+			"x": 405, "y": 120, "aimUID": target_uid,
+			"direction": 3, "speed": 100, "start_time": now, "_seff_stage_mask": 0xFFFF,
+		}
+		var target_trigger_ms := target_trigger_frame * 100
+		var before_target_attack: Dictionary = $WorldRenderer.call("_resolve_magic_effect", target_monster_effect, now + target_trigger_ms - 1)
+		if before_target_attack.is_empty() or not GameState.attached_magic_effects.is_empty():
+			_fail("target monster attack triggered before frame %d: id=%d" % [target_trigger_frame, target_monster_id])
+			return
+		$WorldRenderer.call("_resolve_magic_effect", target_monster_effect, now + target_trigger_ms)
+		var spawned_target_effect: Dictionary = GameState.attached_magic_effects.back() if not GameState.attached_magic_effects.is_empty() else {}
+		if spawned_target_effect.get("magicID", 0) != target_monster_id or spawned_target_effect.get("target_uid", 0) != target_uid or spawned_target_effect.get("kind", "") != target_kind or spawned_target_effect.get("stage", 0) != 2:
+			_fail("target monster attack attachment mismatch: %s" % spawned_target_effect)
+			return
+		var target_active: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now + target_trigger_ms + 100)
+		var target_resolved: Dictionary = target_active.get(target_uid, [{}])[0]
+		if target_resolved.get("meta", PackedInt32Array()) != resources.magic_layout(target_monster_id, 2):
+			_fail("target monster attack run metadata mismatch: %s" % target_resolved)
+			return
+		if target_kind == "ant_healing" and target_resolved.get("shift_y", 0) != -3:
+			_fail("ant healing frame lift mismatch: %s" % target_resolved)
+			return
+		if target_kind == "thunderbolt" and not target_resolved.get("mirror_vertical", false):
+			_fail("monster thunderbolt did not extend its first frames: %s" % target_resolved)
+			return
+	GameState.attached_magic_effects.clear()
+
 	if not $WorldRenderer.supports_monster_attack_magic(dual_axe_id):
 		_fail("dual-axe monster attack magic was not recognized")
 		return
@@ -674,6 +718,40 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ATTACHMENT_SCREENSHOT"))
+	if OS.has_environment("MIR2X_MONSTER_TARGET_ATTACK_SCREENSHOT"):
+		if not $WorldRenderer.load_map(6):
+			_fail("target monster-attack visual map failed to load")
+			return
+		var target_attack_source := _find_open_wave_source($WorldRenderer, 8, $WorldRenderer.map_height - 8)
+		if target_attack_source.x < 0:
+			_fail("no open target monster-attack visual fixture")
+			return
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var target_attack_now := Time.get_ticks_msec()
+		var target_attack_uids := [target_uid, target_uid + 1, target_uid + 2, target_uid + 3]
+		GameState.creatures = {
+			target_attack_uids[0]: {"uid": target_attack_uids[0], "x": target_attack_source.x - 2, "y": target_attack_source.y - 3, "type": 1, "monster_id": 1, "direction": 3, "action_type": 2},
+			target_attack_uids[1]: {"uid": target_attack_uids[1], "x": target_attack_source.x + 2, "y": target_attack_source.y - 3, "type": 1, "monster_id": 1, "direction": 5, "action_type": 2},
+			target_attack_uids[2]: {"uid": target_attack_uids[2], "x": target_attack_source.x - 2, "y": target_attack_source.y, "type": 1, "monster_id": 1, "direction": 7, "action_type": 2},
+			target_attack_uids[3]: {"uid": target_attack_uids[3], "x": target_attack_source.x + 2, "y": target_attack_source.y, "type": 1, "monster_id": 1, "direction": 1, "action_type": 2},
+		}
+		GameState.magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.attached_magic_effects = [
+			{"magicID": target_monster_attacks[0].id, "target_uid": target_attack_uids[0], "start_time": target_attack_now - 100, "cycles": 1, "kind": "ant_healing", "stage": 2},
+			{"magicID": target_monster_attacks[1].id, "target_uid": target_attack_uids[1], "start_time": target_attack_now - 100, "cycles": 1, "kind": "attachment", "stage": 2},
+			{"magicID": target_monster_attacks[2].id, "target_uid": target_attack_uids[2], "start_time": target_attack_now - 100, "cycles": 1, "kind": "attachment", "stage": 2},
+			{"magicID": target_monster_attacks[3].id, "target_uid": target_attack_uids[3], "start_time": target_attack_now - 100, "cycles": 1, "kind": "thunderbolt", "stage": 2},
+		]
+		GameState.view_x = target_attack_source.x * 48 - 400
+		GameState.view_y = (target_attack_source.y - 2) * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_TARGET_ATTACK_SCREENSHOT"))
 	if OS.has_environment("MIR2X_FIXED_ACTION_SCREENSHOT"):
 		var fixed_now := Time.get_ticks_msec()
 		var ice_roar_visual := fixed_effect.duplicate(true)

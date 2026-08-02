@@ -436,6 +436,7 @@ func _resolve_attached_magic(now: int) -> Dictionary:
 			"direction": 0,
 			"alpha_mod": alpha_mod,
 			"mirror_vertical": effect.get("kind", "") == "thunderbolt" and absolute_frame <= 3,
+			"shift_y": -absolute_frame * 3 if effect.get("kind", "") == "ant_healing" else 0,
 		}
 		var target_effects: Array = active.get(target_uid, [])
 		target_effects.append(resolved)
@@ -542,6 +543,12 @@ func _monster_attack_magic_kind(magic_id: int) -> String:
 		"雷电僵尸_雷电", "火焰沃玛_喷火", "沃玛教主_电光",
 	]:
 		return "caster_fixed"
+	if magic_name == "蚂蚁道士_治疗":
+		return "target_ant_healing"
+	if magic_name in ["雷电术", "沃玛教主_雷电术", "潘夜右护卫_雷电术"]:
+		return "target_thunderbolt"
+	if magic_name in ["红衣法师_魔法", "沙漠风魔_扇风"]:
+		return "target_attachment"
 	return ""
 
 
@@ -549,14 +556,21 @@ func _monster_attack_trigger_frame(magic_id: int) -> int:
 	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
 	if magic_name == "沃玛教主_电光":
 		return 1
-	if magic_name in ["粪虫_喷毒", "雷电僵尸_雷电", "火焰沃玛_喷火"]:
+	if magic_name in [
+		"粪虫_喷毒", "雷电僵尸_雷电", "火焰沃玛_喷火", "蚂蚁道士_治疗",
+		"红衣法师_魔法", "沙漠风魔_扇风", "沃玛教主_雷电术",
+	]:
 		return 3
+	if magic_name == "潘夜右护卫_雷电术":
+		return 4
 	return 5
 
 
 func _resolve_monster_attack_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
 	if kind == "follow_projectile":
 		return _resolve_projectile_action_magic(effect, magic_id, "monster_axe", elapsed)
+	if kind.begins_with("target_"):
+		return _resolve_monster_target_attachment(effect, magic_id, kind, elapsed)
 	var resolved := {"special_kind": "monster_attack", "components": [], "underlays": [], "on_ground": false}
 	var speed := clampi(effect.get("speed", 100), 20, 500)
 	var trigger_delay := roundi(float(_monster_attack_trigger_frame(magic_id)) * 100.0 * 100.0 / speed)
@@ -571,6 +585,28 @@ func _resolve_monster_attack_magic(effect: Dictionary, magic_id: int, kind: Stri
 	_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_RUN, position)
 	resolved.components.append(_resolved_component(meta, mini(_magic_absolute_frame(meta, run_elapsed), meta[2] - 1), direction, position))
 	return resolved
+
+
+func _resolve_monster_target_attachment(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
+	var speed := clampi(effect.get("speed", 100), 20, 500)
+	var trigger_delay := roundi(float(_monster_attack_trigger_frame(magic_id)) * 100.0 * 100.0 / speed)
+	var resolved := {"special_kind": "monster_attack", "components": [], "underlays": [], "on_ground": false}
+	if elapsed < trigger_delay:
+		return resolved
+	if not effect.get("_attachment_spawned", false):
+		effect["_attachment_spawned"] = true
+		var target_uid: int = effect.get("aimUID", 0)
+		if _attached_target_exists(target_uid):
+			game_state.attached_magic_effects.append({
+				"magicID": magic_id,
+				"target_uid": target_uid,
+				"start_time": int(effect.get("start_time", 0)) + trigger_delay,
+				"cycles": 1,
+				"kind": kind.trim_prefix("target_"),
+				"stage": MAGIC_STAGE_RUN,
+			})
+			game_state.state_changed.emit()
+	return {}
 
 
 func _resolve_projectile_action_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
@@ -1186,7 +1222,7 @@ func _magic_mod_color(meta: PackedInt32Array, alpha_mod: float) -> Color:
 func _draw_attached_magic(uid: int, start_x: int, start_y: int) -> void:
 	for magic_value in _active_attached_magic.get(uid, []):
 		var magic: Dictionary = magic_value
-		_draw_magic_frame(magic.meta, magic.frame, magic.direction, Vector2(float(start_x) / GRID_XP, float(start_y) / GRID_YP), 0, 0, magic.alpha_mod, magic.mirror_vertical)
+		_draw_magic_frame(magic.meta, magic.frame, magic.direction, Vector2(float(start_x) / GRID_XP, float(start_y + int(magic.get("shift_y", 0))) / GRID_YP), 0, 0, magic.alpha_mod, magic.mirror_vertical)
 
 
 func _draw_hero_attached_magic(uid: int, start_x: int, start_y: int, actor_direction: int, overlay: bool) -> void:
@@ -1195,7 +1231,7 @@ func _draw_hero_attached_magic(uid: int, start_x: int, start_y: int, actor_direc
 		var policy := _hero_attached_magic_draw_policy(magic.get("magic_id", 0), magic.get("kind", ""), actor_direction, overlay, magic.get("alpha_mod", 1.0))
 		if not policy.draw:
 			continue
-		_draw_magic_frame(magic.meta, magic.frame, magic.direction, Vector2(float(start_x) / GRID_XP, float(start_y) / GRID_YP), 0, 0, policy.alpha_mod, magic.mirror_vertical)
+		_draw_magic_frame(magic.meta, magic.frame, magic.direction, Vector2(float(start_x) / GRID_XP, float(start_y + int(magic.get("shift_y", 0))) / GRID_YP), 0, 0, policy.alpha_mod, magic.mirror_vertical)
 
 
 func _hero_attached_magic_draw_policy(magic_id: int, kind: String, actor_direction: int, overlay: bool, base_alpha: float) -> Dictionary:
