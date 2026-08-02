@@ -113,6 +113,11 @@ func _ready() -> void:
 	if not grabbed_icon.visible or grabbed_icon.texture == null or grabbed_icon.size.x <= 0 or grabbed_icon.size.y <= 0:
 		_fail("grabbed item cursor icon did not get a drawable texture/size")
 		return
+	var main_resources: RefCounted = main.get("_resources")
+	var expected_grabbed_icon: Dictionary = main_resources.frame("item", main_resources.item_package_gfx_id(potion_id) | 0x01000000)
+	if expected_grabbed_icon.is_empty() or grabbed_icon.texture != expected_grabbed_icon.texture or grabbed_icon.size != expected_grabbed_icon.texture.get_size():
+		_fail("grabbed item cursor did not use the original native package sprite")
+		return
 	quick_bar.position = Vector2(0, 400)
 	if OS.has_environment("MIR2X_QUICK_BAR_SCREENSHOT"):
 		quick_bar.call("_set_hovered_slot", 0)

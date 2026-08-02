@@ -158,7 +158,8 @@ func _refresh_grabbed_item_icon() -> void:
 		grabbed_item_icon.hide()
 		grabbed_item_icon.texture = null
 		return
-	var icon: Dictionary = _resources.item_icon(int(item.get("itemID", 0)))
+	var item_id := int(item.get("itemID", 0))
+	var icon: Dictionary = _resources.frame("item", _resources.item_package_gfx_id(item_id) | 0x01000000)
 	if icon.is_empty():
 		grabbed_item_icon.hide()
 		grabbed_item_icon.texture = null
