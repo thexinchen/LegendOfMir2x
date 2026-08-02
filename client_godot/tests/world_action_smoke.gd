@@ -124,7 +124,11 @@ func _test_strike_grid_rendering(main: Control) -> bool:
 
 
 func _test_monster_attack_magic_queue(main: Control, resources: RefCounted, physical_id: int) -> bool:
-	var attack_magic_ids := [resources.magic_id("神兽_喷火"), resources.magic_id("楔蛾_喷毒"), resources.magic_id("掷斧骷髅_掷斧")]
+	var attack_magic_ids := [
+		resources.magic_id("神兽_喷火"), resources.magic_id("楔蛾_喷毒"), resources.magic_id("洞蛆_喷毒"),
+		resources.magic_id("粪虫_喷毒"), resources.magic_id("雷电僵尸_雷电"), resources.magic_id("火焰沃玛_喷火"),
+		resources.magic_id("沃玛教主_电光"), resources.magic_id("掷斧骷髅_掷斧"),
+	]
 	if attack_magic_ids.has(0):
 		_fail("monster attack magic metadata unavailable: %s" % attack_magic_ids)
 		return false
@@ -142,8 +146,8 @@ func _test_monster_attack_magic_queue(main: Control, resources: RefCounted, phys
 			_fail("monster attack magic was not queued: id=%d effect=%s" % [attack_magic_ids[index], effect])
 			return false
 	var before_physical := GameState.magic_effects.size()
-	var physical_uid: int = (4 << 59) | (704 << 35) | 904
-	GameState.update_creature(physical_uid, {"uid": physical_uid, "type": 1, "monster_id": 704, "x": 10, "y": 10, "direction": 3, "action_type": 2})
+	var physical_uid: int = (4 << 59) | (799 << 35) | 999
+	GameState.update_creature(physical_uid, {"uid": physical_uid, "type": 1, "monster_id": 799, "x": 10, "y": 10, "direction": 3, "action_type": 2})
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(physical_uid, GameState.player_map_uid, {
 		"type": 7, "speed": 100, "direction": 3, "x": 10, "y": 10,
 		"aimUID": GameState.player_uid, "magicID": physical_id,
@@ -153,7 +157,7 @@ func _test_monster_attack_magic_queue(main: Control, resources: RefCounted, phys
 		return false
 	GameState.magic_effects.clear()
 	for uid in GameState.creatures.keys():
-		if ((int(uid) >> 35) & 0xFFFFFF) in [700, 701, 702, 704]:
+		if ((int(uid) >> 35) & 0xFFFFFF) in range(700, 708) or ((int(uid) >> 35) & 0xFFFFFF) == 799:
 			GameState.remove_creature(uid)
 	return true
 

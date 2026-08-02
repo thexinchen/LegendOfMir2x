@@ -537,9 +537,21 @@ func _monster_attack_magic_kind(magic_id: int) -> String:
 	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
 	if magic_name == "掷斧骷髅_掷斧":
 		return "follow_projectile"
-	if magic_name in ["神兽_喷火", "楔蛾_喷毒"]:
+	if magic_name in [
+		"神兽_喷火", "楔蛾_喷毒", "洞蛆_喷毒", "粪虫_喷毒",
+		"雷电僵尸_雷电", "火焰沃玛_喷火", "沃玛教主_电光",
+	]:
 		return "caster_fixed"
 	return ""
+
+
+func _monster_attack_trigger_frame(magic_id: int) -> int:
+	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+	if magic_name == "沃玛教主_电光":
+		return 1
+	if magic_name in ["粪虫_喷毒", "雷电僵尸_雷电", "火焰沃玛_喷火"]:
+		return 3
+	return 5
 
 
 func _resolve_monster_attack_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
@@ -547,7 +559,7 @@ func _resolve_monster_attack_magic(effect: Dictionary, magic_id: int, kind: Stri
 		return _resolve_projectile_action_magic(effect, magic_id, "monster_axe", elapsed)
 	var resolved := {"special_kind": "monster_attack", "components": [], "underlays": [], "on_ground": false}
 	var speed := clampi(effect.get("speed", 100), 20, 500)
-	var trigger_delay := roundi(5.0 * 100.0 * 100.0 / speed)
+	var trigger_delay := roundi(float(_monster_attack_trigger_frame(magic_id)) * 100.0 * 100.0 / speed)
 	if elapsed < trigger_delay:
 		return resolved
 	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
