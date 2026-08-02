@@ -32,6 +32,18 @@ func _ready() -> void:
 	if "账号流程测试" not in select.get_node("InfoPanel/CharacterInfo").text or not select.get_node("InfoPanel").visible or not select.get_node("CharacterSprite").visible:
 		_fail("queried character preview was not applied")
 		return
+	var info_panel := select.get_node("InfoPanel") as Control
+	var character_info := select.get_node("InfoPanel/CharacterInfo") as RichTextLabel
+	var info_font := character_info.get_theme_font("normal_font")
+	var info_font_size := character_info.get_theme_font_size("normal_font_size")
+	var expected_info_width := info_font.get_string_size("角色：账号流程测试", HORIZONTAL_ALIGNMENT_LEFT, -1, info_font_size).x + 30.0
+	if info_panel.position != Vector2(105, 200) or info_panel.size.y != 75.0 or not is_equal_approx(info_panel.size.x, expected_info_width) or character_info.position != Vector2(15, 15):
+		_fail("dynamic character-info board geometry mismatch: pos=%s size=%s text_pos=%s expected_width=%s" % [info_panel.position, info_panel.size, character_info.position, expected_info_width])
+		return
+	var expected_line_separation := maxi(0, roundi(15.0 - info_font.get_height(info_font_size)))
+	if "[color=#ede2c8]角色：账号流程测试[/color]" not in character_info.text or "[color=#afc4af]等级：1[/color]" not in character_info.text or "[color=#e7e7bd]职业：战士[/color]" not in character_info.text or character_info.get_theme_constant("line_separation") != expected_line_separation:
+		_fail("character-info line colors/spacing mismatch: %s" % character_info.text)
+		return
 	select.set_process(false)
 	select.set("_animation_time_ms", 400.0)
 	select.set("_character_motion", 0)
@@ -58,6 +70,8 @@ func _ready() -> void:
 		_fail("deterministic selection motion transition 1 -> 2 was not preserved")
 		return
 	if OS.has_environment("MIR2X_SELECT_CHARACTER_SCREENSHOT"):
+		select.call("_on_server_message", NetworkClient.SM_QUERYCHAROK, _character_payload("亚当", 1, 2, 10000))
+		select.set("_character_motion", 0)
 		select.set("_animation_time_ms", 400.0)
 		select.call("_update_character_preview")
 		await RenderingServer.frame_post_draw

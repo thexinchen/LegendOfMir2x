@@ -8,9 +8,10 @@ const AutoLogin = preload("res://scripts/account/auto_login.gd")
 const JOB_WARRIOR := 1
 const JOB_TAOIST := 2
 const JOB_WIZARD := 4
+const INFO_LINE_HEIGHT := 15.0
 
 @onready var character_sprite: Control = %CharacterSprite
-@onready var character_info: Label = %CharacterInfo
+@onready var character_info: RichTextLabel = %CharacterInfo
 @onready var notice: Control = %Notice
 @onready var delete_dialog: Control = %DeleteCharacterDialog
 
@@ -178,14 +179,21 @@ func _update_character_preview() -> void:
 	$InfoPanel.show()
 	var jobs := {JOB_WARRIOR: "战士", JOB_WIZARD: "法师", JOB_TAOIST: "道士"}
 	character_info.text = "角色：%s\n等级：%d\n职业：%s" % [
-		character_name,
-		_level_from_exp(character_exp),
-		jobs.get(first_job, "未知"),
-	]
+		character_name, _level_from_exp(character_exp), jobs.get(first_job, "未知")]
+	var lines := character_info.text.split("\n")
+	var font := character_info.get_theme_font("normal_font")
+	var font_size := character_info.get_theme_font_size("normal_font_size")
+	character_info.add_theme_constant_override("line_separation", maxi(0, roundi(INFO_LINE_HEIGHT - font.get_height(font_size))))
+	var text_width := 0.0
+	for line in lines:
+		text_width = maxf(text_width, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	var board_height := INFO_LINE_HEIGHT * 3.0
+	$InfoPanel.position = Vector2(105.0, 260.0 - board_height - 15.0)
+	$InfoPanel.size = Vector2(text_width + 30.0, board_height + 30.0)
+	character_info.position = Vector2(15.0, 15.0)
+	character_info.size = Vector2(text_width, board_height)
+	character_info.text = "[color=#ede2c8]%s[/color]\n[color=#afc4af]%s[/color]\n[color=#e7e7bd]%s[/color]" % [lines[0], lines[1], lines[2]]
 	character_info.show()
-	# C++ uses per-line colors: name (237,226,200), level (175,196,175), profession (231,231,189)
-	# Godot Label uses single color, so we use the name color as the closest match
-	# The C++ also shows buttons only when has_character
 	_update_button_visibility()
 
 

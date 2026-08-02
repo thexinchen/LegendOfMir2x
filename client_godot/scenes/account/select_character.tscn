@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/account/select_character.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000000.png" id="2_background"]
@@ -13,6 +13,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000041.png" id="11_exit_pressed"]
 [ext_resource type="PackedScene" path="res://scenes/account/delete_character_dialog.tscn" id="12_delete_dialog"]
 [ext_resource type="Script" path="res://scripts/account/account_notice.gd" id="13_notice"]
+[ext_resource type="FontFile" path="res://assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf" id="14_info_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_info"]
 bg_color = Color(0, 0, 0, 0.5)
@@ -57,7 +58,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("3_character")
 
-[node name="InfoPanel" type="PanelContainer" parent="."]
+[node name="InfoPanel" type="Panel" parent="."]
 layout_mode = 0
 offset_left = 105.0
 offset_top = 190.0
@@ -65,14 +66,21 @@ offset_right = 285.0
 offset_bottom = 275.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_info")
 
-[node name="CharacterInfo" type="Label" parent="InfoPanel"]
+[node name="CharacterInfo" type="RichTextLabel" parent="InfoPanel"]
 unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.929412, 0.886275, 0.784314, 1)
-theme_override_constants/line_spacing = 3
-theme_override_font_sizes/font_size = 15
-text = "角色：预览角色\n等级：1\n职业：战士"
-vertical_alignment = 1
+layout_mode = 0
+offset_left = 15.0
+offset_top = 15.0
+offset_right = 165.0
+offset_bottom = 70.0
+mouse_filter = 2
+theme_override_constants/line_separation = 0
+theme_override_font_sizes/normal_font_size = 12
+theme_override_fonts/normal_font = ExtResource("14_info_font")
+bbcode_enabled = true
+text = "[color=#ede2c8]角色：预览角色[/color]\n[color=#afc4af]等级：1[/color]\n[color=#e7e7bd]职业：战士[/color]"
+fit_content = false
+scroll_active = false
 
 [node name="StartButton" type="TextureButton" parent="."]
 layout_mode = 0
