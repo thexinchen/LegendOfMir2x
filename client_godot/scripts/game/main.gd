@@ -1054,6 +1054,13 @@ func _handle_action(payload: PackedByteArray) -> void:
 		# ActionMove has no direction field in C++; its ActionNode bytes are zero.
 		# Hero/ClientMonster derive the facing from the movement endpoints.
 		direction = _direction_to(x, y, action.get("aimX", x), action.get("aimY", y))
+	elif action_type == 14:
+		# ActionMine.x/y is the mine target rather than the actor position, and
+		# its C++ ActionNode conversion always clears direction. Hero derives the
+		# swing facing from its current motion endpoint to the target grid.
+		var mine_from_x: int = game_state.player_x if uid == game_state.player_uid else creature.get("x", x)
+		var mine_from_y: int = game_state.player_y if uid == game_state.player_uid else creature.get("y", y)
+		direction = _direction_to(mine_from_x, mine_from_y, x, y)
 	if action_type == 6:
 		var space_magic_id: int = _resources.magic_id("瞬息移动")
 		if space_magic_id > 0:
@@ -1076,10 +1083,14 @@ func _handle_action(payload: PackedByteArray) -> void:
 	
 	if uid == game_state.player_uid:
 		# Update player position and direction
-		game_state.player_action_from_x = x
-		game_state.player_action_from_y = y
-		game_state.player_x = action.get("aimX", x) if _action_uses_aim_position(action_type) else x
-		game_state.player_y = action.get("aimY", y) if _action_uses_aim_position(action_type) else y
+		if action_type == 14:
+			game_state.player_action_from_x = game_state.player_x
+			game_state.player_action_from_y = game_state.player_y
+		else:
+			game_state.player_action_from_x = x
+			game_state.player_action_from_y = y
+			game_state.player_x = action.get("aimX", x) if _action_uses_aim_position(action_type) else x
+			game_state.player_y = action.get("aimY", y) if _action_uses_aim_position(action_type) else y
 		if direction >= 1:
 			game_state.player_direction = direction
 		_set_player_action(action_type, action.get("speed", 100), action.get("magicID", 0))
@@ -1123,10 +1134,14 @@ func _handle_action(payload: PackedByteArray) -> void:
 			elif inferred_type == 3:
 				creature["npc_id"] = (uid >> 35) & 0xFFFFFF
 		else:
-			creature["action_from_x"] = x
-			creature["action_from_y"] = y
-			creature["x"] = action.get("aimX", x) if _action_uses_aim_position(action_type) else x
-			creature["y"] = action.get("aimY", y) if _action_uses_aim_position(action_type) else y
+			if action_type == 14:
+				creature["action_from_x"] = creature.get("x", x)
+				creature["action_from_y"] = creature.get("y", y)
+			else:
+				creature["action_from_x"] = x
+				creature["action_from_y"] = y
+				creature["x"] = action.get("aimX", x) if _action_uses_aim_position(action_type) else x
+				creature["y"] = action.get("aimY", y) if _action_uses_aim_position(action_type) else y
 			creature["action_type"] = stored_action_type
 			creature["action_started_ms"] = Time.get_ticks_msec()
 			creature["action_speed"] = action.get("speed", 100)

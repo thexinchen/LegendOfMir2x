@@ -2127,6 +2127,19 @@ func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
 	if remote.get("x", 0) != 8 or remote.get("y", 0) != 7:
 		_fail("push move did not retain aim grid as logical position")
 		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
+		"type": 14, "speed": 100, "direction": 0, "x": 20, "y": 22,
+	}))
+	if GameState.player_x != 20 or GameState.player_y != 21 or GameState.player_direction != 5:
+		_fail("server-normalized local ACTION_MINE moved the hero into the mine target or lost its derived facing: pos=%s,%s direction=%s" % [GameState.player_x, GameState.player_y, GameState.player_direction])
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(remote_uid, 202, {
+		"type": 14, "speed": 100, "direction": 0, "x": 8, "y": 8,
+	}))
+	remote = GameState.get_creature(remote_uid)
+	if remote.get("x", 0) != 8 or remote.get("y", 0) != 7 or remote.get("direction", 0) != 5:
+		_fail("server-normalized remote ACTION_MINE moved the hero into the mine target or lost its derived facing: %s" % remote)
+		return false
 	var renderer: Control = main.get_node("WorldRenderer")
 	var pushed: Vector2 = renderer.call("_action_draw_grid", 8, 7, 6, 7, 5, Time.get_ticks_msec() - 1000, 100)
 	if not is_equal_approx(pushed.x, 8.0):
@@ -2135,7 +2148,8 @@ func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
 	if renderer.call("_hero_motion", 14) != PackedInt32Array([10, 6]) or not is_equal_approx(float(main.call("_action_duration", 14, 100, 2)), 0.9):
 		_fail("mine action did not use C++ two-handed swing and attack-mode timing")
 		return false
-	main.call("_process_player_action", 0.02)
+	main.call("_set_player_action", 2)
+	main.set("_player_action_timer", -1.0)
 	GameState.remove_creature(remote_uid)
 	main.call("_cancel_movement")
 	return true
