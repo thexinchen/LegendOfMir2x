@@ -47,12 +47,8 @@ const EXTRA_PANELS := {
 	KEY_G: "res://scenes/game/panels/guild.tscn",
 	KEY_Q: "res://scenes/game/panels/quest.tscn",
 	KEY_T: "res://scenes/game/panels/team.tscn",
-	KEY_L: "res://scenes/game/panels/secured_items.tscn",
-	KEY_P: "res://scenes/game/panels/purchase.tscn",
-	KEY_A: "res://scenes/game/panels/auction.tscn",
 	KEY_F: "res://scenes/game/panels/friend_chat.tscn",
 	KEY_O: "res://scenes/game/panels/runtime_config.tscn",
-	KEY_N: "res://scenes/game/panels/npc_chat.tscn",
 	KEY_M: MINIMAP_PANEL_PATH,
 }
 

@@ -112,6 +112,8 @@ func _ready() -> void:
 		return
 	if not await _test_panel_escape_precedence(main):
 		return
+	if not _test_context_panel_hotkeys(main):
+		return
 	if not _test_strike_grid_rendering(main):
 		return
 	if not _test_camera_centering(main):
@@ -228,6 +230,22 @@ func _test_panel_escape_precedence(main: Control) -> bool:
 		_fail("purchase panel consumed Escape although C++ purchase board ignores it")
 		return false
 	purchase.hide()
+	return true
+
+
+func _test_context_panel_hotkeys(main: Control) -> bool:
+	var forbidden := {
+		KEY_L: "res://scenes/game/panels/secured_items.tscn",
+		KEY_P: "res://scenes/game/panels/purchase.tscn",
+		KEY_A: "res://scenes/game/panels/auction.tscn",
+		KEY_N: "res://scenes/game/panels/npc_chat.tscn",
+	}
+	for keycode: int in forbidden:
+		var panel := main.call("_ensure_extra_panel", forbidden[keycode]) as Control
+		panel.hide()
+		if main.call("_try_panel_hotkey", keycode) or panel.visible:
+			_fail("context-only panel was exposed by unsupported hotkey: key=%d scene=%s" % [keycode, forbidden[keycode]])
+			return false
 	return true
 
 
