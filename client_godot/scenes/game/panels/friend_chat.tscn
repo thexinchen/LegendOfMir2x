@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/friend_chat_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000810.png" id="2"]
@@ -16,6 +16,10 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/friend/00001200.png" id="16_search_icon"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000161.png" id="17_friends_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="18_close_down"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_reference"]
+content_margin_left = 5.0
+bg_color = Color(0.25098, 0.25098, 0.25098, 0.705882)
 
 [node name="FriendChatPanel" type="Control"]
 custom_minimum_size = Vector2(451, 464)
@@ -164,19 +168,44 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="Reference" type="Label" parent="Page/ChatPage"]
-visible = false
-layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-theme_override_font_sizes/font_size = 11
-
-[node name="Composer" type="HBoxContainer" parent="Page/ChatPage"]
+[node name="Composer" type="VBoxContainer" parent="Page/ChatPage"]
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="ReferenceBar" type="Panel" parent="Page/ChatPage/Composer"]
+visible = false
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_reference")
+
+[node name="Row" type="HBoxContainer" parent="Page/ChatPage/Composer/ReferenceBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Preview" type="Label" parent="Page/ChatPage/Composer/ReferenceBar/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.784314, 0.784314, 0.784314, 1)
+theme_override_font_sizes/font_size = 10
+text_overrun_behavior = 3
+
+[node name="Clear" type="Button" parent="Page/ChatPage/Composer/ReferenceBar/Row"]
+custom_minimum_size = Vector2(22, 20)
+layout_mode = 2
+focus_mode = 0
+theme_override_font_sizes/font_size = 12
+text = "×"
+flat = true
 
 [node name="Input" type="TextEdit" parent="Page/ChatPage/Composer"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_font_sizes/font_size = 13
 wrap_mode = 1
 

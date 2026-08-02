@@ -43,6 +43,7 @@ func _ready() -> void:
 	$Page/SearchPage/Query.text_changed.connect(_search)
 	$Page/SearchPage/Query.text_submitted.connect(_show_search_candidates)
 	$Page/SearchPage/Clear.pressed.connect(_clear_search)
+	$Page/ChatPage/Composer/ReferenceBar/Row/Clear.pressed.connect(_clear_reference)
 	$Page/ChatPage/Composer/Input.gui_input.connect(_chat_input)
 	$SliderHit.gui_input.connect(_on_slider_input)
 	_hide_stock_scrollbars()
@@ -424,9 +425,7 @@ func _add_message_bubble(parent: Node, peer: Dictionary, sender_name: String, te
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
 			var seq: Variant = message.get("seq")
 			if seq != null:
-				_refer_id = int(seq.get("id", 0))
-				$Page/ChatPage/Reference.text = "引用：%s：%s" % [sender_name, text.left(80)]
-				$Page/ChatPage/Reference.show()
+				_show_reference(int(seq.get("id", 0)), "%s：%s" % [sender_name, text.left(150)])
 	)
 	if mine:
 		row.add_child(spacer)
@@ -508,6 +507,18 @@ func _chat_input(event: InputEvent) -> void:
 		_send()
 
 
+func _show_reference(message_id: int, preview: String) -> void:
+	_refer_id = message_id
+	$Page/ChatPage/Composer/ReferenceBar/Row/Preview.text = preview
+	$Page/ChatPage/Composer/ReferenceBar.show()
+
+
+func _clear_reference() -> void:
+	_refer_id = null
+	$Page/ChatPage/Composer/ReferenceBar/Row/Preview.text = ""
+	$Page/ChatPage/Composer/ReferenceBar.hide()
+
+
 func _send() -> void:
 	var input: TextEdit = $Page/ChatPage/Composer/Input
 	var text := input.text.strip_edges()
@@ -537,8 +548,7 @@ func _send() -> void:
 	)
 	if error == OK:
 		input.clear()
-		_refer_id = null
-		$Page/ChatPage/Reference.hide()
+		_clear_reference()
 	else:
 		_pending_messages.erase(pending_id)
 		_fill_messages()

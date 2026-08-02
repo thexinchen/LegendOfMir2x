@@ -23,10 +23,12 @@ func _ready() -> void:
 	if panel.get_node("ContentFrame").position != Vector2.ZERO or panel.get_node("ContentFrame").size != panel.size:
 		_fail("full-board foreground frame mismatch")
 		return
-	var composer := panel.get_node("Page/ChatPage/Composer") as HBoxContainer
+	var composer := panel.get_node("Page/ChatPage/Composer") as Control
 	var chat_input := panel.get_node("Page/ChatPage/Composer/Input") as TextEdit
-	if composer.custom_minimum_size.y != 74.0 or chat_input.placeholder_text != "" or panel.get_node_or_null("Page/ChatPage/Composer/Send") != null:
-		_fail("chat composer does not match the original full-width 74px multiline input")
+	var reference_bar := panel.get_node_or_null("Page/ChatPage/Composer/ReferenceBar") as Panel
+	var reference_clear := panel.get_node_or_null("Page/ChatPage/Composer/ReferenceBar/Row/Clear") as Button
+	if composer.custom_minimum_size.y != 74.0 or chat_input.placeholder_text != "" or panel.get_node_or_null("Page/ChatPage/Composer/Send") != null or reference_bar == null or reference_clear == null:
+		_fail("chat composer does not match the original fixed 74px input and clearable reference bar")
 		return
 	if OS.has_environment("MIR2X_FRIEND_LIST_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
@@ -131,6 +133,16 @@ func _ready() -> void:
 	panel.call("_open_chat", friend.cpid)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	panel.call("_show_reference", 1001, "清风：晚上一起去矿洞吗？")
+	await get_tree().process_frame
+	var active_reference_bar := panel.get_node("Page/ChatPage/Composer/ReferenceBar") as Panel
+	if not active_reference_bar.visible or active_reference_bar.size.y != 20.0 or panel.get_node("Page/ChatPage/Composer").size.y != 74.0 or panel.get("_refer_id") != 1001:
+		_fail("reference bar did not preserve the original fixed composer geometry: visible=%s bar=%s composer=%s refer=%s" % [active_reference_bar.visible, active_reference_bar.size, panel.get_node("Page/ChatPage/Composer").size, panel.get("_refer_id")])
+		return
+	panel.get_node("Page/ChatPage/Composer/ReferenceBar/Row/Clear").emit_signal("pressed")
+	if active_reference_bar.visible or panel.get("_refer_id") != null:
+		_fail("reference clear control did not reset the pending reference")
+		return
 	panel.set("_pending_messages", {1: {"to": friend.cpid, "text": "发送中的消息", "refer": null}})
 	panel.call("_refresh")
 	await get_tree().process_frame
@@ -180,6 +192,8 @@ func _ready() -> void:
 	main.hide()
 	await get_tree().process_frame
 	if OS.has_environment("MIR2X_FRIEND_CHAT_SCREENSHOT"):
+		panel.call("_show_reference", 1001, "清风：晚上一起去矿洞吗？")
+		await get_tree().process_frame
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FRIEND_CHAT_SCREENSHOT"))
 	print("FRIEND CHAT VISUAL PASS: frames, rows, pending, preview, resize and HUD blink")
 	get_tree().quit()
