@@ -126,6 +126,15 @@ func _ready() -> void:
 	if not main_purchase.visible or main_purchase.position != Vector2.ZERO:
 		_fail("purchase open choreography mismatch")
 		return
+	var inventory_panel := main.get_node("InventoryPanel") as Control
+	var inventory_visible := inventory_panel.visible
+	var inventory_hotkey := InputEventKey.new()
+	inventory_hotkey.keycode = KEY_B
+	inventory_hotkey.pressed = true
+	main.call("_unhandled_input", inventory_hotkey)
+	if inventory_panel.visible != inventory_visible:
+		_fail("visible purchase panel leaked the inventory hotkey to the world UI")
+		return
 	var npc_panel := main.call("_ensure_extra_panel", "res://scenes/game/panels/npc_chat.tscn") as Control
 	npc_panel.show()
 	main.call("_show_purchase", {"npcUID": 92, "itemList": [packable_id]})

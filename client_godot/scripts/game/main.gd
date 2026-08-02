@@ -177,6 +177,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if map_loading_overlay.visible:
 		get_viewport().set_input_as_handled()
 		return
+	var purchase_panel := _extra_panel_nodes.get(PURCHASE_PANEL_PATH) as Control
+	if purchase_panel != null and purchase_panel.visible:
+		get_viewport().set_input_as_handled()
+		return
 	if not event.is_pressed() or event.is_echo():
 		return
 	if _player_dead():
