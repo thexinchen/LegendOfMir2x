@@ -17,9 +17,14 @@ func _ready() -> void:
 		_fail("selection BGM mismatch: %08X %s" % [AudioService.current_bgm_id, AudioService.current_bgm_path])
 		return
 
-	select.call("_on_server_message", NetworkClient.SM_QUERYCHARERROR, PackedByteArray([1]))
+	select.call("_on_server_message", NetworkClient.SM_QUERYCHARERROR, PackedByteArray([2]))
 	if not select.get("_query_complete") or select.get("has_character") or select.get_node("InfoPanel").visible or select.get_node("StartButton").visible or not select.get_node("CreateButton").visible or select.get_node("DeleteButton").visible:
 		_fail("confirmed empty account did not expose only character creation")
+		return
+	select.call("_on_server_message", NetworkClient.SM_ONLINEERROR, PackedByteArray([3]))
+	var no_character_entries: Array = select.get_node("Notice").get("_entries")
+	if no_character_entries.size() != 1 or String(no_character_entries[0].text) != "先创建角色以运行游戏":
+		_fail("no-character online error text diverged from C++: %s" % [no_character_entries])
 		return
 	if OS.has_environment("MIR2X_ACCOUNT_FLOW_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
@@ -110,6 +115,11 @@ func _ready() -> void:
 		return
 	if female_preview.get("_frame_id") != 128 or female_preview.get("_anchor") != Vector2(495, 260) or female_preview.get("_tint") != Color(0.5, 0.5, 0.5, 1.0):
 		_fail("inactive warrior-female creation preview diverged from C++")
+		return
+	create.set("_animation_time_ms", 600.0)
+	create.call("_on_wizard_pressed")
+	if create.get("selected_job") != 4 or create.get("_animation_time_ms") != 600.0:
+		_fail("job selection restarted character animation instead of preserving the C++ absolute frame")
 		return
 	create.set("selected_job", 4)
 	create.set("selected_male", false)

@@ -129,7 +129,7 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			var messages := {2: "没有角色可以删除", 3: "密码错误", 4: "删除角色失败，请稍后重试"}
 			_show_notice(messages.get(payload[0] if not payload.is_empty() else 0, "删除角色失败"))
 		NetworkClient.SM_ONLINEERROR:
-			var messages := {2: "请勿频繁登录", 3: "先创建角色再进入游戏"}
+			var messages := {2: "请勿频繁登录", 3: "先创建角色以运行游戏"}
 			_show_notice(messages.get(payload[0] if not payload.is_empty() else 0, "进入游戏失败"))
 		NetworkClient.SM_ONLINEOK:
 			# Parse SMOnlineOK and store in GameState before switching scene

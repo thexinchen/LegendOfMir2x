@@ -54,19 +54,16 @@ func _on_female_pressed() -> void:
 
 func _on_warrior_pressed() -> void:
 	selected_job = JOB_WARRIOR
-	_restart_animation()
 	_update_characters()
 
 
 func _on_wizard_pressed() -> void:
 	selected_job = JOB_WIZARD
-	_restart_animation()
 	_update_characters()
 
 
 func _on_taoist_pressed() -> void:
 	selected_job = JOB_TAOIST
-	_restart_animation()
 	_update_characters()
 
 
