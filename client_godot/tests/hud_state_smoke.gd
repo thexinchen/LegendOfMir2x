@@ -3,6 +3,7 @@ extends Node
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const CombatCalculatorScript = preload("res://scripts/game/combat_calculator.gd")
 const WorldRendererScript = preload("res://scripts/game/world_renderer.gd")
+const WorldResourceScript = preload("res://scripts/game/world_resource.gd")
 
 
 func _ready() -> void:
@@ -284,6 +285,39 @@ func _ready() -> void:
 	panel.call("_on_command_submitted", "@luaE")
 	if GameState.chat_log.size() != 3 or GameState.chat_log[0].text != "用法：@addHP 数量" or GameState.chat_log[1].text != "无效的物品名：不存在的物品" or GameState.chat_log[2].text != ">> Lua 编辑器尚未实现":
 		_fail("user-command validation or unique prefix routing mismatch: %s" % GameState.chat_log)
+		return
+	if not NetworkClient.has_method("send_query_map_base_uid") or not panel.has_method("_parse_move_to_arguments"):
+		_fail("moveTo does not expose the original map UID query and argument forms")
+		return
+	GameState.player_map_id = 24
+	GameState.player_map_uid = 24 << 35
+	var move_cases := [
+		[["moveTo"], {"map_id": 24, "random": true}],
+		[["moveTo", "25"], {"map_id": 25, "random": true}],
+		[["moveTo", "10", "11"], {"map_id": 24, "random": false, "x": 10, "y": 11}],
+		[["moveTo", "25", "12", "13"], {"map_id": 25, "random": false, "x": 12, "y": 13}],
+	]
+	for move_case: Array in move_cases:
+		var parsed: Dictionary = panel.call("_parse_move_to_arguments", move_case[0])
+		for key: String in move_case[1]:
+			if parsed.get(key) != move_case[1][key]:
+				_fail("moveTo argument parity mismatch: tokens=%s parsed=%s" % [move_case[0], parsed])
+				return
+	if NetworkClient.send_query_map_base_uid(24, Callable()) != ERR_UNCONFIGURED:
+		_fail("offline map UID query unexpectedly connected or used the wrong request path")
+		return
+	var move_world := WorldResourceScript.new()
+	if not move_world.load_map(24):
+		_fail("moveTo regression could not load its map fixture")
+		return
+	var move_location: Vector2i = panel.call("_random_walkable_location", move_world)
+	if move_location.x < 0 or not move_world.can_walk(move_location.x, move_location.y):
+		_fail("moveTo random location was not a valid original ground cell: %s" % move_location)
+		return
+	GameState.chat_log.clear()
+	panel.call("_on_command_submitted", "@moveTo %d %d" % [move_location.x, move_location.y])
+	if GameState.chat_log.size() != 1 or not str(GameState.chat_log[0].text).ends_with("failed"):
+		_fail("current-map moveTo still used local walking instead of a space-move request: %s" % GameState.chat_log)
 		return
 	print("HUD STATE PASS: self/focus face, HP, compact buffs, target depth, experience, load, controls and original user commands")
 	get_tree().quit()

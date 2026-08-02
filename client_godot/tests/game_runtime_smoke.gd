@@ -6,6 +6,8 @@ const CombatCalculatorScript = preload("res://scripts/game/combat_calculator.gd"
 
 var _main: Control
 var _online := false
+var _map_uid_query_done := false
+var _queried_map_uid := 0
 
 
 func _ready() -> void:
@@ -54,6 +56,15 @@ func _verify() -> void:
 		return
 	if GameState.player_gold != 8500:
 		_fail("initial gold did not match original client query: %d" % GameState.player_gold, 13)
+		return
+	if NetworkClient.send_query_map_base_uid(GameState.player_map_id, _on_map_uid_response) != OK:
+		_fail("failed to query the current map base UID", 14)
+		return
+	var map_uid_deadline := Time.get_ticks_msec() + 2000
+	while Time.get_ticks_msec() < map_uid_deadline and not _map_uid_query_done:
+		await get_tree().process_frame
+	if not _map_uid_query_done or _queried_map_uid != GameState.player_map_uid:
+		_fail("map base UID response mismatch: queried=%d current=%d" % [_queried_map_uid, GameState.player_map_uid], 15)
 		return
 	var resources: RefCounted = ActorResourceScript.new()
 	resources.configure_default()
@@ -126,6 +137,12 @@ func _verify() -> void:
 	print("GAME RUNTIME PASS: name=%s hp=%d/%d inventory=%d creatures=%d" % [GameState.player_name, GameState.player_hp, GameState.player_hp_max, GameState.inventory.size(), GameState.creatures.size()])
 	NetworkClient.disconnect_from_server()
 	get_tree().quit()
+
+
+func _on_map_uid_response(head_code: int, payload: PackedByteArray) -> void:
+	_map_uid_query_done = true
+	if head_code == NetworkClient.SM_UID and payload.size() >= 8:
+		_queried_map_uid = payload.decode_u64(0)
 
 
 func _has_latency_log() -> bool:

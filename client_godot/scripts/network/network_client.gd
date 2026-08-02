@@ -21,6 +21,7 @@ const CM_REQUESTADDEXP := 13
 const CM_REQUESTDIE := 14
 const CM_REQUESTKILLPETS := 15
 const CM_PICKUP := 19
+const CM_QUERYMAPBASEUID := 20
 const CM_QUERYGOLD := 21
 const CM_QUERYUIDBUFF := 22
 const CM_QUERYPLAYERNAME := 23
@@ -308,6 +309,13 @@ func send_request_kill_pets() -> Error:
 
 func send_query_gold() -> Error:
 	return _send_empty_message(CM_QUERYGOLD)
+
+
+func send_query_map_base_uid(map_id: int, callback: Callable) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(4)
+	payload.encode_u32(0, map_id)
+	return _send_request(CM_QUERYMAPBASEUID, payload, false, callback)
 
 
 func send_query_uid_buff(uid: int) -> Error:

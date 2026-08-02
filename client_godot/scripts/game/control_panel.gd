@@ -2,6 +2,7 @@ extends Control
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const CombatCalculatorScript = preload("res://scripts/game/combat_calculator.gd")
+const WorldResourceScript = preload("res://scripts/game/world_resource.gd")
 const AC_TEXTURE := preload("res://assets/ui/game/control_panel/00000046.png")
 const DC_TEXTURE := preload("res://assets/ui/game/control_panel/00000047.png")
 const MA_TEXTURE := preload("res://assets/ui/game/control_panel/00000048.png")
@@ -475,15 +476,74 @@ func _handle_user_command(command_text: String) -> void:
 
 
 func _command_move_to(tokens: Array) -> void:
-	if tokens.size() != 3 or not str(tokens[1]).is_valid_int() or not str(tokens[2]).is_valid_int():
-		game_state.add_chat_log("用法：@moveTo X Y", 3)
+	var request := _parse_move_to_arguments(tokens)
+	if request.is_empty():
+		game_state.add_chat_log("用法：@moveTo [地图ID] [X Y]", 3)
 		return
-	var destination := Vector2i(int(tokens[1]), int(tokens[2]))
-	var main := get_parent()
-	if main == null or not main.has_method("_start_move_to"):
-		game_state.add_chat_log("当前场景无法移动", 3)
+	var world := WorldResourceScript.new()
+	var map_id: int = request.map_id
+	if not world.load_map(map_id):
+		game_state.add_chat_log("Move request failed: No map provided", 3)
 		return
-	main.call("_start_move_to", destination)
+	var destination := Vector2i(request.get("x", -1), request.get("y", -1))
+	if request.random:
+		destination = _random_walkable_location(world)
+	if destination.x < 0 or not world.can_walk(destination.x, destination.y):
+		_log_move_request(world.map_name, destination, false)
+		return
+	if request.query_map_uid:
+		var error := NetworkClient.send_query_map_base_uid(map_id, func(head_code: int, payload: PackedByteArray) -> void:
+			_on_move_map_uid_response(head_code, payload, world.map_name, destination)
+		)
+		if error != OK:
+			_log_move_request(world.map_name, destination, false)
+	else:
+		_send_command_space_move(game_state.player_map_uid, world.map_name, destination)
+
+
+func _parse_move_to_arguments(tokens: Array) -> Dictionary:
+	match tokens.size():
+		1:
+			return {"map_id": game_state.player_map_id, "random": true, "query_map_uid": false}
+		2:
+			if str(tokens[1]).is_valid_int() and int(tokens[1]) > 0:
+				return {"map_id": int(tokens[1]), "random": true, "query_map_uid": true}
+		3:
+			if str(tokens[1]).is_valid_int() and str(tokens[2]).is_valid_int():
+				return {"map_id": game_state.player_map_id, "random": false, "query_map_uid": false, "x": int(tokens[1]), "y": int(tokens[2])}
+		4:
+			if str(tokens[1]).is_valid_int() and int(tokens[1]) > 0 and str(tokens[2]).is_valid_int() and str(tokens[3]).is_valid_int():
+				return {"map_id": int(tokens[1]), "random": false, "query_map_uid": true, "x": int(tokens[2]), "y": int(tokens[3])}
+	return {}
+
+
+func _random_walkable_location(world: RefCounted) -> Vector2i:
+	for _attempt in 4096:
+		var location := Vector2i(randi_range(0, world.width - 1), randi_range(0, world.height - 1))
+		if world.can_walk(location.x, location.y):
+			return location
+	for y in world.height:
+		for x in world.width:
+			if world.can_walk(x, y):
+				return Vector2i(x, y)
+	return Vector2i(-1, -1)
+
+
+func _on_move_map_uid_response(head_code: int, payload: PackedByteArray, map_name: String, destination: Vector2i) -> void:
+	if head_code == NetworkClient.SM_UID and payload.size() >= 8:
+		var map_uid := payload.decode_u64(0)
+		if map_uid != 0:
+			_send_command_space_move(map_uid, map_name, destination)
+			return
+	_log_move_request(map_name, destination, false)
+
+
+func _send_command_space_move(map_uid: int, map_name: String, destination: Vector2i) -> void:
+	_log_move_request(map_name, destination, NetworkClient.send_request_space_move(map_uid, destination.x, destination.y) == OK)
+
+
+func _log_move_request(map_name: String, destination: Vector2i, sent: bool) -> void:
+	game_state.add_chat_log("Move request (mapName = %s, x = %d, y = %d) %s" % [map_name, destination.x, destination.y, "sent" if sent else "failed"], 1 if sent else 3)
 
 
 func _command_make_item(tokens: Array) -> void:
