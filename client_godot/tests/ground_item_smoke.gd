@@ -68,8 +68,8 @@ func _ready() -> void:
 	var name_font := name_layout.get("font") as Font
 	var name_size: Vector2i = name_layout.get("raster_size", Vector2i.ZERO)
 	var name_top_left: Vector2i = name_layout.get("top_left", Vector2i.ZERO)
-	if name_font == null or not name_font.resource_path.ends_with("0A_WenQuanYi_Bitmap_Song_15_px.ttf") or name_layout.get("font_size", 0) != 15:
-		_fail("ground item name did not use original font-11 replacement")
+	if name_font == null or not name_font.resource_path.ends_with("0B_WenQuanYi_Bitmap_Song_15_px.ttf") or name_layout.get("font_size", 0) != 15:
+		_fail("ground item name did not use the packed font-11 resource")
 		return
 	if name_top_left.x != roundi(item_center.x) - name_size.x / 2 or name_top_left.y != roundi(item_center.y) - name_size.y / 2 - 20:
 		_fail("ground item name texture was not centered at the original offset")
