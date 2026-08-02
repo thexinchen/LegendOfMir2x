@@ -42,6 +42,14 @@ func _ready() -> void:
 		{"id": resources.magic_id("潘夜右护卫_雷电术"), "frame": 4, "kind": "thunderbolt"},
 		{"id": thunder_id, "frame": 5, "kind": "thunderbolt"},
 	]
+	var monster_projectile_attacks := [
+		{"id": resources.magic_id("暗黑战士_喷刺"), "frame": 5, "gfx_direction": 0},
+		{"id": resources.magic_id("爆毒蚂蚁_喷毒"), "frame": 2, "gfx_direction": 0},
+		{"id": resources.magic_id("沙漠树魔_喷刺"), "frame": 5, "gfx_direction": 0},
+		{"id": resources.magic_id("诺玛法老_火球术"), "frame": 4, "gfx_direction": 4},
+		{"id": resources.magic_id("潘夜左护卫_火球术"), "frame": 4, "gfx_direction": 4},
+		{"id": resources.magic_id("祖玛弓箭手_射箭"), "frame": 5, "gfx_direction": 4},
+	]
 	var dual_axe_id: int = resources.magic_id("掷斧骷髅_掷斧")
 	var space_move_id: int = resources.magic_id("瞬息移动")
 	var monster_death_magic_id := 0
@@ -67,7 +75,7 @@ func _ready() -> void:
 		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
 		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or fixed_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or target_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or fixed_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or target_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_projectile_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
@@ -461,6 +469,46 @@ func _ready() -> void:
 			return
 	GameState.attached_magic_effects.clear()
 
+	for monster_projectile_entry in monster_projectile_attacks:
+		var monster_projectile_id: int = monster_projectile_entry.id
+		var projectile_trigger_frame: int = monster_projectile_entry.frame
+		var expected_gfx_direction: int = monster_projectile_entry.gfx_direction
+		if not $WorldRenderer.supports_monster_attack_magic(monster_projectile_id):
+			_fail("monster projectile magic was not recognized: %d" % monster_projectile_id)
+			return
+		GameState.attached_magic_effects.clear()
+		var monster_projectile := {
+			"source": "monster_attack", "magicID": monster_projectile_id, "uid": GameState.player_uid,
+			"x": 405, "y": 120, "aimUID": target_uid,
+			"direction": 3, "speed": 100, "start_time": now, "_seff_stage_mask": 0xFFFF,
+		}
+		$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(409 * 48, 120 * 32)}})
+		var projectile_trigger_ms := projectile_trigger_frame * 100
+		var before_monster_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", monster_projectile, now + projectile_trigger_ms - 1)
+		if before_monster_projectile.is_empty() or not before_monster_projectile.get("components", []).is_empty() or monster_projectile.has("_projectile_position"):
+			_fail("monster projectile launched before frame %d: id=%d state=%s" % [projectile_trigger_frame, monster_projectile_id, before_monster_projectile])
+			return
+		var active_monster_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", monster_projectile, now + projectile_trigger_ms)
+		var monster_projectile_components: Array = active_monster_projectile.get("components", [])
+		var monster_projectile_position: Vector2 = monster_projectile.get("_projectile_position", Vector2.ZERO)
+		var monster_projectile_source := Vector2(405 * 48, 120 * 32)
+		if monster_projectile_components.size() != 1 or monster_projectile_components[0].meta != resources.magic_layout(monster_projectile_id, 2) or monster_projectile_components[0].direction != expected_gfx_direction or monster_projectile.get("_projectile_fly_direction", -1) != 4 or monster_projectile_position.distance_to(monster_projectile_source) < 19.0:
+			_fail("monster projectile launch mismatch: id=%d state=%s effect=%s" % [monster_projectile_id, active_monster_projectile, monster_projectile])
+			return
+		var monster_target_offset := Vector2(resources.magic_target_offset(monster_projectile_id, 2, expected_gfx_direction))
+		$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": monster_projectile_position + monster_target_offset + Vector2(1, 1)}})
+		$WorldRenderer.call("_resolve_magic_effect", monster_projectile, now + projectile_trigger_ms + 16)
+		var expects_impact: bool = not resources.magic_layout(monster_projectile_id, 3).is_empty()
+		if expects_impact:
+			var monster_impact: Dictionary = GameState.attached_magic_effects.back() if not GameState.attached_magic_effects.is_empty() else {}
+			if monster_impact.get("magicID", 0) != monster_projectile_id or monster_impact.get("stage", 0) != 3 or monster_impact.get("target_uid", 0) != target_uid or monster_impact.get("play_seff", false):
+				_fail("monster projectile impact mismatch: id=%d effect=%s" % [monster_projectile_id, monster_impact])
+				return
+		elif not GameState.attached_magic_effects.is_empty():
+			_fail("monster projectile without explode stage created impact: id=%d" % monster_projectile_id)
+			return
+	GameState.attached_magic_effects.clear()
+
 	if not $WorldRenderer.supports_monster_attack_magic(dual_axe_id):
 		_fail("dual-axe monster attack magic was not recognized")
 		return
@@ -825,6 +873,48 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_ATTACK_SCREENSHOT"))
+	if OS.has_environment("MIR2X_MONSTER_PROJECTILE_SCREENSHOT"):
+		if not $WorldRenderer.load_map(6):
+			_fail("monster projectile visual map failed to load")
+			return
+		var monster_projectile_source := _find_open_wave_source($WorldRenderer, 8, $WorldRenderer.map_height - 8)
+		if monster_projectile_source.x < 0:
+			_fail("no open monster projectile visual fixture")
+			return
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var monster_projectile_now := Time.get_ticks_msec()
+		var projectile_source_offsets := [
+			Vector2i(-4, -4), Vector2i(0, -4), Vector2i(4, -4),
+			Vector2i(-4, -1), Vector2i(0, -1), Vector2i(4, -1),
+		]
+		GameState.creatures.clear()
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.magic_effects.clear()
+		for projectile_index in range(monster_projectile_attacks.size()):
+			var projectile_entry: Dictionary = monster_projectile_attacks[projectile_index]
+			var projectile_source_grid: Vector2i = monster_projectile_source + projectile_source_offsets[projectile_index]
+			var projectile_target_grid := projectile_source_grid + Vector2i(0, 3)
+			var projectile_target_uid: int = target_uid + 20 + projectile_index
+			GameState.creatures[projectile_target_uid] = {
+				"uid": projectile_target_uid, "x": projectile_target_grid.x, "y": projectile_target_grid.y,
+				"type": 1, "monster_id": 1, "direction": 1, "action_type": 2,
+			}
+			GameState.magic_effects.append({
+				"source": "monster_attack", "magicID": projectile_entry.id, "uid": GameState.player_uid,
+				"x": projectile_source_grid.x, "y": projectile_source_grid.y, "aimUID": projectile_target_uid,
+				"direction": 5, "speed": 100,
+				"start_time": monster_projectile_now - int(projectile_entry.frame) * 100,
+			})
+		GameState.view_x = monster_projectile_source.x * 48 - 400
+		GameState.view_y = (monster_projectile_source.y - 1) * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_PROJECTILE_SCREENSHOT"))
 	if OS.has_environment("MIR2X_SPACE_MOVE_SCREENSHOT"):
 		if not $WorldRenderer.load_map(6):
 			_fail("space-move visual map failed to load")

@@ -537,7 +537,11 @@ func supports_monster_attack_magic(magic_id: int) -> bool:
 func _monster_attack_magic_kind(magic_id: int) -> String:
 	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
 	if magic_name == "掷斧骷髅_掷斧":
-		return "follow_projectile"
+		return "monster_axe"
+	if magic_name in ["暗黑战士_喷刺", "爆毒蚂蚁_喷毒", "沙漠树魔_喷刺"]:
+		return "monster_projectile_network"
+	if magic_name in ["诺玛法老_火球术", "潘夜左护卫_火球术", "祖玛弓箭手_射箭"]:
+		return "monster_projectile_target"
 	if magic_name in [
 		"神兽_喷火", "楔蛾_喷毒", "洞蛆_喷毒", "粪虫_喷毒",
 		"雷电僵尸_雷电", "火焰沃玛_喷火", "沃玛教主_电光",
@@ -567,8 +571,8 @@ func _monster_attack_trigger_frame(magic_id: int) -> int:
 
 
 func _resolve_monster_attack_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
-	if kind == "follow_projectile":
-		return _resolve_projectile_action_magic(effect, magic_id, "monster_axe", elapsed)
+	if kind.begins_with("monster_"):
+		return _resolve_projectile_action_magic(effect, magic_id, kind, elapsed)
 	if kind.begins_with("target_"):
 		return _resolve_monster_target_attachment(effect, magic_id, kind, elapsed)
 	var resolved := {"special_kind": "monster_attack", "components": [], "underlays": [], "on_ground": false}
@@ -611,7 +615,7 @@ func _resolve_monster_target_attachment(effect: Dictionary, magic_id: int, kind:
 
 func _resolve_projectile_action_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
 	var speed := clampi(effect.get("speed", 100), 20, 500)
-	var trigger_delay := roundi(4.0 * 100.0 * 100.0 / speed)
+	var trigger_delay := roundi(float(_projectile_trigger_frame(magic_id, kind)) * 100.0 * 100.0 / speed)
 	var resolved := {"special_kind": "follow_projectile", "components": [], "underlays": [], "on_ground": false}
 	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
 	if not startup_meta.is_empty():
@@ -631,11 +635,12 @@ func _resolve_projectile_action_magic(effect: Dictionary, magic_id: int, kind: S
 		var source_pixel := Vector2(effect.get("x", 0) * GRID_XP, effect.get("y", 0) * GRID_YP)
 		var target_pixel: Variant = _projectile_target_pixel(effect.get("aimUID", 0))
 		var network_direction := clampi(effect.get("direction", 1), 1, 8) - 1
-		var fly_direction: int = network_direction * 2 if kind == "monster_axe" else _projectile_direction16(source_pixel, target_pixel, effect.get("direction", 1))
+		var use_network_direction := kind in ["monster_axe", "monster_projectile_network"]
+		var fly_direction: int = network_direction * 2 if use_network_direction else _projectile_direction16(source_pixel, target_pixel, effect.get("direction", 1))
 		effect["_projectile_start"] = source_pixel
 		effect["_projectile_position"] = source_pixel
 		effect["_projectile_fly_direction"] = fly_direction
-		effect["_projectile_gfx_direction"] = network_direction if kind == "monster_axe" else (0 if kind == "fixed_gfx" else fly_direction)
+		effect["_projectile_gfx_direction"] = network_direction if kind == "monster_axe" else (0 if kind in ["fixed_gfx", "monster_projectile_network"] else fly_direction)
 	var position: Vector2 = effect.get("_projectile_position", Vector2.ZERO)
 	var gfx_direction: int = effect.get("_projectile_gfx_direction", 0)
 	var target_uid: int = effect.get("aimUID", 0)
@@ -661,17 +666,20 @@ func _resolve_projectile_action_magic(effect: Dictionary, magic_id: int, kind: S
 		done = done or (absf(remaining.x) < 24.0 and absf(remaining.y) < 16.0) or remaining.length_squared() > previous_distance2
 	if done:
 		effect["_projectile_done"] = true
-		if live_target != null and not effect.get("_projectile_impact_spawned", false):
+		var explode_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_EXPLODE)
+		if live_target != null and not explode_meta.is_empty() and not effect.get("_projectile_impact_spawned", false):
 			effect["_projectile_impact_spawned"] = true
-			game_state.attached_magic_effects.append({
+			var impact_effect := {
 				"magicID": magic_id,
 				"target_uid": target_uid,
 				"start_time": int(effect.get("start_time", 0)) + elapsed,
 				"cycles": 1,
 				"kind": "projectile_impact",
 				"stage": MAGIC_STAGE_EXPLODE,
-				"play_seff": true,
-			})
+			}
+			if not kind.begins_with("monster_"):
+				impact_effect["play_seff"] = true
+			game_state.attached_magic_effects.append(impact_effect)
 			game_state.state_changed.emit()
 		return resolved if not resolved.components.is_empty() else {}
 	var run_elapsed := elapsed - trigger_delay
@@ -681,6 +689,17 @@ func _resolve_projectile_action_magic(effect: Dictionary, magic_id: int, kind: S
 	_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_RUN, grid_position)
 	resolved.components.append(_resolved_component(run_meta, frame, gfx_direction, grid_position))
 	return resolved
+
+
+func _projectile_trigger_frame(magic_id: int, kind: String) -> int:
+	if not kind.begins_with("monster_"):
+		return 4
+	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+	if magic_name == "爆毒蚂蚁_喷毒":
+		return 2
+	if magic_name in ["掷斧骷髅_掷斧", "诺玛法老_火球术", "潘夜左护卫_火球术"]:
+		return 4
+	return 5
 
 
 func _projectile_target_pixel(uid: int) -> Variant:
