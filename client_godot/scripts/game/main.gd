@@ -212,10 +212,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 			else:
 				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-	elif _try_panel_hotkey(event.keycode):
+	elif _try_magic_key(event):
 		pass
 	else:
-		_try_magic_key(event)
+		_try_panel_hotkey(event.keycode)
 
 
 func _try_panel_hotkey(keycode: int) -> bool:
@@ -336,8 +336,9 @@ func _try_magic_key(event: InputEventKey) -> bool:
 		return false
 	var layout: PackedInt32Array = _resources.skill_layout(magic_id)
 	if layout.size() >= 5 and (layout[4] & 1) != 0:
-		return false
-	return _cast_magic(magic_id, _mouse_grid())
+		return true
+	_cast_magic(magic_id, _mouse_grid())
+	return true
 
 
 func _has_learned_magic(magic_id: int) -> bool:

@@ -49,6 +49,8 @@ func _ready() -> void:
 		return
 	if not _test_magic_actions(main, resources, physical_id):
 		return
+	if not _test_magic_panel_hotkey_precedence(main, resources):
+		return
 	if not _test_async_combat_feedback(main, resources):
 		return
 	if not _test_health_feedback(main, resources):
@@ -474,6 +476,66 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 	main.set("_swing_magic", {})
 	main.call("_cancel_movement")
 	main.get_node("WorldRenderer")._actor_target_rects.clear()
+	return true
+
+
+func _test_magic_panel_hotkey_precedence(main: Control, resources: RefCounted) -> bool:
+	var firewall_id: int = resources.magic_id("火墙")
+	var previous_learned: Array = GameState.learned_magic.duplicate(true)
+	var previous_keys: Dictionary = GameState.magic_keys.duplicate(true)
+	var previous_cast_times: Dictionary = GameState.magic_cast_times.duplicate(true)
+	var inventory := main.get_node("InventoryPanel") as Control
+	inventory.hide()
+	GameState.learned_magic = [{"magicID": firewall_id, "exp": 0}]
+	GameState.magic_keys = {firewall_id: 98}
+	GameState.magic_cast_times.erase(firewall_id)
+	var b_key := InputEventKey.new()
+	b_key.keycode = KEY_B
+	b_key.unicode = 98
+	b_key.pressed = true
+	var effect_count := GameState.magic_effects.size()
+	main.call("_unhandled_input", b_key)
+	if inventory.visible or GameState.magic_effects.size() != effect_count + 1 or GameState.player_action_type != 9:
+		_fail("learned B-bound magic was swallowed by the inventory shortcut")
+		return false
+	effect_count = GameState.magic_effects.size()
+	main.call("_unhandled_input", b_key)
+	if inventory.visible or GameState.magic_effects.size() != effect_count:
+		_fail("cooldown-blocked B-bound magic leaked through to the inventory shortcut")
+		return false
+	GameState.learned_magic = []
+	main.call("_unhandled_input", b_key)
+	if not inventory.visible:
+		_fail("unlearned B binding did not fall back to the Godot inventory shortcut")
+		return false
+	inventory.hide()
+	var horse_path := "res://scenes/game/panels/horse.tscn"
+	var panels: Dictionary = main.get("_extra_panel_nodes")
+	if panels.has(horse_path):
+		(panels[horse_path] as Control).hide()
+	GameState.learned_magic = [{"magicID": firewall_id, "exp": 0}]
+	GameState.magic_keys = {firewall_id: 104}
+	GameState.magic_cast_times.erase(firewall_id)
+	var h_key := InputEventKey.new()
+	h_key.keycode = KEY_H
+	h_key.unicode = 104
+	h_key.pressed = true
+	effect_count = GameState.magic_effects.size()
+	main.call("_unhandled_input", h_key)
+	panels = main.get("_extra_panel_nodes")
+	if GameState.magic_effects.size() != effect_count + 1 or (panels.has(horse_path) and (panels[horse_path] as Control).visible):
+		_fail("learned H-bound magic was swallowed by the horse-panel shortcut")
+		return false
+	GameState.learned_magic = []
+	main.call("_unhandled_input", h_key)
+	panels = main.get("_extra_panel_nodes")
+	if not panels.has(horse_path) or not (panels[horse_path] as Control).visible:
+		_fail("unlearned H binding did not fall back to the Godot horse-panel shortcut")
+		return false
+	(panels[horse_path] as Control).hide()
+	GameState.learned_magic = previous_learned
+	GameState.magic_keys = previous_keys
+	GameState.magic_cast_times = previous_cast_times
 	return true
 
 
