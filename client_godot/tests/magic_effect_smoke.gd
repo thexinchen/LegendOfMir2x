@@ -26,6 +26,7 @@ func _ready() -> void:
 	var tao_dog_fire_id: int = resources.magic_id("神兽_喷火")
 	var wedge_poison_id: int = resources.magic_id("楔蛾_喷毒")
 	var dual_axe_id: int = resources.magic_id("掷斧骷髅_掷斧")
+	var space_move_id: int = resources.magic_id("瞬息移动")
 	var target_attachment_ids := [
 		resources.magic_id("乾坤大挪移"), healing_id, resources.magic_id("圣言术"), resources.magic_id("云寂术"),
 		resources.magic_id("回生术"), resources.magic_id("施毒术"), resources.magic_id("诱惑之光"), resources.magic_id("移花接玉"),
@@ -42,7 +43,7 @@ func _ready() -> void:
 		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
 		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or tao_dog_fire_id == 0 or wedge_poison_id == 0 or dual_axe_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or tao_dog_fire_id == 0 or wedge_poison_id == 0 or dual_axe_id == 0 or space_move_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
@@ -338,6 +339,34 @@ func _ready() -> void:
 	if impact_active.get(target_uid, []).is_empty() or impact_active[target_uid][0].meta != resources.magic_layout(fireball_id, 3):
 		_fail("follow projectile impact did not use explode-stage graphics: %s" % impact_active)
 		return
+
+	GameState.attached_magic_effects.clear()
+	var space_effect := {
+		"source": "space_move", "magicID": space_move_id, "uid": target_uid,
+		"x": 405, "y": 120, "aimX": 409, "aimY": 120,
+		"direction": 3, "speed": 100, "start_time": now, "_seff_stage_mask": 0xFFFF,
+	}
+	var active_space: Dictionary = $WorldRenderer.call("_resolve_magic_effect", space_effect, now + 100)
+	var space_components: Array = active_space.get("components", [])
+	if active_space.get("special_kind", "") != "space_move" or space_components.size() != 1 or space_components[0].meta != resources.magic_layout(space_move_id, 2) or space_components[0].position != Vector2(405, 120) or space_components[0].direction != 0:
+		_fail("space move did not keep its run effect at the old grid: %s" % active_space)
+		return
+	if GameState.attached_magic_effects.size() != 1:
+		_fail("space move did not create one destination attachment: %s" % GameState.attached_magic_effects)
+		return
+	var space_attachment: Dictionary = GameState.attached_magic_effects[0]
+	if space_attachment.get("target_uid", 0) != target_uid or space_attachment.get("stage", 0) != 3 or space_attachment.get("kind", "") != "space_move" or space_attachment.get("start_time", -1) != now:
+		_fail("space move destination attachment metadata mismatch: %s" % space_attachment)
+		return
+	$WorldRenderer.call("_resolve_magic_effect", space_effect, now + 120)
+	if GameState.attached_magic_effects.size() != 1:
+		_fail("space move created a duplicate destination attachment")
+		return
+	var space_attached_active: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now + 120)
+	if space_attached_active.get(target_uid, []).size() != 1 or space_attached_active[target_uid][0].meta != resources.magic_layout(space_move_id, 3) or $WorldRenderer.call("_attached_target_grid", target_uid) != Vector2(409, 120):
+		_fail("space move explode stage was not attached at the destination actor: %s" % space_attached_active)
+		return
+	GameState.attached_magic_effects.clear()
 
 	for fixed_monster_id in [tao_dog_fire_id, wedge_poison_id]:
 		if not $WorldRenderer.supports_monster_attack_magic(fixed_monster_id):
@@ -674,6 +703,43 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_ATTACK_SCREENSHOT"))
+	if OS.has_environment("MIR2X_SPACE_MOVE_SCREENSHOT"):
+		if not $WorldRenderer.load_map(6):
+			_fail("space-move visual map failed to load")
+			return
+		var space_source := _find_open_wave_source($WorldRenderer, 8, $WorldRenderer.map_height - 8)
+		if space_source.x < 0:
+			_fail("no open space-move visual fixture")
+			return
+		var space_target := space_source + Vector2i(5, 0)
+		# The first real draw decodes the room's native textures synchronously.
+		# Keep the deterministic fixture at frame zero while that cache warms up.
+		var space_now := Time.get_ticks_msec() + 5000
+		GameState.creatures[target_uid] = {"uid": target_uid, "x": space_target.x, "y": space_target.y, "type": 1, "monster_id": 1, "direction": 7, "action_type": 2}
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.magic_effects = [{
+			"source": "space_move", "magicID": space_move_id, "uid": target_uid,
+			"x": space_source.x, "y": space_source.y, "aimX": space_target.x, "aimY": space_target.y,
+			"direction": 3, "speed": 100, "start_time": space_now,
+		}]
+		GameState.view_x = (space_source.x + 2) * 48 - 400
+		# Teleport frames rise 140-179px above the actor anchor. Keep the feet low
+		# enough for both the old-grid RUN and destination EXPLODE to stay visible.
+		GameState.view_y = space_source.y * 32 - 470
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_SPACE_MOVE_SCREENSHOT"))
+		if OS.has_environment("MIR2X_SPACE_MOVE_BASELINE_SCREENSHOT"):
+			GameState.magic_effects.clear()
+			GameState.attached_magic_effects.clear()
+			$WorldRenderer.queue_redraw()
+			await get_tree().process_frame
+			await get_tree().process_frame
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_SPACE_MOVE_BASELINE_SCREENSHOT"))
 	if OS.has_environment("MIR2X_ATTACK_MAGIC_SCREENSHOT"):
 		var attack_now := Time.get_ticks_msec()
 		GameState.player_x = 405

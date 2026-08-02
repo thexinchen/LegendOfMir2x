@@ -1001,7 +1001,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 			var space_effect := action.duplicate(true)
 			space_effect["uid"] = uid
 			space_effect["magicID"] = space_magic_id
-			game_state.add_magic_effect(space_effect, "action")
+			game_state.add_magic_effect(space_effect, "space_move")
 	if action_type == 9 and action.get("magicID", 0) > 0:
 		if uid != game_state.player_uid or not _has_pending_local_magic(action.get("magicID", 0)):
 			var effect := action.duplicate(true)

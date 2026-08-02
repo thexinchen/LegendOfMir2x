@@ -460,6 +460,8 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 	var magic_id: int = effect.get("magicID", 0)
 	if magic_id <= 0:
 		return {}
+	if effect.get("source", "") == "space_move":
+		return _resolve_space_move_magic(effect, magic_id, maxi(0, now - int(effect.get("start_time", now))))
 	var monster_attack_kind := _monster_attack_magic_kind(magic_id)
 	if effect.get("source", "") == "monster_attack" and not monster_attack_kind.is_empty():
 		return _resolve_monster_attack_magic(effect, magic_id, monster_attack_kind, maxi(0, now - int(effect.get("start_time", now))))
@@ -497,6 +499,34 @@ func _projectile_action_magic_kind(magic_id: int) -> String:
 	if magic_name in ["火球术", "大火球", "霹雳掌", "风掌", "灵魂火符", "冰月神掌", "幽灵盾", "神圣战甲术", "强魔震法", "猛虎强势", "集体隐身术"]:
 		return "directional"
 	return ""
+
+
+func _resolve_space_move_magic(effect: Dictionary, magic_id: int, elapsed: int) -> Dictionary:
+	if not effect.get("_space_move_attachment_spawned", false):
+		effect["_space_move_attachment_spawned"] = true
+		var target_uid: int = effect.get("uid", 0)
+		if _attached_target_exists(target_uid):
+			game_state.attached_magic_effects.append({
+				"magicID": magic_id,
+				"target_uid": target_uid,
+				"start_time": int(effect.get("start_time", 0)),
+				"cycles": 1,
+				"kind": "space_move",
+				"stage": MAGIC_STAGE_EXPLODE,
+				"play_seff": true,
+			})
+			game_state.state_changed.emit()
+	var run_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	if run_meta.is_empty() or elapsed >= _magic_frame_duration(run_meta):
+		return {}
+	var source := Vector2(effect.get("x", 0), effect.get("y", 0))
+	_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_RUN, source)
+	return {
+		"special_kind": "space_move",
+		"components": [_resolved_component(run_meta, mini(_magic_absolute_frame(run_meta, elapsed), run_meta[2] - 1), 0, source)],
+		"underlays": [],
+		"on_ground": false,
+	}
 
 
 func supports_monster_attack_magic(magic_id: int) -> bool:

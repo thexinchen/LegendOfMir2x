@@ -1687,7 +1687,7 @@ func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
 	if GameState.player_x != 20 or GameState.player_y != 21:
 		_fail("foreign stale-map world action changed current player position")
 		return false
-	if GameState.magic_effects.is_empty() or GameState.magic_effects.back().get("magicID", 0) != resources.magic_id("瞬息移动"):
+	if GameState.magic_effects.is_empty() or GameState.magic_effects.back().get("magicID", 0) != resources.magic_id("瞬息移动") or GameState.magic_effects.back().get("source", "") != "space_move" or GameState.magic_effects.back().get("uid", 0) != 101:
 		_fail("space move did not create original teleport effect")
 		return false
 	var remote_uid: int = (5 << 59) | 606
