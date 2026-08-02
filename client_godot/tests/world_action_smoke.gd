@@ -452,8 +452,16 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 	if not main.call("_cast_magic", shield_id, Vector2i(12, 12)) or GameState.magic_effects.back().get("aimUID", 0) != GameState.player_uid:
 		_fail("self spell did not target player UID")
 		return false
+	GameState.update_creature(404, {"uid": 404, "x": 9, "y": 10, "type": 1, "action_type": 2})
 	GameState.update_creature(505, {"uid": 505, "x": 12, "y": 10, "type": 1, "action_type": 2})
 	main.get_node("WorldRenderer")._actor_target_rects = {505: {"rect": Rect2(-100, -100, 200, 200), "map_y": 10}}
+	main.set("_magic_focus_uid", 404)
+	GameState.magic_cast_times[fireball_id] = Time.get_ticks_msec()
+	var effect_count := GameState.magic_effects.size()
+	if main.call("_cast_magic", fireball_id, Vector2i(12, 10)) or main.get("_magic_focus_uid") != 505 or GameState.magic_effects.size() != effect_count:
+		_fail("cooldown-blocked spell did not refresh magic focus without casting")
+		return false
+	GameState.magic_cast_times.erase(fireball_id)
 	if not main.call("_cast_magic", fireball_id, Vector2i(12, 10)) or GameState.magic_effects.back().get("aimUID", 0) != 505:
 		_fail("target spell did not retain focused creature UID")
 		return false

@@ -362,6 +362,9 @@ func _update_magic_focus(_mouse_grid: Vector2i) -> int:
 
 
 func _cast_magic(magic_id: int, mouse_grid: Vector2i) -> bool:
+	# C++ refreshes FOCUS_MAGIC before the cooldown check so the next cast keeps
+	# the target selected by a cooldown-blocked key press.
+	var focus_uid := _update_magic_focus(mouse_grid)
 	if not _magic_ready(magic_id):
 		game_state.add_chat_log("%s尚未冷却" % _resources.magic_names.get(magic_id, "技能"), 2)
 		return false
@@ -370,7 +373,6 @@ func _cast_magic(magic_id: int, mouse_grid: Vector2i) -> bool:
 		_swing_magic[magic_id] = not bool(_swing_magic.get(magic_id, false))
 		game_state.add_chat_log("%s%s" % ["开启" if _swing_magic[magic_id] else "关闭", magic_name], 0)
 		return true
-	var focus_uid := _update_magic_focus(mouse_grid)
 	if magic_name == "空拳刀法":
 		return _send_spell_action(12, magic_id, mouse_grid, focus_uid)
 	if magic_name in SELF_MAGIC_NAMES:
