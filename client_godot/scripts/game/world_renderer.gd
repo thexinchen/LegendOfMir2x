@@ -13,6 +13,7 @@ const OBJMAXH := 25
 const WorldResourceScript = preload("res://scripts/game/world_resource.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const GROUND_ITEM_NAME_FONT: Font = preload("res://assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf")
+const TEAM_LEADER_FONT: Font = preload("res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf")
 const ANIMATION_DELAYS := [150, 200, 250, 300, 350, 400, 420, 450]
 const MAGIC_STAGE_SPELL := 1
 const MAGIC_STAGE_RUN := 2
@@ -1436,9 +1437,31 @@ func _draw_player(view_x: int, view_y: int) -> void:
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
 	_draw_hero_attached_magic(game_state.player_uid, px, py, game_state.player_direction, true)
+	_draw_team_leader_marker(game_state.player_uid, px, py)
 	_draw_player_say(game_state.player_uid, px, py)
 	
 	# The C++ client only enables actor HP/name overlays through debug/runtime flags.
+
+
+func _draw_team_leader_marker(uid: int, start_x: int, start_y: int) -> void:
+	var marker := _team_leader_marker(uid, start_x, start_y)
+	if marker.is_empty():
+		return
+	marker.font.draw_string(get_canvas_item(), marker.baseline, marker.text, HORIZONTAL_ALIGNMENT_LEFT, -1, marker.font_size, marker.color)
+
+
+func _team_leader_marker(uid: int, start_x: int, start_y: int) -> Dictionary:
+	if uid != game_state.player_uid or game_state.team_leader != uid:
+		return {}
+	if not game_state.team_members.any(func(member: Dictionary): return member.get("uid", 0) == uid):
+		return {}
+	return {
+		"text": "我是队长",
+		"font": TEAM_LEADER_FONT,
+		"font_size": 15,
+		"color": Color.YELLOW,
+		"baseline": Vector2(start_x, start_y + TEAM_LEADER_FONT.get_ascent(15)),
+	}
 
 
 func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) -> void:

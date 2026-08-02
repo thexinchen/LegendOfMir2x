@@ -58,6 +58,18 @@ func _ready() -> void:
 		return
 	var renderer: Control = WorldRendererScript.new()
 	renderer.game_state = GameState
+	GameState.team_leader = GameState.player_uid
+	GameState.team_members = [{"uid": GameState.player_uid}]
+	if not renderer.has_method("_team_leader_marker"):
+		_fail("local team-leader marker is missing")
+		return
+	var leader_marker: Dictionary = renderer.call("_team_leader_marker", GameState.player_uid, 100, 200)
+	if leader_marker.get("text", "") != "我是队长" or leader_marker.get("font_size", 0) != 15 or leader_marker.get("color", Color()) != Color.YELLOW or leader_marker.get("baseline", Vector2.ZERO) != Vector2(100, 200 + leader_marker.font.get_ascent(15)):
+		_fail("local team-leader marker did not match original font-11/15px yellow grid anchor: %s" % leader_marker)
+		return
+	if not (renderer.call("_team_leader_marker", GameState.player_uid + 1, 100, 200) as Dictionary).is_empty():
+		_fail("remote hero incorrectly received the MyHero-only leader marker")
+		return
 	renderer._actor_target_rects = {
 		GameState.player_uid: {"rect": Rect2(10, 10, 40, 40), "map_y": 99},
 		101: {"rect": Rect2(10, 10, 40, 40), "map_y": 100},

@@ -4,9 +4,12 @@ const WorldRendererScript = preload("res://scripts/game/world_renderer.gd")
 
 
 func _ready() -> void:
+	var team_leader_fixture := OS.has_environment("MIR2X_TEAM_LEADER_SCREENSHOT")
 	GameState.player_uid = 999
-	GameState.player_x = 0
-	GameState.player_y = -1
+	GameState.player_x = 370 if team_leader_fixture else 0
+	GameState.player_y = 132 if team_leader_fixture else -1
+	GameState.team_leader = GameState.player_uid if team_leader_fixture else 0
+	GameState.team_members = [{"uid": GameState.player_uid}] if team_leader_fixture else []
 	GameState.view_x = float(371 * 48 - 304)
 	GameState.view_y = float(132 * 32 - 234)
 	GameState.creatures = {
@@ -30,7 +33,7 @@ func _ready() -> void:
 	await RenderingServer.frame_post_draw
 	var output_path := OS.get_environment("MIR2X_PANEL_OUTPUT")
 	if output_path.is_empty():
-		output_path = "/tmp/mir2x-world-focus.png"
+		output_path = "/tmp/mir2x-team-leader.png" if team_leader_fixture else "/tmp/mir2x-world-focus.png"
 	var error := get_viewport().get_texture().get_image().save_png(output_path)
 	if error != OK:
 		_fail("unable to save screenshot: %s" % error)
