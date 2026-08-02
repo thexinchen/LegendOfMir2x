@@ -1,4 +1,4 @@
-[gd_scene load_steps=44 format=3]
+[gd_scene load_steps=45 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/control_panel.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000012.png" id="2_base"]
@@ -45,6 +45,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000025.png" id="35_mute_hover"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000026.png" id="36_mute_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000088.png" id="37_chat_slider"]
+[ext_resource type="FontFile" path="res://assets/font/00_SIMSUN.ttf" id="38_level_font"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_command"]
 content_margin_left = 0.0
@@ -412,6 +413,7 @@ offset_bottom = 146.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 15
+theme_override_fonts/font = ExtResource("32_chat_font")
 text = "6-12"
 
 [node name="DCButton" type="Button" parent="Body"]
@@ -446,6 +448,7 @@ offset_bottom = 146.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 15
+theme_override_fonts/font = ExtResource("32_chat_font")
 text = "3-8"
 
 [node name="ExpandButton" type="TextureButton" parent="Body"]
@@ -498,6 +501,7 @@ offset_bottom = 38.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 12
+theme_override_fonts/font = ExtResource("38_level_font")
 text = "3"
 horizontal_alignment = 1
 

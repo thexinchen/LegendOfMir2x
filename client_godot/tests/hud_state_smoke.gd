@@ -88,6 +88,33 @@ func _ready() -> void:
 	if chat_log.get_theme_font_size("normal_font_size") != 15 or chat_log.get_theme_font("normal_font") == null:
 		_fail("chat font mismatch")
 		return
+	var level_label := panel.get_node("%Level") as Label
+	var ac_value := panel.get_node("%ACValue") as Label
+	var dc_value := panel.get_node("%DCValue") as Label
+	if level_label.get_theme_font("font").resource_path != "res://assets/font/00_SIMSUN.ttf" or level_label.get_theme_font_size("font_size") != 12:
+		_fail("level font mismatch: %s size=%s" % [level_label.get_theme_font("font").resource_path, level_label.get_theme_font_size("font_size")])
+		return
+	if ac_value.get_theme_font("font").resource_path != "res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf" or dc_value.get_theme_font("font").resource_path != "res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf":
+		_fail("AC/DC font mismatch: %s / %s" % [ac_value.get_theme_font("font").resource_path, dc_value.get_theme_font("font").resource_path])
+		return
+	if ac_value.get_theme_font_size("font_size") != 15 or dc_value.get_theme_font_size("font_size") != 15:
+		_fail("AC/DC font size mismatch")
+		return
+	if level_label.position != Vector2(395, 17) or level_label.size != Vector2(21, 21) or ac_value.position != Vector2(667, 121) or dc_value.position != Vector2(751, 121):
+		_fail("persistent HUD text geometry mismatch")
+		return
+	var screenshot_path := OS.get_environment("MIR2X_HUD_TEXT_SCREENSHOT")
+	if not screenshot_path.is_empty():
+		panel.set_process(false)
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var save_error := get_viewport().get_texture().get_image().save_png(screenshot_path)
+		if save_error != OK:
+			_fail("failed to save HUD text screenshot: %s" % save_error)
+			return
+		print("HUD TEXT VISUAL PASS: %s" % screenshot_path)
+		get_tree().quit()
+		return
 	if chat_log.get_v_scroll_bar().modulate.a != 0.0:
 		_fail("default chat scrollbar is visible")
 		return
