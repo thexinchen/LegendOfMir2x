@@ -1471,7 +1471,29 @@ func _test_spinkick_direction(main: Control) -> bool:
 	if GameState.player_direction != 5:
 		_fail("non-adjacent ACTION_SPINKICK incorrectly replaced the retained direction")
 		return false
+	var remote_uid: int = (5 << 59) | 304
+	GameState.update_creature(remote_uid, {
+		"uid": remote_uid, "type": 2, "x": 4, "y": 4, "direction": 1, "action_type": 2,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(remote_uid, 202, {
+		"type": 7, "speed": 100, "direction": 0, "x": 4, "y": 4, "aimUID": 101,
+	}))
+	if GameState.get_creature(remote_uid).get("direction", 0) != 7:
+		_fail("server-normalized remote ACTION_ATTACK did not face its adjacent target: %s" % GameState.get_creature(remote_uid))
+		return false
+	var monster_uid: int = (4 << 59) | (224 << 35) | 305
+	GameState.update_creature(monster_uid, {
+		"uid": monster_uid, "type": 1, "monster_id": 224, "x": 2, "y": 4, "direction": 1, "action_type": 2,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(monster_uid, 202, {
+		"type": 7, "speed": 100, "direction": 0, "x": 2, "y": 4, "aimUID": 101,
+	}))
+	if GameState.get_creature(monster_uid).get("direction", 0) != 3:
+		_fail("server-normalized monster ACTION_ATTACK did not face the local hero: %s" % GameState.get_creature(monster_uid))
+		return false
 	GameState.remove_creature(303)
+	GameState.remove_creature(remote_uid)
+	GameState.remove_creature(monster_uid)
 	main.set("_player_action_timer", -1.0)
 	GameState.player_action_type = 2
 	return true
