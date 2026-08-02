@@ -381,6 +381,9 @@ func _test_fps_overlay(main: Control) -> bool:
 	var one_digit: Vector2i = main.call("_layout_fps_overlay", "9")
 	var three_digits: Vector2i = main.call("_layout_fps_overlay", "120")
 	var font := fps.get_theme_font("font")
+	if font == null or not font.resource_path.ends_with("0B_WenQuanYi_Bitmap_Song_15_px.ttf"):
+		_fail("runtime FPS overlay did not use the packed font-11 resource")
+		return false
 	var measured := font.get_string_size("120", HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
 	var style := fps.get_theme_stylebox("normal") as StyleBoxFlat
 	if one_digit.x >= three_digits.x or three_digits != Vector2i(ceili(measured.x) + 1, ceili(measured.y)) or Vector2i(fps.size) != three_digits:

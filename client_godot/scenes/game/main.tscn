@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3]
+[gd_scene load_steps=23 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/main.gd" id="1_script"]
 [ext_resource type="Script" path="res://scripts/game/world_renderer.gd" id="2_renderer"]
@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://scripts/game/skill_buff_hud.gd" id="14_skill_buff_hud"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/input/07000000.png" id="15_loading"]
 [ext_resource type="FontFile" path="res://assets/font/01_Yahei.ttf" id="16_loading_font"]
+[ext_resource type="FontFile" path="res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf" id="17_fps_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fps"]
 content_margin_left = 1.0
@@ -104,7 +105,7 @@ grow_horizontal = 0
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 15
-theme_override_fonts/font = ExtResource("11_world_font")
+theme_override_fonts/font = ExtResource("17_fps_font")
 theme_override_styles/normal = SubResource("StyleBoxFlat_fps")
 horizontal_alignment = 2
 text = "0"
