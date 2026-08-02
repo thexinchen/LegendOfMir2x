@@ -173,6 +173,8 @@ func _ready() -> void:
 
 	if not _test_inventory_transaction_feedback(main, resources):
 		return
+	if not _test_death_correction_queue(main, resources):
+		return
 	if not _test_death_and_map_filter(main, resources):
 		return
 	if not _test_world_displacement(main, resources):
@@ -906,6 +908,152 @@ func _test_magic_panel_hotkey_precedence(main: Control, resources: RefCounted) -
 	GameState.magic_keys = previous_keys
 	GameState.magic_cast_times = previous_cast_times
 	return true
+
+
+func _test_death_correction_queue(main: Control, resources: RefCounted) -> bool:
+	var renderer: Control = main.get_node("WorldRenderer")
+	var line := _find_walkable_line(renderer, 5)
+	if line.size() != 5:
+		_fail("unable to find a straight walkable death-correction fixture")
+		return false
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	GameState.player_x = line[0].x
+	GameState.player_y = line[0].y
+	GameState.player_direction = 1
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
+		"type": 13, "x": line[4].x, "y": line[4].y,
+	}))
+	if GameState.player_action_type != 3 or GameState.player_action_step != 2 or Vector2i(GameState.player_x, GameState.player_y) != line[2] or (main.get("_player_forced_action_queue") as Array).size() != 2:
+		_fail("local Hero death did not start with a two-grid forced correction segment")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(101))
+	if GameState.player_action_type != 3:
+		_fail("SM_NOTIFYDEAD interrupted the local Hero forced death correction")
+		return false
+	main.call("_process_player_action", 1.0)
+	if GameState.player_action_type != 3 or Vector2i(GameState.player_x, GameState.player_y) != line[4] or (main.get("_player_forced_action_queue") as Array).size() != 1:
+		_fail("local Hero death did not advance the second forced correction segment")
+		return false
+	main.call("_process_player_action", 1.0)
+	if GameState.player_action_type != 13 or Vector2i(GameState.player_x, GameState.player_y) != line[4] or not (main.get("_player_forced_action_queue") as Array).is_empty():
+		_fail("local Hero death did not start at the authoritative correction endpoint")
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
+		"type": 2, "direction": 1, "x": line[0].x, "y": line[0].y,
+	}))
+	if GameState.player_action_type != 13 or Vector2i(GameState.player_x, GameState.player_y) != line[4]:
+		_fail("action received after local Hero death interrupted the forced terminal motion")
+		return false
+	main.call("_set_player_action", 2)
+	main.set("_player_action_timer", -1.0)
+
+	var remote_uid: int = (5 << 59) | 801
+	GameState.update_creature(remote_uid, {
+		"uid": remote_uid, "type": 2, "x": line[0].x, "y": line[0].y,
+		"direction": 1, "action_type": 2, "action_started_ms": Time.get_ticks_msec(),
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(remote_uid, 202, {
+		"type": 13, "x": line[4].x, "y": line[4].y,
+	}))
+	var remote: Dictionary = GameState.get_creature(remote_uid)
+	if remote.get("action_type", 0) != 3 or remote.get("action_step", 0) != 2 or Vector2i(remote.x, remote.y) != line[2] or remote.get("forced_action_queue", []).size() != 2:
+		_fail("remote Hero death did not start with a two-grid forced correction segment: %s" % remote)
+		return false
+	main.call("_finish_creature_action", remote_uid, 3, remote.action_started_ms)
+	remote = GameState.get_creature(remote_uid)
+	main.call("_finish_creature_action", remote_uid, 3, remote.action_started_ms)
+	remote = GameState.get_creature(remote_uid)
+	if remote.get("action_type", 0) != 13 or Vector2i(remote.x, remote.y) != line[4] or remote.has("forced_action_queue"):
+		_fail("remote Hero death did not start at the authoritative correction endpoint: %s" % remote)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(remote_uid, 202, {
+		"type": 2, "direction": 1, "x": line[0].x, "y": line[0].y,
+	}))
+	if GameState.get_creature(remote_uid).get("action_type", 0) != 13:
+		_fail("action received after remote Hero death interrupted the forced terminal motion")
+		return false
+
+	var monster_id := 0
+	for monster_id_value in resources.monster_meta:
+		if resources.monster_transform(int(monster_id_value)).is_empty():
+			monster_id = int(monster_id_value)
+			break
+	if monster_id == 0:
+		_fail("plain monster death-correction fixture unavailable")
+		return false
+	var monster_uid: int = (4 << 59) | (monster_id << 35) | 802
+	GameState.update_creature(monster_uid, {
+		"uid": monster_uid, "type": 1, "monster_id": monster_id,
+		"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
+		"action_started_ms": Time.get_ticks_msec(),
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(monster_uid, 202, {
+		"type": 13, "x": line[2].x, "y": line[2].y,
+	}))
+	var monster: Dictionary = GameState.get_creature(monster_uid)
+	if monster.get("action_type", 0) != 3 or monster.get("action_step", 0) != 1 or Vector2i(monster.x, monster.y) != line[1] or monster.get("forced_action_queue", []).size() != 2:
+		_fail("Monster death correction was not decomposed into one-grid segments: %s" % monster)
+		return false
+	main.call("_finish_creature_action", monster_uid, 3, monster.action_started_ms)
+	monster = GameState.get_creature(monster_uid)
+	main.call("_finish_creature_action", monster_uid, 3, monster.action_started_ms)
+	monster = GameState.get_creature(monster_uid)
+	if monster.get("action_type", 0) != 13 or Vector2i(monster.x, monster.y) != line[2] or monster.has("forced_action_queue"):
+		_fail("Monster death did not start after all one-grid correction segments: %s" % monster)
+		return false
+	var transform_monster_id := 0
+	for monster_id_value in resources.monster_meta:
+		if not resources.monster_transform(int(monster_id_value)).is_empty():
+			transform_monster_id = int(monster_id_value)
+			break
+	if transform_monster_id == 0:
+		_fail("transforming monster death-correction fixture unavailable")
+		return false
+	var transform_uid: int = (4 << 59) | (transform_monster_id << 35) | 803
+	GameState.update_creature(transform_uid, {
+		"uid": transform_uid, "type": 1, "monster_id": transform_monster_id,
+		"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 10,
+		"action_speed": 100, "action_magic_id": 0, "action_started_ms": Time.get_ticks_msec(),
+		"monster_stand_mode": false,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(transform_uid, 202, {
+		"type": 13, "x": line[2].x, "y": line[2].y,
+	}))
+	var transforming: Dictionary = GameState.get_creature(transform_uid)
+	if transforming.get("action_type", 0) != 10 or Vector2i(transforming.x, transforming.y) != line[0] or transforming.get("monster_pending_forced_action", {}).get("type", 0) != 13:
+		_fail("transforming Monster did not retain its motion before forced death: %s" % transforming)
+		return false
+	main.call("_finish_creature_action", transform_uid, 10, transforming.action_started_ms)
+	transforming = GameState.get_creature(transform_uid)
+	if transforming.get("action_type", 0) != 3 or Vector2i(transforming.x, transforming.y) != line[1] or transforming.get("forced_action_queue", []).size() != 2:
+		_fail("transforming Monster did not start correction after its transform: %s" % transforming)
+		return false
+	main.call("_finish_creature_action", transform_uid, 3, transforming.action_started_ms)
+	transforming = GameState.get_creature(transform_uid)
+	main.call("_finish_creature_action", transform_uid, 3, transforming.action_started_ms)
+	transforming = GameState.get_creature(transform_uid)
+	if transforming.get("action_type", 0) != 13 or Vector2i(transforming.x, transforming.y) != line[2]:
+		_fail("transforming Monster death did not wait for its correction endpoint: %s" % transforming)
+		return false
+	GameState.remove_creature(remote_uid)
+	GameState.remove_creature(monster_uid)
+	GameState.remove_creature(transform_uid)
+	return true
+
+
+func _find_walkable_line(renderer: Control, count: int) -> Array[Vector2i]:
+	for y in range(renderer.map_height):
+		for x in range(renderer.map_width - count + 1):
+			var line: Array[Vector2i] = []
+			for offset in range(count):
+				if not renderer.call("can_walk", x + offset, y):
+					line.clear()
+					break
+				line.append(Vector2i(x + offset, y))
+			if line.size() == count:
+				return line
+	return []
 
 
 func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:

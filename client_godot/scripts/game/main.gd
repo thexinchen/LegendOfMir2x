@@ -73,11 +73,13 @@ var _pickup_target := Vector2i(-1, -1)
 var _mine_target := Vector2i(-1, -1)
 var _pickup_action_timer := -1.0
 var _player_action_timer := -1.0
+var _player_forced_action_queue: Array[Dictionary] = []
 var _team_flag_active := false
 
 # C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame).
 # Keep a small network margin before sending the next one-hop action.
 const MOVE_STEP_SECONDS := 0.75
+const FORCED_MOVE_SPEED := 500
 const PING_INTERVAL_MS := 10_000
 const U32_MASK := 0xFFFFFFFF
 const BUFF_TYPE_SHIELD := 1
@@ -183,7 +185,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not event.is_pressed() or event.is_echo():
 		return
-	if _player_dead():
+	if _player_dead() or not _player_forced_action_queue.is_empty():
 		if event is InputEventKey:
 			if event.keycode in [KEY_ENTER, KEY_KP_ENTER]:
 				control_panel.call("focus_command")
@@ -730,7 +732,84 @@ func _process_player_action(delta: float) -> void:
 	_player_action_timer -= delta
 	if _player_action_timer <= 0.0:
 		_player_action_timer = -1.0
-		_set_player_action(2)
+		if _player_forced_action_queue.is_empty():
+			_set_player_action(2)
+		else:
+			_advance_player_forced_action()
+
+
+func _start_player_death_action(action: Dictionary) -> void:
+	_cancel_movement()
+	_pickup_action_timer = -1.0
+	_player_action_timer = -1.0
+	var start := Vector2i(game_state.player_x, game_state.player_y)
+	var target := Vector2i(action.get("x", start.x), action.get("y", start.y))
+	_player_forced_action_queue = _forced_correction_steps(start, target, 2)
+	if start != target and _player_forced_action_queue.is_empty():
+		return
+	_player_forced_action_queue.append({"kind": "death", "action": action.duplicate(true)})
+	_advance_player_forced_action()
+
+
+func _advance_player_forced_action() -> void:
+	if _player_forced_action_queue.is_empty():
+		return
+	var queued: Dictionary = _player_forced_action_queue.pop_front()
+	if queued.get("kind", "") == "move":
+		game_state.player_action_from_x = queued.from_x
+		game_state.player_action_from_y = queued.from_y
+		game_state.player_x = queued.x
+		game_state.player_y = queued.y
+		game_state.player_direction = queued.direction
+		_set_player_action(3, FORCED_MOVE_SPEED, 0, queued.step)
+		_player_action_timer = _action_duration(3, FORCED_MOVE_SPEED, 2)
+		return
+	var action: Dictionary = queued.get("action", {})
+	game_state.player_action_from_x = game_state.player_x
+	game_state.player_action_from_y = game_state.player_y
+	_set_player_action(13, 100)
+	_player_action_timer = -1.0
+	_play_action_seff(game_state.player_uid, action, {
+		"uid": game_state.player_uid,
+		"type": 2,
+		"gender": game_state.player_gender,
+		"desp": game_state.player_desp,
+		"action_started_ms": game_state.player_action_started_ms,
+	})
+
+
+func _forced_correction_steps(start: Vector2i, target: Vector2i, max_step: int) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if start == target:
+		return result
+	var goals: Array[Vector2i] = [target]
+	var path: Array[Vector2i] = _pathfinder.find_path(start, goals, world_renderer.can_walk, {})
+	if path.is_empty():
+		push_error("unable to build forced correction path: %s -> %s" % [start, target])
+		return result
+	var from := start
+	var index := 0
+	while index < path.size():
+		var direction_delta := path[index] - from
+		direction_delta = Vector2i(signi(direction_delta.x), signi(direction_delta.y))
+		var endpoint: Vector2i = path[index]
+		var step := 1
+		index += 1
+		while index < path.size() and step < max_step and path[index] - endpoint == direction_delta:
+			endpoint = path[index]
+			step += 1
+			index += 1
+		result.append({
+			"kind": "move",
+			"from_x": from.x,
+			"from_y": from.y,
+			"x": endpoint.x,
+			"y": endpoint.y,
+			"direction": _direction_to(from.x, from.y, endpoint.x, endpoint.y),
+			"step": step,
+		})
+		from = endpoint
+	return result
 
 
 func _set_player_action(action_type: int, speed := 100, magic_id := 0, action_step := 0) -> void:
@@ -1010,6 +1089,7 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 	_cancel_movement()
 	_pickup_action_timer = -1.0
 	_player_action_timer = -1.0
+	_player_forced_action_queue.clear()
 	game_state.start_game_scene(data)
 	NetworkClient.send_query_gold()
 	if _load_world_map(game_state.player_map_id):
@@ -1039,6 +1119,10 @@ func _handle_action(payload: PackedByteArray) -> void:
 	var creature: Dictionary = game_state.get_creature(uid) if uid != game_state.player_uid else {}
 	var previous_creature := creature.duplicate(true)
 	var is_new_creature := creature.is_empty()
+	if uid == game_state.player_uid and (game_state.player_action_type == 13 or not _player_forced_action_queue.is_empty()):
+		return
+	if previous_creature.get("action_type", 0) == 13 or not previous_creature.get("forced_action_queue", []).is_empty():
+		return
 	if previous_creature.get("monster_pending_forced_action", {}).get("type", 0) == 13:
 		return
 	if action_type == 1 and (uid == game_state.player_uid or not creature.is_empty()):
@@ -1049,6 +1133,15 @@ func _handle_action(payload: PackedByteArray) -> void:
 				NetworkClient.send_query_corecord(uid)
 				return
 			0:
+				return
+	if action_type == 13:
+		if uid == game_state.player_uid:
+			_start_player_death_action(action)
+			return
+		if not creature.is_empty():
+			var death_creature_type: int = creature.get("type", _creature_type_from_uid(uid))
+			if death_creature_type in [1, 2] and not (death_creature_type == 1 and creature.get("action_type", 0) == 10):
+				_start_creature_death_action(uid, action, creature)
 				return
 	if action_type == 7:
 		direction = _attack_direction(uid, action)
@@ -1181,6 +1274,7 @@ func _switch_player_map(map_uid: int, action: Dictionary) -> void:
 	_cancel_movement()
 	_pickup_action_timer = -1.0
 	_player_action_timer = -1.0
+	_player_forced_action_queue.clear()
 	_magic_focus_uid = 0
 	_follow_focus_uid = 0
 	_attack_focus_uid = 0
@@ -1407,20 +1501,69 @@ func _configure_monster_form(creature: Dictionary, action_type: int, stored_acti
 
 func _monster_pending_state(creature: Dictionary) -> Dictionary:
 	var state := {}
-	for key in ["x", "y", "action_from_x", "action_from_y", "direction"]:
+	for key in ["x", "y", "action_from_x", "action_from_y", "direction", "action_step"]:
 		if creature.has(key):
 			state[key] = creature[key]
 	return state
 
 
 func _restore_monster_transform_state(creature: Dictionary, previous: Dictionary, restore_timing: bool) -> void:
-	for key in ["x", "y", "action_from_x", "action_from_y", "direction"]:
+	for key in ["x", "y", "action_from_x", "action_from_y", "direction", "action_step"]:
 		if previous.has(key):
 			creature[key] = previous[key]
 	if restore_timing:
 		for key in ["action_started_ms", "action_speed", "action_magic_id"]:
 			if previous.has(key):
 				creature[key] = previous[key]
+
+
+func _start_creature_death_action(uid: int, action: Dictionary, creature: Dictionary) -> void:
+	var start := Vector2i(creature.get("x", action.get("x", 0)), creature.get("y", action.get("y", 0)))
+	var target := Vector2i(action.get("x", start.x), action.get("y", start.y))
+	var max_step := 2 if creature.get("type", 0) == 2 else 1
+	var queue: Array[Dictionary] = _forced_correction_steps(start, target, max_step)
+	if start != target and queue.is_empty():
+		return
+	queue.append({"kind": "death", "action": action.duplicate(true)})
+	creature["forced_action_queue"] = queue
+	game_state.update_creature(uid, creature)
+	_advance_creature_forced_action(uid)
+
+
+func _advance_creature_forced_action(uid: int) -> void:
+	var creature: Dictionary = game_state.get_creature(uid)
+	var queue: Array = creature.get("forced_action_queue", [])
+	if creature.is_empty() or queue.is_empty():
+		return
+	var queued: Dictionary = queue.pop_front()
+	if queue.is_empty():
+		creature.erase("forced_action_queue")
+	else:
+		creature["forced_action_queue"] = queue
+	creature["action_started_ms"] = Time.get_ticks_msec()
+	creature["action_magic_id"] = 0
+	if queued.get("kind", "") == "move":
+		creature["action_from_x"] = queued.from_x
+		creature["action_from_y"] = queued.from_y
+		creature["x"] = queued.x
+		creature["y"] = queued.y
+		creature["direction"] = queued.direction
+		creature["action_type"] = 3
+		creature["action_speed"] = FORCED_MOVE_SPEED
+		creature["action_step"] = queued.step
+		game_state.update_creature(uid, creature)
+		_schedule_creature_idle(uid, 3, creature.action_started_ms, _creature_action_duration(3, FORCED_MOVE_SPEED, creature))
+		return
+	var action: Dictionary = queued.get("action", {})
+	creature["action_from_x"] = creature.get("x", 0)
+	creature["action_from_y"] = creature.get("y", 0)
+	creature["action_type"] = 13
+	creature["action_speed"] = 100
+	creature["action_step"] = 0
+	game_state.update_creature(uid, creature)
+	if creature.get("type", 0) == 1:
+		_queue_monster_death_effect(uid, creature)
+	_play_action_seff(uid, action, creature)
 
 
 func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay: float) -> void:
@@ -1432,6 +1575,9 @@ func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay:
 func _finish_creature_action(uid: int, action_type: int, started_ms: int) -> void:
 	var creature: Dictionary = game_state.get_creature(uid)
 	if creature.is_empty() or creature.get("action_type", 0) != action_type or creature.get("action_started_ms", -1) != started_ms:
+		return
+	if not creature.get("forced_action_queue", []).is_empty():
+		_advance_creature_forced_action(uid)
 		return
 	var pending: Dictionary = creature.get("monster_pending_action", {})
 	var forced_pending: Dictionary = creature.get("monster_pending_forced_action", {})
@@ -1457,14 +1603,8 @@ func _finish_creature_action(uid: int, action_type: int, started_ms: int) -> voi
 	if action_type == 10 and not forced_pending.is_empty():
 		creature.erase("monster_pending_forced_action")
 		creature.erase("monster_pending_form_modes")
-		for key in forced_pending.get("state", {}):
-			creature[key] = forced_pending.state[key]
-		creature["action_type"] = forced_pending.get("type", 13)
-		creature["action_speed"] = forced_pending.get("speed", 100)
-		creature["action_magic_id"] = forced_pending.get("magic_id", 0)
 		game_state.update_creature(uid, creature)
-		_queue_monster_death_effect(uid, creature)
-		_play_action_seff(uid, forced_pending.get("action", {}), creature)
+		_start_creature_death_action(uid, forced_pending.get("action", {}), creature)
 		return
 	if action_type == 10 and not pending.is_empty():
 		for key in pending.get("state", {}):
@@ -2000,13 +2140,15 @@ func _handle_notify_dead(payload: PackedByteArray) -> void:
 	if uid == 0:
 		return
 	if uid == game_state.player_uid:
+		if not _player_forced_action_queue.is_empty():
+			return
 		_cancel_movement()
 		_pickup_action_timer = -1.0
 		_player_action_timer = -1.0
 		_set_player_action(13)
 		return
 	var creature: Dictionary = game_state.get_creature(uid)
-	if creature.is_empty() or creature.get("action_type", 0) == 13 or creature.get("monster_pending_forced_action", {}).get("type", 0) == 13:
+	if creature.is_empty() or creature.get("action_type", 0) == 13 or not creature.get("forced_action_queue", []).is_empty() or creature.get("monster_pending_forced_action", {}).get("type", 0) == 13:
 		return
 	var death_action := {
 		"type": 13,
