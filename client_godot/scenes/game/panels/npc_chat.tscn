@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/npc_chat_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/npc_chat/00000051.png" id="2"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/npc_chat/00000053.png" id="3"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="4"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="5"]
+[ext_resource type="FontFile" path="res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf" id="6_font"]
 
 [node name="NPCChatPanel" type="Control"]
 custom_minimum_size = Vector2(386, 204)
@@ -44,7 +45,8 @@ offset_top = 32.0
 offset_right = 351.0
 offset_bottom = 143.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 15
+theme_override_fonts/normal_font = ExtResource("6_font")
+theme_override_font_sizes/normal_font_size = 15
 text = ""
 bbcode_enabled = true
 fit_content = false

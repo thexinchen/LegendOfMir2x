@@ -4,6 +4,10 @@ extends Node
 func _ready() -> void:
 	var panel: Control = load("res://scenes/game/panels/npc_chat.tscn").instantiate()
 	add_child(panel)
+	var dialog := panel.get_node("Dialog") as RichTextLabel
+	if not dialog.get_theme_font("normal_font").resource_path.ends_with("/0B_WenQuanYi_Bitmap_Song_15_px.ttf") or dialog.get_theme_font_size("normal_font_size") != 15:
+		_fail("NPC dialog did not use original font-11/15px default: font=%s size=%d" % [dialog.get_theme_font("normal_font").resource_path, dialog.get_theme_font_size("normal_font_size")])
+		return
 	var xml := "<layout><par>你好<t color=\"red\">勇士</t></par><par><event id=\"buy\" args=\"{'id':1}\" close=\"1\">购买</event></par></layout>"
 	var bbcode: String = panel.call("_build_bbcode", xml)
 	if not bbcode.contains("你好") or not bbcode.contains("[color=red]勇士[/color]"):
