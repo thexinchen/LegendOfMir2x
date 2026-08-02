@@ -245,7 +245,20 @@ func _update_fps_overlay() -> void:
 	var data: PackedByteArray = game_state.runtime_config.get(6, PackedByteArray())
 	fps_label.visible = data.size() >= 2 and data[0] != 0 and data[1] != 0
 	if fps_label.visible:
-		fps_label.text = str(Engine.get_frames_per_second())
+		_layout_fps_overlay(str(Engine.get_frames_per_second()))
+
+
+func _layout_fps_overlay(text: String) -> Vector2i:
+	var font := fps_label.get_theme_font("font")
+	var font_size := fps_label.get_theme_font_size("font_size")
+	var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var overlay_size := Vector2i(ceili(text_size.x) + 1, ceili(text_size.y))
+	fps_label.text = text
+	fps_label.offset_left = -overlay_size.x
+	fps_label.offset_top = 0
+	fps_label.offset_right = 0
+	fps_label.offset_bottom = overlay_size.y
+	return overlay_size
 
 
 func _handle_mouse_click(event: InputEventMouseButton) -> void:

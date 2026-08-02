@@ -31,6 +31,12 @@ func _ready() -> void:
 	var main: Control = load("res://scenes/game/main.tscn").instantiate()
 	add_child(main)
 	await get_tree().process_frame
+	if OS.has_environment("MIR2X_FPS_SCREENSHOT"):
+		if not await _capture_fps_visual(main):
+			return
+		print("FPS OVERLAY VISUAL PASS: %s" % OS.get_environment("MIR2X_FPS_SCREENSHOT"))
+		get_tree().quit()
+		return
 	if not _test_strike_grid_rendering(main):
 		return
 	if not _test_camera_centering(main):
@@ -166,10 +172,44 @@ func _test_fps_overlay(main: Control) -> bool:
 	if not fps.visible or fps.text.is_empty() or fps.get_theme_font_size("font_size") != 15:
 		_fail("runtime FPS option did not restore the original top-right overlay")
 		return false
+	var one_digit: Vector2i = main.call("_layout_fps_overlay", "9")
+	var three_digits: Vector2i = main.call("_layout_fps_overlay", "120")
+	var font := fps.get_theme_font("font")
+	var measured := font.get_string_size("120", HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
+	var style := fps.get_theme_stylebox("normal") as StyleBoxFlat
+	if one_digit.x >= three_digits.x or three_digits != Vector2i(ceili(measured.x) + 1, ceili(measured.y)) or Vector2i(fps.size) != three_digits:
+		_fail("runtime FPS overlay did not follow the original content-sized geometry")
+		return false
+	if not is_equal_approx(fps.position.x + fps.size.x, main.size.x) or style == null or not is_equal_approx(style.content_margin_left, 1.0) or not is_equal_approx(style.content_margin_top, 0.0) or not is_equal_approx(style.content_margin_right, 0.0) or not is_equal_approx(style.content_margin_bottom, 0.0):
+		_fail("runtime FPS overlay did not preserve the original right anchor and one-pixel left margin")
+		return false
 	GameState.runtime_config[6] = PackedByteArray([1, 0, 0])
 	main.call("_update_fps_overlay")
 	if fps.visible:
 		_fail("runtime FPS overlay did not hide")
+		return false
+	return true
+
+
+func _capture_fps_visual(main: Control) -> bool:
+	GameState.player_uid = 999
+	GameState.player_x = 371
+	GameState.player_y = 132
+	GameState.view_x = float(371 * 48 - 304)
+	GameState.view_y = float(132 * 32 - 234)
+	var renderer := main.get_node("WorldRenderer")
+	if not renderer.load_map(24):
+		_fail("unable to load FPS visual map")
+		return false
+	main.set_process(false)
+	renderer.set_process(false)
+	var fps := main.get_node("FPS") as Label
+	fps.visible = true
+	main.call("_layout_fps_overlay", "120")
+	await RenderingServer.frame_post_draw
+	var error := get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FPS_SCREENSHOT"))
+	if error != OK:
+		_fail("unable to save FPS overlay screenshot: %s" % error)
 		return false
 	return true
 
