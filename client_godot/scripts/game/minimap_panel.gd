@@ -239,7 +239,7 @@ func _zoom_at(canvas_position: Vector2, next_zoom: float) -> void:
 
 func _update_tooltip() -> void:
 	var tooltip := $Coordinate
-	if not Rect2(Vector2.ZERO, $MapViewport.size).has_point(_hover_position) or $MapViewport/MapTexture.texture == null:
+	if not Rect2(Vector2.ZERO, $MapViewport.size).has_point(_hover_position) or $MapViewport/MapTexture.texture == null or not Rect2(_image_offset, _image_size()).has_point(_hover_position):
 		tooltip.hide()
 		return
 	var location := _canvas_to_map(_hover_position)

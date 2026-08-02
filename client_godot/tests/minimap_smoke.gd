@@ -69,6 +69,19 @@ func _ready() -> void:
 	if absf(panel.get("_zoom") - 1.5) > 0.01 or panel.get_node("ZoomBackground/ZoomText").text != "150%":
 		_fail("cursor zoom failed")
 		return
+	panel.call("_zoom_at", Vector2(100, 100), 0.1)
+	panel.set("_hover_position", Vector2.ZERO)
+	panel.call("_update_tooltip")
+	if panel.get_node("Coordinate").visible:
+		_fail("coordinate tooltip leaked into the blank area outside the minimap image")
+		return
+	var image_center: Vector2 = panel.get("_image_offset") + panel.call("_image_size") * 0.5
+	panel.set("_hover_position", image_center)
+	panel.call("_update_tooltip")
+	if not panel.get_node("Coordinate").visible:
+		_fail("coordinate tooltip disappeared inside the minimap image")
+		return
+	panel.call("_zoom_at", image_center, 1.5)
 	GameState.player_map_id = 0
 	GameState.state_changed.emit()
 	GameState.player_map_id = 24
@@ -76,7 +89,13 @@ func _ready() -> void:
 	if absf(panel.get("_zoom") - 1.5) > 0.01:
 		_fail("map reload reset minimap zoom")
 		return
-	if OS.has_environment("MIR2X_MINIMAP_SCREENSHOT"):
+	if OS.has_environment("MIR2X_MINIMAP_BOUNDARY_SCREENSHOT"):
+		panel.call("_zoom_at", Vector2(100, 100), 0.1)
+		panel.set("_hover_position", Vector2.ZERO)
+		panel.call("_update_tooltip")
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MINIMAP_BOUNDARY_SCREENSHOT"))
+	elif OS.has_environment("MIR2X_MINIMAP_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MINIMAP_SCREENSHOT"))
 	print("MINIMAP PASS: original texture, markers, alpha, extend, pan and zoom")
