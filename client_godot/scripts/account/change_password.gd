@@ -1,13 +1,22 @@
 extends Control
 
+const Validation = preload("res://scripts/account/account_validation.gd")
+
 @onready var account_input: LineEdit = %AccountInput
 @onready var old_password_input: LineEdit = %OldPasswordInput
 @onready var new_password_input: LineEdit = %NewPasswordInput
 @onready var confirm_input: LineEdit = %ConfirmInput
 @onready var status: Label = %Status
+@onready var submit_button: TextureButton = $SubmitButton
+@onready var account_check: Label = %AccountCheck
+@onready var old_password_check: Label = %OldPasswordCheck
+@onready var new_password_check: Label = %NewPasswordCheck
+@onready var confirm_check: Label = %ConfirmCheck
 
 
 func _ready() -> void:
+	status.active_changed.connect(_on_status_active_changed)
+	_update_checks()
 	account_input.grab_focus()
 	NetworkClient.message_received.connect(_on_server_message)
 	if OS.has_environment("MIR2X_SCREENSHOT"):
@@ -37,23 +46,26 @@ func _on_confirm_text_submitted(_text: String) -> void:
 
 
 func _submit() -> void:
-	if not account_input.text.contains("@"):
-		_show_status("无效账号")
-	elif not _is_valid_password(old_password_input.text):
-		_show_status("无效密码")
+	if status.is_active():
+		return
+	if not Validation.is_email(account_input.text):
+		_show_status("无效账号", 2000.0)
+		_clear_all()
+	elif not Validation.is_password(old_password_input.text):
+		_show_status("无效密码", 2000.0)
 		old_password_input.clear()
 		new_password_input.clear()
 		confirm_input.clear()
-	elif not _is_valid_password(new_password_input.text):
-		_show_status("无效新密码")
+	elif not Validation.is_password(new_password_input.text):
+		_show_status("无效新密码", 2000.0)
 		new_password_input.clear()
 		confirm_input.clear()
 	elif new_password_input.text != confirm_input.text:
-		_show_status("新密码两次输入不一致")
+		_show_status("新密码两次输入不一致", 2000.0)
 		new_password_input.clear()
 		confirm_input.clear()
 	elif old_password_input.text == new_password_input.text:
-		_show_status("新旧密码相同")
+		_show_status("新旧密码相同", 2000.0)
 		new_password_input.clear()
 		confirm_input.clear()
 	else:
@@ -64,35 +76,20 @@ func _submit() -> void:
 			new_password_input.text,
 		)
 		if error != OK:
-			_show_status("服务器尚未连接")
+			_show_status("服务器尚未连接", 2000.0)
 
 
 func _on_return_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/account/login.tscn")
 
 
-func _is_valid_password(value: String) -> bool:
-	var has_digit := false
-	var has_lower := false
-	var has_upper := false
-	var has_special := false
-	for index in value.length():
-		var code := value.unicode_at(index)
-		has_digit = has_digit or (code >= 48 and code <= 57)
-		has_upper = has_upper or (code >= 65 and code <= 90)
-		has_lower = has_lower or (code >= 97 and code <= 122)
-		has_special = has_special or "~!@#$%^&*()".contains(value[index])
-	return value.length() >= 8 and has_digit and has_lower and has_upper and has_special
-
-
-func _show_status(message: String) -> void:
-	status.text = message
-	status.show()
+func _show_status(message: String, duration_ms := 0.0) -> void:
+	status.show_status(message, duration_ms)
 
 
 func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 	if head_code == NetworkClient.SM_CHANGEPASSWORDOK:
-		_show_status("修改密码成功")
+		_show_status("修改密码成功", 2000.0)
 	elif head_code == NetworkClient.SM_CHANGEPASSWORDERROR:
 		var error_code := payload.decode_u32(0) if payload.size() >= 4 else 0
 		var messages := {
@@ -101,4 +98,39 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			3: "无效的新密码",
 			4: "错误的账号或密码",
 		}
-		_show_status(messages.get(error_code, "修改密码失败"))
+		_clear_all()
+		_show_status(messages.get(error_code, "修改密码失败"), 2000.0)
+
+
+func _clear_all() -> void:
+	account_input.clear()
+	old_password_input.clear()
+	new_password_input.clear()
+	confirm_input.clear()
+
+
+func _on_form_text_changed() -> void:
+	_update_checks()
+
+
+func _on_status_active_changed(active: bool) -> void:
+	account_input.editable = not active
+	old_password_input.editable = not active
+	new_password_input.editable = not active
+	confirm_input.editable = not active
+	submit_button.disabled = active
+	_update_checks()
+
+
+func _update_checks() -> void:
+	var active: bool = status.is_active()
+	_set_check(account_check, account_input.text, Validation.is_email(account_input.text), active)
+	_set_check(old_password_check, old_password_input.text, Validation.is_password(old_password_input.text), active)
+	_set_check(new_password_check, new_password_input.text, Validation.is_password(new_password_input.text), active)
+	_set_check(confirm_check, confirm_input.text, Validation.is_password(confirm_input.text) and confirm_input.text == new_password_input.text, active)
+
+
+func _set_check(label: Label, value: String, valid: bool, status_active: bool) -> void:
+	label.visible = not status_active and not value.is_empty()
+	label.text = "√" if valid else "×"
+	label.add_theme_color_override("font_color", Color.GREEN if valid else Color.RED)

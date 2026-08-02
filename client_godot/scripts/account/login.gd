@@ -2,8 +2,7 @@ extends Control
 
 @onready var account_input: LineEdit = %AccountInput
 @onready var password_input: LineEdit = %PasswordInput
-@onready var notice: Label = %Notice
-@onready var notice_background: PanelContainer = %NoticeBackground
+@onready var notice: Control = %Notice
 @onready var build_version: Label = %BuildVersion
 
 var auto_login_sent := false
@@ -27,7 +26,8 @@ func _ready() -> void:
 
 
 func _get_build_signature() -> String:
-	return "VENGINEERING-godot"
+	var signature := FileAccess.get_file_as_string("res://assets/generated/build_signature.txt").strip_edges()
+	return signature if not signature.is_empty() else "VENGINEERING-development"
 
 
 func _on_login_pressed() -> void:
@@ -85,11 +85,8 @@ func _try_auto_login() -> void:
 
 
 func _show_notice(message: String) -> void:
-	notice.text = message
-	notice.show()
-	notice_background.show()
+	notice.show_message(message)
 
 
 func _hide_notice() -> void:
-	notice.hide()
-	notice_background.hide()
+	notice.clear_messages()

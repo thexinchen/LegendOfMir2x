@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/account/select_character.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000000.png" id="2_background"]
@@ -12,6 +12,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000040.png" id="10_exit_normal"]
 [ext_resource type="Texture2D" path="res://assets/ui/select_character/0c000041.png" id="11_exit_pressed"]
 [ext_resource type="PackedScene" path="res://scenes/account/delete_character_dialog.tscn" id="12_delete_dialog"]
+[ext_resource type="Script" path="res://scripts/account/account_notice.gd" id="13_notice"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_info"]
 bg_color = Color(0, 0, 0, 0.5)
@@ -113,18 +114,18 @@ texture_normal = ExtResource("10_exit_normal")
 texture_pressed = ExtResource("11_exit_pressed")
 texture_hover = ExtResource("10_exit_normal")
 
-[node name="Notice" type="Label" parent="."]
+[node name="Notice" type="Control" parent="."]
 unique_name_in_owner = true
 visible = false
-layout_mode = 0
-offset_left = 250.0
-offset_top = 285.0
-offset_right = 550.0
-offset_bottom = 315.0
-theme_override_colors/font_color = Color(1, 1, 0, 1)
-theme_override_font_sizes/font_size = 15
-horizontal_alignment = 1
-vertical_alignment = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("13_notice")
+draw_background = false
 
 [node name="DeleteCharacterDialog" parent="." instance=ExtResource("12_delete_dialog")]
 unique_name_in_owner = true

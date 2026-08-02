@@ -10,7 +10,7 @@ const JOB_WIZARD := 4
 @onready var male_sprite: Control = %MaleSprite
 @onready var female_sprite: Control = %FemaleSprite
 @onready var name_input: LineEdit = %NameInput
-@onready var notice: Label = %Notice
+@onready var notice: Control = %Notice
 
 var selected_job := JOB_WARRIOR
 var selected_male := true
@@ -133,5 +133,4 @@ func _play_cycle_sound() -> void:
 
 
 func _show_notice(message: String) -> void:
-	notice.text = message
-	notice.show()
+	notice.show_message(message)

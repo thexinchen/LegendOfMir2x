@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3]
+[gd_scene load_steps=24 format=3]
 
 [ext_resource type="Script" path="res://scripts/account/create_character.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000000.png" id="2_background"]
@@ -20,6 +20,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000020.png" id="19_exit_normal"]
 [ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000021.png" id="20_exit_hover"]
 [ext_resource type="Texture2D" path="res://assets/ui/create_character/0d000022.png" id="21_exit_pressed"]
+[ext_resource type="Script" path="res://scripts/account/account_notice.gd" id="22_notice"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_click"]
 
@@ -183,18 +184,17 @@ texture_normal = ExtResource("19_exit_normal")
 texture_pressed = ExtResource("21_exit_pressed")
 texture_hover = ExtResource("20_exit_hover")
 
-[node name="Notice" type="Label" parent="."]
+[node name="Notice" type="Control" parent="."]
 unique_name_in_owner = true
 visible = false
-layout_mode = 0
-offset_left = 250.0
-offset_top = 285.0
-offset_right = 550.0
-offset_bottom = 315.0
-theme_override_colors/font_color = Color(1, 1, 0, 1)
-theme_override_font_sizes/font_size = 15
-horizontal_alignment = 1
-vertical_alignment = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("22_notice")
 
 [connection signal="pressed" from="MaleClickArea" to="." method="_on_male_pressed"]
 [connection signal="pressed" from="FemaleClickArea" to="." method="_on_female_pressed"]

@@ -10,7 +10,7 @@ const JOB_WIZARD := 4
 
 @onready var character_sprite: Control = %CharacterSprite
 @onready var character_info: Label = %CharacterInfo
-@onready var notice: Label = %Notice
+@onready var notice: Control = %Notice
 @onready var delete_dialog: Control = %DeleteCharacterDialog
 
 var has_character := false
@@ -156,7 +156,7 @@ func _apply_character(payload: PackedByteArray) -> void:
 	character_exp = payload.decode_u32(70)
 	has_character = true
 	_query_complete = true
-	notice.hide()
+	notice.clear_messages()
 	_update_character_preview()
 	_capture_flow_if_requested()
 
@@ -222,8 +222,7 @@ func _level_from_exp(experience: int) -> int:
 
 
 func _show_notice(message: String) -> void:
-	notice.text = message
-	notice.show()
+	notice.show_message(message)
 
 
 func _update_button_visibility() -> void:

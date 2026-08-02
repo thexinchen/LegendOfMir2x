@@ -36,6 +36,13 @@ cp -a "$resource_dir/sound/seff/." "$project_dir/build/audio/seff/"
 touch "$project_dir/build/audio/.gdignore"
 
 "$repo_dir/build.sh" Release --mir2x-res "$resource_dir" --target godotworldres
+build_signature=$(sed -n 's/^MIR2X_BUILD_SIGNATURE:STRING=//p' "$repo_dir/build/Release/CMakeCache.txt" | head -n 1)
+if [ -z "$build_signature" ]; then
+    echo "failed to read MIR2X_BUILD_SIGNATURE from CMakeCache.txt" >&2
+    exit 1
+fi
+mkdir -p "$project_dir/assets/generated"
+printf '%s\n' "$build_signature" > "$project_dir/assets/generated/build_signature.txt"
 if [ ! -f "$repo_dir/build/Release/res/map/mapbin.zsdb" ]; then
     "$repo_dir/build.sh" Release --mir2x-res "$resource_dir" --target zsdbdeploy
 fi
