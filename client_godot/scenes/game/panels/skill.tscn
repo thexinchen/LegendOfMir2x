@@ -48,13 +48,19 @@ clip_contents = true
 
 [node name="Page" type="TextureRect" parent="PageViewport"]
 offset_right = 304.0
-offset_bottom = 553.0
+offset_bottom = 532.0
 mouse_filter = 2
 texture = ExtResource("5")
 
 [node name="LearnedSkills" type="Control" parent="PageViewport"]
 offset_right = 304.0
-offset_bottom = 553.0
+offset_bottom = 532.0
+
+[node name="SliderInput" type="Control" parent="."]
+offset_left = 319.0
+offset_top = 67.0
+offset_right = 339.0
+offset_bottom = 347.0
 
 [node name="Tab0" type="TextureButton" parent="."]
 offset_left = 45.0
@@ -158,7 +164,7 @@ offset_left = 30.0
 offset_top = 400.0
 offset_right = 315.0
 offset_bottom = 424.0
-theme_override_colors/font_color = Color(0.9, 0.84, 0.65, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 12
 text = ""
 

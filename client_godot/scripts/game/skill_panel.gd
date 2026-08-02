@@ -24,9 +24,11 @@ const PAGE_TEXTURES: Array[Texture2D] = [
 var _state: Node
 var _resources: RefCounted = ActorResourceScript.new()
 var _selected_tab := 0
+var _hovered_tab := -1
 var _hovered_magic_id := 0
 var _scroll := 0.0
 var _scroll_reach := 0.0
+var _slider_dragging := false
 
 
 func _ready() -> void:
@@ -35,19 +37,23 @@ func _ready() -> void:
 	for index in tab_buttons.size():
 		tab_buttons[index].pressed.connect(_select_tab.bind(index))
 		tab_buttons[index].mouse_entered.connect(_show_tab_name.bind(index))
+		tab_buttons[index].mouse_exited.connect(_hide_tab_name.bind(index))
 	_state = get_node("/root/GameState")
 	_state.state_changed.connect(_refresh_learned_skills)
 	$PageViewport.gui_input.connect(_on_page_input)
+	$SliderInput.gui_input.connect(_on_slider_input)
 	_select_tab(0)
 
 
 func _select_tab(index: int) -> void:
+	var changed := _selected_tab != index
 	_selected_tab = index
-	_scroll = 0.0
+	if changed:
+		_scroll = 0.0
 	page.texture = PAGE_TEXTURES[index]
 	for button_index in tab_buttons.size():
 		tab_buttons[button_index].button_pressed = button_index == index
-	selection_label.text = "元素【%s】" % PAGE_NAMES[index]
+	_update_selection_label()
 	_refresh_learned_skills()
 
 
@@ -59,10 +65,13 @@ func set_learned_skills(skill_nodes: Array[Control]) -> void:
 
 func _refresh_learned_skills() -> void:
 	_clear_skills()
-	var max_reach := 329.0
+	var learned_by_id := {}
 	for magic_value in _state.learned_magic:
 		var magic: Dictionary = magic_value
-		var magic_id: int = magic.get("magicID", 0)
+		learned_by_id[int(magic.get("magicID", 0))] = magic
+	var max_button_reach := 0.0
+	for magic_value in _resources.skill_meta.keys():
+		var magic_id := int(magic_value)
 		var layout: PackedInt32Array = _resources.skill_layout(magic_id)
 		if layout.size() < 5 or layout[1] != _selected_tab:
 			continue
@@ -71,27 +80,38 @@ func _refresh_learned_skills() -> void:
 			continue
 		var texture: Texture2D = frame.texture
 		var button := TextureButton.new()
+		button.set_meta("magic_id", magic_id)
 		button.position = Vector2(layout[2] * 60 + 12, layout[3] * 65 + 13)
 		button.size = texture.get_size() + Vector2(8, 8)
-		button.texture_normal = texture
 		button.ignore_texture_size = true
 		button.mouse_entered.connect(_show_magic.bind(magic_id))
 		button.mouse_exited.connect(_hide_magic.bind(magic_id))
 		learned_skills.add_child(button)
+		if learned_by_id.has(magic_id):
+			var icon := TextureRect.new()
+			icon.name = "Icon"
+			icon.size = texture.get_size()
+			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			icon.texture = texture
+			button.add_child(icon)
 
-		var level_label := _make_overlay_label("1", 12, Color.YELLOW)
-		level_label.position = Vector2(texture.get_width() - 2, texture.get_height() - 1)
-		button.add_child(level_label)
+			var level_label := _make_overlay_label("1", 12, Color.YELLOW)
+			level_label.position = Vector2(texture.get_width() - 2, texture.get_height() - 1)
+			button.add_child(level_label)
 
-		var key: int = _state.magic_keys.get(magic_id, 0)
-		if key != 0:
-			var key_label := _make_overlay_label(char(key).to_upper(), 20, Color(1.0, 0.5, 0.0, 0.88))
-			key_label.position = Vector2(2, 2)
-			key_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.88))
-			key_label.add_theme_constant_override("outline_size", 2)
-			button.add_child(key_label)
-		max_reach = maxf(max_reach, button.position.y + button.size.y + 10)
-	_scroll_reach = maxf(0.0, minf(max_reach, 553.0) - 329.0)
+			var key: int = _state.magic_keys.get(magic_id, 0)
+			if key != 0:
+				var key_text := char(key).to_upper()
+				var key_shadow := _make_overlay_label(key_text, 20, Color(0.0, 0.0, 0.0, 224.0 / 255.0))
+				key_shadow.position = Vector2(4, 4)
+				button.add_child(key_shadow)
+				var key_label := _make_overlay_label(key_text, 20, Color(1.0, 128.0 / 255.0, 0.0, 224.0 / 255.0))
+				key_label.position = Vector2(2, 2)
+				button.add_child(key_label)
+		max_button_reach = maxf(max_button_reach, layout[3] * 65.0 + 13.0 + texture.get_height() + 8.0)
+	var background_height := float(page.texture.get_height()) if page.texture != null else 329.0
+	var page_height := clampf(max_button_reach + 10.0, minf(background_height, 329.0), maxf(background_height, 329.0))
+	_scroll_reach = maxf(0.0, page_height - 329.0)
 	_apply_scroll()
 
 
@@ -110,17 +130,33 @@ func _clear_skills() -> void:
 
 
 func _show_tab_name(index: int) -> void:
-	selection_label.text = "元素【%s】" % PAGE_NAMES[index]
+	_hovered_tab = index
+	_update_selection_label()
+
+
+func _hide_tab_name(index: int) -> void:
+	if _hovered_tab == index:
+		_hovered_tab = -1
+		_update_selection_label()
 
 
 func _show_magic(magic_id: int) -> void:
 	_hovered_magic_id = magic_id
-	selection_label.text = "元素【%s】%s" % [PAGE_NAMES[_selected_tab], _resources.magic_names.get(magic_id, "")]
+	_update_selection_label()
 
 
 func _hide_magic(magic_id: int) -> void:
 	if _hovered_magic_id == magic_id:
 		_hovered_magic_id = 0
+		_update_selection_label()
+
+
+func _update_selection_label() -> void:
+	if _hovered_tab >= 0:
+		selection_label.text = "元素【%s】" % PAGE_NAMES[_hovered_tab]
+	elif _hovered_magic_id != 0:
+		selection_label.text = "元素【%s】%s" % [PAGE_NAMES[_selected_tab], _resources.magic_names.get(_hovered_magic_id, "")]
+	else:
 		selection_label.text = "元素【%s】" % PAGE_NAMES[_selected_tab]
 
 
@@ -132,6 +168,22 @@ func _on_page_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_scroll = minf(1.0, _scroll + 0.1)
 			_apply_scroll()
+
+
+func _on_slider_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		_slider_dragging = event.pressed
+		if event.pressed:
+			_set_scroll_from_slider(event.position.y)
+		accept_event()
+	elif event is InputEventMouseMotion and _slider_dragging:
+		_set_scroll_from_slider(event.position.y)
+		accept_event()
+
+
+func _set_scroll_from_slider(local_y: float) -> void:
+	_scroll = clampf((local_y - 7.0) / 266.0, 0.0, 1.0)
+	_apply_scroll()
 
 
 func _apply_scroll() -> void:
