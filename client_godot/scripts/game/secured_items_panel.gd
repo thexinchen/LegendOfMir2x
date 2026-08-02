@@ -50,19 +50,28 @@ func _refresh() -> void:
 		var cell := TextureButton.new()
 		cell.custom_minimum_size = Vector2(38, 38)
 		cell.ignore_texture_size = true
-		cell.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 		if index < _state.secured_items.size():
 			var item: Dictionary = _state.secured_items[index]
 			var item_id := int(item.get("itemID", 0))
-			var icon: Dictionary = _resources.item_icon(item_id)
+			var icon: Dictionary = _resources.secured_item_icon(item_id)
 			if not icon.is_empty():
-				cell.texture_normal = icon.texture
+				var image := TextureRect.new()
+				var image_size: Vector2 = icon.texture.get_size()
+				image.name = "Icon"
+				image.position = (Vector2(38, 38) - image_size) / 2.0
+				image.size = image_size
+				image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				image.texture = icon.texture
+				image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				cell.add_child(image)
 			cell.mouse_entered.connect(_show_item_tooltip.bind(index, item))
 			cell.mouse_exited.connect(_hide_item_tooltip)
 			cell.pressed.connect(_select_index.bind(index))
 			cell.gui_input.connect(_on_cell_input)
 			if _resources.item_is_packable(item_id) and int(item.get("count", 0)) > 0:
 				var count := Label.new()
+				count.name = "Count"
 				count.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 				count.mouse_filter = Control.MOUSE_FILTER_IGNORE
 				count.text = _count_text(item.get("count", 0))

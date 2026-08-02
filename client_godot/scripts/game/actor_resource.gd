@@ -236,6 +236,10 @@ func item_icon(item_id: int) -> Dictionary:
 	return frame("item", package_gfx_id | 0x01000000) if icon.is_empty() else icon
 
 
+func secured_item_icon(item_id: int) -> Dictionary:
+	return frame("item", item_package_gfx_id(item_id) | 0x02000000)
+
+
 func ground_item(item_id: int) -> Dictionary:
 	return frame("item", item_package_gfx_id(item_id))
 

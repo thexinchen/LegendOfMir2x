@@ -8,23 +8,34 @@ func _ready() -> void:
 	if not resources.configure_default():
 		_fail("world resources unavailable")
 		return
+	var largest_icon := Vector2.ZERO
+	var largest_icon_id := 0
+	var missing_fallback_id := 0
 	var packable_id := 0
 	var other_ids: Array[int] = []
-	for item_id in resources.item_meta:
-		var typed_id := int(item_id)
-		if resources.item_icon(typed_id).is_empty():
+	for item_id_value in resources.item_meta:
+		var audit_id := int(item_id_value)
+		var audit_icon: Dictionary = resources.frame("item", resources.item_package_gfx_id(audit_id) | 0x02000000)
+		if audit_icon.is_empty():
+			if missing_fallback_id == 0 and not resources.item_icon(audit_id).is_empty():
+				missing_fallback_id = audit_id
 			continue
-		if packable_id == 0 and resources.item_is_packable(typed_id):
-			packable_id = typed_id
-		else:
-			other_ids.append(typed_id)
-		if packable_id != 0 and other_ids.size() >= 12:
-			break
-	if packable_id == 0 or other_ids.size() < 12:
-		_fail("not enough item icons")
+		if audit_icon.texture.get_size().x * audit_icon.texture.get_size().y > largest_icon.x * largest_icon.y:
+			largest_icon = audit_icon.texture.get_size()
+			largest_icon_id = audit_id
+		if packable_id == 0 and resources.item_is_packable(audit_id):
+			packable_id = audit_id
+		elif not audit_id in other_ids:
+			other_ids.append(audit_id)
+	if packable_id == 0 or largest_icon_id == 0 or missing_fallback_id == 0 or other_ids.size() < 10:
+		_fail("not enough secured item icon fixtures")
 		return
-	var ids: Array[int] = [packable_id]
-	ids.append_array(other_ids.slice(0, 12))
+	var ids: Array[int] = [packable_id, largest_icon_id, missing_fallback_id]
+	for item_id in other_ids:
+		if not item_id in ids:
+			ids.append(item_id)
+		if ids.size() == 13:
+			break
 	var secured_items: Array = []
 	for index in range(ids.size()):
 		secured_items.append({"itemID": ids[index], "seqID": index + 1, "count": 1234 if index == 0 else index + 2})
@@ -36,6 +47,15 @@ func _ready() -> void:
 	if panel.get_node("ItemGrid").get_child_count() != 12 or panel.get_node("Page").text != "第1/2页":
 		_fail("first page layout mismatch")
 		return
+	var large_cell := panel.get_node("ItemGrid").get_child(1) as TextureButton
+	var large_image := large_cell.get_node_or_null("Icon") as TextureRect
+	if large_image == null or large_image.texture.get_size() != largest_icon or large_image.size != largest_icon or large_image.position != (Vector2(38, 38) - largest_icon) / 2.0 or large_cell.texture_normal != null:
+		_fail("large secured icon was not drawn at native size: size=%s position=%s" % [large_image.size if large_image else Vector2.ZERO, large_image.position if large_image else Vector2.ZERO])
+		return
+	var missing_cell := panel.get_node("ItemGrid").get_child(2) as TextureButton
+	if missing_cell.texture_normal != null or missing_cell.get_node_or_null("Icon") != null:
+		_fail("secured icon incorrectly fell back to inventory artwork")
+		return
 	panel.call("_select_index", 3)
 	panel.call("_change_page", 1)
 	if panel.get_node("Page").text != "第2/2页" or panel.get("_selected_index") != 3:
@@ -43,7 +63,7 @@ func _ready() -> void:
 		return
 	panel.call("_change_page", -1)
 	var first_cell := panel.get_node("ItemGrid").get_child(0)
-	var count_label := first_cell.get_child(0) as Label
+	var count_label := first_cell.get_node_or_null("Count") as Label
 	if count_label == null or count_label.text != "1,234" or first_cell.get_node_or_null("Hover") == null:
 		_fail("count formatting/hover overlay mismatch: children=%s count=%s" % [first_cell.get_children().map(func(child): return child.name), count_label.text if count_label else "null"])
 		return
