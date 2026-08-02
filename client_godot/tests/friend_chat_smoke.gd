@@ -46,7 +46,7 @@ func _test_message_list() -> bool:
 
 func _test_state_ordering() -> bool:
 	var state := get_node("/root/GameState")
-	state.player_uid = 5 << 59 | 42 << 35
+	state.player_uid = (5 << 59) | 42
 	state.chat_conversations.clear()
 	state.chat_messages.clear()
 	var self_cpid: int = state.self_chat_cpid()
@@ -54,7 +54,8 @@ func _test_state_ordering() -> bool:
 	state.add_chat_message(_message(2, 200, peer_cpid, self_cpid, "后到"))
 	state.add_chat_message(_message(1, 100, self_cpid, peer_cpid, "先到"))
 	var messages: Array = state.chat_conversations[0].messages
-	return _expect(messages.size() == 2, "conversation message count mismatch") \
+	return _expect(self_cpid == ((2 << 32) | 42), "self CPID did not use original player DBID: %d" % self_cpid) \
+		and _expect(messages.size() == 2, "conversation message count mismatch") \
 		and _expect(messages[0].seq.id == 1 and messages[1].seq.id == 2, "message ordering mismatch") \
 		and _expect(state.chat_message_text(messages[0]) == "先到", "message plain text mismatch")
 

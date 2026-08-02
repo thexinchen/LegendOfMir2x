@@ -309,7 +309,7 @@ func add_player_say(uid: int, text: String) -> void:
 
 
 func self_chat_cpid() -> int:
-	var dbid := (player_uid >> 35) & 0xFFFFFF
+	var dbid := player_uid & 0xFFFFFFFF
 	return (2 << 32) | dbid
 
 

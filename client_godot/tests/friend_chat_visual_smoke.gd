@@ -2,7 +2,7 @@ extends Control
 
 
 func _ready() -> void:
-	GameState.player_uid = (5 << 59) | (42 << 35)
+	GameState.player_uid = (5 << 59) | 42
 	GameState.player_name = "亚当"
 	GameState.player_gender = 1
 	GameState.player_job = 0
