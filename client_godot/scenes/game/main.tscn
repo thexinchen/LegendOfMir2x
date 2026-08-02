@@ -181,8 +181,8 @@ fit_content = false
 unique_name_in_owner = true
 layout_mode = 0
 offset_top = 400.0
-offset_right = 282.0
-offset_bottom = 443.0
+offset_right = 280.0
+offset_bottom = 448.0
 mouse_filter = 0
 script = ExtResource("12_quick_script")
 
@@ -216,9 +216,9 @@ mouse_filter = 2
 [node name="CloseButton" type="TextureButton" parent="QuickBar"]
 layout_mode = 0
 offset_left = 263.0
-offset_top = 27.0
+offset_top = 32.0
 offset_right = 279.0
-offset_bottom = 43.0
+offset_bottom = 48.0
 texture_normal = ExtResource("10_quick_close")
 texture_pressed = ExtResource("13_quick_close_down")
 ignore_texture_size = true

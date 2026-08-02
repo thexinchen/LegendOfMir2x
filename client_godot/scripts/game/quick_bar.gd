@@ -87,7 +87,7 @@ func _refresh() -> void:
 		if item.is_empty():
 			continue
 		var item_id := int(item.get("itemID", 0))
-		var icon: Dictionary = _resources.item_icon(item_id)
+		var icon: Dictionary = _resources.frame("item", _resources.item_package_gfx_id(item_id) | 0x01000000)
 		if not icon.is_empty():
 			var image := TextureRect.new()
 			image.name = "Icon"

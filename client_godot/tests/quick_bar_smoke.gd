@@ -32,9 +32,21 @@ func _ready() -> void:
 	if quick_bar.position != Vector2(0, 400):
 		_fail("original quick-bar placement mismatch: %s" % quick_bar.position)
 		return
+	if quick_bar.size != Vector2(280, 48):
+		_fail("native quick-bar size mismatch: %s" % quick_bar.size)
+		return
+	var close_button := quick_bar.get_node("CloseButton") as TextureButton
+	if close_button.position != Vector2(263, 32) or close_button.size != Vector2(16, 16):
+		_fail("original quick-bar close geometry mismatch")
+		return
 	var slot0 := quick_bar.get_node("Slots/Slot0")
 	if not slot0.has_node("Icon") or not slot0.has_node("Count") or slot0.get_node("Count").text != "3":
 		_fail("belt icon/count did not render")
+		return
+	var bar_resources: RefCounted = quick_bar.get("_resources")
+	var expected_icon: Dictionary = bar_resources.frame("item", bar_resources.item_package_gfx_id(potion_id) | 0x01000000)
+	if expected_icon.is_empty() or slot0.get_node("Icon").texture != expected_icon.texture:
+		_fail("quick-bar item did not use original package sprite bank")
 		return
 	quick_bar.call("_set_hovered_slot", 0)
 	if not quick_bar.get_node("Hover").visible or quick_bar.get_node("Hover").position != Vector2(17, 6):
@@ -83,9 +95,16 @@ func _ready() -> void:
 	motion.position = Vector2(2000, 2000)
 	motion.relative = Vector2(2000, 2000)
 	quick_bar.call("_on_bar_input", motion)
-	if quick_bar.position.x > 518 or quick_bar.position.y > 557:
+	if quick_bar.position != Vector2(520, 552):
 		_fail("quick-bar drag was not clamped: %s" % quick_bar.position)
 		return
+
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	close_button.pressed.emit()
+	if quick_bar.visible or AudioService.last_seff_id != AudioService.UI_CLICK_SEFF_ID:
+		_fail("quick-bar close did not hide with original button feedback")
+		return
+	quick_bar.show()
 
 	GameState.grabbed_item = {"itemID": potion_id, "seqID": 404, "count": 1}
 	GameState.state_changed.emit()

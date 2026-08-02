@@ -2111,6 +2111,7 @@ func minimap_hud_width() -> float:
 
 
 func _on_quick_bar_close_pressed() -> void:
+	AudioService.play_ui_click()
 	quick_bar.hide()
 
 
