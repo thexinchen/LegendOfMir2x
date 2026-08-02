@@ -1,5 +1,7 @@
 extends Node
 
+var _exp_request_sent := false
+
 
 func _ready() -> void:
 	NetworkClient.connection_changed.connect(_on_connection_changed)
@@ -23,7 +25,14 @@ func _on_message_received(head_code: int, payload: PackedByteArray) -> void:
 			_fail("login failed: %d" % (payload[0] if not payload.is_empty() else -1), 4)
 		NetworkClient.SM_ONLINEOK:
 			print("NETWORK_ONLINE_SMOKE enter game succeeded")
-			get_tree().quit()
+			if NetworkClient.send_request_add_exp(1) != OK:
+				_fail("failed to send original @addExp protocol", 7)
+				return
+			_exp_request_sent = true
+		NetworkClient.SM_EXP:
+			if _exp_request_sent:
+				print("NETWORK_ONLINE_SMOKE original @addExp protocol round-trip succeeded: exp=", payload.decode_u32(0))
+				get_tree().quit()
 		NetworkClient.SM_ONLINEERROR:
 			_fail("enter game failed: %d" % (payload[0] if not payload.is_empty() else -1), 5)
 

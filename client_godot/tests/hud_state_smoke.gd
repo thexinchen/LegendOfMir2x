@@ -258,10 +258,22 @@ func _ready() -> void:
 		_fail("empty broadcast command changed visible chat state")
 		return
 	panel.call("_on_command_submitted", "   @help")
-	if GameState.chat_log.size() != 2 or GameState.chat_log[-1].text != "可用命令：@help":
-		_fail("leading whitespace did not preserve prefixed command routing")
+	if GameState.chat_log.size() != 11 or GameState.chat_log[1].text != "@moveTo" or GameState.chat_log[-1].text != "@help":
+		_fail("leading whitespace did not list the original user commands: %s" % GameState.chat_log)
 		return
-	print("HUD STATE PASS: self/focus face, HP, compact buffs, target depth, experience, load, controls and command input")
+	GameState.chat_log.clear()
+	panel.call("_on_command_submitted", "@add nope")
+	if GameState.chat_log.size() != 3 or GameState.chat_log[0].text != ">> 用户命令有歧义：add" or GameState.chat_log[1].text != ">> 候选命令：addHP" or GameState.chat_log[2].text != ">> 候选命令：addExp":
+		_fail("ambiguous user-command prefix did not list C++ candidates: %s" % GameState.chat_log)
+		return
+	GameState.chat_log.clear()
+	panel.call("_on_command_submitted", "@addH nope")
+	panel.call("_on_command_submitted", "@makeItem 不存在的物品")
+	panel.call("_on_command_submitted", "@luaE")
+	if GameState.chat_log.size() != 3 or GameState.chat_log[0].text != "用法：@addHP 数量" or GameState.chat_log[1].text != "无效的物品名：不存在的物品" or GameState.chat_log[2].text != ">> Lua 编辑器尚未实现":
+		_fail("user-command validation or unique prefix routing mismatch: %s" % GameState.chat_log)
+		return
+	print("HUD STATE PASS: self/focus face, HP, compact buffs, target depth, experience, load, controls and original user commands")
 	get_tree().quit()
 
 

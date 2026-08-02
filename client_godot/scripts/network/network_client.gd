@@ -16,6 +16,10 @@ const CM_ACTION := 8
 const CM_SETMAGICKEY := 9
 const CM_SETRUNTIMECONFIG := 10
 const CM_QUERYCORECORD := 11
+const CM_REQUESTADDHP := 12
+const CM_REQUESTADDEXP := 13
+const CM_REQUESTDIE := 14
+const CM_REQUESTKILLPETS := 15
 const CM_PICKUP := 19
 const CM_QUERYGOLD := 21
 const CM_QUERYPLAYERNAME := 23
@@ -27,6 +31,7 @@ const CM_NPCEVENT := 29
 const CM_QUERYSELLITEMLIST := 30
 const CM_DROPITEM := 31
 const CM_CONSUMEITEM := 32
+const CM_MAKEITEM := 33
 const CM_BUY := 34
 const CM_ADDFRIEND := 35
 const CM_ACCEPTADDFRIEND := 36
@@ -284,6 +289,22 @@ func send_request_space_move(map_uid: int, x: int, y: int) -> Error:
 	return _send_fixed_message(CM_REQUESTSPACEMOVE, payload)
 
 
+func send_request_add_hp(value: int) -> Error:
+	return _send_u64_message(CM_REQUESTADDHP, value)
+
+
+func send_request_add_exp(value: int) -> Error:
+	return _send_u64_message(CM_REQUESTADDEXP, value)
+
+
+func send_request_die() -> Error:
+	return _send_empty_message(CM_REQUESTDIE)
+
+
+func send_request_kill_pets() -> Error:
+	return _send_empty_message(CM_REQUESTKILLPETS)
+
+
 func send_query_player_name(uid: int) -> Error:
 	var payload := PackedByteArray()
 	payload.resize(8)
@@ -409,6 +430,14 @@ func send_consume_item(item_id: int, seq_id: int, count: int = 1) -> Error:
 	payload.encode_u32(4, seq_id)
 	payload.encode_u16(8, clampi(count, 0, 0xFFFF))
 	return _send_fixed_message(CM_CONSUMEITEM, payload)
+
+
+func send_make_item(item_id: int, count: int = 1) -> Error:
+	var payload := PackedByteArray()
+	payload.resize(6)
+	payload.encode_u32(0, item_id)
+	payload.encode_u16(4, clampi(count, 0, 0xFFFF))
+	return _send_fixed_message(CM_MAKEITEM, payload)
 
 
 func send_retrieve_secured_item(item_id: int, seq_id: int) -> Error:

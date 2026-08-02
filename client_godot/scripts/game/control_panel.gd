@@ -6,6 +6,10 @@ const AC_TEXTURE := preload("res://assets/ui/game/control_panel/00000046.png")
 const DC_TEXTURE := preload("res://assets/ui/game/control_panel/00000047.png")
 const MA_TEXTURE := preload("res://assets/ui/game/control_panel/00000048.png")
 const MC_TEXTURE := preload("res://assets/ui/game/control_panel/00000049.png")
+const USER_COMMANDS := [
+	"moveTo", "luaEditor", "makeItem", "getAttackUID", "addHP",
+	"addExp", "killPets", "die", "revive", "help",
+]
 
 signal panel_requested(scene_path: String)
 signal quick_bar_toggled
@@ -423,16 +427,108 @@ func _on_command_submitted(text: String) -> void:
 		if not content.is_empty():
 			NetworkClient.send_player_broadcast(content)
 	elif full_text.begins_with("@"):
-		var user_command := full_text.substr(1).strip_edges()
-		if user_command == "help":
-			game_state.add_chat_log("可用命令：@help", 1)
-		else:
-			game_state.add_chat_log("无效的本地命令：%s" % user_command, 3)
+		_handle_user_command(full_text.substr(1))
 	elif full_text.begins_with("$"):
 		game_state.add_chat_log("Godot 客户端不提供本地 Lua 执行环境", 3)
 	else:
 		game_state.add_chat_log(full_text, 0)
 		NetworkClient.send_player_say(full_text)
+
+
+func _handle_user_command(command_text: String) -> void:
+	var tokens := Array(command_text.split(" ", false))
+	if tokens.is_empty():
+		return
+	var command_prefix := str(tokens[0])
+	var matches: Array[String] = []
+	for command in USER_COMMANDS:
+		if command.begins_with(command_prefix):
+			matches.append(command)
+	if matches.is_empty():
+		game_state.add_chat_log("-> 无效的用户命令：%s" % command_prefix, 3)
+		return
+	if matches.size() > 1:
+		game_state.add_chat_log(">> 用户命令有歧义：%s" % command_prefix, 3)
+		for candidate in matches:
+			game_state.add_chat_log(">> 候选命令：%s" % candidate, 3)
+		return
+	match matches[0]:
+		"moveTo": _command_move_to(tokens)
+		"luaEditor": game_state.add_chat_log(">> Lua 编辑器尚未实现", 3)
+		"makeItem": _command_make_item(tokens)
+		"getAttackUID": game_state.add_chat_log(str(_attack_focus_uid()), 3)
+		"addHP": _command_add_value(tokens, true)
+		"addExp": _command_add_value(tokens, false)
+		"killPets":
+			NetworkClient.send_request_kill_pets()
+			game_state.add_chat_log("杀死所有宝宝", 1)
+		"die":
+			NetworkClient.send_request_die()
+			game_state.add_chat_log("自杀", 1)
+		"revive":
+			if game_state.player_action_type == 13:
+				NetworkClient.send_request_add_hp(1)
+				game_state.add_chat_log("复活", 1)
+		"help":
+			for command in USER_COMMANDS:
+				game_state.add_chat_log("@%s" % command, 1)
+
+
+func _command_move_to(tokens: Array) -> void:
+	if tokens.size() != 3 or not str(tokens[1]).is_valid_int() or not str(tokens[2]).is_valid_int():
+		game_state.add_chat_log("用法：@moveTo X Y", 3)
+		return
+	var destination := Vector2i(int(tokens[1]), int(tokens[2]))
+	var main := get_parent()
+	if main == null or not main.has_method("_start_move_to"):
+		game_state.add_chat_log("当前场景无法移动", 3)
+		return
+	main.call("_start_move_to", destination)
+
+
+func _command_make_item(tokens: Array) -> void:
+	if tokens.size() < 2 or tokens.size() > 3:
+		game_state.add_chat_log("用法：@makeItem 物品名字 [数量]", 1)
+		return
+	var item_name := str(tokens[1])
+	var item_id := 0
+	for id_value in _resources.item_names:
+		if str(_resources.item_names[id_value]) == item_name:
+			item_id = int(id_value)
+			break
+	if item_id <= 0:
+		game_state.add_chat_log("无效的物品名：%s" % item_name, 3)
+		return
+	var count := 1
+	if tokens.size() == 3:
+		if not str(tokens[2]).is_valid_int():
+			game_state.add_chat_log("无效的物品数量：%s" % tokens[2], 3)
+			return
+		count = int(tokens[2])
+	if count <= 0 or count > 0xFFFF:
+		game_state.add_chat_log("无效的物品数量：%s" % count, 3)
+		return
+	NetworkClient.send_make_item(item_id, count)
+
+
+func _command_add_value(tokens: Array, health: bool) -> void:
+	var command_name := "addHP" if health else "addExp"
+	if tokens.size() != 2 or not str(tokens[1]).is_valid_int():
+		game_state.add_chat_log("用法：@%s 数量" % command_name, 3)
+		return
+	var value := int(tokens[1])
+	if value <= 0:
+		game_state.add_chat_log("无效的数量：%s" % tokens[1], 3)
+		return
+	if health:
+		NetworkClient.send_request_add_hp(value)
+	else:
+		NetworkClient.send_request_add_exp(value)
+
+
+func _attack_focus_uid() -> int:
+	var main := get_parent()
+	return int(main.get("_attack_focus_uid")) if main != null and main.has_method("_send_attack_action") else 0
 
 
 func _on_ac_pressed() -> void:
