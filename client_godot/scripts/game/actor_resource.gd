@@ -17,6 +17,7 @@ var buff_names: Dictionary = {}
 var magic_meta: Dictionary = {}
 var magic_names: Dictionary = {}
 var magic_ids_by_name: Dictionary = {}
+var hero_weapon_orders := PackedByteArray()
 var _textures: Dictionary = {}
 
 
@@ -25,6 +26,7 @@ func configure(path: String) -> bool:
 	var loaded := false
 	for family in ["hero", "hair", "helmet", "weapon", "monster", "npc", "item", "equip", "proguse", "selectchar", "magic"]:
 		loaded = _load_index(family) or loaded
+	_load_hero_weapon_orders()
 	_load_monster_meta()
 	_load_item_meta()
 	_load_item_details()
@@ -284,6 +286,13 @@ func magic_id(name: String) -> int:
 	return magic_ids_by_name.get(name, 0)
 
 
+func hero_weapon_order(gfx_motion: int, direction: int, frame_index: int) -> int:
+	if gfx_motion < 0 or gfx_motion >= 33 or direction < 1 or direction > 8 or frame_index < 0 or frame_index >= 10:
+		return -1
+	var index := gfx_motion * 80 + (direction - 1) * 10 + frame_index
+	return hero_weapon_orders[index] if hero_weapon_orders.size() == 2640 else 0
+
+
 func _load_index(family: String) -> bool:
 	var file := FileAccess.open("%s/sprites/%s.m2xindex" % [base_path, family], FileAccess.READ)
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
@@ -301,6 +310,18 @@ func _load_index(family: String) -> bool:
 			dy -= 0x10000
 		offsets["%s:%08X" % [family, key]] = Vector2i(dx, dy)
 	return true
+
+
+func _load_hero_weapon_orders() -> void:
+	hero_weapon_orders.clear()
+	var file := FileAccess.open("%s/sprites/weapon_order.m2xmeta" % base_path, FileAccess.READ)
+	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
+		return
+	if file.get_32() != 1 or file.get_32() != 2640:
+		return
+	var values := file.get_buffer(2640)
+	if values.size() == 2640:
+		hero_weapon_orders = values
 
 
 func _load_monster_meta() -> void:

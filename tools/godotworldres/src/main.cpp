@@ -529,6 +529,18 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
         writeVector(metaFile, metaList);
     }
     if(std::strcmp(family, "hero") == 0){
+        constexpr std::array<uint8_t, 2640> weaponOrder
+        {
+            #include "weaponorder.inc"
+        };
+        std::ofstream weaponOrderFile(outputDir / "sprites" / "weapon_order.m2xmeta", std::ios::binary);
+        const SpriteHeader weaponOrderHeader {.spriteCount = to_u32(weaponOrder.size())};
+        weaponOrderFile.write(reinterpret_cast<const char *>(&weaponOrderHeader), sizeof(weaponOrderHeader));
+        weaponOrderFile.write(reinterpret_cast<const char *>(weaponOrder.data()), static_cast<std::streamsize>(weaponOrder.size()));
+        if(!weaponOrderFile){
+            throw fflpanic("failed to write hero weapon order metadata");
+        }
+
         std::vector<ItemMetaRecord> metaList;
         for(uint32_t itemID = 1; itemID < DBCOM_ITEMENDID(); ++itemID){
             const auto &record = DBCOM_ITEMRECORD(itemID);

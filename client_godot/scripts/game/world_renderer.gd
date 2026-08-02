@@ -1432,11 +1432,9 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	var py: int = roundi(draw_grid.y * GRID_YP) - view_y
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
 
-	_draw_hero_attached_magic(game_state.player_uid, px, py, game_state.player_direction, false)
 	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id, game_state.player_uid, game_state.player_y):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
-	_draw_hero_attached_magic(game_state.player_uid, px, py, game_state.player_direction, true)
 	_draw_team_leader_marker(game_state.player_uid, px, py)
 	_draw_player_say(game_state.player_uid, px, py)
 	
@@ -1477,8 +1475,6 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 	var c_type: int = c.get("type", 0)
 	var sprite_drawn := false
 	var uid: int = c.get("uid", 0)
-	if c_type == 2:
-		_draw_hero_attached_magic(uid, cx, cy, c.get("direction", 5), false)
 	match c_type:
 		1: sprite_drawn = _draw_monster_sprite(c, cx, cy, body_alpha)
 		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100), c.get("action_magic_id", 0), uid, c.get("y", 0))
@@ -1486,9 +1482,7 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 	if not sprite_drawn:
 		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3 * body_alpha))
 		draw_circle(center, 12, Color(0.7, 0.2, 0.2, 0.9 * body_alpha))
-	if c_type == 2:
-		_draw_hero_attached_magic(uid, cx, cy, c.get("direction", 5), true)
-	else:
+	if c_type != 2:
 		_draw_attached_magic(uid, cx, cy)
 		if c_type == 1 and c.get("action_type", 2) == 7:
 			var motion_magic_id: int = c.get("action_magic_id", 0)
@@ -1602,13 +1596,17 @@ func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dict
 	var shadow: Dictionary = actor_resource.frame("hero", body_key | (1 << 23))
 	var body: Dictionary = actor_resource.frame("hero", body_key)
 	_record_actor_target(uid, 2, map_y, action_type, body, start_x, start_y)
-	_draw_sprite_frame(shadow, start_x, start_y, 0.5)
 	var weapon_shape := _wear_shape(wear, 3)
 	var weapon_key := 0
 	if weapon_shape > 0:
 		var weapon_gfx: int = ((weapon_shape - 1) << 9) | (motion_data[0] << 3) | direction_index
 		weapon_key = (gender << 22) | ((weapon_gfx & 0x1FFFF) << 5) | frame_index
 		_draw_sprite_frame(actor_resource.frame("weapon", weapon_key | (1 << 23)), start_x, start_y, 0.5)
+	_draw_sprite_frame(shadow, start_x, start_y, 0.5)
+	var weapon_order: int = actor_resource.hero_weapon_order(motion_data[0], direction_index + 1, frame_index)
+	if weapon_key != 0 and weapon_order == 1:
+		_draw_sprite_frame(actor_resource.frame("weapon", weapon_key), start_x, start_y, 1.0)
+	_draw_hero_attached_magic(uid, start_x, start_y, direction_index + 1, false)
 	_draw_sprite_frame(body, start_x, start_y, 1.0)
 	var layer: Dictionary = actor_resource.frame("hero", body_key | (1 << 24))
 	_draw_sprite_frame(layer, start_x, start_y, 1.0)
@@ -1623,8 +1621,9 @@ func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dict
 			var hair_gfx: int = ((hair - 1) << 9) | (motion_data[0] << 3) | direction_index
 			var hair_key: int = (gender << 22) | ((hair_gfx & 0x1FFFF) << 5) | frame_index
 			_draw_sprite_frame(actor_resource.frame("hair", hair_key), start_x, start_y, 1.0)
-	if weapon_key != 0:
+	if weapon_key != 0 and weapon_order == 0:
 		_draw_sprite_frame(actor_resource.frame("weapon", weapon_key), start_x, start_y, 1.0)
+	_draw_hero_attached_magic(uid, start_x, start_y, direction_index + 1, true)
 	if action_type == 7:
 		_draw_attack_motion_effect(magic_id, direction, action_started_ms, start_x, start_y)
 	return not body.is_empty()

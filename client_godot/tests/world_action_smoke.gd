@@ -16,6 +16,15 @@ func _ready() -> void:
 	if not resources.configure_default():
 		_fail("world resources unavailable")
 		return
+	if not resources.has_method("hero_weapon_order"):
+		_fail("hero weapon draw-order metadata unavailable")
+		return
+	if resources.call("hero_weapon_order", 0, 1, 0) != 1 \
+			or resources.call("hero_weapon_order", 0, 5, 0) != 0 \
+			or resources.call("hero_weapon_order", 1, 1, 0) != 1 \
+			or resources.call("hero_weapon_order", 32, 8, 9) != 0:
+		_fail("hero weapon draw-order metadata mismatch")
+		return
 	var physical_id: int = resources.magic_id("物理攻击")
 	var next_strike_id: int = resources.magic_id("攻杀剑术")
 	if physical_id == 0 or next_strike_id == 0:
