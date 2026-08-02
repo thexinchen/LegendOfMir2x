@@ -23,7 +23,16 @@ func _ready() -> void:
 	if not (panel.call("_build_bbcode", xml, event_meta, event_meta) as String).contains("[color=#ff00ff]"):
 		_fail("pressed event color missing")
 		return
-	GameState.npc_dialog = {"npcUID": 1, "eventPath": "npc/test", "xmlLayout": xml}
+	var cjk_text := "\u7532\u4e59\u4e19\u4e01"
+	var nowrap_xml := "<layout><par>12345678<event id=\"spawn\" wrap=\"false\">%s</event></par></layout>" % cjk_text
+	var nowrap_bbcode: String = panel.call("_build_bbcode", nowrap_xml, "", "", 100.0)
+	if not nowrap_bbcode.contains("12345678\n[color=#ffff00][url=") or not nowrap_bbcode.contains("%s[/url]" % cjk_text):
+		_fail("wrap=false event was not moved to an intact next line: %s" % nowrap_bbcode)
+		return
+	var display_xml := xml
+	if OS.has_environment("MIR2X_NPC_NOWRAP_SCREENSHOT"):
+		display_xml = "<layout><par>Monster list:</par><par><event id=\"a\" wrap=\"false\">\u7532\u4e59\u4e19\u4e01\uff0c</event><event id=\"b\" wrap=\"false\">\u620a\u5df1\u5e9a\u8f9b\uff0c</event><event id=\"c\" wrap=\"false\">\u58ec\u7678\u5b50\u4e11\uff0c</event><event id=\"d\" wrap=\"false\">\u5bc5\u536f\u8fb0\u5df3\uff0c</event></par></layout>"
+	GameState.npc_dialog = {"npcUID": 1, "eventPath": "npc/test", "xmlLayout": display_xml}
 	GameState.state_changed.emit()
 	await get_tree().process_frame
 	await get_tree().process_frame

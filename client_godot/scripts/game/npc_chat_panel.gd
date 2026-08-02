@@ -31,7 +31,7 @@ func _refresh() -> void:
 	_apply_layout.call_deferred()
 
 
-func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = "") -> String:
+func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = "", line_width_override: float = -1.0) -> String:
 	if xml.is_empty():
 		return ""
 	var parser := XMLParser.new()
@@ -39,6 +39,11 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 		return _escape_bbcode(xml)
 	var result := ""
 	var tag_stack: Array[String] = []
+	var no_wrap_depth := 0
+	var line_width: float = line_width_override if line_width_override > 0.0 else _dialog_line_width()
+	var current_line_width := 0.0
+	var atomic_result_start := -1
+	var atomic_text := ""
 	while parser.read() == OK:
 		match parser.get_node_type():
 			XMLParser.NODE_ELEMENT:
@@ -46,6 +51,7 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 				if name == "par":
 					if not result.is_empty() and not result.ends_with("\n"):
 						result += "\n"
+					current_line_width = 0.0
 					var par_tags: Array[String] = []
 					var align := _xml_attribute(parser, "align", "justify").to_lower()
 					if align == "center":
@@ -67,6 +73,10 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 						par_tags.append("color")
 					tag_stack.append("par:%s" % ",".join(par_tags))
 				elif name == "event":
+					var wrap_enabled := _parse_bool(_xml_attribute(parser, "wrap", "true"))
+					if not wrap_enabled:
+						atomic_result_start = result.length()
+						atomic_text = ""
 					var event := {
 						"id": _xml_attribute(parser, "id", ""),
 						"path": _xml_attribute(parser, "path", ""),
@@ -76,7 +86,9 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					var meta := JSON.stringify(event)
 					var event_color := "#ff00ff" if meta == pressed_meta else ("#00ff00" if meta == hover_meta else "#ffff00")
 					result += "[color=%s][url=%s]" % [event_color, meta]
-					tag_stack.append("event")
+					tag_stack.append("event" if wrap_enabled else "event-nowrap")
+					if not wrap_enabled:
+						no_wrap_depth += 1
 				elif name == "t":
 					result += "[color=%s]" % _bbcode_color(_xml_attribute(parser, "color", "white"))
 					tag_stack.append("t")
@@ -86,12 +98,35 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 				else:
 					tag_stack.append(name)
 				if parser.is_empty():
-					result = _close_tag(result, tag_stack.pop_back())
+					var empty_tag: String = tag_stack.pop_back()
+					if empty_tag == "event-nowrap":
+						var empty_placement: Array = _place_atomic_text(result, atomic_result_start, atomic_text, current_line_width, line_width)
+						current_line_width = empty_placement[0]
+						result = empty_placement[1]
+						atomic_result_start = -1
+						atomic_text = ""
+					result = _close_tag(result, empty_tag)
+					if empty_tag == "event-nowrap":
+						no_wrap_depth -= 1
 			XMLParser.NODE_ELEMENT_END:
 				if not tag_stack.is_empty():
-					result = _close_tag(result, tag_stack.pop_back())
+					var closed_tag: String = tag_stack.pop_back()
+					if closed_tag == "event-nowrap":
+						var placement: Array = _place_atomic_text(result, atomic_result_start, atomic_text, current_line_width, line_width)
+						current_line_width = placement[0]
+						result = placement[1]
+						atomic_result_start = -1
+						atomic_text = ""
+					result = _close_tag(result, closed_tag)
+					if closed_tag == "event-nowrap":
+						no_wrap_depth -= 1
 			XMLParser.NODE_TEXT:
-				result += _escape_bbcode(parser.get_node_data())
+				var text := parser.get_node_data()
+				result += _escape_bbcode(text)
+				if no_wrap_depth > 0:
+					atomic_text += text
+				else:
+					current_line_width = _advance_line_width(current_line_width, text, line_width)
 	return result
 
 
@@ -108,7 +143,7 @@ func _close_tag(result: String, name: String) -> String:
 		"par":
 			if not result.ends_with("\n"):
 				result += "\n"
-		"event":
+		"event", "event-nowrap":
 			result += "[/url][/color]"
 		"t":
 			result += "[/color]"
@@ -165,6 +200,35 @@ func _bbcode_color(value: String) -> String:
 
 func _escape_bbcode(text: String) -> String:
 	return text.replace("[", "[lb]").replace("]", "[rb]")
+
+
+func _dialog_line_width() -> float:
+	var face_width: float = float($Face.texture.get_width()) if $Face.visible and $Face.texture != null else 0.0
+	var board_width := maxf(get_viewport_rect().size.x / 3.0, MIN_BOARD_WIDTH)
+	return maxf(1.0, board_width - MARGIN * (3.0 if $Face.visible else 2.0) - face_width)
+
+
+func _text_width(text: String) -> float:
+	return $Dialog.get_theme_font("normal_font").get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, $Dialog.get_theme_font_size("normal_font_size")).x
+
+
+func _advance_line_width(current: float, text: String, line_width: float) -> float:
+	for index in text.length():
+		var character: String = text[index]
+		if character == "\n":
+			current = 0.0
+			continue
+		var character_width: float = _text_width(character)
+		current = character_width if current > 0.0 and current + character_width > line_width else current + character_width
+	return current
+
+
+func _place_atomic_text(bbcode: String, start: int, text: String, current: float, line_width: float) -> Array:
+	var atomic_width: float = _text_width(text)
+	if current > 0.0 and current + atomic_width > line_width and atomic_width <= line_width:
+		bbcode = bbcode.insert(start, "\n")
+		current = 0.0
+	return [_advance_line_width(current, text, line_width), bbcode]
 
 
 func _parse_bool(value: String) -> bool:
