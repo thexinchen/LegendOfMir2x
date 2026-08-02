@@ -106,7 +106,8 @@ func _ready() -> void:
 		{"item": {"itemID": packable_id, "seqID": 0}, "costList": [{"itemID": gold_id, "count": 1288}]},
 	]}
 	GameState.state_changed.emit()
-	if panel.size.x != 514 or panel.get_node("Detail").get_child_count() < 3 or not _has_label_text(panel.get_node("Detail"), "1,288 金币"):
+	var packable_price_label := _find_label_text(panel.get_node("Detail"), "1,288 金币")
+	if panel.size.x != 514 or panel.get_node("Detail").get_child_count() < 3 or packable_price_label == null or packable_price_label.get_theme_font_size("font_size") != 13:
 		_fail("packable item extension missing")
 		return
 	if panel.get_node("ItemTooltip").visible:

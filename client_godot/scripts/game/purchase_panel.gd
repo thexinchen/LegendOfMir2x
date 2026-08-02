@@ -278,6 +278,7 @@ func _build_packable_detail(sell_item: Dictionary) -> void:
 	price.size = Vector2(145, 38)
 	price.text = "%s 金币" % _comma_number(_gold_price(sell_item))
 	price.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	price.add_theme_font_size_override("font_size", 13)
 	price.add_theme_color_override("font_color", Color.YELLOW)
 	$Detail.add_child(price)
 	_add_detail_button(Vector2(366, 60), COUNT_NORMAL, COUNT_DOWN, func(): quantity_requested.emit(_state.npc_sell.get("npcUID", 0), item_id, _resources.item_name(item_id)))
