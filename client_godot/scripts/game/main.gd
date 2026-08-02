@@ -2293,7 +2293,7 @@ func _ensure_extra_panel(scene_path: String) -> Control:
 		return null
 	panel = packed.instantiate() as Control
 	add_child(panel)
-	panel.position = Vector2(size.x - panel.size.x, 0.0) if scene_path.ends_with("/minimap.tscn") else (size - panel.size) * 0.5
+	panel.position = _extra_panel_initial_position(scene_path, panel.size)
 	if scene_path == MINIMAP_PANEL_PATH:
 		panel.call("set_requested_visible", true)
 	else:
@@ -2307,6 +2307,31 @@ func _ensure_extra_panel(scene_path: String) -> Control:
 	if scene_path == FRIEND_CHAT_PANEL_PATH and panel.has_signal("group_name_requested"):
 		panel.group_name_requested.connect(_on_friend_group_name_requested)
 	return panel
+
+
+func _extra_panel_initial_position(scene_path: String, panel_size: Vector2) -> Vector2:
+	var renderer_center := Vector2(floorf(size.x * 0.5), floorf(size.y * 0.5))
+	match scene_path:
+		"res://scenes/game/panels/horse.tscn":
+			return renderer_center + Vector2(-128, -161)
+		"res://scenes/game/panels/guild.tscn":
+			return renderer_center + Vector2(-297, -222)
+		QUEST_PANEL_PATH:
+			return renderer_center + Vector2(-145, -223)
+		TEAM_PANEL_PATH:
+			return renderer_center + Vector2(-129, -122)
+		FRIEND_CHAT_PANEL_PATH:
+			return renderer_center + Vector2(-250, -250)
+		"res://scenes/game/panels/runtime_config.tscn":
+			return renderer_center + Vector2(-255, -234)
+		"res://scenes/game/panels/input_string.tscn":
+			return renderer_center + Vector2(-179, -134)
+		SECURED_ITEMS_PANEL_PATH, PURCHASE_PANEL_PATH, NPC_CHAT_PANEL_PATH:
+			return Vector2.ZERO
+		MINIMAP_PANEL_PATH:
+			return Vector2(size.x - panel_size.x, 0.0)
+		_:
+			return (size - panel_size) * 0.5
 
 
 func _on_input_committed(value: String) -> void:

@@ -40,6 +40,45 @@ func _ready() -> void:
 	if initial_player_state_panel.position != Vector2(236, 67) or initial_player_state_panel.size != Vector2(328, 466) or initial_skill_panel.position != Vector2(220, 76) or initial_skill_panel.size != Vector2(360, 448):
 		_fail("main panel geometry mismatch: player=%s/%s skill=%s/%s" % [initial_player_state_panel.position, initial_player_state_panel.size, initial_skill_panel.position, initial_skill_panel.size])
 		return
+	var expected_extra_positions := {
+		"res://scenes/game/panels/horse.tscn": Vector2(272, 139),
+		"res://scenes/game/panels/guild.tscn": Vector2(103, 78),
+		"res://scenes/game/panels/quest.tscn": Vector2(255, 77),
+		"res://scenes/game/panels/team.tscn": Vector2(271, 178),
+		"res://scenes/game/panels/secured_items.tscn": Vector2.ZERO,
+		"res://scenes/game/panels/purchase.tscn": Vector2.ZERO,
+		"res://scenes/game/panels/auction.tscn": Vector2(40, 80),
+		"res://scenes/game/panels/friend_chat.tscn": Vector2(150, 50),
+		"res://scenes/game/panels/runtime_config.tscn": Vector2(145, 66),
+		"res://scenes/game/panels/npc_chat.tscn": Vector2.ZERO,
+		"res://scenes/game/panels/minimap.tscn": Vector2(600, 0),
+		"res://scenes/game/panels/input_string.tscn": Vector2(221, 166),
+	}
+	for scene_path: String in expected_extra_positions:
+		var extra_panel := main.call("_ensure_extra_panel", scene_path) as Control
+		if extra_panel == null or extra_panel.position != expected_extra_positions[scene_path]:
+			_fail("extra panel initial position mismatch: scene=%s actual=%s expected=%s" % [scene_path, extra_panel.position if extra_panel != null else Vector2.INF, expected_extra_positions[scene_path]])
+			return
+	if OS.has_environment("MIR2X_EXTRA_PANEL_SCREENSHOT"):
+		var visual_scene := OS.get_environment("MIR2X_EXTRA_PANEL_SCENE")
+		if not expected_extra_positions.has(visual_scene):
+			_fail("unsupported extra panel visual scene: %s" % visual_scene)
+			return
+		var extra_panels: Dictionary = main.get("_extra_panel_nodes")
+		for panel_node: Control in extra_panels.values():
+			panel_node.hide()
+		var visual_panel := extra_panels[visual_scene] as Control
+		visual_panel.show()
+		visual_panel.move_to_front()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var screenshot_error := get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_EXTRA_PANEL_SCREENSHOT"))
+		if screenshot_error != OK:
+			_fail("unable to save extra panel screenshot: %s" % screenshot_error)
+			return
+		print("EXTRA PANEL VISUAL PASS: %s at %s" % [visual_scene, visual_panel.position])
+		get_tree().quit()
+		return
 	if OS.has_environment("MIR2X_FPS_SCREENSHOT"):
 		if not await _capture_fps_visual(main):
 			return
