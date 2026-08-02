@@ -21,6 +21,7 @@ var player_action_type: int = 2
 var player_action_started_ms: int = 0
 var player_action_speed: int = 100
 var player_action_magic_id: int = 0
+var player_action_step: int = 0
 var player_action_from_x: int = 0
 var player_action_from_y: int = 0
 var player_hp: int = 0
@@ -197,6 +198,7 @@ func set_player_online(online_data: Dictionary) -> void:
 	player_action_started_ms = Time.get_ticks_msec()
 	player_action_speed = online_data.get("action_speed", 100)
 	player_action_magic_id = online_data.get("action_magic_id", 0)
+	player_action_step = 0
 	player_action_from_x = player_x
 	player_action_from_y = player_y
 	player_map_id = _map_id_from_uid(player_map_uid)
@@ -218,6 +220,7 @@ func start_game_scene(scene_data: Dictionary) -> void:
 	player_action_started_ms = Time.get_ticks_msec()
 	player_action_speed = 100
 	player_action_magic_id = 0
+	player_action_step = 0
 	player_action_from_x = player_x
 	player_action_from_y = player_y
 	player_desp = scene_data.get("desp", player_desp)

@@ -2196,9 +2196,17 @@ func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
 		"type": 5, "speed": 100, "direction": 3, "x": 6, "y": 7, "aimX": 8, "aimY": 7,
 	}))
 	var remote: Dictionary = GameState.get_creature(remote_uid)
-	if remote.get("x", 0) != 8 or remote.get("y", 0) != 7:
-		_fail("push move did not retain aim grid as logical position")
+	if remote.get("x", 0) != 8 or remote.get("y", 0) != 7 or remote.get("action_step", 0) != 2:
+		_fail("push move did not retain its two-grid Hero movement state: %s" % remote)
 		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
+		"type": 3, "speed": 100, "direction": 3, "x": 20, "y": 21, "aimX": 22, "aimY": 21,
+	}))
+	if GameState.player_x != 22 or GameState.player_y != 21 or GameState.player_action_step != 2:
+		_fail("local ACTION_MOVE did not retain its two-grid Hero movement state")
+		return false
+	GameState.player_x = 20
+	GameState.player_y = 21
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
 		"type": 14, "speed": 100, "direction": 0, "x": 20, "y": 22,
 	}))
@@ -2216,6 +2224,9 @@ func _test_world_displacement(main: Control, resources: RefCounted) -> bool:
 	var pushed: Vector2 = renderer.call("_action_draw_grid", 8, 7, 6, 7, 5, Time.get_ticks_msec() - 1000, 100)
 	if not is_equal_approx(pushed.x, 8.0):
 		_fail("push move rendering did not interpolate to aim grid")
+		return false
+	if renderer.call("_hero_motion", 3, 0, {}, 1) != PackedInt32Array([21, 6]) or renderer.call("_hero_motion", 3, 0, {}, 2) != PackedInt32Array([22, 6]):
+		_fail("Hero movement did not select C++ walk/run graphics from its step count")
 		return false
 	if renderer.call("_hero_motion", 14) != PackedInt32Array([10, 6]) or not is_equal_approx(float(main.call("_action_duration", 14, 100, 2)), 0.9):
 		_fail("mine action did not use C++ two-handed swing and attack-mode timing")

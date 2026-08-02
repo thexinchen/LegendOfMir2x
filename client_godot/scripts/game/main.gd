@@ -600,7 +600,7 @@ func _send_move_action(aim_x: int, aim_y: int) -> void:
 	game_state.player_x = aim_x
 	game_state.player_y = aim_y
 	_player_action_timer = -1.0
-	_set_player_action(3, action.speed)
+	_set_player_action(3, action.speed, 0, _grid_distance(Vector2i(action.x, action.y), Vector2i(action.aimX, action.aimY)))
 
 
 func _grid_distance(from: Vector2i, to: Vector2i) -> int:
@@ -733,10 +733,11 @@ func _process_player_action(delta: float) -> void:
 		_set_player_action(2)
 
 
-func _set_player_action(action_type: int, speed := 100, magic_id := 0) -> void:
+func _set_player_action(action_type: int, speed := 100, magic_id := 0, action_step := 0) -> void:
 	game_state.player_action_type = action_type
 	game_state.player_action_speed = speed
 	game_state.player_action_magic_id = magic_id
+	game_state.player_action_step = action_step
 	game_state.player_action_started_ms = Time.get_ticks_msec()
 	game_state.state_changed.emit()
 
@@ -1032,6 +1033,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 	var y: int = action.get("y", 0)
 	var action_type: int = action.get("type", 0)
 	var direction: int = action.get("direction", 0)
+	var action_step := _grid_distance(Vector2i(x, y), Vector2i(action.get("aimX", x), action.get("aimY", y))) if action_type in [3, 5] else 0
 	if action_type == 9 and _resources.magic_cast_motion(action.get("magicID", 0)) == 7:
 		direction = 5
 	var creature: Dictionary = game_state.get_creature(uid) if uid != game_state.player_uid else {}
@@ -1097,7 +1099,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 			game_state.player_y = action.get("aimY", y) if _action_uses_aim_position(action_type) else y
 		if action_type != 11 and direction >= 1:
 			game_state.player_direction = direction
-		_set_player_action(action_type, action.get("speed", 100), action.get("magicID", 0))
+		_set_player_action(action_type, action.get("speed", 100), action.get("magicID", 0), action_step)
 		_player_action_timer = _action_duration(action_type, action.get("speed", 100), 2, action.get("magicID", 0))
 		if action_type == 2 and not _move_path.is_empty():
 			_move_path.clear()
@@ -1126,6 +1128,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 				"action_started_ms": Time.get_ticks_msec(),
 				"action_speed": action.get("speed", 100),
 				"action_magic_id": action.get("magicID", 0),
+				"action_step": action_step,
 				"direction": direction if direction >= 1 else (1 if inferred_type == 3 else _direction_to(x, y, action.get("aimX", x), action.get("aimY", y))),
 			}
 			if inferred_type == 1:
@@ -1150,6 +1153,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 			creature["action_started_ms"] = Time.get_ticks_msec()
 			creature["action_speed"] = action.get("speed", 100)
 			creature["action_magic_id"] = action.get("magicID", 0)
+			creature["action_step"] = action_step
 			if not (action_type == 11 and creature_type == 2) and direction >= 1:
 				creature["direction"] = direction
 		if creature_type == 1:

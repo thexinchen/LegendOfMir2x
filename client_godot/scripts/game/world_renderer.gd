@@ -1433,7 +1433,7 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	var py: int = roundi(draw_grid.y * GRID_YP) - view_y
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
 
-	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id, game_state.player_uid, game_state.player_y):
+	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id, game_state.player_uid, game_state.player_y, game_state.player_action_step):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
 	_draw_team_leader_marker(game_state.player_uid, px, py)
@@ -1478,7 +1478,7 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 	var uid: int = c.get("uid", 0)
 	match c_type:
 		1: sprite_drawn = _draw_monster_sprite(c, cx, cy, body_alpha)
-		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100), c.get("action_magic_id", 0), uid, c.get("y", 0))
+		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100), c.get("action_magic_id", 0), uid, c.get("y", 0), c.get("action_step", 0))
 		3: sprite_drawn = _draw_npc_sprite(c, cx, cy)
 	if not sprite_drawn:
 		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3 * body_alpha))
@@ -1569,8 +1569,8 @@ func _wrap_player_say(text: String, font: Font) -> Array[String]:
 	return result
 
 
-func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int, action_started_ms := 0, action_speed := 100, magic_id := 0, uid := 0, map_y := 0) -> bool:
-	var motion_data := _hero_motion(action_type, magic_id, desp)
+func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int, action_started_ms := 0, action_speed := 100, magic_id := 0, uid := 0, map_y := 0, action_step := 0) -> bool:
+	var motion_data := _hero_motion(action_type, magic_id, desp, action_step)
 	var frame_index := _motion_frame(action_type, motion_data[1], action_started_ms, action_speed)
 	if action_type == 9:
 		var spell_state := _hero_spell_motion_state(magic_id, action_started_ms)
@@ -1689,9 +1689,9 @@ func _packed_rgba_color(packed_color: int) -> Color:
 	)
 
 
-func _hero_motion(action_type: int, magic_id := 0, desp: Dictionary = {}) -> PackedInt32Array:
+func _hero_motion(action_type: int, magic_id := 0, desp: Dictionary = {}, action_step := 0) -> PackedInt32Array:
 	match action_type:
-		3, 5: return PackedInt32Array([21, 6])
+		3, 5: return PackedInt32Array([22 if action_step == 2 else 21, 6])
 		7:
 			var magic_name: String = actor_resource.magic_names.get(magic_id, "")
 			if magic_name in ["翔空剑法", "莲月剑法"]:
