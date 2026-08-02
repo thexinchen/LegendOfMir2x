@@ -2225,7 +2225,18 @@ func _test_exact_frame_input(main: Control) -> bool:
 	GameState.grabbed_item = {"itemID": 1, "seqID": 2, "count": 1}
 	GameState.update_creature(707, {"uid": 707, "x": 5, "y": 5, "type": 1, "action_type": 2})
 	var renderer: Control = main.get_node("WorldRenderer")
-	renderer._actor_target_rects = {707: {"rect": Rect2(90, 90, 20, 20), "map_y": 5}}
+	renderer._actor_target_rects = {
+		707: {"rect": Rect2(90, 90, 20, 20), "map_y": 5},
+		808: {"rect": Rect2(95, 90, 20, 20), "map_y": 6},
+	}
+	renderer._mouse_focus_uid = 707
+	if renderer.focus_uid_at_screen(Vector2(100, 100)) != 707:
+		_fail("overlapping actors did not retain the C++ sticky mouse focus")
+		return false
+	if renderer.focus_uid_at_screen(Vector2(112, 100)) != 808:
+		_fail("mouse focus did not switch after leaving the retained target box")
+		return false
+	renderer._actor_target_rects.erase(808)
 	var left_click := InputEventMouseButton.new()
 	left_click.button_index = MOUSE_BUTTON_LEFT
 	left_click.position = Vector2(100, 100)

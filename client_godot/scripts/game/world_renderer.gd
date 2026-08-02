@@ -1877,6 +1877,11 @@ func _record_actor_target(uid: int, creature_type: int, map_y: int, action_type:
 
 
 func focus_uid_at_screen(screen_position: Vector2, allow_player := false) -> int:
+	if _mouse_focus_uid != 0 and _actor_target_rects.has(_mouse_focus_uid) \
+			and (allow_player or _mouse_focus_uid != game_state.player_uid):
+		var retained: Dictionary = _actor_target_rects[_mouse_focus_uid]
+		if retained.rect.has_point(screen_position):
+			return _mouse_focus_uid
 	var best_uid := 0
 	var best_y := -2147483648
 	for uid_value in _actor_target_rects:
