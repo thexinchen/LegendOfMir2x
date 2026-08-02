@@ -103,7 +103,22 @@ func _ready() -> void:
 	if level_label.position != Vector2(395, 17) or level_label.size != Vector2(21, 21) or ac_value.position != Vector2(667, 121) or dc_value.position != Vector2(751, 121):
 		_fail("persistent HUD text geometry mismatch")
 		return
-	var screenshot_path := OS.get_environment("MIR2X_HUD_TEXT_SCREENSHOT")
+	var arc_current := panel.get_node("%ArcCurrent") as TextureRect
+	var arc_next := panel.get_node("%ArcNext") as TextureRect
+	if arc_current.position != Vector2(46, 8) or arc_current.size != Vector2(36, 20) or arc_next.position != Vector2(46, 8) or arc_next.size != Vector2(36, 20):
+		_fail("title arc geometry mismatch")
+		return
+	panel.call("_update_title_arc", 0.0)
+	if arc_current.texture == null or arc_next.texture == null or arc_current.modulate.a != 1.0 or arc_next.modulate.a != 0.0:
+		_fail("title arc initial frame mismatch")
+		return
+	panel.call("_update_title_arc", 1250.0)
+	if not is_equal_approx(arc_current.modulate.a, 191.0 / 255.0) or not is_equal_approx(arc_next.modulate.a, 64.0 / 255.0):
+		_fail("title arc cross-fade mismatch: %s / %s" % [arc_current.modulate.a, arc_next.modulate.a])
+		return
+	var screenshot_path := OS.get_environment("MIR2X_HUD_ARC_SCREENSHOT")
+	if screenshot_path.is_empty():
+		screenshot_path = OS.get_environment("MIR2X_HUD_TEXT_SCREENSHOT")
 	if not screenshot_path.is_empty():
 		panel.set_process(false)
 		await get_tree().process_frame

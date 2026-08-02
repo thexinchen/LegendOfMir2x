@@ -491,6 +491,24 @@ offset_bottom = 41.0
 mouse_filter = 1
 texture = ExtResource("6_title")
 
+[node name="ArcCurrent" type="TextureRect" parent="Title"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 46.0
+offset_top = 8.0
+offset_right = 82.0
+offset_bottom = 28.0
+mouse_filter = 2
+
+[node name="ArcNext" type="TextureRect" parent="Title"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 46.0
+offset_top = 8.0
+offset_right = 82.0
+offset_bottom = 28.0
+mouse_filter = 2
+
 [node name="Level" type="Label" parent="."]
 unique_name_in_owner = true
 layout_mode = 0

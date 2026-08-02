@@ -33,6 +33,8 @@ signal minimized_changed(minimized: bool)
 @onready var face_health: ColorRect = %FaceHealth
 @onready var buff_container: Control = %BuffContainer
 @onready var title: TextureRect = $Title
+@onready var title_arc_current: TextureRect = %ArcCurrent
+@onready var title_arc_next: TextureRect = %ArcNext
 @onready var minimize_button: TextureButton = $MinimizeButton
 @onready var expand_button: TextureButton = $Body/ExpandButton
 @onready var emoji_button: TextureButton = $Body/EmojiButton
@@ -50,11 +52,18 @@ var _chat_signature := ""
 var _focus_hud_signature := ""
 var _button_blinks: Dictionary = {}
 var _chat_slider_dragging := false
+var _title_arc_frames: Array[Texture2D] = []
+var _title_arc_elapsed_ms := 0.0
 
 
 func _ready() -> void:
 	game_state = get_node("/root/GameState")
 	_resources.configure_default()
+	for frame_index in range(4):
+		var frame: Dictionary = _resources.frame("proguse", 0x04000000 + frame_index)
+		if not frame.is_empty():
+			_title_arc_frames.append(frame.texture)
+	_update_title_arc(0.0)
 	var meter_frame: Dictionary = _resources.frame("proguse", 0x000000A0)
 	if not meter_frame.is_empty():
 		exp_bar.texture_progress = meter_frame.texture
@@ -138,6 +147,8 @@ func _on_board_button_pressed(button: BaseButton) -> void:
 func _process(_delta: float) -> void:
 	if game_state == null:
 		return
+	_title_arc_elapsed_ms += _delta * 1000.0
+	_update_title_arc(_title_arc_elapsed_ms)
 	# Update HP/MP bars
 	if game_state.player_hp_max > 0:
 		health_bar.value = float(game_state.player_hp) / float(game_state.player_hp_max) * 100.0
@@ -151,6 +162,23 @@ func _process(_delta: float) -> void:
 	_update_chat_display()
 	_update_button_blinks()
 	_update_chat_slider()
+
+
+func _update_title_arc(elapsed_ms: float) -> void:
+	if _title_arc_frames.size() != 4:
+		title_arc_current.hide()
+		title_arc_next.hide()
+		return
+	var decimal_frame := maxf(elapsed_ms, 0.0) / 1000.0
+	var current_frame := floori(decimal_frame) % 4
+	var next_frame := (current_frame + 1) % 4
+	var alpha_byte := clampi(roundi(255.0 * (decimal_frame - floorf(decimal_frame))), 0, 255)
+	title_arc_current.texture = _title_arc_frames[current_frame]
+	title_arc_next.texture = _title_arc_frames[next_frame]
+	title_arc_current.modulate.a = float(255 - alpha_byte) / 255.0
+	title_arc_next.modulate.a = float(alpha_byte) / 255.0
+	title_arc_current.show()
+	title_arc_next.show()
 
 
 func _refresh_static() -> void:
