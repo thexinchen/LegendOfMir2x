@@ -3,6 +3,7 @@ extends Control
 @export var close_button_path: NodePath
 @export var ui_click_button_paths: Array[NodePath] = []
 @export var overlay_button_paths: Array[NodePath] = []
+@export var silent_overlay_button_paths: Array[NodePath] = []
 
 var _dragging := false
 
@@ -17,6 +18,9 @@ func _ready() -> void:
 	for button_path in overlay_button_paths:
 		var button := get_node(button_path) as TextureButton
 		AudioService.bind_overlay_button(button)
+	for button_path in silent_overlay_button_paths:
+		var button := get_node(button_path) as TextureButton
+		AudioService.bind_overlay_visual(button)
 	if OS.has_environment("MIR2X_PANEL_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_PANEL_SCREENSHOT"))

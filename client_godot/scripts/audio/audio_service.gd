@@ -183,6 +183,10 @@ func bind_ui_click(button: BaseButton) -> void:
 
 func bind_overlay_button(button: TextureButton) -> void:
 	bind_ui_click(button)
+	bind_overlay_visual(button)
+
+
+func bind_overlay_visual(button: TextureButton) -> void:
 	if button.has_meta("original_overlay_button"):
 		return
 	button.set_meta("original_overlay_button", true)

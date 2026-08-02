@@ -1,21 +1,37 @@
 extends "res://scripts/game/closable_panel.gd"
 
+const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const MIN_BOARD_WIDTH := 300.0
+const MARGIN := 35.0
+
 var _state: Node
+var _resources: RefCounted = ActorResourceScript.new()
+var _hover_meta := ""
+var _pressed_meta := ""
 
 
 func _ready() -> void:
 	super._ready()
 	_state = get_node("/root/GameState")
+	_resources.configure_default()
 	_state.state_changed.connect(_refresh)
 	$Dialog.meta_clicked.connect(_on_meta_clicked)
+	$Dialog.meta_hover_started.connect(_on_meta_hover_started)
+	$Dialog.meta_hover_ended.connect(_on_meta_hover_ended)
+	$Dialog.gui_input.connect(_on_dialog_gui_input)
 	_refresh()
 
 
 func _refresh() -> void:
-	$Dialog.text = _build_bbcode(_state.npc_dialog.get("xmlLayout", ""))
+	var dialog: Dictionary = _state.npc_dialog
+	var face_frame: Dictionary = _resources.frame("proguse", 0x50000000 | _npc_id(dialog.get("npcUID", 0)))
+	$Face.texture = face_frame.get("texture")
+	$Face.visible = $Face.texture != null
+	$Dialog.text = _build_bbcode(dialog.get("xmlLayout", ""), _hover_meta)
+	_apply_layout.call_deferred()
 
 
-func _build_bbcode(xml: String) -> String:
+func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = "") -> String:
 	if xml.is_empty():
 		return ""
 	var parser := XMLParser.new()
@@ -30,7 +46,26 @@ func _build_bbcode(xml: String) -> String:
 				if name == "par":
 					if not result.is_empty() and not result.ends_with("\n"):
 						result += "\n"
-					tag_stack.append("par")
+					var par_tags: Array[String] = []
+					var align := _xml_attribute(parser, "align", "justify").to_lower()
+					if align == "center":
+						result += "[center]"
+						par_tags.append("center")
+					elif align == "right":
+						result += "[right]"
+						par_tags.append("right")
+					elif align == "distributed":
+						result += "[fill]"
+						par_tags.append("fill")
+					var font_size := int(_xml_attribute(parser, "size", "15"))
+					if font_size != 15:
+						result += "[font_size=%d]" % max(1, font_size)
+						par_tags.append("font_size")
+					var par_color := _xml_attribute(parser, "color", "")
+					if not par_color.is_empty():
+						result += "[color=%s]" % _bbcode_color(par_color)
+						par_tags.append("color")
+					tag_stack.append("par:%s" % ",".join(par_tags))
 				elif name == "event":
 					var event := {
 						"id": _xml_attribute(parser, "id", ""),
@@ -38,7 +73,9 @@ func _build_bbcode(xml: String) -> String:
 						"args": _xml_attribute(parser, "args", ""),
 						"close": _parse_bool(_xml_attribute(parser, "close", "0")),
 					}
-					result += "[color=#ffd86b][url=%s]" % JSON.stringify(event)
+					var meta := JSON.stringify(event)
+					var event_color := "#ff00ff" if meta == pressed_meta else ("#00ff00" if meta == hover_meta else "#ffff00")
+					result += "[color=%s][url=%s]" % [event_color, meta]
 					tag_stack.append("event")
 				elif name == "t":
 					result += "[color=%s]" % _bbcode_color(_xml_attribute(parser, "color", "white"))
@@ -55,10 +92,18 @@ func _build_bbcode(xml: String) -> String:
 					result = _close_tag(result, tag_stack.pop_back())
 			XMLParser.NODE_TEXT:
 				result += _escape_bbcode(parser.get_node_data())
-	return result.strip_edges(false, true)
+	return result
 
 
 func _close_tag(result: String, name: String) -> String:
+	if name.begins_with("par:"):
+		var tags := name.trim_prefix("par:").split(",", false)
+		tags.reverse()
+		for tag in tags:
+			result += "[/%s]" % tag
+		if not result.ends_with("\n"):
+			result += "\n"
+		return result
 	match name:
 		"par":
 			if not result.ends_with("\n"):
@@ -68,6 +113,36 @@ func _close_tag(result: String, name: String) -> String:
 		"t":
 			result += "[/color]"
 	return result
+
+
+func _apply_layout() -> void:
+	var face_size := Vector2.ZERO
+	if $Face.visible:
+		face_size = $Face.texture.get_size()
+	var board_width := maxf(get_viewport_rect().size.x / 3.0, MIN_BOARD_WIDTH)
+	var line_width := board_width - MARGIN * (3.0 if $Face.visible else 2.0) - face_size.x
+	line_width = maxf(1.0, line_width)
+	$Dialog.size = Vector2(line_width, 1.0)
+	var content_width := clampf(ceilf($Dialog.get_content_width()), 1.0, line_width)
+	$Dialog.size = Vector2(content_width, 1.0)
+	var content_height := maxf(1.0, ceilf($Dialog.get_content_height()))
+	var panel_width := MARGIN * (3.0 if $Face.visible else 2.0) + face_size.x + content_width
+	var panel_height := MARGIN * 2.0 + maxf(face_size.y, content_height)
+	custom_minimum_size = Vector2.ZERO
+	size = Vector2(panel_width, panel_height)
+	custom_minimum_size = size
+	$Upper.size = Vector2(panel_width, panel_height - 44.0)
+	$Lower.position = Vector2(0.0, panel_height - 44.0)
+	$Lower.size = Vector2(panel_width, 44.0)
+	$Face.position = Vector2(MARGIN, MARGIN)
+	$Face.size = face_size
+	$Dialog.position = Vector2(MARGIN * 2.0 + face_size.x if $Face.visible else MARGIN, (panel_height - content_height) * 0.5)
+	$Dialog.size = Vector2(content_width, content_height)
+	$CloseButton.position = Vector2(panel_width - 40.0, panel_height - 43.0)
+
+
+func _npc_id(uid: int) -> int:
+	return (uid >> 35) & 0xFFFFFF
 
 
 func _xml_attribute(parser: XMLParser, name: String, fallback: String) -> String:
@@ -111,3 +186,22 @@ func _on_meta_clicked(meta: Variant) -> void:
 	)
 	if event.get("close", false):
 		hide()
+
+
+func _on_meta_hover_started(meta: Variant) -> void:
+	_hover_meta = str(meta)
+	$Dialog.text = _build_bbcode(_state.npc_dialog.get("xmlLayout", ""), _hover_meta)
+
+
+func _on_meta_hover_ended(meta: Variant) -> void:
+	if _hover_meta != str(meta):
+		return
+	_hover_meta = ""
+	$Dialog.text = _build_bbcode(_state.npc_dialog.get("xmlLayout", ""))
+
+
+func _on_dialog_gui_input(event: InputEvent) -> void:
+	if not event is InputEventMouseButton or event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	_pressed_meta = _hover_meta if event.pressed else ""
+	$Dialog.text = _build_bbcode(_state.npc_dialog.get("xmlLayout", ""), _hover_meta, _pressed_meta)

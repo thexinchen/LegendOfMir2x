@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/player_state_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/player_state/06000000.png" id="2"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001c.png" id="3"]
 [ext_resource type="Script" path="res://scripts/game/player_paperdoll.gd" id="4_paperdoll"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="5"]
 
 [node name="PlayerStatePanel" type="Control"]
 custom_minimum_size = Vector2(328, 466)
@@ -11,6 +12,7 @@ offset_right = 328.0
 offset_bottom = 466.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+silent_overlay_button_paths = Array[NodePath]([NodePath("CloseButton")])
 
 [node name="Background" type="TextureRect" parent="."]
 offset_right = 328.0
@@ -73,6 +75,7 @@ offset_top = 13.0
 offset_right = 320.0
 offset_bottom = 47.0
 texture_hover = ExtResource("3")
+texture_pressed = ExtResource("5")
 ignore_texture_size = true
 
 [node name="ItemTooltip" type="Panel" parent="."]
