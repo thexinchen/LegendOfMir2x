@@ -11,6 +11,7 @@ const PAGE_SEARCH := 3
 const PAGE_GROUP := 4
 const SYSTEM_CPID := (1 << 32) | 0xFFFFFF01
 const FRIEND_RESPONSE_EVENT := "_RSVD_NAME_AFRESP_8368138412597"
+const FRIEND_NOTICE_BACKGROUND := Color(0.0, 0.5, 0.0, 1.0)
 
 var _state: Node
 var _page := PAGE_PREVIEW
@@ -363,10 +364,10 @@ func _add_stranger_operations(parent: Node, peer: Dictionary) -> void:
 	var actions := HBoxContainer.new()
 	var add := Button.new()
 	add.text = "添加"
-	add.pressed.connect(_request_friend.bind(int(peer.get("cpid", 0))))
+	add.pressed.connect(_request_friend.bind(int(peer.get("cpid", 0)), false))
 	var block := Button.new()
 	block.text = "屏蔽"
-	block.pressed.connect(func(): NetworkClient.send_block_player(int(peer.get("cpid", 0)), func(_head: int, _payload: PackedByteArray): pass))
+	block.pressed.connect(func(): NetworkClient.send_block_player(int(peer.get("cpid", 0)), func(head: int, _payload: PackedByteArray): _apply_friend_action_result(int(peer.get("cpid", 0)), "block", head)))
 	actions.add_child(add)
 	actions.add_child(block)
 	panel.add_child(actions)
@@ -464,16 +465,26 @@ func _add_friend_request_actions(parent: VBoxContainer, xml: String) -> void:
 
 
 func _respond_friend_request(cpid: int, accept: bool, add_friend: bool, block: bool) -> void:
-	var done := func(head: int, _payload: PackedByteArray):
-		$Status.text = "好友申请已处理" if head == NetworkClient.SM_OK else "好友申请处理失败"
+	$Status.text = ""
 	if accept:
-		NetworkClient.send_accept_friend(cpid, done)
+		NetworkClient.send_accept_friend(cpid, func(head: int, _payload: PackedByteArray): _apply_friend_action_result(cpid, "accept", head))
 		if add_friend:
-			NetworkClient.send_add_friend(cpid, func(_head: int, _payload: PackedByteArray): pass)
+			_request_friend(cpid, false)
 	else:
-		NetworkClient.send_reject_friend(cpid, done)
+		NetworkClient.send_reject_friend(cpid, func(head: int, _payload: PackedByteArray): _apply_friend_action_result(cpid, "reject", head))
 		if block:
-			NetworkClient.send_block_player(cpid, func(_head: int, _payload: PackedByteArray): pass)
+			NetworkClient.send_block_player(cpid, func(head: int, _payload: PackedByteArray): _apply_friend_action_result(cpid, "block", head))
+
+
+func _apply_friend_action_result(cpid: int, action: String, head: int) -> void:
+	var name: String = _state.chat_peers.get(cpid, {}).get("name", "对方")
+	if head != NetworkClient.SM_OK:
+		_state.add_chat_log("无效的拉黑请求" if action == "block" else "无效的请求", 3)
+		return
+	match action:
+		"accept": _state.add_chat_log("你已经通过%s的好友申请" % name, 1)
+		"reject": _state.add_chat_log("你已经拒绝%s的好友申请" % name, 1)
+		"block": _state.add_chat_log("你已经拉黑%s" % name, 1)
 
 
 func _peer_avatar(peer: Dictionary) -> Dictionary:
@@ -602,7 +613,7 @@ func _add_search_candidate(parent: Node, peer: Dictionary, cpid: int) -> void:
 	add.size = Vector2(44, 24)
 	add.text = "添加"
 	add.add_theme_font_size_override("font_size", 12)
-	add.pressed.connect(_request_friend.bind(cpid))
+	add.pressed.connect(_request_friend.bind(cpid, true))
 	row.add_child(add)
 
 
@@ -634,24 +645,35 @@ func _add_search_suggestion(parent: Node, peer: Dictionary, query: String) -> vo
 	button.add_child(icon)
 
 
-func _request_friend(cpid: int) -> void:
+func _request_friend(cpid: int, switch_to_preview: bool = true) -> void:
 	var peer: Dictionary = _state.chat_peers.get(cpid, {})
 	NetworkClient.send_add_friend(cpid, func(head: int, payload: PackedByteArray):
 		if head != NetworkClient.SM_OK:
-			$Status.text = "无效的好友请求"
+			_apply_add_friend_result(peer, head, 0, switch_to_preview)
 			return
 		var reader := CerealReader.new(payload)
-		var result := reader.read_sd_add_friend_notif()
-		match result:
-			2:
-				_state.add_chat_peer(peer, true, "%s已经通过你的好友申请，现在可以开始聊天了。" % peer.get("name", "对方"))
-				$Status.text = "%s 已成为你的好友" % peer.get("name", "对方")
-			3: $Status.text = "对方拒绝了好友申请"
-			4: $Status.text = "等待对方处理好友申请"
-			5: $Status.text = "对方已经是你的好友"
-			1: $Status.text = "你已被对方屏蔽"
-			_: $Status.text = "无效的好友请求"
+		_apply_add_friend_result(peer, head, reader.read_sd_add_friend_notif(), switch_to_preview)
 	)
+
+
+func _apply_add_friend_result(peer: Dictionary, head: int, result: int, switch_to_preview: bool) -> void:
+	$Status.text = ""
+	if head != NetworkClient.SM_OK:
+		_state.add_chat_log("无效的请求。", 0, FRIEND_NOTICE_BACKGROUND)
+		return
+	var name: String = peer.get("name", "对方")
+	match result:
+		2:
+			var was_friend := _is_friend(int(peer.get("cpid", 0)))
+			if not was_friend:
+				_state.add_chat_peer(peer, true, "%s已经通过你的好友申请，现在可以开始聊天了。" % name)
+				_state.add_chat_log("%s已经通过了你的好友请求" % name, 1)
+			if switch_to_preview:
+				_show_page(PAGE_PREVIEW)
+		3: _state.add_chat_log("%s已经拒绝了你的好友请求" % name, 1)
+		4: _state.add_chat_log("等待%s处理你的好友验证" % name, 1)
+		5: _state.add_chat_log("重复添加好友%s" % name, 1)
+		1: _state.add_chat_log("你已经被%s加入了黑名单" % name, 1)
 
 
 func _fill_group_members() -> void:

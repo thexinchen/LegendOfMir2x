@@ -26,12 +26,19 @@ func _ready() -> void:
 	GameState.wear = {}
 	GameState.buff_list = [resources.buff_meta.keys()[0]]
 	GameState.chat_log = []
+	for index in range(GameState.CHAT_LOG_MAX + 1):
+		GameState.add_chat_log("历史消息 %03d" % index)
+	if GameState.chat_log.size() != 200 or GameState.chat_log[0].text != "历史消息 001":
+		_fail("chat history did not retain the original 200-line capacity")
+		return
+	GameState.chat_log = []
 	GameState.add_chat_log("普通消息", 0)
 	GameState.add_chat_log("获得物品", 1)
 	GameState.add_chat_log("广播消息", 2)
 	GameState.add_chat_log("错误消息", 3)
 	for index in range(8):
 		GameState.add_chat_log("滚动消息 %02d" % index, index % 4)
+	GameState.add_chat_log("无效的请求。", 0, Color(0.0, 0.5, 0.0, 1.0))
 	var panel: Control = load("res://scenes/game/control_panel.tscn").instantiate()
 	add_child(panel)
 	await get_tree().process_frame
@@ -82,6 +89,9 @@ func _ready() -> void:
 	if parsed_chat.find("普通消息") < 0 or parsed_chat.find("获得物品") < 0 or parsed_chat.find("广播消息") < 0 or parsed_chat.find("错误消息") < 0:
 		_fail("chat messages mismatch: %s" % parsed_chat)
 		return
+	if GameState.chat_log[-1].background_color != Color(0.0, 0.5, 0.0, 1.0) or parsed_chat.find("无效的请求。") < 0:
+		_fail("friend notice background metadata or rendered text mismatch")
+		return
 	if command.get_theme_font_size("font_size") != 15:
 		_fail("command font size mismatch")
 		return
@@ -116,7 +126,9 @@ func _ready() -> void:
 	if not is_equal_approx(arc_current.modulate.a, 191.0 / 255.0) or not is_equal_approx(arc_next.modulate.a, 64.0 / 255.0):
 		_fail("title arc cross-fade mismatch: %s / %s" % [arc_current.modulate.a, arc_next.modulate.a])
 		return
-	var screenshot_path := OS.get_environment("MIR2X_HUD_ARC_SCREENSHOT")
+	var screenshot_path := OS.get_environment("MIR2X_FRIEND_FEEDBACK_SCREENSHOT")
+	if screenshot_path.is_empty():
+		screenshot_path = OS.get_environment("MIR2X_HUD_ARC_SCREENSHOT")
 	if screenshot_path.is_empty():
 		screenshot_path = OS.get_environment("MIR2X_HUD_TEXT_SCREENSHOT")
 	if not screenshot_path.is_empty():

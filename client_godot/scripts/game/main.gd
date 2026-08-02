@@ -2030,9 +2030,20 @@ func _handle_friend_result(payload: PackedByteArray, accepted: bool) -> void:
 	var peer := reader.read_sd_chat_peer()
 	if not _reader_ok(reader, "SM_ADDFRIEND"):
 		return
+	_apply_friend_result(peer, accepted)
+
+
+func _apply_friend_result(peer: Dictionary, accepted: bool) -> void:
+	var name: String = peer.get("name", "对方")
 	if accepted:
-		game_state.add_chat_peer(peer, true, "%s已经通过你的好友申请，现在可以开始聊天了。" % peer.get("name", "对方"))
-	game_state.add_chat_log("%s已%s你的好友申请" % [peer.get("name", "对方"), "通过" if accepted else "拒绝"], 1 if accepted else 3)
+		var cpid := int(peer.get("cpid", 0))
+		for current in game_state.chat_friends:
+			if int(current.get("cpid", 0)) == cpid:
+				return
+		game_state.add_chat_peer(peer, true, "%s已经通过你的好友申请，现在可以开始聊天了。" % name)
+		game_state.add_chat_log("%s已经通过了你的好友请求" % name, 1)
+	else:
+		game_state.add_chat_log("%s已经拒绝了你的好友请求" % name, 1)
 
 
 func _reader_ok(reader: RefCounted, packet_name: String) -> bool:

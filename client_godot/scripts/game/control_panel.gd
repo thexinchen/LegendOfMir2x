@@ -272,16 +272,21 @@ func _apply_focus_hud(focus_creature: Dictionary) -> void:
 func _update_chat_display() -> void:
 	var signature := ""
 	for line in game_state.chat_log:
-		signature += "%d:%s\n" % [line.get("type", 0), line.get("text", "")]
+		signature += "%d:%s:%s\n" % [line.get("type", 0), line.get("text", ""), line.get("background_color", Color.TRANSPARENT).to_html()]
 	if signature == _chat_signature:
 		return
 	_chat_signature = signature
 	chat_log.clear()
 	for index in range(game_state.chat_log.size()):
 		var line: Dictionary = game_state.chat_log[index]
+		var background: Color = line.get("background_color", Color.TRANSPARENT)
+		if background.a > 0.0:
+			chat_log.push_bgcolor(background)
 		chat_log.push_color(line.get("color", Color.WHITE))
 		chat_log.add_text(line.get("text", ""))
 		chat_log.pop()
+		if background.a > 0.0:
+			chat_log.pop()
 		if index + 1 < game_state.chat_log.size():
 			chat_log.newline()
 	chat_log.scroll_to_line(maxi(0, chat_log.get_line_count() - 1))

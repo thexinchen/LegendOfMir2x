@@ -84,6 +84,8 @@ func _ready() -> void:
 	if not panel.get_node("Page/SearchPage/Query").text.is_empty() or search_results.get_child_count() != 0 or panel.get("_search_show_candidates"):
 		_fail("search clear control did not reset input, candidates and results")
 		return
+	if not _test_friend_feedback(panel, friend):
+		return
 	panel.call("_open_group_page")
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -138,6 +140,21 @@ func _ready() -> void:
 	var main := load("res://scenes/game/main.tscn").instantiate() as Control
 	add_child(main)
 	await get_tree().process_frame
+	var notified := {"id": 505, "cpid": (2 << 32) | 505, "type": 2, "name": "远方来客", "gender": true, "job": 1}
+	GameState.chat_log = []
+	main.call("_apply_friend_result", notified, true)
+	if not panel.call("_is_friend", notified.cpid) or not _expect_notice("远方来客已经通过了你的好友请求", Color(0.0, 1.0, 0.0, 1.0), Color.TRANSPARENT):
+		_fail("server-side accepted friend result mismatch")
+		return
+	var accepted_log_count := GameState.chat_log.size()
+	main.call("_apply_friend_result", notified, true)
+	if GameState.chat_log.size() != accepted_log_count:
+		_fail("duplicate accepted friend result produced another notice")
+		return
+	main.call("_apply_friend_result", friend, false)
+	if not _expect_notice("清风已经拒绝了你的好友请求", Color(0.0, 1.0, 0.0, 1.0), Color.TRANSPARENT):
+		_fail("server-side rejected friend result mismatch")
+		return
 	var main_friend := main.call("_ensure_extra_panel", "res://scenes/game/panels/friend_chat.tscn") as Control
 	var main_selection := {}
 	main_selection[int(friend.cpid)] = true
@@ -161,6 +178,68 @@ func _ready() -> void:
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FRIEND_CHAT_SCREENSHOT"))
 	print("FRIEND CHAT VISUAL PASS: frames, rows, pending, preview, resize and HUD blink")
 	get_tree().quit()
+
+
+func _test_friend_feedback(panel: Control, friend: Dictionary) -> bool:
+	var saved_friends := GameState.chat_friends.duplicate(true)
+	var saved_peers := GameState.chat_peers.duplicate(true)
+	var saved_conversations := GameState.chat_conversations.duplicate(true)
+	var saved_log := GameState.chat_log.duplicate(true)
+	var probe := {"id": 404, "cpid": (2 << 32) | 404, "type": 2, "name": "测试好友", "gender": false, "job": 1}
+	GameState.chat_peers[probe.cpid] = probe
+	GameState.chat_log = []
+	panel.call("_apply_add_friend_result", probe, NetworkClient.SM_OK + 1, 0, true)
+	if not _expect_notice("无效的请求。", Color.WHITE, Color(0.0, 0.5, 0.0, 1.0)):
+		return false
+	var expected := {
+		3: "测试好友已经拒绝了你的好友请求",
+		4: "等待测试好友处理你的好友验证",
+		5: "重复添加好友测试好友",
+		1: "你已经被测试好友加入了黑名单",
+	}
+	for result in expected:
+		panel.call("_apply_add_friend_result", probe, NetworkClient.SM_OK, result, true)
+		if not _expect_notice(expected[result], Color(0.0, 1.0, 0.0, 1.0), Color.TRANSPARENT):
+			return false
+	panel.call("_show_page", 3)
+	panel.call("_apply_add_friend_result", probe, NetworkClient.SM_OK, 2, true)
+	if panel.get("_page") != 0 or not panel.call("_is_friend", probe.cpid) or not _expect_notice("测试好友已经通过了你的好友请求", Color(0.0, 1.0, 0.0, 1.0), Color.TRANSPARENT):
+		_fail("accepted friend did not enter preview with original notice")
+		return false
+	var accepted_log_count := GameState.chat_log.size()
+	panel.call("_apply_add_friend_result", probe, NetworkClient.SM_OK, 2, false)
+	if GameState.chat_log.size() != accepted_log_count:
+		_fail("existing friend acceptance produced another notice")
+		return false
+	panel.call("_apply_friend_action_result", int(friend.cpid), "accept", NetworkClient.SM_OK)
+	if not _expect_notice("你已经通过清风的好友申请", Color(0.0, 1.0, 0.0, 1.0), Color.TRANSPARENT):
+		return false
+	panel.call("_apply_friend_action_result", int(friend.cpid), "reject", NetworkClient.SM_OK)
+	if not _expect_notice("你已经拒绝清风的好友申请", Color(0.0, 1.0, 0.0, 1.0), Color.TRANSPARENT):
+		return false
+	panel.call("_apply_friend_action_result", int(friend.cpid), "block", NetworkClient.SM_OK)
+	if not _expect_notice("你已经拉黑清风", Color(0.0, 1.0, 0.0, 1.0), Color.TRANSPARENT):
+		return false
+	panel.call("_apply_friend_action_result", int(friend.cpid), "accept", NetworkClient.SM_OK + 1)
+	if not _expect_notice("无效的请求", Color(1.0, 0.25, 0.25, 1.0), Color.TRANSPARENT):
+		return false
+	panel.call("_apply_friend_action_result", int(friend.cpid), "block", NetworkClient.SM_OK + 1)
+	if not _expect_notice("无效的拉黑请求", Color(1.0, 0.25, 0.25, 1.0), Color.TRANSPARENT):
+		return false
+	GameState.chat_friends = saved_friends
+	GameState.chat_peers = saved_peers
+	GameState.chat_conversations = saved_conversations
+	GameState.chat_log = saved_log
+	GameState.state_changed.emit()
+	return true
+
+
+func _expect_notice(expected_text: String, expected_color: Color, expected_background: Color) -> bool:
+	var line: Dictionary = GameState.chat_log[-1]
+	if line.text == expected_text and line.color == expected_color and line.background_color == expected_background:
+		return true
+	_fail("friend notice mismatch: %s" % line)
+	return false
 
 
 func _message(id: int, timestamp: int, from: int, to: int, text: String) -> Dictionary:

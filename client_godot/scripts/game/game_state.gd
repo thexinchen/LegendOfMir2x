@@ -58,9 +58,9 @@ var creatures: Dictionary = {}  # uid -> CreatureData
 var ground_items: Dictionary = {}  # "x,y" -> list of item IDs
 
 # Chat log
-var chat_log: Array = []  # list of {type, text, color}
+var chat_log: Array = []  # list of {type, text, color, background_color}
 var player_say_messages: Dictionary = {}  # hero uid -> [{text, start_time}]
-const CHAT_LOG_MAX := 100
+const CHAT_LOG_MAX := 200
 const PLAYER_SAY_LIMIT := 10
 
 # Persistent friend-chat state (separate from nearby/world chat).
@@ -282,14 +282,14 @@ func inventory_ratio() -> float:
 	return clampf(float(inventory.size()) / 100.0, 0.0, 1.0)
 
 
-func add_chat_log(text: String, log_type: int = 0) -> void:
+func add_chat_log(text: String, log_type: int = 0, background_color: Color = Color.TRANSPARENT) -> void:
 	var color := Color.WHITE
 	match log_type:
 		0: color = Color(1, 1, 1, 1)      # white
 		1: color = Color(0, 1, 0, 1)       # green
 		2: color = Color(0.25, 0.5, 1, 1)  # blue
 		3: color = Color(1, 0.25, 0.25, 1) # red
-	chat_log.append({"type": log_type, "text": text, "color": color})
+	chat_log.append({"type": log_type, "text": text, "color": color, "background_color": background_color})
 	if chat_log.size() > CHAT_LOG_MAX:
 		chat_log.pop_front()
 	state_changed.emit()
