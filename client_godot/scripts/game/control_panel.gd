@@ -242,7 +242,15 @@ func _apply_focus_hud(focus_creature: Dictionary) -> void:
 		face_frame = _resources.frame("proguse", face_id)
 	if face_frame.is_empty():
 		face_frame = _resources.frame("proguse", 0x010007CF)
-	face.texture = face_frame.get("texture")
+	var face_source := face_frame.get("texture") as Texture2D
+	if face_source != null:
+		var face_crop := AtlasTexture.new()
+		face_crop.atlas = face_source
+		face_crop.region = Rect2(0, 0, maxi(0, face_source.get_width() - 2), face_source.get_height())
+		face.texture = face_crop
+		face.size = face_crop.region.size
+	else:
+		face.texture = null
 	for child in buff_container.get_children():
 		buff_container.remove_child(child)
 		child.queue_free()

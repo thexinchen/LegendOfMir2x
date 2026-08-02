@@ -164,10 +164,10 @@ unique_name_in_owner = true
 offset_left = 533.0
 offset_top = 36.0
 offset_right = 615.0
-offset_bottom = 118.0
+offset_bottom = 130.0
 mouse_filter = 2
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 0
 
 [node name="FaceHealth" type="ColorRect" parent="Body"]
 unique_name_in_owner = true

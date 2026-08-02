@@ -43,15 +43,16 @@ func _ready() -> void:
 	var panel: Control = load("res://scenes/game/control_panel.tscn").instantiate()
 	add_child(panel)
 	await get_tree().process_frame
-	if panel.get_node("%Face").texture == null:
-		_fail("player face missing")
+	var face := panel.get_node("%Face") as TextureRect
+	if not _face_uses_original_crop(face):
+		_fail("player face did not preserve the original right-edge crop")
 		return
 	if panel.get_node("%BuffContainer").get_child_count() != 1:
 		_fail("compact self buff missing")
 		return
 	var monster_id: int = resources.monster_meta.keys()[0]
 	panel.call("_apply_focus_hud", {"uid": 101, "type": 1, "monster_id": monster_id, "hp": 25, "hp_max": 100, "buffs": GameState.buff_list})
-	if absf(panel.get_node("%FaceHealth").size.x - 20.5) > 0.01 or panel.get_node("%Face").texture == null:
+	if absf(panel.get_node("%FaceHealth").size.x - 20.5) > 0.01 or not _face_uses_original_crop(face):
 		_fail("focused monster portrait or health mismatch")
 		return
 	if panel.get_node("%BuffContainer").get_child_count() != 1:
@@ -326,3 +327,11 @@ func _ready() -> void:
 func _fail(message: String) -> void:
 	push_error("HUD_STATE_SMOKE %s" % message)
 	get_tree().quit(1)
+
+
+func _face_uses_original_crop(face: TextureRect) -> bool:
+	var crop := face.texture as AtlasTexture
+	if crop == null or crop.atlas == null:
+		return false
+	var expected_size := Vector2(maxi(0, crop.atlas.get_width() - 2), crop.atlas.get_height())
+	return crop.region == Rect2(Vector2.ZERO, expected_size) and face.size == expected_size
