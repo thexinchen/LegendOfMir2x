@@ -90,6 +90,15 @@ struct MonsterMetaRecord
     uint32_t attackMotionMagicID = 0;
     uint32_t transformEffectMagicID = 0;
     uint32_t spawnEffectMagicID = 0;
+    uint8_t bodyStandMotionID = 0;
+    uint8_t bodyStandFrameCount = 0;
+    uint8_t bodyAttackMotionID = 0;
+    uint8_t bodyAttackFrameCount = 0;
+    uint32_t bodyAltAttackMagicID = 0;
+    uint8_t bodyAltAttackMotionID = 0;
+    uint8_t bodyAltAttackFrameCount = 0;
+    uint8_t bodyFlags = 0;
+    uint8_t spawnDirection = 0;
 };
 
 struct ItemMetaRecord
@@ -173,7 +182,7 @@ static_assert(sizeof(TileRecord) == 8);
 static_assert(sizeof(ObjectRecord) == 12);
 static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
-static_assert(sizeof(MonsterMetaRecord) == 54);
+static_assert(sizeof(MonsterMetaRecord) == 66);
 static_assert(sizeof(ItemMetaRecord) == 156);
 static_assert(sizeof(ItemDetailRecord) == 48);
 static_assert(sizeof(SkillMetaRecord) == 16);
@@ -262,6 +271,39 @@ static MonsterMetaRecord monsterMetaRecord(uint32_t monsterID)
         // mode trigger flips. Use the symmetric reverse sequence so burrowing
         // remains visible and completes instead of leaving a zero-frame motion.
         setTransf(0, 8, 0, 1, 8, 0, 10, 8, 9, 10, 0X0A);
+    }
+
+    // bodyFlags: bit 0 redirects every non-hitted body motion to stand,
+    // bit 1 forces the first graphics direction.
+    if(name == u8"爆裂蜘蛛"){
+        result.bodyStandMotionID = 1;
+        result.bodyStandFrameCount = 1;
+    }
+    else if(name == u8"诺玛大法老"){
+        result.bodyAttackMotionID = 6;
+        result.bodyAttackFrameCount = 6;
+    }
+    else if(name == u8"沙漠树魔"){
+        result.bodyStandFrameCount = 1;
+        result.bodyAttackMotionID = 2;
+        result.bodyAttackFrameCount = 10;
+    }
+    else if(name == u8"霸王教主"){
+        result.bodyAttackMotionID = 2;
+        result.bodyAttackFrameCount = 10;
+        result.bodyAltAttackMagicID = DBCOM_MAGICID(u8"霸王教主_野蛮冲撞");
+        result.bodyAltAttackMotionID = 6;
+        result.bodyAltAttackFrameCount = 10;
+    }
+    else if(name == u8"角蝇"){
+        result.bodyFlags = 0X02;
+    }
+    else if(name == u8"栗子树" || name == u8"圣诞树" || name == u8"圣诞树1"){
+        result.bodyStandFrameCount = 4;
+        result.bodyFlags = 0X03;
+    }
+    else if(name == u8"变异骷髅" || name == u8"超强骷髅"){
+        result.spawnDirection = DIR_DOWNLEFT;
     }
     return result;
 }
@@ -481,7 +523,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "monster.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 9, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 10, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
     }

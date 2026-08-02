@@ -83,6 +83,8 @@ func _ready() -> void:
 		return
 	if not _test_monster_spawn_actions(main, resources):
 		return
+	if not _test_monster_body_profiles(main, resources):
+		return
 	if not _test_monster_transform_actions(main, resources):
 		return
 	if not _test_monster_jump_stands(main):
@@ -1426,6 +1428,83 @@ func _test_monster_spawn_actions(main: Control, resources: RefCounted) -> bool:
 	GameState.remove_creature(special_uid)
 	GameState.remove_creature(ordinary_uid)
 	GameState.magic_effects.clear()
+	return true
+
+
+func _test_monster_body_profiles(main: Control, resources: RefCounted) -> bool:
+	var physical_id: int = resources.magic_id("物理攻击")
+	var savage_id: int = resources.magic_id("霸王教主_野蛮冲撞")
+	var shipwreck_id := 0
+	var pharaoh_id := 0
+	var fixed_direction_ids: Array[int] = []
+	var tree_ids: Array[int] = []
+	var spawn_direction_ids: Array[int] = []
+	for monster_id_value in resources.monster_meta:
+		var monster_id: int = monster_id_value
+		var physical_sequence: PackedInt32Array = resources.monster_body_sequence(monster_id, 7, physical_id)
+		var savage_sequence: PackedInt32Array = resources.monster_body_sequence(monster_id, 7, savage_id)
+		if physical_sequence == PackedInt32Array([2, 10, -1]) and savage_sequence == PackedInt32Array([6, 10, -1]):
+			shipwreck_id = monster_id
+		if physical_sequence == PackedInt32Array([6, 6, -1]):
+			pharaoh_id = monster_id
+		if resources.monster_body_sequence(monster_id, 2)[2] == 0:
+			fixed_direction_ids.append(monster_id)
+		if resources.monster_body_sequence(monster_id, 13) == PackedInt32Array([0, 4, 0]):
+			tree_ids.append(monster_id)
+		if resources.monster_spawn_direction(monster_id) == 6:
+			spawn_direction_ids.append(monster_id)
+	if physical_id <= 0 or savage_id <= 0 or shipwreck_id == 0 or pharaoh_id == 0 or fixed_direction_ids.size() != 4 or tree_ids.size() != 3 or spawn_direction_ids.size() != 2:
+		_fail("special monster body fixtures unavailable: ship=%d pharaoh=%d fixed=%s tree=%s spawn=%s" % [shipwreck_id, pharaoh_id, fixed_direction_ids, tree_ids, spawn_direction_ids])
+		return false
+	var renderer: Control = main.get_node("WorldRenderer")
+	var shipwreck_creature := {"type": 1, "monster_id": shipwreck_id, "action_type": 7, "action_magic_id": physical_id, "direction": 7}
+	var physical_render: Dictionary = renderer.call("_monster_render_sequence", shipwreck_creature)
+	shipwreck_creature["action_magic_id"] = savage_id
+	var savage_render: Dictionary = renderer.call("_monster_render_sequence", shipwreck_creature)
+	if physical_render.motion != 2 or physical_render.count != 10 or savage_render.motion != 6 or savage_render.count != 10:
+		_fail("ShipwreckLord body branch mismatch: physical=%s savage=%s" % [physical_render, savage_render])
+		return false
+	if not is_equal_approx(float(main.call("_creature_action_duration", 7, 100, shipwreck_creature, savage_id)), 1.0):
+		_fail("ShipwreckLord ten-frame body duration was not shared with action scheduling")
+		return false
+	var pharaoh_render: Dictionary = renderer.call("_monster_render_sequence", {"type": 1, "monster_id": pharaoh_id, "action_type": 7, "action_magic_id": savage_id, "direction": 5})
+	if pharaoh_render.motion != 6 or pharaoh_render.count != 6 or not is_equal_approx(float(main.call("_creature_action_duration", 7, 100, {"type": 1, "monster_id": pharaoh_id}, savage_id)), 0.6):
+		_fail("Numa Grand Pharaoh spell-body redirect mismatch: %s" % pharaoh_render)
+		return false
+	for tree_id in tree_ids:
+		var tree_render: Dictionary = renderer.call("_monster_render_sequence", {"type": 1, "monster_id": tree_id, "action_type": 13, "direction": 8})
+		if tree_render.motion != 0 or tree_render.count != 4 or tree_render.direction != 0:
+			_fail("tree body did not stay on fixed-direction stand graphics: id=%d render=%s" % [tree_id, tree_render])
+			return false
+	var fixed_non_tree_id: int = fixed_direction_ids.filter(func(id: int) -> bool: return id not in tree_ids)[0]
+	var fixed_attack: Dictionary = renderer.call("_monster_render_sequence", {"type": 1, "monster_id": fixed_non_tree_id, "action_type": 7, "direction": 8})
+	if fixed_attack.motion != 2 or fixed_attack.count != 6 or fixed_attack.direction != 0:
+		_fail("BugbatMaggot body direction was not fixed: %s" % fixed_attack)
+		return false
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	var runtime_resources: RefCounted = main.get("_resources")
+	for index in range(spawn_direction_ids.size()):
+		var monster_id: int = spawn_direction_ids[index]
+		var monster_meta: PackedInt32Array = runtime_resources.monster_meta[monster_id]
+		var spawn_seff: int = monster_meta[2]
+		monster_meta[2] = 0xFFFFFFFF
+		runtime_resources.monster_meta[monster_id] = monster_meta
+		var uid: int = (4 << 59) | (monster_id << 35) | (730 + index)
+		if index == 0:
+			main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {"type": 1, "speed": 100, "direction": 2, "x": 42, "y": 43}))
+		else:
+			var union_data := PackedByteArray()
+			union_data.resize(4)
+			union_data.encode_u32(0, monster_id)
+			main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(uid, 202, {"type": 1, "speed": 100, "direction": 2, "x": 44, "y": 43}, union_data))
+		var spawned: Dictionary = GameState.get_creature(uid)
+		monster_meta[2] = spawn_seff
+		runtime_resources.monster_meta[monster_id] = monster_meta
+		if spawned.get("action_type", 0) != 2 or spawned.get("direction", 0) != 6:
+			_fail("Tao skeleton initial spawn direction mismatch: %s" % spawned)
+			return false
+		GameState.remove_creature(uid)
 	return true
 
 

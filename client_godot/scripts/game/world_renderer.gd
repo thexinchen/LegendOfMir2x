@@ -1667,10 +1667,12 @@ func _monster_render_sequence(creature: Dictionary) -> Dictionary:
 	elif transform.is_empty():
 		look_id = creature.get("monster_stand_look", look_id)
 	var direction_index := clampi(creature.get("direction", 5), 1, 8) - 1
-	var motion_data := _monster_motion(action_type)
+	var motion_data: PackedInt32Array = actor_resource.monster_body_sequence(monster_id, action_type, creature.get("action_magic_id", 0))
 	var frame_begin := 0
 	var frame_count: int = motion_data[1]
 	var reverse := false
+	if motion_data[2] >= 0:
+		direction_index = motion_data[2]
 	if not transform.is_empty():
 		if action_type == 10:
 			motion_data = transform.active_transform if stand_mode else transform.hidden_transform

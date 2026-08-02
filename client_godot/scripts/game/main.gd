@@ -742,6 +742,9 @@ func _creature_action_duration(action_type: int, speed: int, creature: Dictionar
 		if not transform.is_empty():
 			var sequence: PackedInt32Array = transform.active_transform if creature.get("monster_stand_mode", false) else transform.hidden_transform
 			return float(sequence[2]) * 0.1 * 100.0 / float(clampi(speed, 20, 500))
+	if creature.get("type", 0) == 1 and action_type in [1, 7, 9, 11, 13]:
+		var body_sequence: PackedInt32Array = _resources.monster_body_sequence(creature.get("monster_id", 0), action_type, magic_id)
+		return float(body_sequence[1]) * 0.1 * 100.0 / float(clampi(speed, 20, 500))
 	return _action_duration(action_type, speed, creature.get("type", 0), magic_id)
 
 
@@ -1055,6 +1058,9 @@ func _handle_action(payload: PackedByteArray) -> void:
 			}
 			if inferred_type == 1:
 				creature["monster_id"] = monster_id
+				var spawn_direction: int = _resources.monster_spawn_direction(monster_id) if action_type == 1 else 0
+				if spawn_direction > 0:
+					creature["direction"] = spawn_direction
 				if action_type == 1 and _resources.monster_spawn_look(monster_id) > 0:
 					creature["monster_stand_look"] = _resources.monster_spawn_look(monster_id)
 			elif inferred_type == 3:
@@ -1421,6 +1427,9 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	if c_type == 1:
 		var monster_id: int = creature.get("monster_id", (uid >> 35) & 0xFFFFFF)
 		creature["action_type"] = _creature_stored_action_type(action_type, c_type, monster_id)
+		var spawn_direction: int = _resources.monster_spawn_direction(monster_id) if is_new and action_type == 1 else 0
+		if spawn_direction > 0:
+			creature["direction"] = spawn_direction
 		if is_new and action_type == 1 and _resources.monster_spawn_look(monster_id) > 0:
 			creature["monster_stand_look"] = _resources.monster_spawn_look(monster_id)
 		creature["action_type"] = _configure_monster_form(creature, action_type, creature["action_type"], action, true, {})

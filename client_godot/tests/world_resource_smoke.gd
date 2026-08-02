@@ -118,6 +118,41 @@ func _ready() -> void:
 	if spawn_effect_names != ["僧侣僵尸_地洞", "沙漠石人_石坑"]:
 		_fail("monster meta v9 special ground effects mismatch: %s" % spawn_effect_names)
 		return
+	var physical_magic_id: int = actors.magic_id("物理攻击")
+	var savage_magic_id: int = actors.magic_id("霸王教主_野蛮冲撞")
+	var stand_body_override_count := 0
+	var attack_body_override_count := 0
+	var fixed_body_direction_count := 0
+	var tree_body_count := 0
+	var spawn_direction_count := 0
+	var alternate_attack_count := 0
+	for monster_id_value in actors.monster_meta:
+		var monster_id: int = monster_id_value
+		var look_id: int = actors.monster_look(monster_id)
+		var stand_sequence: PackedInt32Array = actors.monster_body_sequence(monster_id, 2)
+		var attack_sequence: PackedInt32Array = actors.monster_body_sequence(monster_id, 7, physical_magic_id)
+		var savage_sequence: PackedInt32Array = actors.monster_body_sequence(monster_id, 7, savage_magic_id)
+		if stand_sequence != PackedInt32Array([0, 4, -1]):
+			stand_body_override_count += 1
+			var stand_direction := stand_sequence[2] if stand_sequence[2] >= 0 else 0
+			var stand_key := (look_id << 12) | (stand_sequence[0] << 8) | (stand_direction << 5) | (stand_sequence[1] - 1)
+			if stand_sequence[1] <= 0 or actors.frame("monster", stand_key).is_empty():
+				_fail("monster meta v10 stand sequence references a missing frame: monster=%d sequence=%s" % [monster_id, stand_sequence])
+				return
+		if attack_sequence != PackedInt32Array([2, 6, -1]):
+			attack_body_override_count += 1
+			var attack_direction := attack_sequence[2] if attack_sequence[2] >= 0 else 0
+			var attack_key := (look_id << 12) | (attack_sequence[0] << 8) | (attack_direction << 5) | (attack_sequence[1] - 1)
+			if attack_sequence[1] <= 0 or actors.frame("monster", attack_key).is_empty():
+				_fail("monster meta v10 attack sequence references a missing frame: monster=%d sequence=%s" % [monster_id, attack_sequence])
+				return
+		fixed_body_direction_count += 1 if stand_sequence[2] == 0 else 0
+		tree_body_count += 1 if actors.monster_body_sequence(monster_id, 13) == PackedInt32Array([0, 4, 0]) else 0
+		spawn_direction_count += 1 if actors.monster_spawn_direction(monster_id) == 6 else 0
+		alternate_attack_count += 1 if attack_sequence == PackedInt32Array([2, 10, -1]) and savage_sequence == PackedInt32Array([6, 10, -1]) else 0
+	if physical_magic_id <= 0 or savage_magic_id <= 0 or stand_body_override_count != 6 or attack_body_override_count != 7 or fixed_body_direction_count != 4 or tree_body_count != 3 or spawn_direction_count != 2 or alternate_attack_count != 1:
+		_fail("monster meta v10 body profiles mismatch: stand=%d attack=%d fixed=%d tree=%d spawn_dir=%d alternate=%d" % [stand_body_override_count, attack_body_override_count, fixed_body_direction_count, tree_body_count, spawn_direction_count, alternate_attack_count])
+		return
 	var fade_monster_count := 0
 	var persistent_corpse_count := 0
 	for monster_id_value in actors.monster_meta:

@@ -108,6 +108,43 @@ func monster_spawn_effect_magic_id(monster_id: int) -> int:
 	return meta[22] if meta.size() >= 23 else 0
 
 
+func monster_spawn_direction(monster_id: int) -> int:
+	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
+	return meta[31] if meta.size() >= 32 else 0
+
+
+func monster_body_sequence(monster_id: int, action_type: int, magic_id := 0) -> PackedInt32Array:
+	var sequence: PackedInt32Array
+	match action_type:
+		3, 5: sequence = PackedInt32Array([1, 6, -1])
+		7: sequence = PackedInt32Array([2, 6, -1])
+		11: sequence = PackedInt32Array([3, 2, -1])
+		13: sequence = PackedInt32Array([4, 10, -1])
+		9: sequence = PackedInt32Array([6, 10, -1])
+		1: sequence = PackedInt32Array([8, 10, -1])
+		_: sequence = PackedInt32Array([0, 4, -1])
+	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
+	if meta.size() < 32:
+		return sequence
+	var flags := int(meta[30])
+	if bool(flags & 1) and action_type != 11:
+		sequence[0] = meta[23] if meta[24] > 0 else 0
+		sequence[1] = meta[24] if meta[24] > 0 else 4
+	elif action_type == 2 and meta[24] > 0:
+		sequence[0] = meta[23]
+		sequence[1] = meta[24]
+	elif action_type == 7:
+		if meta[27] > 0 and magic_id == meta[27]:
+			sequence[0] = meta[28]
+			sequence[1] = meta[29]
+		elif meta[26] > 0:
+			sequence[0] = meta[25]
+			sequence[1] = meta[26]
+	if bool(flags & 2):
+		sequence[2] = 0
+	return sequence
+
+
 func monster_transform(monster_id: int) -> Dictionary:
 	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
 	if meta.size() < 19 or meta[14] <= 0:
@@ -260,7 +297,7 @@ func _load_monster_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+	if version not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -288,6 +325,12 @@ func _load_monster_meta() -> void:
 			meta.append(file.get_32())
 		if version >= 9:
 			meta.append(file.get_32())
+		if version >= 10:
+			for _body_index in range(4):
+				meta.append(file.get_8())
+			meta.append(file.get_32())
+			for _body_index in range(4):
+				meta.append(file.get_8())
 		monster_meta[monster_id] = meta
 
 

@@ -1135,6 +1135,65 @@ func _ready() -> void:
 			await get_tree().process_frame
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_SPAWN_BASELINE_SCREENSHOT"))
+	if OS.has_environment("MIR2X_MONSTER_BODY_SCREENSHOT"):
+		if not $WorldRenderer.load_map(6):
+			_fail("monster-body visual map failed to load")
+			return
+		var body_source := _find_open_wave_source($WorldRenderer, 8, $WorldRenderer.map_height - 8)
+		if body_source.x < 0:
+			_fail("no open monster-body visual fixture")
+			return
+		var physical_magic_id: int = resources.magic_id("物理攻击")
+		var savage_magic_id: int = resources.magic_id("霸王教主_野蛮冲撞")
+		var body_visuals: Array[Dictionary] = []
+		var tree_added := false
+		for monster_id_value in resources.monster_meta:
+			var monster_id: int = monster_id_value
+			var stand_sequence: PackedInt32Array = resources.monster_body_sequence(monster_id, 2)
+			var attack_sequence: PackedInt32Array = resources.monster_body_sequence(monster_id, 7, physical_magic_id)
+			var savage_sequence: PackedInt32Array = resources.monster_body_sequence(monster_id, 7, savage_magic_id)
+			var death_sequence: PackedInt32Array = resources.monster_body_sequence(monster_id, 13)
+			if stand_sequence == PackedInt32Array([1, 1, -1]):
+				body_visuals.append({"monster_id": monster_id, "action": 2, "magic": 0, "offset": Vector2i(-6, 2), "elapsed": 0})
+			elif stand_sequence == PackedInt32Array([0, 1, -1]):
+				body_visuals.append({"monster_id": monster_id, "action": 7, "magic": physical_magic_id, "offset": Vector2i(-5, -1), "elapsed": 900})
+			elif attack_sequence == PackedInt32Array([6, 6, -1]):
+				body_visuals.append({"monster_id": monster_id, "action": 7, "magic": resources.magic_id("诺玛大法老_雷电术"), "offset": Vector2i(-2, -1), "elapsed": 500})
+			elif attack_sequence == PackedInt32Array([2, 10, -1]) and savage_sequence == PackedInt32Array([6, 10, -1]):
+				body_visuals.append({"monster_id": monster_id, "action": 7, "magic": savage_magic_id, "offset": Vector2i(2, -1), "elapsed": 900})
+			elif death_sequence == PackedInt32Array([0, 4, 0]) and not tree_added:
+				tree_added = true
+				body_visuals.append({"monster_id": monster_id, "action": 13, "magic": 0, "offset": Vector2i(6, 1), "elapsed": 300})
+			elif stand_sequence == PackedInt32Array([0, 4, 0]) and death_sequence != PackedInt32Array([0, 4, 0]):
+				body_visuals.append({"monster_id": monster_id, "action": 7, "magic": 0, "offset": Vector2i(-2, 3), "elapsed": 500})
+			elif resources.monster_spawn_direction(monster_id) == 6 and not body_visuals.any(func(entry: Dictionary) -> bool: return entry.get("spawn_direction", false)):
+				body_visuals.append({"monster_id": monster_id, "action": 2, "magic": 0, "offset": Vector2i(2, 3), "elapsed": 0, "spawn_direction": true})
+		if body_visuals.size() != 7:
+			_fail("monster-body visual metadata mismatch: %s" % body_visuals)
+			return
+		var body_now := Time.get_ticks_msec()
+		GameState.creatures.clear()
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.magic_effects.clear()
+		for body_index in range(body_visuals.size()):
+			var visual: Dictionary = body_visuals[body_index]
+			var body_grid: Vector2i = body_source + visual.offset
+			var body_uid: int = (int(visual.monster_id) << 35) | (910 + body_index)
+			GameState.creatures[body_uid] = {
+				"uid": body_uid, "x": body_grid.x, "y": body_grid.y,
+				"type": 1, "monster_id": visual.monster_id,
+				"direction": 6 if visual.get("spawn_direction", false) else 8,
+				"action_type": visual.action, "action_magic_id": visual.magic,
+				"action_speed": 100, "action_started_ms": body_now - int(visual.elapsed),
+			}
+		GameState.view_x = body_source.x * 48 - 400
+		GameState.view_y = (body_source.y + 1) * 32 - 350
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_BODY_SCREENSHOT"))
 	if OS.has_environment("MIR2X_SPACE_MOVE_SCREENSHOT"):
 		if not $WorldRenderer.load_map(6):
 			_fail("space-move visual map failed to load")
