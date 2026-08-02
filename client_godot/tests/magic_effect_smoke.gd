@@ -300,15 +300,13 @@ func _ready() -> void:
 		"x": 405, "y": 120, "aimX": 409, "aimY": 120, "aimUID": target_uid,
 		"direction": 3, "start_time": now,
 	}
-	var spell_meta: PackedInt32Array = resources.magic_layout(fireball_id, 1)
-	if not spell_meta.is_empty():
-		fireball.start_time -= $WorldRenderer.call("_magic_stage_duration", spell_meta, fireball)
-	fireball.start_time -= 250
+	var chain_trigger: int = $WorldRenderer.call("_hero_spell_trigger_delay", fireball_id, 4)
+	fireball.start_time -= chain_trigger
 	GameState.magic_effects = [fireball]
 	var active: Array = $WorldRenderer.call("_resolve_magic_effects", now)
 	var active_fireball_components: Array = active[0].get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fireball_run) if active.size() == 1 else []
 	if active.size() != 1 or active_fireball_components.size() != 1:
-		_fail("magic stage chain resolution mismatch: %s" % active)
+		_fail("magic stage chain resolution mismatch: %s" % [active])
 		return
 
 	GameState.attached_magic_effects.clear()
@@ -392,25 +390,40 @@ func _ready() -> void:
 	if launched_components.size() != 1 or first_position == source_position or absf(first_position.distance_to(source_position) - 20.0) > 1.0:
 		_fail("follow projectile did not advance 20px on launch: %s pos=%s" % [launched_projectile, first_position])
 		return
+	$WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + projectile_trigger)
+	if projectile_effect.get("_projectile_position", Vector2.ZERO) != first_position or projectile_effect.get("_projectile_step_count", 0) != 1:
+		_fail("same-time redraw advanced follow projectile: %s" % projectile_effect)
+		return
+	var sparse_projectile := projectile_effect.duplicate(true)
+	for key in ["_projectile_position", "_projectile_start", "_projectile_fly_direction", "_projectile_gfx_direction", "_projectile_last_fly_offset", "_projectile_step_count", "_projectile_impact_spawned", "_projectile_done"]:
+		sparse_projectile.erase(key)
+	var dense_projectile := sparse_projectile.duplicate(true)
+	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(430 * 48, 120 * 32)}})
+	$WorldRenderer.call("_resolve_magic_effect", sparse_projectile, now + projectile_trigger + 100)
+	for sample_offset in [0, 17, 34, 50, 67, 84, 100]:
+		$WorldRenderer.call("_resolve_magic_effect", dense_projectile, now + projectile_trigger + sample_offset)
+	if sparse_projectile.get("_projectile_step_count", 0) != 7 or dense_projectile.get("_projectile_step_count", 0) != 7 or sparse_projectile.get("_projectile_position", Vector2.ZERO) != dense_projectile.get("_projectile_position", Vector2.ZERO):
+		_fail("60Hz projectile state depended on render sampling: sparse=%s dense=%s" % [sparse_projectile, dense_projectile])
+		return
 	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(first_position.x, first_position.y - 160)}})
 	var prior_position := first_position
-	$WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + projectile_trigger + 16)
+	$WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + projectile_trigger + 17)
 	var turned_position: Vector2 = projectile_effect.get("_projectile_position", Vector2.ZERO)
 	if turned_position.y >= prior_position.y:
 		_fail("follow projectile did not home toward moved target: before=%s after=%s" % [prior_position, turned_position])
 		return
 	var fireball_offset := Vector2(resources.magic_target_offset(fireball_id, 2, projectile_effect.get("_projectile_gfx_direction", 0)))
 	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": turned_position + fireball_offset + Vector2(1, 1)}})
-	var hit_state: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + projectile_trigger + 32)
+	var hit_state: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + projectile_trigger + 34)
 	var hit_run_components: Array = hit_state.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fireball_run)
 	if not hit_run_components.is_empty() or GameState.attached_magic_effects.size() != 1:
 		_fail("follow projectile hit did not replace flight with one impact: state=%s effects=%s" % [hit_state, GameState.attached_magic_effects])
 		return
 	var impact: Dictionary = GameState.attached_magic_effects[0]
-	if impact.get("target_uid", 0) != target_uid or impact.get("stage", 0) != 3 or impact.get("kind", "") != "projectile_impact":
+	if impact.get("target_uid", 0) != target_uid or impact.get("stage", 0) != 3 or impact.get("kind", "") != "projectile_impact" or impact.get("start_time", 0) != now + projectile_trigger + 34:
 		_fail("follow projectile impact metadata mismatch: %s" % impact)
 		return
-	var impact_active: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now + projectile_trigger + 32)
+	var impact_active: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now + projectile_trigger + 34)
 	if impact_active.get(target_uid, []).is_empty() or impact_active[target_uid][0].meta != resources.magic_layout(fireball_id, 3):
 		_fail("follow projectile impact did not use explode-stage graphics: %s" % impact_active)
 		return
@@ -617,7 +630,7 @@ func _ready() -> void:
 			return
 		var monster_target_offset := Vector2(resources.magic_target_offset(monster_projectile_id, 2, expected_gfx_direction))
 		$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": monster_projectile_position + monster_target_offset + Vector2(1, 1)}})
-		$WorldRenderer.call("_resolve_magic_effect", monster_projectile, now + projectile_trigger_ms + 16)
+		$WorldRenderer.call("_resolve_magic_effect", monster_projectile, now + projectile_trigger_ms + 17)
 		var expects_impact: bool = not resources.magic_layout(monster_projectile_id, 3).is_empty()
 		if expects_impact:
 			var monster_impact: Dictionary = GameState.attached_magic_effects.back() if not GameState.attached_magic_effects.is_empty() else {}
@@ -652,7 +665,7 @@ func _ready() -> void:
 		return
 	var axe_offset := Vector2(resources.magic_target_offset(dual_axe_id, 2, 2))
 	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": axe_position + axe_offset + Vector2(1, 1)}})
-	$WorldRenderer.call("_resolve_magic_effect", axe_effect, now + 416)
+	$WorldRenderer.call("_resolve_magic_effect", axe_effect, now + 417)
 	if GameState.attached_magic_effects.size() != 1 or GameState.attached_magic_effects[0].get("magicID", 0) != dual_axe_id or GameState.attached_magic_effects[0].get("stage", 0) != 3:
 		_fail("dual axe impact did not create its split attachment: %s" % GameState.attached_magic_effects)
 		return
@@ -666,6 +679,7 @@ func _ready() -> void:
 		fixed_projectile.erase("_projectile_fly_direction")
 		fixed_projectile.erase("_projectile_gfx_direction")
 		fixed_projectile.erase("_projectile_last_fly_offset")
+		fixed_projectile.erase("_projectile_step_count")
 		fixed_projectile.erase("_projectile_done")
 		fixed_projectile.erase("_projectile_impact_spawned")
 		$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(409 * 48, 120 * 32)}})
@@ -679,7 +693,7 @@ func _ready() -> void:
 
 	GameState.attached_magic_effects.clear()
 	var missing_projectile := projectile_effect.duplicate(true)
-	for key in ["_projectile_position", "_projectile_start", "_projectile_fly_direction", "_projectile_gfx_direction", "_projectile_last_fly_offset", "_projectile_impact_spawned", "_projectile_done"]:
+	for key in ["_projectile_position", "_projectile_start", "_projectile_fly_direction", "_projectile_gfx_direction", "_projectile_last_fly_offset", "_projectile_step_count", "_projectile_impact_spawned", "_projectile_done"]:
 		missing_projectile.erase(key)
 	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(409 * 48, 120 * 32)}})
 	$WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + projectile_trigger)
@@ -687,12 +701,12 @@ func _ready() -> void:
 	GameState.creatures.erase(target_uid)
 	$WorldRenderer.set("_actor_target_rects", {})
 	var missing_before: Vector2 = missing_projectile.get("_projectile_position", Vector2.ZERO)
-	$WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + projectile_trigger + 16)
+	$WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + projectile_trigger + 17)
 	if missing_projectile.get("_projectile_position", Vector2.ZERO) != missing_before + last_offset:
 		_fail("missing-target projectile did not continue its last direction")
 		return
 	missing_projectile["_projectile_position"] = Vector2(missing_projectile.get("_projectile_start", Vector2.ZERO)) + Vector2(256 * 48, 0)
-	var expired_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + projectile_trigger + 32)
+	var expired_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + projectile_trigger + 34)
 	var expired_run_components: Array = expired_projectile.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fireball_run)
 	if not expired_run_components.is_empty() or not GameState.attached_magic_effects.is_empty():
 		_fail("missing-target projectile did not expire silently after 255 grids")
@@ -960,11 +974,21 @@ func _ready() -> void:
 		GameState.player_direction = 3
 		GameState.attached_magic_effects.clear()
 		GameState.firewalls.clear()
-		GameState.magic_effects = [{
+		var projectile_visual := {
 			"source": "action", "magicID": fireball_id, "uid": GameState.player_uid,
 			"x": 405, "y": 120, "aimX": 413, "aimY": 120, "aimUID": target_uid,
-			"direction": 3, "speed": 100, "start_time": projectile_now - projectile_trigger,
-		}]
+			"direction": 3, "speed": 100, "start_time": projectile_now - projectile_trigger - 100,
+		}
+		$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(413 * 48, 120 * 32)}})
+		$WorldRenderer.call("_resolve_magic_effect", projectile_visual, projectile_now)
+		if projectile_visual.get("_projectile_step_count", 0) != 7:
+			_fail("projectile visual did not pre-roll seven 60Hz steps: %s" % projectile_visual)
+			return
+		# Map rendering can take longer than one projectile step on CI. Preserve the
+		# pre-rolled C++ state while the real display frame is captured.
+		projectile_visual["_projectile_step_count"] = 1 << 30
+		$WorldRenderer.set("_actor_target_rects", {})
+		GameState.magic_effects = [projectile_visual]
 		GameState.view_x = 409 * 48 - 400
 		GameState.view_y = 120 * 32 - 300
 		$WorldRenderer.queue_redraw()

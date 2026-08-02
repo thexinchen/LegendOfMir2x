@@ -33,6 +33,7 @@ const FIRE_ASH_TEXTURE_ID := 0x0F0000DC
 const ICE_SLAG_TEXTURE_IDS := [0x0F000105, 0x0F000104]
 const SPECIAL_WAVE_COUNT := 8
 const SPECIAL_WAVE_DELAY_MS := 100
+const PROJECTILE_UPDATE_HZ := 60
 const FIRE_ASH_FADE_IN_MS := 1000
 const FIRE_ASH_HOLD_MS := 5000
 const FIRE_ASH_FADE_OUT_MS := 3000
@@ -744,44 +745,50 @@ func _resolve_projectile_action_magic(effect: Dictionary, magic_id: int, kind: S
 	var position: Vector2 = effect.get("_projectile_position", Vector2.ZERO)
 	var gfx_direction: int = effect.get("_projectile_gfx_direction", 0)
 	var target_uid: int = effect.get("aimUID", 0)
-	var live_target: Variant = _projectile_target_pixel(target_uid)
 	var target_offset: Vector2 = Vector2(actor_resource.magic_target_offset(magic_id, MAGIC_STAGE_RUN, gfx_direction))
-	var head_position: Vector2 = position + target_offset
-	var move_offset: Vector2
-	var previous_distance2: float = INF
-	if live_target != null:
-		var target_position: Vector2 = live_target
-		var difference := target_position - head_position
-		previous_distance2 = difference.length_squared()
-		move_offset = Vector2.ZERO if difference == Vector2.ZERO else _projectile_move_offset(difference)
-	else:
-		move_offset = effect.get("_projectile_last_fly_offset", _projectile_direction_offset(effect.get("_projectile_fly_direction", 0)))
-	position += move_offset
-	effect["_projectile_position"] = position
-	effect["_projectile_last_fly_offset"] = move_offset
-	head_position = position + target_offset
-	var done := _projectile_out_of_range(effect)
-	if live_target != null:
-		var remaining: Vector2 = Vector2(live_target) - head_position
-		done = done or (absf(remaining.x) < 24.0 and absf(remaining.y) < 16.0) or remaining.length_squared() > previous_distance2
-	if done:
-		effect["_projectile_done"] = true
-		var explode_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_EXPLODE)
-		if live_target != null and not explode_meta.is_empty() and not effect.get("_projectile_impact_spawned", false):
-			effect["_projectile_impact_spawned"] = true
-			var impact_effect := {
-				"magicID": magic_id,
-				"target_uid": target_uid,
-				"start_time": int(effect.get("start_time", 0)) + elapsed,
-				"cycles": 1,
-				"kind": "projectile_impact",
-				"stage": MAGIC_STAGE_EXPLODE,
-			}
-			if not kind.begins_with("monster_"):
-				impact_effect["play_seff"] = true
-			game_state.attached_magic_effects.append(impact_effect)
-			game_state.state_changed.emit()
-		return resolved if not resolved.components.is_empty() else {}
+	var required_steps := floori(float(elapsed - trigger_delay) * PROJECTILE_UPDATE_HZ / 1000.0) + 1
+	var processed_steps: int = effect.get("_projectile_step_count", 0)
+	while processed_steps < required_steps:
+		var live_target: Variant = _projectile_target_pixel(target_uid)
+		var head_position := position + target_offset
+		var move_offset: Vector2
+		var previous_distance2: float = INF
+		if live_target != null:
+			var target_position: Vector2 = live_target
+			var difference := target_position - head_position
+			previous_distance2 = difference.length_squared()
+			move_offset = Vector2.ZERO if difference == Vector2.ZERO else _projectile_move_offset(difference)
+		else:
+			move_offset = effect.get("_projectile_last_fly_offset", _projectile_direction_offset(effect.get("_projectile_fly_direction", 0)))
+		position += move_offset
+		processed_steps += 1
+		effect["_projectile_position"] = position
+		effect["_projectile_last_fly_offset"] = move_offset
+		effect["_projectile_step_count"] = processed_steps
+		head_position = position + target_offset
+		var done := _projectile_out_of_range(effect)
+		if live_target != null:
+			var remaining: Vector2 = Vector2(live_target) - head_position
+			done = done or (absf(remaining.x) < 24.0 and absf(remaining.y) < 16.0) or remaining.length_squared() > previous_distance2
+		if done:
+			effect["_projectile_done"] = true
+			var explode_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_EXPLODE)
+			if live_target != null and not explode_meta.is_empty() and not effect.get("_projectile_impact_spawned", false):
+				effect["_projectile_impact_spawned"] = true
+				var impact_elapsed := trigger_delay + ceili(float(processed_steps - 1) * 1000.0 / PROJECTILE_UPDATE_HZ)
+				var impact_effect := {
+					"magicID": magic_id,
+					"target_uid": target_uid,
+					"start_time": int(effect.get("start_time", 0)) + impact_elapsed,
+					"cycles": 1,
+					"kind": "projectile_impact",
+					"stage": MAGIC_STAGE_EXPLODE,
+				}
+				if not kind.begins_with("monster_"):
+					impact_effect["play_seff"] = true
+				game_state.attached_magic_effects.append(impact_effect)
+				game_state.state_changed.emit()
+			return resolved if not resolved.components.is_empty() else {}
 	var run_elapsed := elapsed - trigger_delay
 	var absolute_frame := _magic_absolute_frame(run_meta, run_elapsed)
 	var frame := absolute_frame % run_meta[2] if run_meta[7] & 1 else absolute_frame
