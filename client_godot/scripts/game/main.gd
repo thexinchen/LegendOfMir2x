@@ -14,6 +14,10 @@ const PURCHASE_PANEL_PATH := "res://scenes/game/panels/purchase.tscn"
 const FRIEND_CHAT_PANEL_PATH := "res://scenes/game/panels/friend_chat.tscn"
 const SECURED_ITEMS_PANEL_PATH := "res://scenes/game/panels/secured_items.tscn"
 const TEAM_PANEL_PATH := "res://scenes/game/panels/team.tscn"
+const HORSE_PANEL_PATH := "res://scenes/game/panels/horse.tscn"
+const GUILD_PANEL_PATH := "res://scenes/game/panels/guild.tscn"
+const INPUT_STRING_PANEL_PATH := "res://scenes/game/panels/input_string.tscn"
+const RUNTIME_CONFIG_PANEL_PATH := "res://scenes/game/panels/runtime_config.tscn"
 const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 
 @onready var world_renderer: Control = $WorldRenderer
@@ -231,6 +235,30 @@ func _try_panel_hotkey(keycode: int) -> bool:
 	else:
 		return false
 	return true
+
+
+func handle_panel_escape() -> bool:
+	# Match ImMainUI::processEvent(). Purchase, auction, NPC chat and minimap do
+	# not consume Escape. Runtime config closes but deliberately returns false.
+	var ordered_panels: Array[Control] = [
+		_extra_panel_nodes.get(HORSE_PANEL_PATH) as Control,
+		_extra_panel_nodes.get(GUILD_PANEL_PATH) as Control,
+		_extra_panel_nodes.get(INPUT_STRING_PANEL_PATH) as Control,
+		_extra_panel_nodes.get(RUNTIME_CONFIG_PANEL_PATH) as Control,
+		_extra_panel_nodes.get(QUEST_PANEL_PATH) as Control,
+		_extra_panel_nodes.get(TEAM_PANEL_PATH) as Control,
+		_extra_panel_nodes.get(SECURED_ITEMS_PANEL_PATH) as Control,
+		inventory_panel,
+		player_state_panel,
+		_extra_panel_nodes.get(FRIEND_CHAT_PANEL_PATH) as Control,
+		skill_panel,
+	]
+	for panel in ordered_panels:
+		if panel != null and panel.visible and panel.has_method("close_for_escape"):
+			if bool(panel.call("close_for_escape")):
+				get_viewport().set_input_as_handled()
+				return true
+	return false
 
 
 func _player_dead() -> bool:

@@ -145,8 +145,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if not visible or not event.pressed or event.echo:
 		return
 	if event.keycode == KEY_ESCAPE:
-		hide()
-		get_viewport().set_input_as_handled()
+		super._unhandled_key_input(event)
 		return
 	if _hovered_magic_id == 0:
 		return

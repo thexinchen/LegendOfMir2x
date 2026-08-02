@@ -75,6 +75,13 @@ var _preview_lines: Array[LineEdit] = []
 var _preview_fonts: Array[Font] = []
 
 
+# C++ closes this board on Escape but returns false, so later boards and the
+# world-centering fallback still receive the same key event.
+func close_for_escape() -> bool:
+	hide()
+	return false
+
+
 func _ready() -> void:
 	super._ready()
 	_state = get_node("/root/GameState")

@@ -85,6 +85,8 @@ func _ready() -> void:
 		print("FPS OVERLAY VISUAL PASS: %s" % OS.get_environment("MIR2X_FPS_SCREENSHOT"))
 		get_tree().quit()
 		return
+	if not await _test_panel_escape_precedence(main):
+		return
 	if not _test_strike_grid_rendering(main):
 		return
 	if not _test_camera_centering(main):
@@ -160,6 +162,42 @@ func _ready() -> void:
 		return
 	print("WORLD ACTION PASS: team flag, focus channels, mining, exact-frame focus, action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
+
+
+func _test_panel_escape_precedence(main: Control) -> bool:
+	var inventory := main.get_node("InventoryPanel") as Control
+	var player_state := main.get_node("PlayerStatePanel") as Control
+	var skill := main.get_node("SkillPanel") as Control
+	inventory.show()
+	player_state.show()
+	skill.show()
+	var escape := InputEventKey.new()
+	escape.keycode = KEY_ESCAPE
+	escape.pressed = true
+	Input.parse_input_event(escape)
+	await get_tree().process_frame
+	if inventory.visible or not player_state.visible or not skill.visible:
+		_fail("multi-panel Escape did not follow C++ inventory-before-player-before-skill priority: inventory=%s player=%s skill=%s" % [inventory.visible, player_state.visible, skill.visible])
+		return false
+	player_state.hide()
+	skill.hide()
+	var runtime := main.call("_ensure_extra_panel", "res://scenes/game/panels/runtime_config.tscn") as Control
+	runtime.show()
+	inventory.show()
+	Input.parse_input_event(escape)
+	await get_tree().process_frame
+	if runtime.visible or inventory.visible:
+		_fail("runtime Escape did not close runtime and continue to inventory: runtime=%s inventory=%s" % [runtime.visible, inventory.visible])
+		return false
+	var purchase := main.call("_ensure_extra_panel", "res://scenes/game/panels/purchase.tscn") as Control
+	purchase.show()
+	Input.parse_input_event(escape)
+	await get_tree().process_frame
+	if not purchase.visible:
+		_fail("purchase panel consumed Escape although C++ purchase board ignores it")
+		return false
+	purchase.hide()
+	return true
 
 
 func _test_strike_grid_rendering(main: Control) -> bool:

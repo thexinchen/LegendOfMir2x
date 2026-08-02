@@ -50,5 +50,13 @@ func _clamp_to_viewport() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
-		hide()
-		get_viewport().set_input_as_handled()
+		var main := get_parent()
+		if main != null and main.has_method("handle_panel_escape"):
+			main.call("handle_panel_escape")
+		elif close_for_escape():
+			get_viewport().set_input_as_handled()
+
+
+func close_for_escape() -> bool:
+	hide()
+	return true

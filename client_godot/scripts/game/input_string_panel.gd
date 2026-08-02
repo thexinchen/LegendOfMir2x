@@ -35,10 +35,9 @@ func _cancel() -> void:
 	cancelled.emit()
 
 
-func _unhandled_key_input(event: InputEvent) -> void:
-	if visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
-		_cancel()
-		get_viewport().set_input_as_handled()
+func close_for_escape() -> bool:
+	_cancel()
+	return true
 
 
 func _on_text_changed(value: String) -> void:
