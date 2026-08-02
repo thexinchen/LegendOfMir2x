@@ -171,21 +171,14 @@ theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_font_sizes/font_size = 11
 
 [node name="Composer" type="HBoxContainer" parent="Page/ChatPage"]
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
 
 [node name="Input" type="TextEdit" parent="Page/ChatPage/Composer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 13
-placeholder_text = "输入消息，Enter 发送"
 wrap_mode = 1
-
-[node name="Send" type="Button" parent="Page/ChatPage/Composer"]
-custom_minimum_size = Vector2(55, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 13
-text = "发送"
 
 [node name="SearchPage" type="Control" parent="Page"]
 visible = false

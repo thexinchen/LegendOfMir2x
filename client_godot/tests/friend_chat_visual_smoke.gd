@@ -23,6 +23,11 @@ func _ready() -> void:
 	if panel.get_node("ContentFrame").position != Vector2.ZERO or panel.get_node("ContentFrame").size != panel.size:
 		_fail("full-board foreground frame mismatch")
 		return
+	var composer := panel.get_node("Page/ChatPage/Composer") as HBoxContainer
+	var chat_input := panel.get_node("Page/ChatPage/Composer/Input") as TextEdit
+	if composer.custom_minimum_size.y != 74.0 or chat_input.placeholder_text != "" or panel.get_node_or_null("Page/ChatPage/Composer/Send") != null:
+		_fail("chat composer does not match the original full-width 74px multiline input")
+		return
 	if OS.has_environment("MIR2X_FRIEND_LIST_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FRIEND_LIST_SCREENSHOT"))

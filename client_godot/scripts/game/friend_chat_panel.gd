@@ -43,7 +43,6 @@ func _ready() -> void:
 	$Page/SearchPage/Query.text_changed.connect(_search)
 	$Page/SearchPage/Query.text_submitted.connect(_show_search_candidates)
 	$Page/SearchPage/Clear.pressed.connect(_clear_search)
-	$Page/ChatPage/Composer/Send.pressed.connect(_send)
 	$Page/ChatPage/Composer/Input.gui_input.connect(_chat_input)
 	$SliderHit.gui_input.connect(_on_slider_input)
 	_hide_stock_scrollbars()
