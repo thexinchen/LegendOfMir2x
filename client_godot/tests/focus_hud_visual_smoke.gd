@@ -19,6 +19,9 @@ func _ready() -> void:
 	GameState.player_mp = 50
 	GameState.player_mp_max = 100
 	GameState.buff_list = [resources.buff_meta.keys()[0]]
+	GameState.chat_log.clear()
+	for index in range(12):
+		GameState.add_chat_log("聊天滚动测试 %02d" % index, index % 4)
 	var panel: Control = load("res://scenes/game/control_panel.tscn").instantiate()
 	panel.position = Vector2(0, 448)
 	add_child(panel)

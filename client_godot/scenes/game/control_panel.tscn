@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=3]
+[gd_scene load_steps=44 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/control_panel.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000012.png" id="2_base"]
@@ -44,6 +44,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000024.png" id="34_emoji_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000025.png" id="35_mute_hover"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000026.png" id="36_mute_down"]
+[ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000088.png" id="37_chat_slider"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_command"]
 content_margin_left = 0.0
@@ -198,6 +199,21 @@ bbcode_enabled = true
 fit_content = false
 scroll_active = true
 scroll_following = true
+
+[node name="ChatSliderHitArea" type="Control" parent="Body"]
+offset_left = 615.0
+offset_top = 49.0
+offset_right = 633.0
+offset_bottom = 129.0
+
+[node name="ChatSlider" type="TextureRect" parent="Body"]
+offset_left = 619.5
+offset_top = 110.0
+offset_right = 636.5
+offset_bottom = 129.0
+mouse_filter = 2
+texture = ExtResource("37_chat_slider")
+modulate = Color(0.5, 0.5, 0.5, 1)
 
 [node name="Command" type="LineEdit" parent="Body"]
 unique_name_in_owner = true

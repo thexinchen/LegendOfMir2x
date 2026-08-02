@@ -30,6 +30,8 @@ func _ready() -> void:
 	GameState.add_chat_log("获得物品", 1)
 	GameState.add_chat_log("广播消息", 2)
 	GameState.add_chat_log("错误消息", 3)
+	for index in range(8):
+		GameState.add_chat_log("滚动消息 %02d" % index, index % 4)
 	var panel: Control = load("res://scenes/game/control_panel.tscn").instantiate()
 	add_child(panel)
 	await get_tree().process_frame
@@ -89,12 +91,55 @@ func _ready() -> void:
 	if chat_log.get_v_scroll_bar().modulate.a != 0.0:
 		_fail("default chat scrollbar is visible")
 		return
+	var chat_slider := panel.get_node("Body/ChatSlider") as TextureRect
+	var chat_slider_hit_area := panel.get_node("Body/ChatSliderHitArea") as Control
+	var chat_scroll_bar := chat_log.get_v_scroll_bar()
+	if chat_slider.size != Vector2(17, 19) or chat_slider.position != Vector2(619.5, 110) or chat_slider.modulate != Color(0.5, 0.5, 0.5, 1.0) or chat_slider_hit_area.position != Vector2(615, 49) or chat_slider_hit_area.size != Vector2(18, 80):
+		_fail("compact original chat slider geometry mismatch")
+		return
+	var scroll_reach := chat_scroll_bar.max_value - chat_scroll_bar.page
+	if scroll_reach <= 45.0:
+		_fail("chat slider fixture has no useful scroll range")
+		return
+	var wheel_up := InputEventMouseButton.new()
+	wheel_up.button_index = MOUSE_BUTTON_WHEEL_UP
+	wheel_up.pressed = true
+	wheel_up.factor = 1.0
+	var bottom_value := chat_scroll_bar.value
+	panel.call("_on_chat_input", wheel_up)
+	if not is_equal_approx(chat_scroll_bar.value, bottom_value - 45.0):
+		_fail("chat wheel did not move by the original three-line step")
+		return
+	var slider_press := InputEventMouseButton.new()
+	slider_press.button_index = MOUSE_BUTTON_LEFT
+	slider_press.pressed = true
+	slider_press.position = Vector2(9, 10)
+	panel.call("_on_chat_slider_input", slider_press)
+	if chat_scroll_bar.value != 0.0 or chat_slider.position.y != 51.0 or chat_slider.modulate != Color.WHITE:
+		_fail("compact chat slider drag-to-top mismatch")
+		return
+	var slider_release := InputEventMouseButton.new()
+	slider_release.button_index = MOUSE_BUTTON_LEFT
+	slider_release.pressed = false
+	panel.call("_on_chat_slider_input", slider_release)
+	if chat_slider.modulate != Color(0.5, 0.5, 0.5, 1.0):
+		_fail("chat slider idle tint mismatch")
+		return
+	GameState.add_chat_log("新消息回到底部", 1)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not is_equal_approx(chat_scroll_bar.value, chat_scroll_bar.max_value - chat_scroll_bar.page) or chat_slider.position.y != 110.0:
+		_fail("new chat message did not restore original bottom-follow state")
+		return
 	panel.call("_on_expand_pressed")
 	if panel.get_node("%Face").visible or panel.get_node("%FaceHealth").visible or panel.get_node("%BuffContainer").visible:
 		_fail("compact focus HUD remains visible while chat is expanded")
 		return
 	if panel.get_node("Body/ExpandButton").position.y != -266.0 or not panel.get_node("Body/EmojiButton").visible or not panel.get_node("Body/MuteButton").visible:
 		_fail("expanded HUD switch or hover-only controls mismatch")
+		return
+	if chat_slider.position != Vector2(619.5, 108) or chat_slider_hit_area.position != Vector2(615, -218) or chat_slider_hit_area.size != Vector2(18, 345):
+		_fail("expanded original chat slider geometry mismatch")
 		return
 	var emoji_button := panel.get_node("Body/EmojiButton") as TextureButton
 	var mute_button := panel.get_node("Body/MuteButton") as TextureButton

@@ -18,6 +18,8 @@ signal minimized_changed(minimized: bool)
 @onready var expanded_middle: NinePatchRect = %ExpandedMiddle
 @onready var chat_background: ColorRect = %ChatBackground
 @onready var chat_log: RichTextLabel = %ChatLog
+@onready var chat_slider_hit_area: Control = $Body/ChatSliderHitArea
+@onready var chat_slider: TextureRect = $Body/ChatSlider
 @onready var level_label: Label = %Level
 @onready var ac_value: Label = %ACValue
 @onready var dc_value: Label = %DCValue
@@ -47,6 +49,7 @@ var _combat: Dictionary = {}
 var _chat_signature := ""
 var _focus_hud_signature := ""
 var _button_blinks: Dictionary = {}
+var _chat_slider_dragging := false
 
 
 func _ready() -> void:
@@ -72,11 +75,14 @@ func _ready() -> void:
 	var chat_scroll_bar := chat_log.get_v_scroll_bar()
 	chat_scroll_bar.modulate = Color.TRANSPARENT
 	chat_scroll_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chat_log.gui_input.connect(_on_chat_input)
+	chat_slider_hit_area.gui_input.connect(_on_chat_slider_input)
 	_refresh_static()
 	_update_chat_display()
 	$Body/MagicKey.pressed.connect(magic_key_hud_toggled.emit)
 	title.gui_input.connect(_on_title_gui_input)
 	_update_button_blinks()
+	_update_chat_slider()
 
 
 func _bind_overlay_button(button: TextureButton) -> void:
@@ -144,6 +150,7 @@ func _process(_delta: float) -> void:
 	# Update chat log from game_state
 	_update_chat_display()
 	_update_button_blinks()
+	_update_chat_slider()
 
 
 func _refresh_static() -> void:
@@ -250,6 +257,8 @@ func _update_chat_display() -> void:
 		if index + 1 < game_state.chat_log.size():
 			chat_log.newline()
 	chat_log.scroll_to_line(maxi(0, chat_log.get_line_count() - 1))
+	chat_log.scroll_following = true
+	call_deferred("_update_chat_slider")
 
 
 func _on_minimize_pressed() -> void:
@@ -290,6 +299,66 @@ func _on_expand_pressed() -> void:
 	expand_button.position.y = -266.0 if _expanded else 22.0
 	emoji_button.visible = _expanded
 	mute_button.visible = _expanded
+	_update_chat_slider()
+
+
+func _chat_scroll_reach() -> float:
+	var scroll_bar := chat_log.get_v_scroll_bar()
+	return maxf(0.0, scroll_bar.max_value - scroll_bar.page)
+
+
+func _chat_scroll_normalized() -> float:
+	var reach := _chat_scroll_reach()
+	return clampf(chat_log.get_v_scroll_bar().value / reach, 0.0, 1.0) if reach > 0.0 else 1.0
+
+
+func _set_chat_scroll_normalized(value: float) -> void:
+	var normalized := clampf(value, 0.0, 1.0)
+	chat_log.scroll_following = normalized >= 1.0
+	chat_log.get_v_scroll_bar().value = normalized * _chat_scroll_reach()
+	_update_chat_slider()
+
+
+func _on_chat_input(event: InputEvent) -> void:
+	if not event is InputEventMouseButton or not event.pressed or event.button_index not in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		return
+	var reach := _chat_scroll_reach()
+	if reach <= 0.0:
+		return
+	var direction := -1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0
+	var factor: float = event.factor if event.factor > 0.0 else 1.0
+	_set_chat_scroll_normalized(_chat_scroll_normalized() + direction * factor * 45.0 / reach)
+	accept_event()
+
+
+func _on_chat_slider_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		_chat_slider_dragging = event.pressed
+		if event.pressed:
+			_set_chat_slider_from_hit_y(event.position.y)
+		_update_chat_slider()
+		accept_event()
+	elif event is InputEventMouseMotion and _chat_slider_dragging:
+		_set_chat_slider_from_hit_y(event.position.y)
+		accept_event()
+
+
+func _set_chat_slider_from_hit_y(hit_y: float) -> void:
+	var travel := 324.0 if _expanded else 59.0
+	_set_chat_scroll_normalized((hit_y - 10.0) / travel)
+
+
+func _update_chat_slider() -> void:
+	var normalized := _chat_scroll_normalized()
+	if _expanded:
+		chat_slider_hit_area.position = Vector2(615, -218)
+		chat_slider_hit_area.size = Vector2(18, 345)
+		chat_slider.position = Vector2(619.5, -216 + normalized * 324.0)
+	else:
+		chat_slider_hit_area.position = Vector2(615, 49)
+		chat_slider_hit_area.size = Vector2(18, 80)
+		chat_slider.position = Vector2(619.5, 51 + normalized * 59.0)
+	chat_slider.modulate = Color.WHITE if _chat_slider_dragging else Color(0.5, 0.5, 0.5, 1.0)
 
 
 func _on_minimap_pressed() -> void:
