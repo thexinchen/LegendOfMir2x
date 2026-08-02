@@ -105,6 +105,8 @@ func _ready() -> void:
 		return
 	if not _test_system_chat_feedback(main):
 		return
+	if not _test_player_name_state(main):
+		return
 	if not _test_magic_actions(main, resources, physical_id):
 		return
 	if not _test_hero_spell_gestures(main, resources):
@@ -461,6 +463,42 @@ func _test_system_chat_feedback(main: Control) -> bool:
 	return true
 
 
+func _test_player_name_state(main: Control) -> bool:
+	var saved_uid: int = GameState.player_uid
+	var saved_name: String = GameState.player_name
+	var saved_color: int = GameState.player_name_color
+	var saved_creatures := GameState.creatures.duplicate(true)
+	var local_uid: int = (5 << 59) | 21
+	var remote_uid: int = (5 << 59) | 22
+	var monster_uid: int = (4 << 59) | 23
+	GameState.player_uid = local_uid
+	GameState.player_name = "旧本地名"
+	GameState.player_name_color = 0xFFFFFFFF
+	GameState.creatures = {
+		remote_uid: {"uid": remote_uid, "type": 2, "name": "旧远端名"},
+		monster_uid: {"uid": monster_uid, "type": 1, "name": "怪物名"},
+	}
+	main.call("_on_server_message", NetworkClient.SM_PLAYERNAME, _player_name_payload(local_uid, "新本地名", 0))
+	var name_label := main.get_node("PlayerStatePanel/Name") as Label
+	if GameState.player_name != "新本地名" or GameState.player_name_color != 0xFFFFFFFF or name_label.text != "新本地名" or name_label.get_theme_color("font_color") != Color.WHITE:
+		_fail("local player-name state/white fallback mismatch: name=%s color=%X label=%s/%s" % [GameState.player_name, GameState.player_name_color, name_label.text, name_label.get_theme_color("font_color")])
+		return false
+	main.call("_on_server_message", NetworkClient.SM_PLAYERNAME, _player_name_payload(remote_uid, "新远端名", 0x00332211))
+	var remote: Dictionary = GameState.get_creature(remote_uid)
+	if remote.get("name", "") != "新远端名" or remote.get("name_color", 0) != 0xFF332211:
+		_fail("remote player-name state/color normalization mismatch: %s" % remote)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_PLAYERNAME, _player_name_payload(monster_uid, "伪角色名", 0x00010203))
+	if GameState.get_creature(monster_uid).get("name", "") != "怪物名":
+		_fail("SM_PLAYERNAME incorrectly renamed a non-player creature")
+		return false
+	GameState.player_uid = saved_uid
+	GameState.player_name = saved_name
+	GameState.player_name_color = saved_color
+	GameState.creatures = saved_creatures
+	return true
+
+
 func _test_inventory_transaction_feedback(main: Control, resources: RefCounted) -> bool:
 	var known_item_id: int = resources.item_names.keys()[0]
 	var packable_id := 0
@@ -548,6 +586,17 @@ func _player_say_payload(uid: int, text: String) -> PackedByteArray:
 	var encoded := text.to_utf8_buffer()
 	for index in mini(encoded.size(), 127):
 		payload[8 + index] = encoded[index]
+	return payload
+
+
+func _player_name_payload(uid: int, text: String, color: int) -> PackedByteArray:
+	var payload := PackedByteArray([1])
+	_append_u64(payload, uid)
+	var encoded := text.to_utf8_buffer()
+	_append_u64(payload, encoded.size())
+	payload.append_array(encoded)
+	_append_u32(payload, color)
+	payload.append(0)
 	return payload
 
 

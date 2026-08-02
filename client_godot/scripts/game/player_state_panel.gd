@@ -44,6 +44,13 @@ func _process(_delta: float) -> void:
 func _refresh() -> void:
 	var tooltip_location := _tooltip_location
 	$Name.text = _state.player_name
+	var name_color: int = _state.player_name_color
+	$Name.add_theme_color_override("font_color", Color8(
+		name_color & 0xFF,
+		(name_color >> 8) & 0xFF,
+		(name_color >> 16) & 0xFF,
+		(name_color >> 24) & 0xFF,
+	))
 	var combat: Dictionary = CombatCalculatorScript.calculate(_state, _resources)
 	var inv_load := CombatCalculatorScript.inventory_load(_state, _resources)
 	var body_load := CombatCalculatorScript.body_load(_state, _resources)

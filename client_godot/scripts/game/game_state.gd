@@ -8,6 +8,7 @@ signal state_changed
 # Player state
 var player_uid: int = 0
 var player_name: String = ""
+var player_name_color: int = 0xFFFFFFFF
 var player_gender: int = 0
 var player_job: int = 0
 var player_level: int = 1
@@ -185,6 +186,7 @@ func set_player_online(online_data: Dictionary) -> void:
 	player_health_initialized = false
 	player_uid = online_data.get("uid", 0)
 	player_name = online_data.get("name", "")
+	player_name_color = 0xFFFFFFFF
 	player_gender = online_data.get("gender", 0)
 	player_job = online_data.get("job", 0)
 	player_map_uid = online_data.get("map_uid", 0)

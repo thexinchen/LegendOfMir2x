@@ -16,6 +16,7 @@ func _ready() -> void:
 		return
 
 	GameState.player_name = "角色状态测试"
+	GameState.player_name_color = 0xFF332211
 	GameState.player_gender = 1
 	GameState.player_job = 1
 	GameState.player_exp = 1100
@@ -37,6 +38,10 @@ func _ready() -> void:
 	var panel: Control = load("res://scenes/game/panels/player_state.tscn").instantiate()
 	add_child(panel)
 	await get_tree().process_frame
+	var name_label := panel.get_node("Name") as Label
+	if name_label.text != "角色状态测试" or name_label.get_theme_color("font_color") != Color8(0x11, 0x22, 0x33):
+		_fail("player name text/color does not match C++ state board: text=%s color=%s" % [name_label.text, name_label.get_theme_color("font_color")])
+		return
 	if panel.get_node("EquipmentSlots").get_child_count() != 11:
 		_fail("all eleven wear grids are not interactive")
 		return

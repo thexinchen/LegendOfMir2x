@@ -1751,14 +1751,26 @@ func _handle_miss(payload: PackedByteArray) -> void:
 func _handle_player_name(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var data := reader.read_sd_player_name()
+	if not _reader_ok(reader, "SM_PLAYERNAME"):
+		return
 	var uid: int = data.get("uid", 0)
 	var name: String = data.get("name", "")
-	if not name.is_empty():
-		var c: Dictionary = game_state.get_creature(uid)
-		if not c.is_empty():
-			c["name"] = name
-			c["name_color"] = data.get("nameColor", 0xFFFFFFFF)
-			game_state.update_creature(uid, c)
+	var name_color := _normalize_player_name_color(data.get("nameColor", 0))
+	if uid == game_state.player_uid:
+		game_state.player_name = name
+		game_state.player_name_color = name_color
+		game_state.state_changed.emit()
+		return
+	var c: Dictionary = game_state.get_creature(uid)
+	if c.get("type", 0) == 2:
+		c["name"] = name
+		c["name_color"] = name_color
+		game_state.update_creature(uid, c)
+
+
+func _normalize_player_name_color(value: int) -> int:
+	var rgb := value & 0x00FFFFFF
+	return 0xFF000000 | (rgb if rgb != 0 else 0x00FFFFFF)
 
 
 func _handle_player_config(payload: PackedByteArray) -> void:
