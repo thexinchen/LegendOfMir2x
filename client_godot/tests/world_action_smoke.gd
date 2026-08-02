@@ -1512,6 +1512,13 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 	if retained.get("x", 0) != 5 or retained.get("y", 0) != 6 or retained.get("direction", 0) != 3 or retained.get("action_type", 0) != 2:
 		_fail("late ACTION_SPAWN reset an existing actor: %s" % retained)
 		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(monster_uid, 202, {
+		"type": 3, "speed": 100, "direction": 0, "x": 5, "y": 6, "aimX": 6, "aimY": 5,
+	}))
+	var moving_monster: Dictionary = GameState.get_creature(monster_uid)
+	if moving_monster.get("direction", 0) != 2:
+		_fail("direction-less ACTION_MOVE did not face an existing actor along its path: %s" % moving_monster)
+		return false
 
 	var player_uid := remote_player_uid
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(player_uid, 202, {
@@ -1522,10 +1529,10 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 		return false
 	var player_union := PackedByteArray([5, 18, 0, 0, 0])
 	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(player_uid, 202, {
-		"type": 2, "speed": 100, "direction": 6, "x": 9, "y": 9,
+		"type": 3, "speed": 100, "direction": 0, "x": 9, "y": 9, "aimX": 8, "aimY": 10,
 	}, player_union))
 	var resolved: Dictionary = GameState.get_creature(player_uid)
-	if resolved.get("type", 0) != 2 or resolved.get("gender", 0) != 1 or resolved.get("job", 0) != 2 or resolved.get("level", 0) != 18:
+	if resolved.get("type", 0) != 2 or resolved.get("gender", 0) != 1 or resolved.get("job", 0) != 2 or resolved.get("level", 0) != 18 or resolved.get("direction", 0) != 6:
 		_fail("matching SM_COREORD did not create the queried player: %s" % resolved)
 		return false
 

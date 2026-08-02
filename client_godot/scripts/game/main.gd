@@ -1046,6 +1046,10 @@ func _handle_action(payload: PackedByteArray) -> void:
 				return
 	if action_type == 12 and direction < 1:
 		direction = _spinkick_direction(uid, action)
+	elif action_type in [3, 5] and direction < 1:
+		# ActionMove has no direction field in C++; its ActionNode bytes are zero.
+		# Hero/ClientMonster derive the facing from the movement endpoints.
+		direction = _direction_to(x, y, action.get("aimX", x), action.get("aimY", y))
 	if action_type == 6:
 		var space_magic_id: int = _resources.magic_id("瞬息移动")
 		if space_magic_id > 0:
@@ -1428,6 +1432,12 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	# UID_NPC=3, UID_MON=4, UID_PLY=5
 	var c_type := _creature_type_from_uid(uid)
 	var action_type: int = action.get("type", 0)
+	var direction: int = action.get("direction", 0)
+	if action_type in [3, 5] and direction < 1:
+		direction = _direction_to(
+			action.get("x", 0), action.get("y", 0),
+			action.get("aimX", action.get("x", 0)), action.get("aimY", action.get("y", 0)),
+		)
 	
 	var creature: Dictionary = game_state.get_creature(uid)
 	var is_new := creature.is_empty()
@@ -1446,7 +1456,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 			"action_magic_id": action.get("magicID", 0),
 			"action_from_x": action.get("x", 0),
 			"action_from_y": action.get("y", 0),
-			"direction": action.get("direction", 0),
+			"direction": direction,
 		}
 	else:
 		creature["action_from_x"] = action.get("x", 0)
@@ -1458,7 +1468,8 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 		creature["action_started_ms"] = Time.get_ticks_msec()
 		creature["action_speed"] = action.get("speed", 100)
 		creature["action_magic_id"] = action.get("magicID", 0)
-		creature["direction"] = action.get("direction", 0)
+		if direction >= 1:
+			creature["direction"] = direction
 	
 	# Parse union data for additional info
 	var union_data: PackedByteArray = data.get("union_data", PackedByteArray())
