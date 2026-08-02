@@ -14,6 +14,7 @@ const WorldResourceScript = preload("res://scripts/game/world_resource.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const GROUND_ITEM_NAME_FONT: Font = preload("res://assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf")
 const TEAM_LEADER_FONT: Font = preload("res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf")
+const PLAYER_SAY_FONT: Font = preload("res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf")
 const ANIMATION_DELAYS := [150, 200, 250, 300, 350, 400, 420, 450]
 const MAGIC_STAGE_SPELL := 1
 const MAGIC_STAGE_RUN := 2
@@ -1497,7 +1498,7 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 
 
 func _draw_player_say(uid: int, start_x: int, start_y: int) -> void:
-	var font := get_theme_default_font()
+	var font := PLAYER_SAY_FONT
 	if font == null:
 		return
 	var layout := _player_say_layout(uid, font, Time.get_ticks_msec())

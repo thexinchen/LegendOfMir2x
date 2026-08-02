@@ -41,7 +41,11 @@ func _ready() -> void:
 	if not $WorldRenderer.load_map(24):
 		_fail("map 24 failed to load")
 		return
-	var font: Font = $WorldRenderer.get_theme_default_font()
+	var script_constants := ($WorldRenderer.get_script() as Script).get_script_constant_map()
+	var font := script_constants.get("PLAYER_SAY_FONT") as Font
+	if font == null or not font.resource_path.ends_with("/0B_WenQuanYi_Bitmap_Song_15_px.ttf"):
+		_fail("player say did not use the C++ font 11 resource: %s" % font)
+		return
 	GameState.player_say_messages.clear()
 	GameState.add_player_say(GameState.player_uid, "短消息")
 	var now := Time.get_ticks_msec()
