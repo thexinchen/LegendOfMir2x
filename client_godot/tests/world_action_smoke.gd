@@ -1386,6 +1386,23 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 	GameState.player_uid = 101
 	GameState.player_map_uid = 202
 	var monster_uid: int = (4 << 59) | (224 << 35) | 303
+	var remote_player_uid: int = (5 << 59) | 404
+	var npc_uid: int = (3 << 59) | (7 << 35) | 407
+	if not main.has_method("_query_initial_uid_buff"):
+		_fail("new actors do not expose the C++ initial UID buff query")
+		return false
+	if main.call("_query_initial_uid_buff", monster_uid, true) != ERR_UNCONFIGURED:
+		_fail("new monster did not attempt the initial UID buff query")
+		return false
+	if main.call("_query_initial_uid_buff", remote_player_uid, true) != ERR_UNCONFIGURED:
+		_fail("new remote player did not attempt the initial UID buff query")
+		return false
+	if main.call("_query_initial_uid_buff", npc_uid, true) != OK:
+		_fail("NPC incorrectly attempted an initial UID buff query")
+		return false
+	if main.call("_query_initial_uid_buff", monster_uid, false) != OK:
+		_fail("existing actor incorrectly repeated the initial UID buff query")
+		return false
 	GameState.update_creature(monster_uid, {
 		"uid": monster_uid, "type": 1, "monster_id": 224,
 		"x": 5, "y": 6, "direction": 3, "action_type": 2,
@@ -1398,7 +1415,7 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 		_fail("late ACTION_SPAWN reset an existing actor: %s" % retained)
 		return false
 
-	var player_uid: int = (5 << 59) | 404
+	var player_uid := remote_player_uid
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(player_uid, 202, {
 		"type": 3, "speed": 100, "direction": 5, "x": 8, "y": 9, "aimX": 9, "aimY": 9,
 	}))
@@ -1425,7 +1442,7 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(new_monster_uid, 202, {
 		"type": 2, "speed": 100, "direction": 4, "x": 11, "y": 12,
 	}))
-	var new_npc_uid: int = (3 << 59) | (7 << 35) | 407
+	var new_npc_uid := npc_uid
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(new_npc_uid, 202, {
 		"type": 1, "speed": 100, "direction": 1, "x": 13, "y": 14,
 	}))

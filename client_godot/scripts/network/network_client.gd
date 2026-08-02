@@ -22,6 +22,7 @@ const CM_REQUESTDIE := 14
 const CM_REQUESTKILLPETS := 15
 const CM_PICKUP := 19
 const CM_QUERYGOLD := 21
+const CM_QUERYUIDBUFF := 22
 const CM_QUERYPLAYERNAME := 23
 const CM_QUERYPLAYERWLDESP := 24
 const CM_QUERYCHATPEERLIST := 25
@@ -307,6 +308,10 @@ func send_request_kill_pets() -> Error:
 
 func send_query_gold() -> Error:
 	return _send_empty_message(CM_QUERYGOLD)
+
+
+func send_query_uid_buff(uid: int) -> Error:
+	return _send_u64_message(CM_QUERYUIDBUFF, uid)
 
 
 func send_query_player_name(uid: int) -> Error:

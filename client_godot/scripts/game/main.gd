@@ -1484,6 +1484,7 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 		creature["action_type"] = _configure_monster_form(creature, action_type, creature["action_type"], action, true, {})
 	
 	game_state.update_creature(uid, creature)
+	_query_initial_uid_buff(uid, is_new)
 	if is_new and c_type == 2:
 		NetworkClient.send_query_player_wldesp(uid)
 	var stored_action_type: int = creature.get("action_type", action_type)
@@ -1497,6 +1498,12 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	if duration > 0.0:
 		_schedule_creature_idle(uid, stored_action_type, creature.get("action_started_ms", 0), duration)
 	_play_action_seff(uid, action, creature)
+
+
+func _query_initial_uid_buff(uid: int, is_new: bool) -> Error:
+	if not is_new or _creature_type_from_uid(uid) not in [1, 2]:
+		return OK
+	return NetworkClient.send_query_uid_buff(uid)
 
 
 func _queue_monster_death_effect(uid: int, creature: Dictionary) -> void:
