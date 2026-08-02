@@ -50,6 +50,11 @@ func _ready() -> void:
 		{"id": resources.magic_id("潘夜左护卫_火球术"), "frame": 4, "gfx_direction": 4},
 		{"id": resources.magic_id("祖玛弓箭手_射箭"), "frame": 5, "gfx_direction": 4},
 	]
+	var monster_motion_attacks := [
+		resources.magic_id("潘夜右护卫_电魔杖"),
+		resources.magic_id("潘夜左护卫_火魔杖"),
+	]
+	var shipwreck_blade_id: int = resources.magic_id("霸王教主_火刃")
 	var dual_axe_id: int = resources.magic_id("掷斧骷髅_掷斧")
 	var space_move_id: int = resources.magic_id("瞬息移动")
 	var monster_death_magic_id := 0
@@ -75,7 +80,7 @@ func _ready() -> void:
 		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
 		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or fixed_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or target_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_projectile_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or fixed_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or target_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_projectile_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_motion_attacks.has(0) or shipwreck_blade_id == 0 or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
@@ -468,6 +473,37 @@ func _ready() -> void:
 			_fail("monster thunderbolt did not extend its first frames: %s" % target_resolved)
 			return
 	GameState.attached_magic_effects.clear()
+
+	for monster_motion_id in monster_motion_attacks:
+		if not $WorldRenderer.supports_monster_attack_magic(monster_motion_id):
+			_fail("monster motion-sync magic was not recognized: %d" % monster_motion_id)
+			return
+		GameState.attached_magic_effects.clear()
+		var monster_motion_effect := {
+			"source": "monster_attack", "magicID": monster_motion_id, "uid": GameState.player_uid,
+			"x": 405, "y": 120, "aimUID": target_uid,
+			"direction": 3, "speed": 100, "start_time": now, "_seff_stage_mask": 0xFFFF,
+		}
+		$WorldRenderer.call("_resolve_magic_effect", monster_motion_effect, now + 399)
+		if not GameState.attached_magic_effects.is_empty():
+			_fail("monster motion-sync impact triggered before frame 4: %d" % monster_motion_id)
+			return
+		$WorldRenderer.call("_resolve_magic_effect", monster_motion_effect, now + 400)
+		var motion_impact: Dictionary = GameState.attached_magic_effects.back() if not GameState.attached_magic_effects.is_empty() else {}
+		if motion_impact.get("magicID", 0) != monster_motion_id or motion_impact.get("target_uid", 0) != target_uid or motion_impact.get("stage", 0) != 3 or motion_impact.get("play_seff", false):
+			_fail("monster motion-sync impact mismatch: %s" % motion_impact)
+			return
+		var before_motion_run: Dictionary = $WorldRenderer.call("_monster_attack_motion_effect_state", monster_motion_id, 3, now, 100, 6, now + 299)
+		var first_motion_run: Dictionary = $WorldRenderer.call("_monster_attack_motion_effect_state", monster_motion_id, 3, now, 100, 6, now + 300)
+		if before_motion_run.get("visible", false) or not first_motion_run.get("visible", false) or first_motion_run.get("frame", -1) != 0 or first_motion_run.get("direction", -1) != 2 or first_motion_run.get("meta", PackedInt32Array()) != resources.magic_layout(monster_motion_id, 2):
+			_fail("monster wand motion-sync run mismatch: before=%s first=%s" % [before_motion_run, first_motion_run])
+			return
+	GameState.attached_magic_effects.clear()
+	var shipwreck_motion: Dictionary = $WorldRenderer.call("_monster_attack_motion_effect_state", shipwreck_blade_id, 5, now, 100, 6, now + 500)
+	var shipwreck_done: Dictionary = $WorldRenderer.call("_monster_attack_motion_effect_state", shipwreck_blade_id, 5, now, 100, 6, now + 600)
+	if not shipwreck_motion.get("visible", false) or shipwreck_motion.get("frame", -1) != 5 or shipwreck_motion.get("direction", -1) != 4 or shipwreck_motion.get("meta", PackedInt32Array()) != resources.magic_layout(shipwreck_blade_id, 2) or not shipwreck_done.is_empty():
+		_fail("shipwreck blade motion-sync mismatch: active=%s done=%s" % [shipwreck_motion, shipwreck_done])
+		return
 
 	for monster_projectile_entry in monster_projectile_attacks:
 		var monster_projectile_id: int = monster_projectile_entry.id
@@ -915,6 +951,45 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_PROJECTILE_SCREENSHOT"))
+	if OS.has_environment("MIR2X_MONSTER_MOTION_SCREENSHOT"):
+		if not $WorldRenderer.load_map(6):
+			_fail("monster motion-sync visual map failed to load")
+			return
+		var motion_source := _find_open_wave_source($WorldRenderer, 8, $WorldRenderer.map_height - 8)
+		if motion_source.x < 0:
+			_fail("no open monster motion-sync visual fixture")
+			return
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var motion_now := Time.get_ticks_msec()
+		var physical_id: int = resources.magic_id("物理攻击")
+		var motion_visuals := [
+			{"monster_id": 223, "magic_id": physical_id, "offset": Vector2i(-4, 1)},
+			{"monster_id": 237, "magic_id": monster_motion_attacks[0], "offset": Vector2i(0, 1)},
+			{"monster_id": 242, "magic_id": monster_motion_attacks[1], "offset": Vector2i(4, 1)},
+		]
+		GameState.creatures.clear()
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.magic_effects.clear()
+		for motion_index in range(motion_visuals.size()):
+			var motion_visual: Dictionary = motion_visuals[motion_index]
+			var motion_grid: Vector2i = motion_source + motion_visual.offset
+			var motion_uid: int = (int(motion_visual.monster_id) << 35) | (850 + motion_index)
+			GameState.creatures[motion_uid] = {
+				"uid": motion_uid, "x": motion_grid.x, "y": motion_grid.y,
+				"type": 1, "monster_id": motion_visual.monster_id,
+				"direction": 5, "action_type": 7, "action_speed": 100,
+				"action_started_ms": motion_now - 400, "action_magic_id": motion_visual.magic_id,
+			}
+		GameState.view_x = motion_source.x * 48 - 400
+		GameState.view_y = (motion_source.y + 1) * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_MOTION_SCREENSHOT"))
 	if OS.has_environment("MIR2X_SPACE_MOVE_SCREENSHOT"):
 		if not $WorldRenderer.load_map(6):
 			_fail("space-move visual map failed to load")

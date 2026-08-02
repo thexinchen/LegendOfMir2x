@@ -81,6 +81,18 @@ func _ready() -> void:
 	if death_magic_count != 11:
 		_fail("monster meta v6 death magic count mismatch: %d" % death_magic_count)
 		return
+	var attack_motion_magic_count := 0
+	for monster_id_value in actors.monster_meta:
+		var attack_motion_magic_id: int = actors.monster_attack_motion_magic_id(int(monster_id_value))
+		if attack_motion_magic_id <= 0:
+			continue
+		attack_motion_magic_count += 1
+		if actors.magic_names.get(attack_motion_magic_id, "") != "霸王教主_火刃" or actors.magic_layout(attack_motion_magic_id, 2).is_empty():
+			_fail("monster meta v7 references invalid attack motion magic: monster=%d magic=%d" % [monster_id_value, attack_motion_magic_id])
+			return
+	if attack_motion_magic_count != 1:
+		_fail("monster meta v7 attack motion magic count mismatch: %d" % attack_motion_magic_count)
+		return
 	var fade_monster_count := 0
 	var persistent_corpse_count := 0
 	for monster_id_value in actors.monster_meta:

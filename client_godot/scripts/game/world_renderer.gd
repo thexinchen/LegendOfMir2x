@@ -542,6 +542,8 @@ func _monster_attack_magic_kind(magic_id: int) -> String:
 		return "monster_projectile_network"
 	if magic_name in ["诺玛法老_火球术", "潘夜左护卫_火球术", "祖玛弓箭手_射箭"]:
 		return "monster_projectile_target"
+	if magic_name in ["潘夜右护卫_电魔杖", "潘夜左护卫_火魔杖"]:
+		return "motion_sync_target"
 	if magic_name in [
 		"神兽_喷火", "楔蛾_喷毒", "洞蛆_喷毒", "粪虫_喷毒",
 		"雷电僵尸_雷电", "火焰沃玛_喷火", "沃玛教主_电光",
@@ -571,6 +573,8 @@ func _monster_attack_trigger_frame(magic_id: int) -> int:
 
 
 func _resolve_monster_attack_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
+	if kind == "motion_sync_target":
+		return _resolve_monster_motion_sync_target(effect, magic_id, elapsed)
 	if kind.begins_with("monster_"):
 		return _resolve_projectile_action_magic(effect, magic_id, kind, elapsed)
 	if kind.begins_with("target_"):
@@ -588,6 +592,24 @@ func _resolve_monster_attack_magic(effect: Dictionary, magic_id: int, kind: Stri
 	var direction := clampi(effect.get("direction", 1), 1, 8) - 1
 	_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_RUN, position)
 	resolved.components.append(_resolved_component(meta, mini(_magic_absolute_frame(meta, run_elapsed), meta[2] - 1), direction, position))
+	return resolved
+
+
+func _resolve_monster_motion_sync_target(effect: Dictionary, magic_id: int, elapsed: int) -> Dictionary:
+	var resolved := {"special_kind": "monster_attack", "components": [], "underlays": [], "on_ground": false}
+	var speed := clampi(effect.get("speed", 100), 20, 500)
+	var trigger_delay := roundi(4.0 * 100.0 * 100.0 / speed)
+	if elapsed < trigger_delay or effect.get("_motion_sync_impact_spawned", false):
+		return resolved
+	effect["_motion_sync_impact_spawned"] = true
+	var target_uid: int = effect.get("aimUID", 0)
+	if target_uid != 0 and _projectile_target_pixel(target_uid) != null:
+		game_state.attached_magic_effects.append({
+			"magicID": magic_id, "target_uid": target_uid,
+			"start_time": int(effect.get("start_time", 0)) + trigger_delay,
+			"cycles": 1, "kind": "monster_motion_impact", "stage": MAGIC_STAGE_EXPLODE,
+		})
+		game_state.state_changed.emit()
 	return resolved
 
 
@@ -1306,6 +1328,12 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 		_draw_hero_attached_magic(uid, cx, cy, c.get("direction", 5), true)
 	else:
 		_draw_attached_magic(uid, cx, cy)
+		if c_type == 1 and c.get("action_type", 2) == 7:
+			var motion_magic_id: int = c.get("action_magic_id", 0)
+			if motion_magic_id == actor_resource.magic_id("物理攻击"):
+				motion_magic_id = actor_resource.monster_attack_motion_magic_id(c.get("monster_id", 0))
+			var motion_frame_count: int = _monster_render_sequence(c).count
+			_draw_monster_attack_motion_effect(motion_magic_id, c.get("direction", 5), c.get("action_started_ms", 0), c.get("action_speed", 100), motion_frame_count, cx, cy)
 	
 	if c_type == 2:
 		_draw_player_say(uid, cx, cy)
@@ -1515,6 +1543,36 @@ func _draw_monster_sprite(creature: Dictionary, start_x: int, start_y: int, alph
 	if sequence.focusable:
 		_draw_focus_overlays(body, start_x, start_y, creature.get("uid", 0), alpha)
 	return not body.is_empty()
+
+
+func _draw_monster_attack_motion_effect(magic_id: int, direction: int, started_ms: int, speed: int, motion_frame_count: int, start_x: int, start_y: int) -> void:
+	var effect := _monster_attack_motion_effect_state(magic_id, direction, started_ms, speed, motion_frame_count)
+	if effect.is_empty() or not effect.get("visible", false):
+		return
+	_draw_magic_frame(effect.meta, effect.frame, effect.direction, Vector2(float(start_x) / GRID_XP, float(start_y) / GRID_YP), 0, 0, 240.0 / 255.0)
+
+
+func _monster_attack_motion_effect_state(magic_id: int, direction: int, started_ms: int, speed: int, motion_frame_count: int, now_ms := -1) -> Dictionary:
+	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+	if magic_name not in ["霸王教主_火刃", "潘夜右护卫_电魔杖", "潘夜左护卫_火魔杖"]:
+		return {}
+	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	if meta.is_empty() or meta[2] <= 0:
+		return {}
+	var lag_frame := 3 if magic_name in ["潘夜右护卫_电魔杖", "潘夜左护卫_火魔杖"] else 0
+	var sample_now: int = Time.get_ticks_msec() if now_ms < 0 else now_ms
+	var elapsed := sample_now if started_ms <= 0 else maxi(0, sample_now - started_ms)
+	var frame_delay := 100.0 * 100.0 / float(clampi(speed, 20, 500))
+	var absolute_frame := floori(float(elapsed) / frame_delay)
+	var effect_frame_count := mini(meta[2] + lag_frame, motion_frame_count)
+	if absolute_frame >= effect_frame_count:
+		return {}
+	var gfx_frame := absolute_frame - lag_frame
+	return {
+		"meta": meta, "frame": gfx_frame,
+		"direction": clampi(direction, 1, 8) - 1 if meta[6] > 1 else 0,
+		"visible": gfx_frame >= 0,
+	}
 
 
 func _monster_render_sequence(creature: Dictionary) -> Dictionary:
