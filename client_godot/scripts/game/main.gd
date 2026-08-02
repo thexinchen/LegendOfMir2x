@@ -1007,6 +1007,10 @@ func _handle_action(payload: PackedByteArray) -> void:
 			var effect := action.duplicate(true)
 			effect["uid"] = uid
 			game_state.add_magic_effect(effect, "action")
+	if action_type == 7 and world_renderer.supports_monster_attack_magic(action.get("magicID", 0)):
+		var attack_effect := action.duplicate(true)
+		attack_effect["uid"] = uid
+		game_state.add_magic_effect(attack_effect, "monster_attack")
 	if action_type == 11:
 		game_state.trigger_shield_hit(uid)
 	

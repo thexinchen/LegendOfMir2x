@@ -23,6 +23,9 @@ func _ready() -> void:
 	var healing_id: int = resources.magic_id("治愈术")
 	var soul_talisman_id: int = resources.magic_id("灵魂火符")
 	var flame_sword_id: int = resources.magic_id("烈火剑法")
+	var tao_dog_fire_id: int = resources.magic_id("神兽_喷火")
+	var wedge_poison_id: int = resources.magic_id("楔蛾_喷毒")
+	var dual_axe_id: int = resources.magic_id("掷斧骷髅_掷斧")
 	var target_attachment_ids := [
 		resources.magic_id("乾坤大挪移"), healing_id, resources.magic_id("圣言术"), resources.magic_id("云寂术"),
 		resources.magic_id("回生术"), resources.magic_id("施毒术"), resources.magic_id("诱惑之光"), resources.magic_id("移花接玉"),
@@ -39,7 +42,7 @@ func _ready() -> void:
 		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
 		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or tao_dog_fire_id == 0 or wedge_poison_id == 0 or dual_axe_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
@@ -336,6 +339,54 @@ func _ready() -> void:
 		_fail("follow projectile impact did not use explode-stage graphics: %s" % impact_active)
 		return
 
+	for fixed_monster_id in [tao_dog_fire_id, wedge_poison_id]:
+		if not $WorldRenderer.supports_monster_attack_magic(fixed_monster_id):
+			_fail("fixed monster attack magic was not recognized: %d" % fixed_monster_id)
+			return
+		var monster_fixed := {
+			"source": "monster_attack", "magicID": fixed_monster_id, "uid": target_uid,
+			"x": 405, "y": 120, "aimUID": GameState.player_uid,
+			"direction": 3, "speed": 100, "start_time": now, "_seff_stage_mask": 0xFFFF,
+		}
+		var before_monster_fixed: Dictionary = $WorldRenderer.call("_resolve_magic_effect", monster_fixed, now + 499)
+		if before_monster_fixed.is_empty() or not before_monster_fixed.get("components", []).is_empty():
+			_fail("fixed monster attack triggered before frame 5: id=%d state=%s" % [fixed_monster_id, before_monster_fixed])
+			return
+		var active_monster_fixed: Dictionary = $WorldRenderer.call("_resolve_magic_effect", monster_fixed, now + 500)
+		var fixed_components: Array = active_monster_fixed.get("components", [])
+		if fixed_components.size() != 1 or fixed_components[0].meta != resources.magic_layout(fixed_monster_id, 2) or fixed_components[0].position != Vector2(405, 120) or fixed_components[0].direction != 2:
+			_fail("fixed monster attack frame-5 placement/direction mismatch: id=%d state=%s" % [fixed_monster_id, active_monster_fixed])
+			return
+
+	if not $WorldRenderer.supports_monster_attack_magic(dual_axe_id):
+		_fail("dual-axe monster attack magic was not recognized")
+		return
+	GameState.attached_magic_effects.clear()
+	var axe_effect := {
+		"source": "monster_attack", "magicID": dual_axe_id, "uid": target_uid,
+		"x": 405, "y": 120, "aimUID": target_uid,
+		"direction": 3, "speed": 100, "start_time": now, "_seff_stage_mask": 0xFFFF,
+	}
+	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(409 * 48, 120 * 32)}})
+	var before_axe: Dictionary = $WorldRenderer.call("_resolve_magic_effect", axe_effect, now + 399)
+	if before_axe.is_empty() or not before_axe.get("components", []).is_empty():
+		_fail("dual axe launched before attack frame 4: %s" % before_axe)
+		return
+	var active_axe: Dictionary = $WorldRenderer.call("_resolve_magic_effect", axe_effect, now + 400)
+	var axe_components: Array = active_axe.get("components", [])
+	var axe_source := Vector2(405 * 48, 120 * 32)
+	var axe_position: Vector2 = axe_effect.get("_projectile_position", Vector2.ZERO)
+	if axe_components.size() != 1 or axe_components[0].meta != resources.magic_layout(dual_axe_id, 2) or axe_components[0].direction != 2 or axe_effect.get("_projectile_fly_direction", -1) != 4 or axe_position.distance_to(axe_source) < 19.0:
+		_fail("dual axe frame-4 direction/movement mismatch: state=%s effect=%s" % [active_axe, axe_effect])
+		return
+	var axe_offset := Vector2(resources.magic_target_offset(dual_axe_id, 2, 2))
+	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": axe_position + axe_offset + Vector2(1, 1)}})
+	$WorldRenderer.call("_resolve_magic_effect", axe_effect, now + 416)
+	if GameState.attached_magic_effects.size() != 1 or GameState.attached_magic_effects[0].get("magicID", 0) != dual_axe_id or GameState.attached_magic_effects[0].get("stage", 0) != 3:
+		_fail("dual axe impact did not create its split attachment: %s" % GameState.attached_magic_effects)
+		return
+	GameState.attached_magic_effects.clear()
+
 	for fixed_projectile_id in fixed_projectile_ids:
 		var fixed_projectile := projectile_effect.duplicate(true)
 		fixed_projectile["magicID"] = fixed_projectile_id
@@ -604,6 +655,25 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_PROJECTILE_SCREENSHOT"))
+	if OS.has_environment("MIR2X_MONSTER_ATTACK_SCREENSHOT"):
+		var monster_attack_now := Time.get_ticks_msec()
+		var monster_source := special_source + Vector2i(2, 2)
+		var monster_target := monster_source + Vector2i(8, 4)
+		GameState.creatures[target_uid] = {"uid": target_uid, "x": monster_target.x, "y": monster_target.y, "type": 1, "monster_id": 1, "direction": 7, "action_type": 2}
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.magic_effects = [
+			{"source": "monster_attack", "magicID": tao_dog_fire_id, "uid": target_uid, "x": monster_source.x, "y": monster_source.y, "direction": 3, "speed": 100, "start_time": monster_attack_now - 600},
+			{"source": "monster_attack", "magicID": wedge_poison_id, "uid": target_uid, "x": monster_source.x + 5, "y": monster_source.y, "direction": 5, "speed": 100, "start_time": monster_attack_now - 600},
+			{"source": "monster_attack", "magicID": dual_axe_id, "uid": target_uid, "x": monster_source.x, "y": monster_source.y + 4, "aimUID": target_uid, "direction": 3, "speed": 100, "start_time": monster_attack_now - 400},
+		]
+		GameState.view_x = (monster_source.x + 4) * 48 - 400
+		GameState.view_y = (monster_source.y + 2) * 32 - 300
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_ATTACK_SCREENSHOT"))
 	if OS.has_environment("MIR2X_ATTACK_MAGIC_SCREENSHOT"):
 		var attack_now := Time.get_ticks_msec()
 		GameState.player_x = 405

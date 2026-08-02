@@ -460,6 +460,9 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 	var magic_id: int = effect.get("magicID", 0)
 	if magic_id <= 0:
 		return {}
+	var monster_attack_kind := _monster_attack_magic_kind(magic_id)
+	if effect.get("source", "") == "monster_attack" and not monster_attack_kind.is_empty():
+		return _resolve_monster_attack_magic(effect, magic_id, monster_attack_kind, maxi(0, now - int(effect.get("start_time", now))))
 	var stages := [MAGIC_STAGE_RUN, MAGIC_STAGE_EXPLODE] if effect.get("source", "") == "cast" else [MAGIC_STAGE_SPELL, MAGIC_STAGE_RUN, MAGIC_STAGE_EXPLODE]
 	var special_kind := _special_magic_kind(magic_id)
 	var elapsed := maxi(0, now - int(effect.get("start_time", now)))
@@ -496,6 +499,38 @@ func _projectile_action_magic_kind(magic_id: int) -> String:
 	return ""
 
 
+func supports_monster_attack_magic(magic_id: int) -> bool:
+	return not _monster_attack_magic_kind(magic_id).is_empty()
+
+
+func _monster_attack_magic_kind(magic_id: int) -> String:
+	var magic_name: String = actor_resource.magic_names.get(magic_id, "")
+	if magic_name == "掷斧骷髅_掷斧":
+		return "follow_projectile"
+	if magic_name in ["神兽_喷火", "楔蛾_喷毒"]:
+		return "caster_fixed"
+	return ""
+
+
+func _resolve_monster_attack_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
+	if kind == "follow_projectile":
+		return _resolve_projectile_action_magic(effect, magic_id, "monster_axe", elapsed)
+	var resolved := {"special_kind": "monster_attack", "components": [], "underlays": [], "on_ground": false}
+	var speed := clampi(effect.get("speed", 100), 20, 500)
+	var trigger_delay := roundi(5.0 * 100.0 * 100.0 / speed)
+	if elapsed < trigger_delay:
+		return resolved
+	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	var run_elapsed := elapsed - trigger_delay
+	if meta.is_empty() or run_elapsed >= _magic_frame_duration(meta):
+		return {}
+	var position := Vector2(effect.get("x", 0), effect.get("y", 0))
+	var direction := clampi(effect.get("direction", 1), 1, 8) - 1
+	_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_RUN, position)
+	resolved.components.append(_resolved_component(meta, mini(_magic_absolute_frame(meta, run_elapsed), meta[2] - 1), direction, position))
+	return resolved
+
+
 func _resolve_projectile_action_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
 	var speed := clampi(effect.get("speed", 100), 20, 500)
 	var trigger_delay := roundi(4.0 * 100.0 * 100.0 / speed)
@@ -517,11 +552,12 @@ func _resolve_projectile_action_magic(effect: Dictionary, magic_id: int, kind: S
 	if not effect.has("_projectile_position"):
 		var source_pixel := Vector2(effect.get("x", 0) * GRID_XP, effect.get("y", 0) * GRID_YP)
 		var target_pixel: Variant = _projectile_target_pixel(effect.get("aimUID", 0))
-		var fly_direction: int = _projectile_direction16(source_pixel, target_pixel, effect.get("direction", 1))
+		var network_direction := clampi(effect.get("direction", 1), 1, 8) - 1
+		var fly_direction: int = network_direction * 2 if kind == "monster_axe" else _projectile_direction16(source_pixel, target_pixel, effect.get("direction", 1))
 		effect["_projectile_start"] = source_pixel
 		effect["_projectile_position"] = source_pixel
 		effect["_projectile_fly_direction"] = fly_direction
-		effect["_projectile_gfx_direction"] = 0 if kind == "fixed_gfx" else fly_direction
+		effect["_projectile_gfx_direction"] = network_direction if kind == "monster_axe" else (0 if kind == "fixed_gfx" else fly_direction)
 	var position: Vector2 = effect.get("_projectile_position", Vector2.ZERO)
 	var gfx_direction: int = effect.get("_projectile_gfx_direction", 0)
 	var target_uid: int = effect.get("aimUID", 0)

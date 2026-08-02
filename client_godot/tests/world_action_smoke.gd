@@ -57,6 +57,8 @@ func _ready() -> void:
 		return
 	if not _test_magic_actions(main, resources, physical_id):
 		return
+	if not _test_monster_attack_magic_queue(main, resources, physical_id):
+		return
 	if not _test_magic_panel_hotkey_precedence(main, resources):
 		return
 	if not _test_async_combat_feedback(main, resources):
@@ -118,6 +120,41 @@ func _test_strike_grid_rendering(main: Control) -> bool:
 	if renderer.call("_strike_grid_color", 1001) != Color.TRANSPARENT or renderer.call("_strike_grid_color", -1) != Color.TRANSPARENT:
 		_fail("strike grid color escaped its original one-second lifecycle")
 		return false
+	return true
+
+
+func _test_monster_attack_magic_queue(main: Control, resources: RefCounted, physical_id: int) -> bool:
+	var attack_magic_ids := [resources.magic_id("神兽_喷火"), resources.magic_id("楔蛾_喷毒"), resources.magic_id("掷斧骷髅_掷斧")]
+	if attack_magic_ids.has(0):
+		_fail("monster attack magic metadata unavailable: %s" % attack_magic_ids)
+		return false
+	GameState.player_map_uid = 24 << 35
+	GameState.magic_effects.clear()
+	for index in range(attack_magic_ids.size()):
+		var uid: int = (4 << 59) | ((700 + index) << 35) | (900 + index)
+		GameState.update_creature(uid, {"uid": uid, "type": 1, "monster_id": 700 + index, "x": 10, "y": 10, "direction": 3, "action_type": 2})
+		main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, GameState.player_map_uid, {
+			"type": 7, "speed": 100, "direction": 3, "x": 10, "y": 10,
+			"aimX": 13, "aimY": 10, "aimUID": GameState.player_uid, "magicID": attack_magic_ids[index],
+		}))
+		var effect: Dictionary = GameState.magic_effects.back() if not GameState.magic_effects.is_empty() else {}
+		if effect.get("magicID", 0) != attack_magic_ids[index] or effect.get("source", "") != "monster_attack" or effect.get("uid", 0) != uid:
+			_fail("monster attack magic was not queued: id=%d effect=%s" % [attack_magic_ids[index], effect])
+			return false
+	var before_physical := GameState.magic_effects.size()
+	var physical_uid: int = (4 << 59) | (704 << 35) | 904
+	GameState.update_creature(physical_uid, {"uid": physical_uid, "type": 1, "monster_id": 704, "x": 10, "y": 10, "direction": 3, "action_type": 2})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(physical_uid, GameState.player_map_uid, {
+		"type": 7, "speed": 100, "direction": 3, "x": 10, "y": 10,
+		"aimUID": GameState.player_uid, "magicID": physical_id,
+	}))
+	if GameState.magic_effects.size() != before_physical:
+		_fail("ordinary physical monster attack created a magic effect")
+		return false
+	GameState.magic_effects.clear()
+	for uid in GameState.creatures.keys():
+		if ((int(uid) >> 35) & 0xFFFFFF) in [700, 701, 702, 704]:
+			GameState.remove_creature(uid)
 	return true
 
 
