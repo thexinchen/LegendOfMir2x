@@ -1596,6 +1596,14 @@ func _append_u64(payload: PackedByteArray, value: int) -> void:
 
 
 func _test_shield_hit_action(main: Control, resources: RefCounted) -> bool:
+	var renderer: Control = main.get_node("WorldRenderer")
+	if renderer.map_width <= 0 and not renderer.load_map(24):
+		_fail("unable to load hit-correction map fixture")
+		return false
+	var line := _find_walkable_line(renderer, 3)
+	if line.size() != 3:
+		_fail("unable to find a straight walkable hit-correction fixture")
+		return false
 	GameState.player_uid = 101
 	GameState.player_map_uid = 202
 	GameState.player_x = 3
@@ -1629,15 +1637,75 @@ func _test_shield_hit_action(main: Control, resources: RefCounted) -> bool:
 		return false
 	var monster_uid: int = (4 << 59) | 304
 	GameState.update_creature(monster_uid, {
-		"uid": monster_uid, "type": 1, "x": 8, "y": 9, "direction": 1, "action_type": 2,
+		"uid": monster_uid, "type": 1, "x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
 	})
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(monster_uid, 202, {
-		"type": 11, "speed": 100, "direction": 7, "x": 10, "y": 11, "fromUID": 303,
+		"type": 11, "speed": 100, "direction": 7, "x": line[2].x, "y": line[2].y, "fromUID": 303,
 	}))
 	var monster: Dictionary = GameState.get_creature(monster_uid)
-	if monster.get("action_type", 0) != 11 or monster.get("x", 0) != 10 or monster.get("y", 0) != 11 or monster.get("direction", 0) != 7:
-		_fail("Monster ACTION_HITTED incorrectly used the Hero endpoint-retention rule: %s" % monster)
+	if monster.get("action_type", 0) != 3 or Vector2i(monster.x, monster.y) != line[1] or monster.get("motion_action_queue", []).size() != 2:
+		_fail("Monster ACTION_HITTED did not start with one-grid correction: %s" % monster)
 		return false
+	main.call("_finish_creature_action", monster_uid, 3, monster.action_started_ms)
+	monster = GameState.get_creature(monster_uid)
+	if monster.get("action_type", 0) != 3 or Vector2i(monster.x, monster.y) != line[2] or monster.get("motion_action_queue", []).size() != 1:
+		_fail("Monster ACTION_HITTED did not finish its correction segments: %s" % monster)
+		return false
+	main.call("_finish_creature_action", monster_uid, 3, monster.action_started_ms)
+	monster = GameState.get_creature(monster_uid)
+	if monster.get("action_type", 0) != 11 or Vector2i(monster.x, monster.y) != line[2] or monster.get("direction", 0) != 7 or monster.has("motion_action_queue"):
+		_fail("Monster ACTION_HITTED did not start at the authoritative endpoint: %s" % monster)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(monster_uid, 202, {
+		"type": 11, "speed": 100, "direction": 5, "x": line[0].x, "y": line[0].y, "fromUID": 303,
+	}))
+	monster = GameState.get_creature(monster_uid)
+	if monster.get("action_type", 0) != 3 or not monster.has("motion_action_queue"):
+		_fail("Monster replacement hit did not start a new ordinary correction queue: %s" % monster)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(monster_uid, 202, {
+		"type": 4, "speed": 100, "direction": 3, "x": line[2].x, "y": line[2].y,
+	}))
+	monster = GameState.get_creature(monster_uid)
+	if monster.get("action_type", 0) != 2 or Vector2i(monster.x, monster.y) != line[2] or monster.has("motion_action_queue"):
+		_fail("later Monster action did not replace the ordinary hit-correction queue: %s" % monster)
+		return false
+
+	var reveal_monster_id := 0
+	for monster_id_value in resources.monster_meta:
+		if resources.monster_transform(int(monster_id_value)).get("reveal_on_hit", false):
+			reveal_monster_id = int(monster_id_value)
+			break
+	if reveal_monster_id == 0:
+		_fail("reveal-on-hit monster correction fixture unavailable")
+		return false
+	var reveal_uid: int = (4 << 59) | (reveal_monster_id << 35) | 305
+	GameState.update_creature(reveal_uid, {
+		"uid": reveal_uid, "type": 1, "monster_id": reveal_monster_id,
+		"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
+		"action_started_ms": Time.get_ticks_msec(), "monster_stand_mode": false,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(reveal_uid, 202, {
+		"type": 11, "speed": 100, "direction": 7, "x": line[2].x, "y": line[2].y, "fromUID": 303,
+	}))
+	var revealing: Dictionary = GameState.get_creature(reveal_uid)
+	if revealing.get("action_type", 0) != 10 or Vector2i(revealing.x, revealing.y) != line[0] or revealing.get("monster_pending_action", {}).get("type", 0) != 11:
+		_fail("hidden Monster did not transform before hit correction: %s" % revealing)
+		return false
+	main.call("_finish_creature_action", reveal_uid, 10, revealing.action_started_ms)
+	revealing = GameState.get_creature(reveal_uid)
+	if revealing.get("action_type", 0) != 3 or Vector2i(revealing.x, revealing.y) != line[1] or revealing.get("motion_action_queue", []).size() != 2:
+		_fail("revealed Monster did not start hit correction after transformation: %s" % revealing)
+		return false
+	main.call("_finish_creature_action", reveal_uid, 3, revealing.action_started_ms)
+	revealing = GameState.get_creature(reveal_uid)
+	main.call("_finish_creature_action", reveal_uid, 3, revealing.action_started_ms)
+	revealing = GameState.get_creature(reveal_uid)
+	if revealing.get("action_type", 0) != 11 or Vector2i(revealing.x, revealing.y) != line[2]:
+		_fail("revealed Monster hit did not wait for the correction endpoint: %s" % revealing)
+		return false
+	GameState.remove_creature(monster_uid)
+	GameState.remove_creature(reveal_uid)
 	GameState.attached_magic_effects.clear()
 	main.set("_player_action_timer", -1.0)
 	GameState.player_action_type = 2
