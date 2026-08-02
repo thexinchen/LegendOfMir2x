@@ -236,6 +236,8 @@ func _try_panel_hotkey(keycode: int) -> bool:
 		_toggle_panel(player_state_panel)
 	elif keycode == KEY_S:
 		_toggle_panel(skill_panel)
+	elif keycode == KEY_T:
+		_on_control_panel_panel_requested(TEAM_PANEL_PATH)
 	elif EXTRA_PANELS.has(keycode):
 		_toggle_extra_panel(EXTRA_PANELS[keycode])
 	else:

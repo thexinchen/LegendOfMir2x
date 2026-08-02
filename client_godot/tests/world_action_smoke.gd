@@ -437,12 +437,18 @@ func _test_team_flag_cursor(main: Control) -> bool:
 		_fail("team-flag right-click did not cancel without changing movement")
 		return false
 	move_path.clear()
-	GameState.team_members = [{"uid": GameState.player_uid, "name": "自己"}]
-	main.call("_on_control_panel_panel_requested", "res://scenes/game/panels/team.tscn")
 	var panels: Dictionary = main.get("_extra_panel_nodes")
 	var team_panel := panels.get("res://scenes/game/panels/team.tscn") as Control
+	if team_panel != null:
+		team_panel.hide()
+	if not main.call("_try_panel_hotkey", KEY_T) or not main.get("_team_flag_active") or (team_panel != null and team_panel.visible):
+		_fail("no-team T shortcut bypassed the original team-flag selection")
+		return false
+	main.call("_set_team_flag_cursor", false)
+	GameState.team_members = [{"uid": GameState.player_uid, "name": "自己"}]
+	main.call("_try_panel_hotkey", KEY_T)
 	if team_panel == null or not team_panel.visible or main.get("_team_flag_active"):
-		_fail("in-team HUD request did not open the team panel")
+		_fail("in-team T shortcut did not open the team panel")
 		return false
 	team_panel.hide()
 	GameState.creatures.erase(target_uid)
