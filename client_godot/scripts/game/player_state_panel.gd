@@ -84,6 +84,8 @@ func _refresh() -> void:
 		if not item.is_empty():
 			icon.mouse_entered.connect(_show_item_tooltip.bind(location, item))
 			icon.mouse_exited.connect(_hide_item_tooltip)
+		if location >= 4:
+			_add_wear_hover_overlay(icon, location)
 		icon.pressed.connect(_on_wear_pressed.bind(location))
 		$EquipmentSlots.add_child(icon)
 	if tooltip_location >= 0 and not _state.wear.get(tooltip_location, {}).is_empty():
@@ -91,6 +93,23 @@ func _refresh() -> void:
 	else:
 		_hide_item_tooltip()
 	$CharacterLayers.queue_redraw()
+
+
+func _add_wear_hover_overlay(icon: TextureButton, location: int) -> void:
+	var frame: Dictionary = _resources.frame("proguse", 0x06000002 if location == 4 else 0x06000001)
+	if frame.is_empty():
+		return
+	var overlay := TextureRect.new()
+	overlay.name = "HoverOverlay"
+	overlay.position = Vector2(-1, -6 if location == 4 else -3)
+	overlay.size = frame.texture.get_size()
+	overlay.texture = frame.texture
+	overlay.modulate = Color(1, 1, 1, 128.0 / 255.0)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.hide()
+	icon.add_child(overlay)
+	icon.mouse_entered.connect(overlay.show)
+	icon.mouse_exited.connect(overlay.hide)
 
 
 func _refresh_state_values(values: Array, overloaded: Array) -> void:

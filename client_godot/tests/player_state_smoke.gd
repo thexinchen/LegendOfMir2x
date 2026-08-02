@@ -45,6 +45,29 @@ func _ready() -> void:
 	if panel.get_node("EquipmentSlots").get_child_count() != 11:
 		_fail("all eleven wear grids are not interactive")
 		return
+	var equipment_slots := panel.get_node("EquipmentSlots")
+	var shoe_slot := _slot_at(equipment_slots, Vector2(-8, 182))
+	var necklace_slot := _slot_at(equipment_slots, Vector2(150, 30))
+	var weapon_slot := _slot_at(equipment_slots, Vector2(22, 22))
+	var shoe_hover := shoe_slot.get_node_or_null("HoverOverlay") as TextureRect if shoe_slot else null
+	var necklace_hover := necklace_slot.get_node_or_null("HoverOverlay") as TextureRect if necklace_slot else null
+	if shoe_hover == null or shoe_hover.texture == null or shoe_hover.position != Vector2(-1, -6) or not is_equal_approx(shoe_hover.modulate.a, 128.0 / 255.0):
+		_fail("shoe slot hover overlay does not match C++")
+		return
+	if necklace_hover == null or necklace_hover.texture == null or necklace_hover.position != Vector2(-1, -3) or not is_equal_approx(necklace_hover.modulate.a, 128.0 / 255.0):
+		_fail("ordinary wear slot hover overlay does not match C++")
+		return
+	if weapon_slot == null or weapon_slot.get_node_or_null("HoverOverlay") != null:
+		_fail("large paper-doll wear slot unexpectedly has a hover overlay")
+		return
+	shoe_slot.mouse_entered.emit()
+	if not shoe_hover.visible:
+		_fail("wear hover overlay did not appear on mouse enter")
+		return
+	shoe_slot.mouse_exited.emit()
+	if shoe_hover.visible:
+		_fail("wear hover overlay did not hide on mouse exit")
+		return
 	if not panel.call("_can_wear", weapon_id, 3) or panel.call("_can_wear", weapon_id, 5):
 		_fail("wear slot validation mismatch")
 		return
@@ -67,6 +90,11 @@ func _ready() -> void:
 		_fail("equipment tooltip content/style mismatch: %s" % tooltip_lines)
 		return
 	if OS.has_environment("MIR2X_PLAYER_STATE_SCREENSHOT"):
+		var screenshot_shoe_slot := _slot_at(panel.get_node("EquipmentSlots"), Vector2(-8, 182))
+		if screenshot_shoe_slot == null:
+			_fail("shoe slot missing before visual capture")
+			return
+		screenshot_shoe_slot.mouse_entered.emit()
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_PLAYER_STATE_SCREENSHOT"))
 	print("PLAYER STATE PASS: metadata, combat, loads, eleven wear grids and visuals")
@@ -90,6 +118,13 @@ func _label_texts(parent: Node) -> Array[String]:
 		if child is Label:
 			result.append(child.text)
 	return result
+
+
+func _slot_at(parent: Node, position: Vector2) -> TextureButton:
+	for child in parent.get_children():
+		if child is TextureButton and child.position == position:
+			return child
+	return null
 
 
 func _fail(message: String) -> void:
