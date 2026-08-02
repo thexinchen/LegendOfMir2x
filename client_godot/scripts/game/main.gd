@@ -1149,8 +1149,11 @@ func _handle_action(payload: PackedByteArray) -> void:
 				return
 	if action_type == 11 and not creature.is_empty() and creature.get("type", _creature_type_from_uid(uid)) == 1:
 		var hit_transform: Dictionary = _resources.monster_transform(creature.get("monster_id", 0))
-		var hit_needs_reveal: bool = not hit_transform.is_empty() and bool(hit_transform.get("reveal_on_hit", false)) and not bool(creature.get("monster_stand_mode", false))
-		if creature.get("action_type", 0) != 10 and not hit_needs_reveal:
+		if bool(hit_transform.get("reveal_on_hit", false)):
+			if creature.get("action_type", 0) != 10 and bool(creature.get("monster_stand_mode", false)):
+				_start_monster_current_hitted_action(uid, action, creature)
+				return
+		elif creature.get("action_type", 0) != 10:
 			_start_monster_motion_action(uid, action, creature)
 			return
 	if action_type == 7:
@@ -1171,10 +1174,20 @@ func _handle_action(payload: PackedByteArray) -> void:
 		var mine_from_y: int = game_state.player_y if uid == game_state.player_uid else creature.get("y", y)
 		direction = _direction_to(mine_from_x, mine_from_y, x, y)
 	if not creature.is_empty() and creature.get("type", _creature_type_from_uid(uid)) == 1 and action_type in [2, 3, 7]:
-		if _resources.monster_transform(creature.get("monster_id", 0)).is_empty():
+		var motion_monster_id: int = creature.get("monster_id", 0)
+		var motion_transform: Dictionary = _resources.monster_transform(motion_monster_id)
+		var correction_waits_for_form := false
+		if not motion_transform.is_empty():
+			if action_type == 7:
+				correction_waits_for_form = creature.get("action_type", 0) == 10 or not bool(creature.get("monster_stand_mode", false))
+			elif action_type == 2:
+				correction_waits_for_form = creature.get("action_type", 0) == 10 or _monster_action_flag(action) != bool(creature.get("monster_stand_mode", false))
+		if _resources.monster_motion_correction(motion_monster_id, action_type) and not correction_waits_for_form:
 			var queued_monster_action := action.duplicate(true)
 			queued_monster_action["direction"] = direction
 			_start_monster_motion_action(uid, queued_monster_action, creature)
+			return
+		if action_type == 2 and not motion_transform.is_empty() and not correction_waits_for_form:
 			return
 	if action_type == 6:
 		var space_magic_id: int = _resources.magic_id("瞬息移动")
@@ -1473,8 +1486,9 @@ func _configure_monster_form(creature: Dictionary, action_type: int, stored_acti
 		creature["monster_transform_continued"] = was_transforming
 		return 10
 	var form_request := action_type in [2, 10]
-	var queued_action: bool = action_type == 7 or (action_type == 11 and transform.reveal_on_hit)
-	var needs_reveal: bool = queued_action and not final_mode
+	var correction_action: bool = _resources.monster_motion_correction(creature.get("monster_id", 0), action_type)
+	var queued_action: bool = action_type == 7 or (action_type == 11 and (transform.reveal_on_hit or was_transforming)) or (action_type == 2 and correction_action)
+	var needs_reveal: bool = (action_type == 7 or (action_type == 11 and transform.reveal_on_hit) or (action_type == 2 and correction_action and requested_mode)) and not final_mode
 	if form_request and not constructor_state and requested_mode != final_mode:
 		if was_transforming:
 			form_queue.append(requested_mode)
@@ -1556,6 +1570,14 @@ func _start_monster_motion_action(uid: int, action: Dictionary, creature: Dictio
 	creature["motion_action_queue"] = queue
 	game_state.update_creature(uid, creature)
 	_advance_monster_motion_action(uid)
+
+
+func _start_monster_current_hitted_action(uid: int, action: Dictionary, creature: Dictionary) -> void:
+	var current_action := action.duplicate(true)
+	current_action["x"] = creature.get("x", action.get("x", 0))
+	current_action["y"] = creature.get("y", action.get("y", 0))
+	current_action["direction"] = 1
+	_start_monster_motion_action(uid, current_action, creature)
 
 
 func _advance_monster_motion_action(uid: int) -> void:
@@ -1692,7 +1714,15 @@ func _finish_creature_action(uid: int, action_type: int, started_ms: int) -> voi
 		_start_creature_death_action(uid, forced_pending.get("action", {}), creature)
 		return
 	if action_type == 10 and not pending.is_empty():
-		if pending.get("type", 0) in [7, 11]:
+		var pending_type: int = pending.get("type", 0)
+		if pending_type == 11:
+			game_state.update_creature(uid, creature)
+			if _resources.monster_transform(creature.get("monster_id", 0)).get("reveal_on_hit", false):
+				_start_monster_current_hitted_action(uid, pending.get("action", {}), creature)
+			else:
+				_start_monster_motion_action(uid, pending.get("action", {}), creature)
+			return
+		if _resources.monster_motion_correction(creature.get("monster_id", 0), pending_type):
 			game_state.update_creature(uid, creature)
 			_start_monster_motion_action(uid, pending.get("action", {}), creature)
 			return

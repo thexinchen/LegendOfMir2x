@@ -99,6 +99,7 @@ struct MonsterMetaRecord
     uint8_t bodyAltAttackFrameCount = 0;
     uint8_t bodyFlags = 0;
     uint8_t spawnDirection = 0;
+    uint8_t motionCorrectionFlags = 0;
 };
 
 struct ItemMetaRecord
@@ -183,7 +184,7 @@ static_assert(sizeof(TileRecord) == 8);
 static_assert(sizeof(ObjectRecord) == 12);
 static_assert(sizeof(SpriteHeader) == 12);
 static_assert(sizeof(SpriteRecord) == 8);
-static_assert(sizeof(MonsterMetaRecord) == 66);
+static_assert(sizeof(MonsterMetaRecord) == 67);
 static_assert(sizeof(ItemMetaRecord) == 156);
 static_assert(sizeof(ItemDetailRecord) == 48);
 static_assert(sizeof(SkillMetaRecord) == 16);
@@ -233,7 +234,7 @@ static MonsterMetaRecord monsterMetaRecord(uint32_t monsterID)
     // ACTION_HITTED forces an active-form transformation.
     const auto setTransf = [&result](uint16_t hiddenLook, int standMotion, int standBegin, int standCount,
                                     int activeMotion, int activeBegin, int activeCount,
-                                    int hiddenMotion, int hiddenBegin, int hiddenCount, int flags)
+                                    int hiddenMotion, int hiddenBegin, int hiddenCount, int flags, int motionFlags)
     {
         result.hiddenLookID = hiddenLook;
         result.hiddenStandMotion = check_cast<uint8_t>(standMotion);
@@ -246,32 +247,33 @@ static MonsterMetaRecord monsterMetaRecord(uint32_t monsterID)
         result.hiddenTransfBegin = check_cast<uint8_t>(hiddenBegin);
         result.hiddenTransfCount = check_cast<uint8_t>(hiddenCount);
         result.transfFlags = check_cast<uint8_t>(flags);
+        result.motionCorrectionFlags = check_cast<uint8_t>(motionFlags);
     };
 
     const std::u8string_view name = record.name;
     if(name == u8"食人花"){
-        setTransf(0, 8, 7, 1, 8, 7, 8, 8, 0, 8, 0X09);
+        setTransf(0, 8, 7, 1, 8, 7, 8, 8, 0, 8, 0X09, 0X00);
     }
     else if(name == u8"触龙神"){
-        setTransf(0, 8, 0, 1, 8, 0, 10, 8, 9, 10, 0X1A);
+        setTransf(0, 8, 0, 1, 8, 0, 10, 8, 9, 10, 0X1A, 0X00);
     }
     else if(name == u8"僵尸_1" || name == u8"僵尸_2" || name == u8"腐僵"){
-        setTransf(0, 4, 9, 1, 8, 0, 10, 4, 0, 10, 0X00);
+        setTransf(0, 4, 9, 1, 8, 0, 10, 4, 0, 10, 0X00, 0X00);
     }
     else if(name == u8"沙鬼"){
-        setTransf(0, 8, 9, 1, 8, 9, 10, 8, 0, 10, 0X01);
+        setTransf(0, 8, 9, 1, 8, 9, 10, 8, 0, 10, 0X01, 0X00);
     }
     else if(name == u8"神兽"){
-        setTransf(0X59, 0, 0, 4, 8, 0, 10, 8, 9, 10, 0X06);
+        setTransf(0X59, 0, 0, 4, 8, 0, 10, 8, 9, 10, 0X06, 0X03);
     }
     else if(name == u8"祖玛雕像" || name == u8"祖玛卫士"){
-        setTransf(0, 8, 0, 1, 8, 0, 6, 8, 5, 6, 0X02);
+        setTransf(0, 8, 0, 1, 8, 0, 6, 8, 5, 6, 0X02, 0X02);
     }
     else if(name == u8"祖玛教主"){
         // The C++ hidden-form branch returns an empty spawn sequence after the
         // mode trigger flips. Use the symmetric reverse sequence so burrowing
         // remains visible and completes instead of leaving a zero-frame motion.
-        setTransf(0, 8, 0, 1, 8, 0, 10, 8, 9, 10, 0X0A);
+        setTransf(0, 8, 0, 1, 8, 0, 10, 8, 9, 10, 0X0A, 0X02);
     }
 
     // bodyFlags: bit 0 redirects every non-hitted body motion to stand,
@@ -524,7 +526,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "monster.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 10, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 11, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
     }

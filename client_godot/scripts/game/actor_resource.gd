@@ -165,6 +165,23 @@ func monster_transform(monster_id: int) -> Dictionary:
 	}
 
 
+func monster_motion_correction(monster_id: int, action_type: int) -> bool:
+	var transform: Dictionary = monster_transform(monster_id)
+	if transform.is_empty():
+		return action_type in [2, 3, 7, 11]
+	if action_type == 3:
+		return true
+	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
+	var flags := int(meta[32]) if meta.size() >= 33 else 0
+	if action_type == 2:
+		return bool(flags & 1)
+	if action_type == 7:
+		return bool(flags & 2)
+	if action_type == 11:
+		return not bool(transform.get("reveal_on_hit", false))
+	return false
+
+
 func monster_seff(monster_id: int, action_type: int) -> int:
 	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
 	if meta.size() < 6:
@@ -329,7 +346,7 @@ func _load_monster_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
+	if version not in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -363,6 +380,8 @@ func _load_monster_meta() -> void:
 			meta.append(file.get_32())
 			for _body_index in range(4):
 				meta.append(file.get_8())
+		if version >= 11:
+			meta.append(file.get_8())
 		monster_meta[monster_id] = meta
 
 

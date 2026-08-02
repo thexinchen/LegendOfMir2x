@@ -1696,15 +1696,8 @@ func _test_shield_hit_action(main: Control, resources: RefCounted) -> bool:
 		return false
 	main.call("_finish_creature_action", reveal_uid, 10, revealing.action_started_ms)
 	revealing = GameState.get_creature(reveal_uid)
-	if revealing.get("action_type", 0) != 3 or Vector2i(revealing.x, revealing.y) != line[1] or revealing.get("motion_action_queue", []).size() != 2:
-		_fail("revealed Monster did not start hit correction after transformation: %s" % revealing)
-		return false
-	main.call("_finish_creature_action", reveal_uid, 3, revealing.action_started_ms)
-	revealing = GameState.get_creature(reveal_uid)
-	main.call("_finish_creature_action", reveal_uid, 3, revealing.action_started_ms)
-	revealing = GameState.get_creature(reveal_uid)
-	if revealing.get("action_type", 0) != 11 or Vector2i(revealing.x, revealing.y) != line[2]:
-		_fail("revealed Monster hit did not wait for the correction endpoint: %s" % revealing)
+	if revealing.get("action_type", 0) != 11 or Vector2i(revealing.x, revealing.y) != line[0] or revealing.get("direction", 0) != 1 or revealing.has("motion_action_queue"):
+		_fail("EvilCentipede hit did not stay at its current grid after transformation: %s" % revealing)
 		return false
 	GameState.remove_creature(monster_uid)
 	GameState.remove_creature(reveal_uid)
@@ -1720,6 +1713,155 @@ func _test_monster_motion_correction(main: Control, resources: RefCounted) -> bo
 	if line.size() != 5:
 		_fail("unable to find a straight walkable Monster action fixture")
 		return false
+	if not resources.has_method("monster_motion_correction"):
+		_fail("Monster subclass motion-correction metadata unavailable")
+		return false
+	var transformed_ids: Array[int] = []
+	var stand_correction_ids: Array[int] = []
+	var attack_correction_ids: Array[int] = []
+	var reveal_on_hit_id := 0
+	for monster_id_value in resources.monster_meta:
+		var candidate_id := int(monster_id_value)
+		var candidate_transform: Dictionary = resources.monster_transform(candidate_id)
+		if candidate_transform.is_empty():
+			continue
+		transformed_ids.append(candidate_id)
+		if resources.monster_motion_correction(candidate_id, 2):
+			stand_correction_ids.append(candidate_id)
+		if resources.monster_motion_correction(candidate_id, 7):
+			attack_correction_ids.append(candidate_id)
+		if candidate_transform.reveal_on_hit:
+			reveal_on_hit_id = candidate_id
+	if transformed_ids.size() != 10 or stand_correction_ids.size() != 1 or attack_correction_ids.size() != 4 or reveal_on_hit_id == 0:
+		_fail("Monster subclass correction classification mismatch: all=%s stand=%s attack=%s reveal=%d" % [transformed_ids, stand_correction_ids, attack_correction_ids, reveal_on_hit_id])
+		return false
+	for index in range(transformed_ids.size()):
+		var move_id: int = transformed_ids[index]
+		var move_uid: int = (4 << 59) | (move_id << 35) | (320 + index)
+		GameState.update_creature(move_uid, {
+			"uid": move_uid, "type": 1, "monster_id": move_id,
+			"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
+			"action_started_ms": Time.get_ticks_msec(), "monster_stand_mode": true,
+		})
+		main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(move_uid, 202, {
+			"type": 3, "speed": 100, "direction": 0,
+			"x": line[2].x, "y": line[2].y, "aimX": line[3].x, "aimY": line[3].y,
+		}))
+		var moving_transform: Dictionary = GameState.get_creature(move_uid)
+		if moving_transform.get("action_type", 0) != 3 or Vector2i(moving_transform.x, moving_transform.y) != line[1] or moving_transform.get("action_speed", 0) != 500:
+			_fail("transformed Monster ACTION_MOVE skipped base correction: id=%d creature=%s" % [move_id, moving_transform])
+			return false
+		GameState.remove_creature(move_uid)
+
+	var active_ext := PackedByteArray()
+	active_ext.resize(8)
+	active_ext[0] = 1
+	var stand_id: int = stand_correction_ids[0]
+	var stand_uid: int = (4 << 59) | (stand_id << 35) | 340
+	GameState.update_creature(stand_uid, {
+		"uid": stand_uid, "type": 1, "monster_id": stand_id,
+		"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
+		"action_started_ms": Time.get_ticks_msec(), "monster_stand_mode": false,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(stand_uid, 202, {
+		"type": 2, "speed": 100, "direction": 7, "x": line[2].x, "y": line[2].y, "extParam": active_ext,
+	}))
+	var standing_transform: Dictionary = GameState.get_creature(stand_uid)
+	if standing_transform.get("action_type", 0) != 10 or standing_transform.get("monster_pending_action", {}).get("type", 0) != 2 or Vector2i(standing_transform.x, standing_transform.y) != line[0]:
+		_fail("TaoDog stand correction did not wait behind transformation: %s" % standing_transform)
+		return false
+	main.call("_finish_creature_action", stand_uid, 10, standing_transform.action_started_ms)
+	standing_transform = GameState.get_creature(stand_uid)
+	if standing_transform.get("action_type", 0) != 3 or Vector2i(standing_transform.x, standing_transform.y) != line[1] or standing_transform.get("motion_action_queue", []).size() != 2:
+		_fail("TaoDog stand correction did not start after transformation: %s" % standing_transform)
+		return false
+	GameState.remove_creature(stand_uid)
+
+	var static_stand_id: int = transformed_ids.filter(func(id: int) -> bool: return not resources.monster_motion_correction(id, 2))[0]
+	var static_stand_uid: int = (4 << 59) | (static_stand_id << 35) | 341
+	GameState.update_creature(static_stand_uid, {
+		"uid": static_stand_uid, "type": 1, "monster_id": static_stand_id,
+		"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
+		"action_started_ms": Time.get_ticks_msec(), "monster_stand_mode": true,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(static_stand_uid, 202, {
+		"type": 2, "speed": 100, "direction": 7, "x": line[2].x, "y": line[2].y, "extParam": active_ext,
+	}))
+	var static_stand: Dictionary = GameState.get_creature(static_stand_uid)
+	if Vector2i(static_stand.x, static_stand.y) != line[0] or static_stand.get("direction", 0) != 1:
+		_fail("stationary subclass ACTION_STAND incorrectly applied the message endpoint: %s" % static_stand)
+		return false
+	GameState.remove_creature(static_stand_uid)
+
+	for index in range(attack_correction_ids.size()):
+		var attack_id: int = attack_correction_ids[index]
+		var attack_uid: int = (4 << 59) | (attack_id << 35) | (350 + index)
+		GameState.update_creature(attack_uid, {
+			"uid": attack_uid, "type": 1, "monster_id": attack_id,
+			"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
+			"action_started_ms": Time.get_ticks_msec(), "monster_stand_mode": true,
+		})
+		main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(attack_uid, 202, {
+			"type": 7, "speed": 100, "direction": 5, "x": line[2].x, "y": line[2].y,
+		}))
+		var attacking_transform: Dictionary = GameState.get_creature(attack_uid)
+		if attacking_transform.get("action_type", 0) != 3 or Vector2i(attacking_transform.x, attacking_transform.y) != line[1]:
+			_fail("transform subclass ACTION_ATTACK skipped required correction: id=%d creature=%s" % [attack_id, attacking_transform])
+			return false
+		GameState.remove_creature(attack_uid)
+	var direct_attack_id: int = transformed_ids.filter(func(id: int) -> bool: return not resources.monster_motion_correction(id, 7))[0]
+	var direct_attack_uid: int = (4 << 59) | (direct_attack_id << 35) | 359
+	GameState.update_creature(direct_attack_uid, {
+		"uid": direct_attack_uid, "type": 1, "monster_id": direct_attack_id,
+		"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
+		"action_started_ms": Time.get_ticks_msec(), "monster_stand_mode": true,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(direct_attack_uid, 202, {
+		"type": 7, "speed": 100, "direction": 5, "x": line[2].x, "y": line[2].y,
+	}))
+	var direct_attack: Dictionary = GameState.get_creature(direct_attack_uid)
+	if direct_attack.get("action_type", 0) != 7 or Vector2i(direct_attack.x, direct_attack.y) != line[2] or direct_attack.has("motion_action_queue"):
+		_fail("stationary subclass ACTION_ATTACK incorrectly inserted base correction: %s" % direct_attack)
+		return false
+	GameState.remove_creature(direct_attack_uid)
+
+	var reveal_uid: int = (4 << 59) | (reveal_on_hit_id << 35) | 360
+	GameState.update_creature(reveal_uid, {
+		"uid": reveal_uid, "type": 1, "monster_id": reveal_on_hit_id,
+		"x": line[0].x, "y": line[0].y, "direction": 7, "action_type": 2,
+		"action_started_ms": Time.get_ticks_msec(), "monster_stand_mode": true,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(reveal_uid, 202, {
+		"type": 11, "speed": 100, "direction": 5, "x": line[2].x, "y": line[2].y,
+	}))
+	var reveal_hit: Dictionary = GameState.get_creature(reveal_uid)
+	if reveal_hit.get("action_type", 0) != 11 or Vector2i(reveal_hit.x, reveal_hit.y) != line[0] or reveal_hit.get("direction", 0) != 1:
+		_fail("EvilCentipede ACTION_HITTED did not retain its current grid and fixed direction: %s" % reveal_hit)
+		return false
+	GameState.remove_creature(reveal_uid)
+
+	var transforming_hit_id: int = transformed_ids.filter(func(id: int) -> bool: return id != reveal_on_hit_id)[0]
+	var transforming_hit_uid: int = (4 << 59) | (transforming_hit_id << 35) | 361
+	GameState.update_creature(transforming_hit_uid, {
+		"uid": transforming_hit_uid, "type": 1, "monster_id": transforming_hit_id,
+		"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 10,
+		"action_started_ms": Time.get_ticks_msec(), "action_speed": 100,
+		"monster_stand_mode": true,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(transforming_hit_uid, 202, {
+		"type": 11, "speed": 100, "direction": 5, "x": line[2].x, "y": line[2].y,
+	}))
+	var transforming_hit: Dictionary = GameState.get_creature(transforming_hit_uid)
+	if transforming_hit.get("action_type", 0) != 10 or transforming_hit.get("monster_pending_action", {}).get("type", 0) != 11:
+		_fail("transforming Monster did not defer ACTION_HITTED until transformation completion: %s" % transforming_hit)
+		return false
+	main.call("_finish_creature_action", transforming_hit_uid, 10, transforming_hit.action_started_ms)
+	transforming_hit = GameState.get_creature(transforming_hit_uid)
+	if transforming_hit.get("action_type", 0) != 3 or Vector2i(transforming_hit.x, transforming_hit.y) != line[1] or transforming_hit.get("motion_action_queue", []).size() != 2:
+		_fail("deferred Monster ACTION_HITTED did not start correction after transformation: %s" % transforming_hit)
+		return false
+	GameState.remove_creature(transforming_hit_uid)
+
 	var monster_id := 0
 	for monster_id_value in resources.monster_meta:
 		if resources.monster_transform(int(monster_id_value)).is_empty():
@@ -1782,7 +1924,7 @@ func _test_monster_motion_correction(main: Control, resources: RefCounted) -> bo
 
 	var transform_id := 0
 	for monster_id_value in resources.monster_meta:
-		if not resources.monster_transform(int(monster_id_value)).is_empty():
+		if not resources.monster_transform(int(monster_id_value)).is_empty() and resources.monster_motion_correction(int(monster_id_value), 7):
 			transform_id = int(monster_id_value)
 			break
 	if transform_id == 0:
