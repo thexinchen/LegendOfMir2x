@@ -611,12 +611,12 @@ func _test_hero_spell_gestures(main: Control, resources: RefCounted) -> bool:
 	if spell0_tail_start != PackedInt32Array([7, 0, 0]) or spell0_tail_end != PackedInt32Array([7, 2, 0]) or spell0_tail_repeat != PackedInt32Array([7, 0, 0]):
 		_fail("SPELL0 did not append two C++ attack-mode holds: %s %s %s" % [spell0_tail_start, spell0_tail_end, spell0_tail_repeat])
 		return false
-	var spell1_meta: PackedInt32Array = resources.magic_layout(spell1_id, 1)
-	var spell1_primary_ms := float(maxi(spell1_meta[2], 10)) * 10000.0 / float(clampi(spell1_meta[4], 20, 500))
-	var spell1_freeze: PackedInt32Array = renderer.call("_hero_spell_motion_state", spell1_id, 1000, 1000 + maxi(300, floori(spell1_primary_ms) - 150))
+	var spell1_release_ms: int = renderer.call("_hero_spell_trigger_delay", spell1_id, 4)
+	var spell1_freeze: PackedInt32Array = renderer.call("_hero_spell_motion_state", spell1_id, 1000, 1000 + spell1_release_ms - 1)
+	var spell1_release: PackedInt32Array = renderer.call("_hero_spell_motion_state", spell1_id, 1000, 1000 + spell1_release_ms)
 	var attack_mode_start: PackedInt32Array = renderer.call("_hero_spell_motion_state", attack_mode_id, 1000, 1000)
-	if spell1_freeze[0] != 3 or spell1_freeze[1] != 3 or attack_mode_start != PackedInt32Array([7, 0, 5]):
-		_fail("spell startup freeze or attack-mode direction mismatch: spell1=%s attack=%s" % [spell1_freeze, attack_mode_start])
+	if spell1_freeze != PackedInt32Array([3, 3, 0]) or spell1_release != PackedInt32Array([3, 4, 0]) or attack_mode_start != PackedInt32Array([7, 0, 5]):
+		_fail("spell startup freeze/release or attack-mode direction mismatch: freeze=%s release=%s attack=%s" % [spell1_freeze, spell1_release, attack_mode_start])
 		return false
 	GameState.player_uid = 101
 	GameState.player_map_uid = 202

@@ -232,6 +232,26 @@ func _ready() -> void:
 	if laser_components.size() != 1 or laser_components[0].position != Vector2(special_source) or laser_components[0].direction != 2:
 		_fail("laser did not stay on caster grid/direction: %s" % laser_state)
 		return
+	var special_action_cases := [
+		{"effect": special_effect, "id": hellfire_id, "kind": "hellfire", "frame": 3, "run_delay": 100, "visible_meta": hellfire_meta},
+		{"effect": ice_effect, "id": ice_thrust_id, "kind": "ice_thrust", "frame": 3, "run_delay": 100, "visible_meta": ice_thorn_meta},
+		{"effect": wind_effect, "id": wind_chain_id, "kind": "wind_chain", "frame": 4, "run_delay": 0, "visible_meta": wind_run},
+		{"effect": laser_effect, "id": laser_id, "kind": "laser", "frame": 3, "run_delay": 0, "visible_meta": laser_run},
+	]
+	for special_case in special_action_cases:
+		var action_special: Dictionary = special_case.effect.duplicate(true)
+		var special_id: int = special_case.id
+		var special_frame: int = special_case.frame
+		var special_trigger: int = $WorldRenderer.call("_hero_spell_trigger_delay", special_id, special_frame)
+		var before_special: Dictionary = $WorldRenderer.call("_resolve_special_action_magic", action_special, special_id, special_case.kind, special_trigger - 1)
+		var special_run: PackedInt32Array = special_case.visible_meta
+		if before_special.get("components", []).any(func(component: Dictionary) -> bool: return component.meta == special_run):
+			_fail("special action triggered before synchronized hero frame: id=%d frame=%d" % [special_id, special_frame])
+			return
+		var running_special: Dictionary = $WorldRenderer.call("_resolve_special_action_magic", action_special, special_id, special_case.kind, special_trigger + int(special_case.run_delay))
+		if not running_special.get("components", []).any(func(component: Dictionary) -> bool: return component.meta == special_run):
+			_fail("special action missing after synchronized hero frame: id=%d delay=%d state=%s" % [special_id, special_trigger, running_special])
+			return
 	var fixed_effect := propagated_effect.duplicate(true)
 	fixed_effect["aimUID"] = target_uid
 	fixed_effect["aimX"] = 409
@@ -241,18 +261,19 @@ func _ready() -> void:
 		var action_fixed := fixed_effect.duplicate(true)
 		action_fixed["magicID"] = fixed_id
 		var fixed_run: PackedInt32Array = resources.magic_layout(fixed_id, 2)
-		var before_fixed: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", action_fixed, fixed_id, "run_explode" if fixed_id == hit_wind_id else "run", 299)
+		var fixed_trigger: int = $WorldRenderer.call("_hero_spell_trigger_delay", fixed_id, 3)
+		var before_fixed: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", action_fixed, fixed_id, "run_explode" if fixed_id == hit_wind_id else "run", fixed_trigger - 1)
 		for component in before_fixed.get("components", []):
 			if component.meta == fixed_run:
 				_fail("fixed action triggered before spell frame 3: id=%d" % fixed_id)
 				return
-		var running_fixed: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", action_fixed, fixed_id, "run_explode" if fixed_id == hit_wind_id else "run", 300)
+		var running_fixed: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", action_fixed, fixed_id, "run_explode" if fixed_id == hit_wind_id else "run", fixed_trigger)
 		var run_components: Array = running_fixed.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fixed_run)
 		if run_components.size() != 1 or run_components[0].position != Vector2(409, 120):
 			_fail("fixed action frame-3 placement mismatch: id=%d state=%s" % [fixed_id, running_fixed])
 			return
 		GameState.creatures[target_uid]["x"] = 410
-		var moved_fixed: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", action_fixed, fixed_id, "run_explode" if fixed_id == hit_wind_id else "run", 400)
+		var moved_fixed: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", action_fixed, fixed_id, "run_explode" if fixed_id == hit_wind_id else "run", fixed_trigger + 100)
 		for component in moved_fixed.get("components", []):
 			if component.meta == fixed_run and component.position != Vector2(409, 120):
 				_fail("fixed action followed target after trigger: id=%d state=%s" % [fixed_id, moved_fixed])
@@ -262,8 +283,9 @@ func _ready() -> void:
 	var hit_explode: PackedInt32Array = resources.magic_layout(hit_wind_id, 3)
 	var hit_effect := fixed_effect.duplicate(true)
 	hit_effect["magicID"] = hit_wind_id
-	$WorldRenderer.call("_resolve_fixed_action_magic", hit_effect, hit_wind_id, "run_explode", 300)
-	var hit_explode_state: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", hit_effect, hit_wind_id, "run_explode", 300 + int($WorldRenderer.call("_magic_frame_duration", hit_run)))
+	var hit_trigger: int = $WorldRenderer.call("_hero_spell_trigger_delay", hit_wind_id, 3)
+	$WorldRenderer.call("_resolve_fixed_action_magic", hit_effect, hit_wind_id, "run_explode", hit_trigger)
+	var hit_explode_state: Dictionary = $WorldRenderer.call("_resolve_fixed_action_magic", hit_effect, hit_wind_id, "run_explode", hit_trigger + int($WorldRenderer.call("_magic_frame_duration", hit_run)))
 	var hit_components: Array = hit_explode_state.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == hit_explode)
 	if hit_components.size() != 1 or hit_components[0].position != Vector2(409, 120):
 		_fail("hit-wind explode chain mismatch: %s" % hit_explode_state)
@@ -298,22 +320,24 @@ func _ready() -> void:
 	for attachment_id in target_attachment_ids:
 		var action_effect := attachment_action.duplicate(true)
 		action_effect["magicID"] = attachment_id
-		$WorldRenderer.call("_resolve_magic_effect", action_effect, now + 299)
+		var attachment_trigger: int = $WorldRenderer.call("_hero_spell_trigger_delay", attachment_id, 3)
+		$WorldRenderer.call("_resolve_magic_effect", action_effect, now + attachment_trigger - 1)
 		if not GameState.attached_magic_effects.is_empty():
 			_fail("target attachment triggered before spell frame 3: id=%d" % attachment_id)
 			return
-		$WorldRenderer.call("_resolve_magic_effect", action_effect, now + 300)
+		$WorldRenderer.call("_resolve_magic_effect", action_effect, now + attachment_trigger)
 		if GameState.attached_magic_effects.size() != 1 or GameState.attached_magic_effects[0].get("target_uid", 0) != target_uid:
 			_fail("target attachment did not bind aimed creature: id=%d effects=%s" % [attachment_id, GameState.attached_magic_effects])
 			return
-		$WorldRenderer.call("_resolve_magic_effect", action_effect, now + 400)
+		$WorldRenderer.call("_resolve_magic_effect", action_effect, now + attachment_trigger + 100)
 		if GameState.attached_magic_effects.size() != 1:
 			_fail("target attachment duplicated during redraw: id=%d" % attachment_id)
 			return
 		GameState.attached_magic_effects.clear()
 	var moving_effect := attachment_action.duplicate(true)
 	moving_effect["magicID"] = healing_id
-	$WorldRenderer.call("_resolve_magic_effect", moving_effect, now + 300)
+	var healing_trigger: int = $WorldRenderer.call("_hero_spell_trigger_delay", healing_id, 3)
+	$WorldRenderer.call("_resolve_magic_effect", moving_effect, now + healing_trigger)
 	GameState.creatures[target_uid]["x"] = 411
 	GameState.creatures[target_uid]["y"] = 121
 	if $WorldRenderer.call("_attached_target_grid", target_uid) != Vector2(411, 121):
@@ -326,7 +350,7 @@ func _ready() -> void:
 	var healing_fallback := attachment_action.duplicate(true)
 	healing_fallback["magicID"] = healing_id
 	healing_fallback["aimUID"] = target_uid
-	$WorldRenderer.call("_resolve_magic_effect", healing_fallback, now + 300)
+	$WorldRenderer.call("_resolve_magic_effect", healing_fallback, now + healing_trigger)
 	if GameState.attached_magic_effects.size() != 1 or GameState.attached_magic_effects[0].get("target_uid", 0) != GameState.player_uid:
 		_fail("healing attachment did not fall back to caster: %s" % GameState.attached_magic_effects)
 		return
@@ -334,7 +358,7 @@ func _ready() -> void:
 	var strict_missing := attachment_action.duplicate(true)
 	strict_missing["magicID"] = target_attachment_ids[0]
 	strict_missing["aimUID"] = target_uid
-	$WorldRenderer.call("_resolve_magic_effect", strict_missing, now + 300)
+	$WorldRenderer.call("_resolve_magic_effect", strict_missing, now + int($WorldRenderer.call("_hero_spell_trigger_delay", target_attachment_ids[0], 3)))
 	if not GameState.attached_magic_effects.is_empty():
 		_fail("strict target attachment incorrectly fell back to caster")
 		return
@@ -347,12 +371,21 @@ func _ready() -> void:
 		"direction": 3, "speed": 100, "start_time": now, "_seff_stage_mask": 0xFFFF,
 	}
 	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(409 * 48, 120 * 32)}})
-	var before_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + 399)
+	var projectile_trigger: int = $WorldRenderer.call("_hero_spell_trigger_delay", fireball_id, 4)
+	if projectile_trigger <= 400:
+		_fail("SPELL0 projectile trigger was not delayed by startup synchronization: %d" % projectile_trigger)
+		return
+	var before_motion: PackedInt32Array = $WorldRenderer.call("_hero_spell_motion_state", fireball_id, now, now + projectile_trigger - 1)
+	var trigger_motion: PackedInt32Array = $WorldRenderer.call("_hero_spell_motion_state", fireball_id, now, now + projectile_trigger)
+	if before_motion[1] >= 4 or trigger_motion[1] < 4:
+		_fail("projectile trigger and hero frame 4 diverged: before=%s trigger=%s delay=%d" % [before_motion, trigger_motion, projectile_trigger])
+		return
+	var before_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + projectile_trigger - 1)
 	for component in before_projectile.get("components", []):
 		if component.meta == fireball_run:
 			_fail("follow projectile launched before spell frame 4")
 			return
-	var launched_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + 400)
+	var launched_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + projectile_trigger)
 	var launched_components: Array = launched_projectile.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fireball_run)
 	var first_position: Vector2 = projectile_effect.get("_projectile_position", Vector2.ZERO)
 	var source_position := Vector2(405 * 48, 120 * 32)
@@ -361,14 +394,14 @@ func _ready() -> void:
 		return
 	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(first_position.x, first_position.y - 160)}})
 	var prior_position := first_position
-	$WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + 416)
+	$WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + projectile_trigger + 16)
 	var turned_position: Vector2 = projectile_effect.get("_projectile_position", Vector2.ZERO)
 	if turned_position.y >= prior_position.y:
 		_fail("follow projectile did not home toward moved target: before=%s after=%s" % [prior_position, turned_position])
 		return
 	var fireball_offset := Vector2(resources.magic_target_offset(fireball_id, 2, projectile_effect.get("_projectile_gfx_direction", 0)))
 	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": turned_position + fireball_offset + Vector2(1, 1)}})
-	var hit_state: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + 432)
+	var hit_state: Dictionary = $WorldRenderer.call("_resolve_magic_effect", projectile_effect, now + projectile_trigger + 32)
 	var hit_run_components: Array = hit_state.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fireball_run)
 	if not hit_run_components.is_empty() or GameState.attached_magic_effects.size() != 1:
 		_fail("follow projectile hit did not replace flight with one impact: state=%s effects=%s" % [hit_state, GameState.attached_magic_effects])
@@ -377,7 +410,7 @@ func _ready() -> void:
 	if impact.get("target_uid", 0) != target_uid or impact.get("stage", 0) != 3 or impact.get("kind", "") != "projectile_impact":
 		_fail("follow projectile impact metadata mismatch: %s" % impact)
 		return
-	var impact_active: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now + 432)
+	var impact_active: Dictionary = $WorldRenderer.call("_resolve_attached_magic", now + projectile_trigger + 32)
 	if impact_active.get(target_uid, []).is_empty() or impact_active[target_uid][0].meta != resources.magic_layout(fireball_id, 3):
 		_fail("follow projectile impact did not use explode-stage graphics: %s" % impact_active)
 		return
@@ -636,7 +669,8 @@ func _ready() -> void:
 		fixed_projectile.erase("_projectile_done")
 		fixed_projectile.erase("_projectile_impact_spawned")
 		$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(409 * 48, 120 * 32)}})
-		var fixed_projectile_state: Dictionary = $WorldRenderer.call("_resolve_magic_effect", fixed_projectile, now + 400)
+		var fixed_projectile_trigger: int = $WorldRenderer.call("_hero_spell_trigger_delay", fixed_projectile_id, 4)
+		var fixed_projectile_state: Dictionary = $WorldRenderer.call("_resolve_magic_effect", fixed_projectile, now + fixed_projectile_trigger)
 		var fixed_run_meta: PackedInt32Array = resources.magic_layout(fixed_projectile_id, 2)
 		var fixed_components: Array = fixed_projectile_state.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fixed_run_meta)
 		if fixed_components.size() != 1 or fixed_components[0].direction != 0:
@@ -648,17 +682,17 @@ func _ready() -> void:
 	for key in ["_projectile_position", "_projectile_start", "_projectile_fly_direction", "_projectile_gfx_direction", "_projectile_last_fly_offset", "_projectile_impact_spawned", "_projectile_done"]:
 		missing_projectile.erase(key)
 	$WorldRenderer.set("_actor_target_rects", {target_uid: {"world_center": Vector2(409 * 48, 120 * 32)}})
-	$WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + 400)
+	$WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + projectile_trigger)
 	var last_offset: Vector2 = missing_projectile.get("_projectile_last_fly_offset", Vector2.ZERO)
 	GameState.creatures.erase(target_uid)
 	$WorldRenderer.set("_actor_target_rects", {})
 	var missing_before: Vector2 = missing_projectile.get("_projectile_position", Vector2.ZERO)
-	$WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + 416)
+	$WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + projectile_trigger + 16)
 	if missing_projectile.get("_projectile_position", Vector2.ZERO) != missing_before + last_offset:
 		_fail("missing-target projectile did not continue its last direction")
 		return
 	missing_projectile["_projectile_position"] = Vector2(missing_projectile.get("_projectile_start", Vector2.ZERO)) + Vector2(256 * 48, 0)
-	var expired_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + 432)
+	var expired_projectile: Dictionary = $WorldRenderer.call("_resolve_magic_effect", missing_projectile, now + projectile_trigger + 32)
 	var expired_run_components: Array = expired_projectile.get("components", []).filter(func(component: Dictionary) -> bool: return component.meta == fireball_run)
 	if not expired_run_components.is_empty() or not GameState.attached_magic_effects.is_empty():
 		_fail("missing-target projectile did not expire silently after 255 grids")
@@ -811,11 +845,11 @@ func _ready() -> void:
 	if OS.has_environment("MIR2X_PROPAGATED_SCREENSHOT"):
 		var propagated_now := Time.get_ticks_msec()
 		var wind_visual := wind_effect.duplicate(true)
-		wind_visual["start_time"] = propagated_now - 400 - 3 * wind_run_duration - 200
+		wind_visual["start_time"] = propagated_now - int($WorldRenderer.call("_hero_spell_trigger_delay", wind_chain_id, 4)) - 3 * wind_run_duration - 200
 		var laser_visual := laser_effect.duplicate(true)
 		laser_visual["x"] = ice_source.x
 		laser_visual["y"] = ice_source.y
-		laser_visual["start_time"] = propagated_now - 300 - 200
+		laser_visual["start_time"] = propagated_now - int($WorldRenderer.call("_hero_spell_trigger_delay", laser_id, 3)) - 200
 		GameState.magic_effects = [wind_visual, laser_visual]
 		GameState.view_x = special_source.x * 48 - 240
 		GameState.view_y = roundi(float(special_source.y + ice_source.y) * 16.0) - 260
@@ -828,7 +862,7 @@ func _ready() -> void:
 		var laser_capture := laser_effect.duplicate(true)
 		laser_capture["x"] = ice_source.x
 		laser_capture["y"] = ice_source.y
-		laser_capture["start_time"] = laser_now - 300 - 200
+		laser_capture["start_time"] = laser_now - int($WorldRenderer.call("_hero_spell_trigger_delay", laser_id, 3)) - 200
 		GameState.magic_effects = [laser_capture]
 		GameState.view_x = ice_source.x * 48 - 240
 		GameState.view_y = ice_source.y * 32 - 260
@@ -900,7 +934,7 @@ func _ready() -> void:
 		hit_visual["aimUID"] = 0
 		hit_visual["aimX"] = special_source.x + 5
 		hit_visual["aimY"] = special_source.y
-		hit_visual["start_time"] = fixed_now - 300 - int($WorldRenderer.call("_magic_frame_duration", hit_run)) - 200
+		hit_visual["start_time"] = fixed_now - hit_trigger - int($WorldRenderer.call("_magic_frame_duration", hit_run)) - 200
 		GameState.attached_magic_effects.clear()
 		GameState.firewalls.clear()
 		GameState.magic_effects = [ice_roar_visual, hit_visual]
@@ -913,12 +947,23 @@ func _ready() -> void:
 	if OS.has_environment("MIR2X_PROJECTILE_SCREENSHOT"):
 		var projectile_now := Time.get_ticks_msec()
 		GameState.creatures[target_uid] = {"uid": target_uid, "x": 413, "y": 120, "type": 1, "monster_id": 1, "direction": 7}
+		var projectile_caster_uid := target_uid + 100
+		GameState.creatures[projectile_caster_uid] = {
+			"uid": projectile_caster_uid, "x": 405, "y": 120, "type": 2, "gender": 1, "desp": {},
+			"direction": 3, "action_type": 9, "action_magic_id": fireball_id,
+			"action_speed": 100, "action_started_ms": projectile_now - projectile_trigger,
+		}
+		GameState.player_action_type = 9
+		GameState.player_action_magic_id = fireball_id
+		GameState.player_action_speed = 100
+		GameState.player_action_started_ms = projectile_now - projectile_trigger
+		GameState.player_direction = 3
 		GameState.attached_magic_effects.clear()
 		GameState.firewalls.clear()
 		GameState.magic_effects = [{
 			"source": "action", "magicID": fireball_id, "uid": GameState.player_uid,
 			"x": 405, "y": 120, "aimX": 413, "aimY": 120, "aimUID": target_uid,
-			"direction": 3, "speed": 100, "start_time": projectile_now - 400,
+			"direction": 3, "speed": 100, "start_time": projectile_now - projectile_trigger,
 		}]
 		GameState.view_x = 409 * 48 - 400
 		GameState.view_y = 120 * 32 - 300

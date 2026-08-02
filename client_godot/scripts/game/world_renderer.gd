@@ -714,7 +714,8 @@ func _resolve_monster_target_attachment(effect: Dictionary, magic_id: int, kind:
 
 func _resolve_projectile_action_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
 	var speed := clampi(effect.get("speed", 100), 20, 500)
-	var trigger_delay := roundi(float(_projectile_trigger_frame(magic_id, kind)) * 100.0 * 100.0 / speed)
+	var trigger_frame := _projectile_trigger_frame(magic_id, kind)
+	var trigger_delay := roundi(float(trigger_frame) * 100.0 * 100.0 / speed) if kind.begins_with("monster_") else _hero_spell_trigger_delay(magic_id, trigger_frame)
 	var resolved := {"special_kind": "follow_projectile", "components": [], "underlays": [], "on_ground": false}
 	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
 	if not startup_meta.is_empty():
@@ -853,8 +854,7 @@ func _action_attachment_policy(magic_id: int) -> String:
 
 
 func _resolve_target_attached_action_magic(effect: Dictionary, magic_id: int, policy: String, elapsed: int) -> Dictionary:
-	var speed := clampi(effect.get("speed", 100), 20, 500)
-	var trigger_delay := roundi(3.0 * 100.0 * 100.0 / speed)
+	var trigger_delay := _hero_spell_trigger_delay(magic_id, 3)
 	var resolved := {"special_kind": "target_attachment", "components": [], "underlays": [], "on_ground": false}
 	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
 	if not startup_meta.is_empty():
@@ -896,8 +896,7 @@ func _fixed_action_magic_kind(magic_id: int) -> String:
 
 
 func _resolve_fixed_action_magic(effect: Dictionary, magic_id: int, kind: String, elapsed: int) -> Dictionary:
-	var speed := clampi(effect.get("speed", 100), 20, 500)
-	var trigger_delay := roundi(3.0 * 100.0 * 100.0 / speed)
+	var trigger_delay := _hero_spell_trigger_delay(magic_id, 3)
 	var resolved := {"special_kind": "fixed_action", "components": [], "underlays": [], "on_ground": false}
 	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
 	if not startup_meta.is_empty():
@@ -944,9 +943,8 @@ func _resolve_special_action_magic(effect: Dictionary, magic_id: int, kind: Stri
 	var run_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
 	if run_meta.is_empty():
 		return {}
-	var speed := clampi(effect.get("speed", 100), 20, 500)
 	var trigger_frame := 4 if kind == "wind_chain" else 3
-	var trigger_delay := roundi(float(trigger_frame) * 100.0 * 100.0 / speed)
+	var trigger_delay := _hero_spell_trigger_delay(magic_id, trigger_frame)
 	var run_elapsed := elapsed - trigger_delay
 	var resolved: Dictionary = {}
 	match kind:
@@ -1614,22 +1612,43 @@ func _hero_spell_motion_state(magic_id: int, started_ms: int, now_ms := -1) -> P
 	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
 	if startup_meta.is_empty():
 		return PackedInt32Array([cast_motion, mini(floori(float(elapsed_ms) / 100.0), body_frame_count - 1), forced_direction])
-	var minimum_effect_frames := 8 if cast_motion == 2 else 10
-	var effect_frame_count := maxi(startup_meta[2], minimum_effect_frames)
-	var effect_speed := clampi(startup_meta[4], 20, 500)
-	var primary_duration_ms := float(effect_frame_count) * 10000.0 / float(effect_speed)
+	var primary_duration_ms := float(maxi(startup_meta[2], 8 if cast_motion == 2 else 10)) * 10000.0 / float(clampi(startup_meta[4], 20, 500))
 	if cast_motion == 2 and float(elapsed_ms) >= primary_duration_ms:
 		var tail_elapsed := minf(float(elapsed_ms) - primary_duration_ms, 599.0)
 		return PackedInt32Array([7, floori(tail_elapsed / 100.0) % 3, 0])
 	var sync_frame_count := 3 if cast_motion == 2 else 1
 	var freeze_frame := body_frame_count - 1 - sync_frame_count
-	var sync_start_ms := maxf(float(freeze_frame + 1) * 100.0, primary_duration_ms - float(sync_frame_count) * 100.0)
+	var sync_start_ms := _hero_spell_sync_start_ms(startup_meta, cast_motion, freeze_frame, sync_frame_count)
 	var body_frame: int
 	if float(elapsed_ms) < sync_start_ms:
 		body_frame = mini(floori(float(elapsed_ms) / 100.0), freeze_frame)
 	else:
 		body_frame = mini(freeze_frame + 1 + floori((float(elapsed_ms) - sync_start_ms) / 100.0), body_frame_count - 1)
 	return PackedInt32Array([cast_motion, body_frame, forced_direction])
+
+
+func _hero_spell_trigger_delay(magic_id: int, trigger_frame: int) -> int:
+	var cast_motion: int = actor_resource.magic_cast_motion(magic_id)
+	var body_frame_count := 3 if cast_motion == 7 else 5
+	var target_frame := clampi(trigger_frame, 0, body_frame_count - 1)
+	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
+	if startup_meta.is_empty():
+		return target_frame * 100
+	var sync_frame_count := 3 if cast_motion == 2 else 1
+	var freeze_frame := body_frame_count - 1 - sync_frame_count
+	if target_frame <= freeze_frame:
+		return target_frame * 100
+	var sync_start_ms := _hero_spell_sync_start_ms(startup_meta, cast_motion, freeze_frame, sync_frame_count)
+	return roundi(sync_start_ms) + (target_frame - freeze_frame - 1) * 100
+
+
+func _hero_spell_sync_start_ms(startup_meta: PackedInt32Array, cast_motion: int, freeze_frame: int, sync_frame_count: int) -> float:
+	var effect_frame_count := maxi(startup_meta[2], 8 if cast_motion == 2 else 10)
+	var effect_speed := clampi(startup_meta[4], 20, 500)
+	var effect_sync_frame_count := roundi(float(effect_speed * sync_frame_count) / 100.0)
+	var release_effect_frame := effect_frame_count - 1 - effect_sync_frame_count
+	var release_tick := maxi(0, ceili((float(release_effect_frame) - 0.5) * 100.0 / float(effect_speed)))
+	return float(maxi((freeze_frame + 1) * 100, release_tick * 100))
 
 
 func _hero_double_handed(desp: Dictionary) -> bool:
