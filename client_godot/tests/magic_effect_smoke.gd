@@ -58,6 +58,8 @@ func _ready() -> void:
 	var zuma_firewall_id: int = resources.magic_id("祖玛教主_火墙")
 	var zuma_hellfire_id: int = resources.magic_id("祖玛教主_地狱火")
 	var zuma_fragment_id: int = resources.magic_id("祖玛教主_石像碎片")
+	var monk_spawn_ground_id: int = resources.magic_id("僧侣僵尸_地洞")
+	var stone_spawn_ground_id: int = resources.magic_id("沙漠石人_石坑")
 	var dual_axe_id: int = resources.magic_id("掷斧骷髅_掷斧")
 	var space_move_id: int = resources.magic_id("瞬息移动")
 	var monster_death_magic_id := 0
@@ -83,7 +85,7 @@ func _ready() -> void:
 		fixed_projectile_ids[2], resources.magic_id("幽灵盾"), resources.magic_id("神圣战甲术"), resources.magic_id("强魔震法"),
 		resources.magic_id("猛虎强势"), resources.magic_id("集体隐身术"),
 	]
-	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or fixed_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or target_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_projectile_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_motion_attacks.has(0) or shipwreck_blade_id == 0 or zuma_firewall_id == 0 or zuma_hellfire_id == 0 or zuma_fragment_id == 0 or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
+	if fireball_id == 0 or thunder_id == 0 or firewall_id == 0 or shield_id == 0 or ring_id == 0 or hellfire_id == 0 or ice_thrust_id == 0 or fire_ash_id == 0 or ice_thorn_id == 0 or wind_chain_id == 0 or laser_id == 0 or flame_sword_id == 0 or fixed_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or target_monster_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_projectile_attacks.any(func(entry: Dictionary) -> bool: return entry.id == 0) or monster_motion_attacks.has(0) or shipwreck_blade_id == 0 or zuma_firewall_id == 0 or zuma_hellfire_id == 0 or zuma_fragment_id == 0 or monk_spawn_ground_id == 0 or stone_spawn_ground_id == 0 or dual_axe_id == 0 or space_move_id == 0 or monster_death_magic_id == 0 or target_attachment_ids.has(0) or fixed_action_ids.has(0) or projectile_ids.has(0):
 		_fail("magic name metadata incomplete")
 		return
 	for magic_id in target_attachment_ids:
@@ -455,6 +457,15 @@ func _ready() -> void:
 	if fragment_future.is_empty() or not fragment_future.get("components", []).is_empty() or fragment_hold.get("components", []).size() != 1 or not is_equal_approx(fragment_hold.components[0].alpha_mod, 1.0) or not is_equal_approx(fragment_fade.components[0].alpha_mod, 0.5) or not fragment_done.is_empty():
 		_fail("ZumaTaurus fragment hold/fade lifecycle mismatch: future=%s hold=%s fade=%s done=%s" % [fragment_future, fragment_hold, fragment_fade, fragment_done])
 		return
+	for spawn_ground_id in [monk_spawn_ground_id, stone_spawn_ground_id]:
+		var spawn_ground_effect := {"source": "monster_spawn_ground", "magicID": spawn_ground_id, "x": special_source.x, "y": special_source.y, "direction": 4, "start_time": now}
+		var spawn_future: Dictionary = $WorldRenderer.call("_resolve_magic_effect", spawn_ground_effect, now - 1)
+		var spawn_first: Dictionary = $WorldRenderer.call("_resolve_magic_effect", spawn_ground_effect, now)
+		var spawn_fade: Dictionary = $WorldRenderer.call("_resolve_magic_effect", spawn_ground_effect, now + 6500)
+		var spawn_done: Dictionary = $WorldRenderer.call("_resolve_magic_effect", spawn_ground_effect, now + 8000)
+		if spawn_future.is_empty() or not spawn_future.get("components", []).is_empty() or spawn_first.get("components", []).size() != 1 or spawn_first.components[0].frame != 0 or spawn_first.components[0].direction != 3 or not is_equal_approx(spawn_fade.components[0].alpha_mod, 0.5) or not spawn_done.is_empty():
+			_fail("monster spawn remnant lifecycle mismatch: id=%d future=%s first=%s fade=%s done=%s" % [spawn_ground_id, spawn_future, spawn_first, spawn_fade, spawn_done])
+			return
 
 	for fixed_monster_entry in fixed_monster_attacks:
 		var fixed_monster_id: int = fixed_monster_entry.id
@@ -1075,6 +1086,55 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_ZUMA_MAGIC_SCREENSHOT"))
+	if OS.has_environment("MIR2X_MONSTER_SPAWN_SCREENSHOT"):
+		if not $WorldRenderer.load_map(6):
+			_fail("monster-spawn visual map failed to load")
+			return
+		var spawn_source := _find_open_wave_source($WorldRenderer, 8, $WorldRenderer.map_height - 8)
+		if spawn_source.x < 0:
+			_fail("no open monster-spawn visual fixture")
+			return
+		var spawn_visuals: Array[Dictionary] = []
+		for monster_id_value in resources.monster_meta:
+			var spawn_magic_id: int = resources.monster_spawn_effect_magic_id(int(monster_id_value))
+			if spawn_magic_id > 0:
+				spawn_visuals.append({"monster_id": int(monster_id_value), "magic_id": spawn_magic_id})
+		if spawn_visuals.size() != 2:
+			_fail("monster-spawn visual metadata mismatch: %s" % spawn_visuals)
+			return
+		var spawn_now := Time.get_ticks_msec()
+		GameState.creatures.clear()
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.magic_effects.clear()
+		for spawn_index in range(spawn_visuals.size()):
+			var spawn_visual: Dictionary = spawn_visuals[spawn_index]
+			var spawn_grid := spawn_source + Vector2i(spawn_index * 4 - 2, 0)
+			var spawn_uid: int = (int(spawn_visual.monster_id) << 35) | (890 + spawn_index)
+			GameState.creatures[spawn_uid] = {
+				"uid": spawn_uid, "x": spawn_grid.x, "y": spawn_grid.y,
+				"type": 1, "monster_id": spawn_visual.monster_id, "direction": 3 + spawn_index * 2,
+				"action_type": 1, "action_speed": 100, "action_started_ms": spawn_now - 900,
+			}
+			GameState.magic_effects.append({
+				"source": "monster_spawn_ground", "magicID": spawn_visual.magic_id,
+				"uid": spawn_uid, "x": spawn_grid.x, "y": spawn_grid.y,
+				"direction": 3 + spawn_index * 2, "start_time": spawn_now - 100,
+			})
+		GameState.view_x = spawn_source.x * 48 - 400
+		GameState.view_y = spawn_source.y * 32 - 400
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_SPAWN_SCREENSHOT"))
+		if OS.has_environment("MIR2X_MONSTER_SPAWN_BASELINE_SCREENSHOT"):
+			GameState.magic_effects.clear()
+			$WorldRenderer.queue_redraw()
+			await get_tree().process_frame
+			await get_tree().process_frame
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_SPAWN_BASELINE_SCREENSHOT"))
 	if OS.has_environment("MIR2X_SPACE_MOVE_SCREENSHOT"):
 		if not $WorldRenderer.load_map(6):
 			_fail("space-move visual map failed to load")

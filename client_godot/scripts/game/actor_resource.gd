@@ -103,6 +103,11 @@ func monster_transform_effect_magic_id(monster_id: int) -> int:
 	return meta[21] if meta.size() >= 22 else 0
 
 
+func monster_spawn_effect_magic_id(monster_id: int) -> int:
+	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
+	return meta[22] if meta.size() >= 23 else 0
+
+
 func monster_transform(monster_id: int) -> Dictionary:
 	var meta: PackedInt32Array = monster_meta.get(monster_id, PackedInt32Array())
 	if meta.size() < 19 or meta[14] <= 0:
@@ -255,7 +260,7 @@ func _load_monster_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2, 3, 4, 5, 6, 7, 8]:
+	if version not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -280,6 +285,8 @@ func _load_monster_meta() -> void:
 		if version >= 7:
 			meta.append(file.get_32())
 		if version >= 8:
+			meta.append(file.get_32())
+		if version >= 9:
 			meta.append(file.get_32())
 		monster_meta[monster_id] = meta
 

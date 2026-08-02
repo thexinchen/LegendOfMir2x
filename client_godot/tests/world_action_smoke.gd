@@ -1373,10 +1373,33 @@ func _test_monster_spawn_actions(main: Control, resources: RefCounted) -> bool:
 	if renderer.call("_monster_motion", special.get("action_type", 0)) != PackedInt32Array([8, 10]):
 		_fail("special monster spawn did not select MOTION_MON_SPAWN graphics")
 		return false
+	GameState.magic_effects.clear()
+	var ground_spawn_ids: Array[int] = []
+	for monster_id_value in resources.monster_meta:
+		if resources.monster_spawn_effect_magic_id(int(monster_id_value)) > 0:
+			ground_spawn_ids.append(int(monster_id_value))
+	if ground_spawn_ids.size() != 2:
+		_fail("monster ground-spawn metadata unavailable: %s" % ground_spawn_ids)
+		return false
+	for index in range(ground_spawn_ids.size()):
+		var ground_id: int = ground_spawn_ids[index]
+		var ground_uid: int = (4 << 59) | (ground_id << 35) | (710 + index)
+		var ground_union := PackedByteArray()
+		ground_union.resize(4)
+		ground_union.encode_u32(0, ground_id)
+		main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(ground_uid, 202, {
+			"type": 1, "speed": 100, "direction": 3 + index, "x": 36 + index * 2, "y": 37,
+		}, ground_union))
+		var ground_creature: Dictionary = GameState.get_creature(ground_uid)
+		var ground_effect: Dictionary = GameState.magic_effects.back() if not GameState.magic_effects.is_empty() else {}
+		if ground_creature.get("action_type", 0) != 1 or ground_creature.has("monster_stand_look") or ground_effect.get("source", "") != "monster_spawn_ground" or ground_effect.get("magicID", 0) != resources.monster_spawn_effect_magic_id(ground_id) or ground_effect.get("direction", 0) != 3 + index or ground_effect.get("start_time", 0) != ground_creature.action_started_ms + 900:
+			_fail("monster ground spawn action/effect mismatch: monster=%s effect=%s" % [ground_creature, ground_effect])
+			return false
+		GameState.remove_creature(ground_uid)
 	var ordinary_id := 0
 	for monster_id_value in resources.monster_meta:
 		var candidate_id: int = monster_id_value
-		if resources.monster_spawn_look(candidate_id) == 0:
+		if resources.monster_spawn_look(candidate_id) == 0 and resources.monster_spawn_effect_magic_id(candidate_id) == 0:
 			ordinary_id = candidate_id
 			break
 	if ordinary_id == 0:
@@ -1402,6 +1425,7 @@ func _test_monster_spawn_actions(main: Control, resources: RefCounted) -> bool:
 		return false
 	GameState.remove_creature(special_uid)
 	GameState.remove_creature(ordinary_uid)
+	GameState.magic_effects.clear()
 	return true
 
 

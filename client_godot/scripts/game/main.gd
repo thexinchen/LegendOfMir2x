@@ -1080,6 +1080,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 		game_state.update_creature(uid, creature)
 		if creature_type == 1 and stored_action_type == 13:
 			_queue_monster_death_effect(uid, creature)
+		if creature_type == 1 and stored_action_type == 1:
+			_queue_monster_spawn_effect(uid, creature)
 		if creature_type == 1 and stored_action_type == 10:
 			_queue_monster_transform_effect(uid, creature)
 		if not continued_monster_action:
@@ -1161,9 +1163,9 @@ func _creature_stored_action_type(action_type: int, creature_type: int, monster_
 		return action_type
 	if action_type == 4:
 		return 2
-	# Generic monsters are born standing. ClientTaoDog is the sole constructor
-	# that redirects its initial spawn to a real ten-frame spawn sequence.
-	if action_type == 1 and _resources.monster_spawn_look(monster_id) == 0:
+	# Most monsters are born standing. TaoDog redirects its look, while monk
+	# zombies and sand stone men keep their look and play the real spawn motion.
+	if action_type == 1 and _resources.monster_spawn_look(monster_id) == 0 and _resources.monster_spawn_effect_magic_id(monster_id) == 0:
 		return 2
 	return action_type
 
@@ -1429,6 +1431,8 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 	var stored_action_type: int = creature.get("action_type", action_type)
 	if c_type == 1 and stored_action_type == 13:
 		_queue_monster_death_effect(uid, creature)
+	if c_type == 1 and stored_action_type == 1:
+		_queue_monster_spawn_effect(uid, creature)
 	if c_type == 1 and stored_action_type == 10:
 		_queue_monster_transform_effect(uid, creature)
 	var duration := _creature_action_duration(stored_action_type, action.get("speed", 100), creature, action.get("magicID", 0))
@@ -1474,6 +1478,29 @@ func _queue_monster_transform_effect(uid: int, creature: Dictionary) -> void:
 		"x": creature.get("x", 0),
 		"y": creature.get("y", 0),
 		"source": "monster_transform",
+		"start_time": started_ms + roundi(9.0 * 100.0 * 100.0 / speed),
+		"action_started_ms": started_ms,
+	})
+	game_state.state_changed.emit()
+
+
+func _queue_monster_spawn_effect(uid: int, creature: Dictionary) -> void:
+	var magic_id: int = _resources.monster_spawn_effect_magic_id(creature.get("monster_id", 0))
+	if magic_id <= 0:
+		return
+	var started_ms: int = creature.get("action_started_ms", Time.get_ticks_msec())
+	for effect_value in game_state.magic_effects:
+		var effect: Dictionary = effect_value
+		if effect.get("source", "") == "monster_spawn_ground" and effect.get("uid", 0) == uid and effect.get("action_started_ms", -1) == started_ms:
+			return
+	var speed := clampi(creature.get("action_speed", 100), 20, 500)
+	game_state.magic_effects.append({
+		"magicID": magic_id,
+		"uid": uid,
+		"x": creature.get("x", 0),
+		"y": creature.get("y", 0),
+		"direction": creature.get("direction", 1),
+		"source": "monster_spawn_ground",
 		"start_time": started_ms + roundi(9.0 * 100.0 * 100.0 / speed),
 		"action_started_ms": started_ms,
 	})

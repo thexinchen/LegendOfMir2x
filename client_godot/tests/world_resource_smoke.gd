@@ -105,6 +105,19 @@ func _ready() -> void:
 	if transform_effect_magic_count != 1:
 		_fail("monster meta v8 transform effect count mismatch: %d" % transform_effect_magic_count)
 		return
+	var spawn_effect_names: Array[String] = []
+	for monster_id_value in actors.monster_meta:
+		var spawn_effect_magic_id: int = actors.monster_spawn_effect_magic_id(int(monster_id_value))
+		if spawn_effect_magic_id > 0:
+			spawn_effect_names.append(actors.magic_names.get(spawn_effect_magic_id, ""))
+			var spawn_meta: PackedInt32Array = actors.magic_layout(spawn_effect_magic_id, 2)
+			if spawn_meta.is_empty() or spawn_meta[2] != 1 or spawn_meta[6] <= 1:
+				_fail("monster meta v9 references invalid directional spawn remnant: monster=%d magic=%d meta=%s" % [monster_id_value, spawn_effect_magic_id, spawn_meta])
+				return
+	spawn_effect_names.sort()
+	if spawn_effect_names != ["僧侣僵尸_地洞", "沙漠石人_石坑"]:
+		_fail("monster meta v9 special ground effects mismatch: %s" % spawn_effect_names)
+		return
 	var fade_monster_count := 0
 	var persistent_corpse_count := 0
 	for monster_id_value in actors.monster_meta:

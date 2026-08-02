@@ -465,6 +465,8 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 		return {}
 	if effect.get("source", "") == "monster_transform":
 		return _resolve_monster_transform_effect(effect, magic_id, now - int(effect.get("start_time", now)))
+	if effect.get("source", "") == "monster_spawn_ground":
+		return _resolve_monster_spawn_ground_effect(effect, magic_id, now - int(effect.get("start_time", now)))
 	if effect.get("source", "") == "space_move":
 		return _resolve_space_move_magic(effect, magic_id, maxi(0, now - int(effect.get("start_time", now))))
 	var monster_attack_kind := _monster_attack_magic_kind(magic_id)
@@ -647,6 +649,26 @@ func _resolve_monster_transform_effect(effect: Dictionary, magic_id: int, elapse
 		alpha = 1.0 - float(elapsed - MONSTER_FRAGMENT_HOLD_MS) / MONSTER_FRAGMENT_FADE_MS
 	var position := Vector2(effect.get("x", 0), effect.get("y", 0))
 	resolved.components.append(_resolved_component(meta, 0, 0, position, alpha))
+	return resolved
+
+
+func _resolve_monster_spawn_ground_effect(effect: Dictionary, magic_id: int, elapsed: int) -> Dictionary:
+	var resolved := {"special_kind": "monster_spawn_ground", "components": [], "underlays": [], "on_ground": true}
+	if elapsed < 0:
+		return resolved
+	var total_duration := MONSTER_FRAGMENT_HOLD_MS + MONSTER_FRAGMENT_FADE_MS
+	if elapsed >= total_duration:
+		return {}
+	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	if meta.is_empty():
+		return {}
+	var alpha := 1.0
+	if elapsed >= MONSTER_FRAGMENT_HOLD_MS:
+		alpha = 1.0 - float(elapsed - MONSTER_FRAGMENT_HOLD_MS) / MONSTER_FRAGMENT_FADE_MS
+	var position := Vector2(effect.get("x", 0), effect.get("y", 0))
+	var direction := clampi(effect.get("direction", 1), 1, 8) - 1 if meta[6] > 1 else 0
+	_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_RUN, position)
+	resolved.components.append(_resolved_component(meta, 0, direction, position, alpha))
 	return resolved
 
 
