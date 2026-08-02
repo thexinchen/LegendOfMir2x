@@ -22,11 +22,11 @@ close_button_path = NodePath("CloseButton")
 ui_click_button_paths = Array[NodePath]([NodePath("UpButton"), NodePath("DownButton"), NodePath("HideButton"), NodePath("ShowButton"), NodePath("CloseButton")])
 overlay_button_paths = Array[NodePath]([NodePath("UpButton"), NodePath("DownButton"), NodePath("HideButton"), NodePath("ShowButton"), NodePath("CloseButton")])
 
-[node name="Background" type="TextureRect" parent="."]
+[node name="GrayBacking" type="ColorRect" parent="."]
 offset_right = 257.0
 offset_bottom = 322.0
 mouse_filter = 2
-texture = ExtResource("2")
+color = Color(0.501961, 0.501961, 0.501961, 1)
 
 [node name="HorseViewport" type="ColorRect" parent="."]
 offset_left = 15.0
@@ -35,6 +35,12 @@ offset_right = 242.0
 offset_bottom = 227.0
 mouse_filter = 2
 color = Color(0, 0, 0, 1)
+
+[node name="Background" type="TextureRect" parent="."]
+offset_right = 257.0
+offset_bottom = 322.0
+mouse_filter = 2
+texture = ExtResource("2")
 
 [node name="UpButton" type="TextureButton" parent="."]
 offset_left = 20.0

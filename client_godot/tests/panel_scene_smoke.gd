@@ -35,6 +35,9 @@ func _ready() -> void:
 			panel.free()
 			_fail("no texture found in %s" % scene_path)
 			return
+		if scene_path.ends_with("/horse.tscn") and not _check_horse_layers(panel):
+			panel.free()
+			return
 		panel.free()
 		print("PANEL PASS: ", scene_path)
 	print("ALL PANEL SCENES PASS: ", PANEL_SCENES.size())
@@ -52,6 +55,19 @@ func _texture_count(node: Node) -> int:
 	for child in node.get_children():
 		count += _texture_count(child)
 	return count
+
+
+func _check_horse_layers(panel: Node) -> bool:
+	var backing := panel.get_node_or_null("GrayBacking") as ColorRect
+	var viewport := panel.get_node_or_null("HorseViewport") as ColorRect
+	var background := panel.get_node_or_null("Background") as TextureRect
+	if backing == null or backing.position != Vector2.ZERO or backing.size != Vector2(257, 322) or not backing.color.is_equal_approx(Color8(128, 128, 128)):
+		_fail("horse panel does not preserve the C++ opaque gray backing: node=%s position=%s size=%s color=%s" % [backing, backing.position if backing else Vector2.INF, backing.size if backing else Vector2.INF, backing.color if backing else Color.TRANSPARENT])
+		return false
+	if viewport == null or background == null or not (backing.get_index() < viewport.get_index() and viewport.get_index() < background.get_index()):
+		_fail("horse panel draw order is not gray backing -> black viewport -> original texture")
+		return false
+	return true
 
 
 func _fail(message: String) -> void:
