@@ -124,6 +124,37 @@ func _ready() -> void:
 	if AudioService.last_seff_id != AudioService.UI_CLICK_SEFF_ID:
 		_fail("inventory texture button did not play original click SEFF")
 		return
+	if int(panel.get("_repack_index")) != 1:
+		_fail("inventory sort did not advance the original repack sequence")
+		return
+	var weapon_size: Vector2i = panel.call("_item_grid_size", weapon_id)
+	var base_sort_key: Array = [weapon_size.x * weapon_size.y, weapon_id, resources.item_type(weapon_id)]
+	for method in range(6):
+		var expected_key := base_sort_key.duplicate()
+		var swap_index := method % expected_key.size()
+		var first: Variant = expected_key[0]
+		expected_key[0] = expected_key[swap_index]
+		expected_key[swap_index] = first
+		if panel.call("_repack_sort_key", weapon, method) != expected_key:
+			_fail("inventory repack key rotation mismatch at method %d" % method)
+			return
+	var inventory_before_sort: Dictionary = {}
+	for item: Dictionary in GameState.inventory:
+		inventory_before_sort["%d:%d" % [item.itemID, item.seqID]] = item.count
+	var repack_signatures: Dictionary = {_bin_signature(panel.get("_bins")): true}
+	for _method in range(1, 6):
+		panel.call("_repack")
+		repack_signatures[_bin_signature(panel.get("_bins"))] = true
+	if int(panel.get("_repack_index")) != 6 or repack_signatures.size() < 2:
+		_fail("inventory repeated sort did not cycle through original layouts")
+		return
+	if not GameState.grabbed_item.is_empty() or GameState.inventory.size() != inventory_before_sort.size():
+		_fail("inventory sort mutated authoritative item ownership")
+		return
+	for item: Dictionary in GameState.inventory:
+		if inventory_before_sort.get("%d:%d" % [item.itemID, item.seqID], -1) != item.count:
+			_fail("inventory sort changed item identity or count")
+			return
 	panel.call("_sync_bins")
 	var bins: Dictionary = panel.get("_bins")
 	if bins.size() != 2:
@@ -195,6 +226,15 @@ func _ready() -> void:
 		return
 	print("INVENTORY INTERACTION PASS: types=%d potion=%d weapon=%d bins=%d" % [resources.item_types.size(), potion_id, weapon_id, bins.size()])
 	get_tree().quit()
+
+
+func _bin_signature(bins: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	for key: String in bins:
+		var bin: Dictionary = bins[key]
+		parts.append("%s@%d,%d" % [key, int(bin.x), int(bin.y)])
+	parts.sort()
+	return "|".join(parts)
 
 
 func _test_start_inv_op_reader() -> bool:

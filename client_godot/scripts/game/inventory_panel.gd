@@ -40,6 +40,7 @@ var _slider_dragging := false
 var _emblem_time := 0.0
 var _emblem_frame := -1
 var _tooltip_key := ""
+var _repack_index := 0
 
 
 func _ready() -> void:
@@ -381,11 +382,41 @@ func _close_operation() -> void:
 
 
 func _repack() -> void:
+	var pack_method := _repack_index
+	_repack_index += 1
+	var items: Array = _state.inventory.duplicate()
+	items.sort_custom(func(left: Dictionary, right: Dictionary) -> bool:
+		return _repack_item_before(left, right, pack_method)
+	)
 	_bins.clear()
-	_sync_bins()
+	for item: Dictionary in items:
+		var size := _item_grid_size(int(item.get("itemID", 0)))
+		var position := _find_free_position(size.x, size.y)
+		_bins[_item_key(item)] = {"x": position.x, "y": position.y, "w": size.x, "h": size.y, "item": item}
 	_scroll_row = 0
 	_scroll_value = 0.0
 	_refresh()
+
+
+func _repack_item_before(left: Dictionary, right: Dictionary, pack_method: int) -> bool:
+	var left_key := _repack_sort_key(left, pack_method)
+	var right_key := _repack_sort_key(right, pack_method)
+	for index in range(left_key.size()):
+		if left_key[index] == right_key[index]:
+			continue
+		return left_key[index] > right_key[index] if pack_method % 2 else left_key[index] < right_key[index]
+	return false
+
+
+func _repack_sort_key(item: Dictionary, pack_method: int) -> Array:
+	var item_id := int(item.get("itemID", 0))
+	var size := _item_grid_size(item_id)
+	var key: Array = [size.x * size.y, item_id, _resources.item_type(item_id)]
+	var swap_index := absi(pack_method) % key.size()
+	var first: Variant = key[0]
+	key[0] = key[swap_index]
+	key[swap_index] = first
+	return key
 
 
 func _max_scroll_row() -> int:
