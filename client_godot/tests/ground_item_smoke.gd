@@ -62,6 +62,21 @@ func _ready() -> void:
 	if not $WorldRenderer.load_map(24):
 		_fail("map 24 failed to load")
 		return
+	var item_name: String = resources.item_name(ground_item_id)
+	var item_center := Vector2(472, 316)
+	var name_layout: Dictionary = $WorldRenderer.call("_ground_item_name_layout", item_name, item_center)
+	var name_font := name_layout.get("font") as Font
+	var name_size: Vector2i = name_layout.get("raster_size", Vector2i.ZERO)
+	var name_top_left: Vector2i = name_layout.get("top_left", Vector2i.ZERO)
+	if name_font == null or not name_font.resource_path.ends_with("0A_WenQuanYi_Bitmap_Song_15_px.ttf") or name_layout.get("font_size", 0) != 15:
+		_fail("ground item name did not use original font-11 replacement")
+		return
+	if name_top_left.x != roundi(item_center.x) - name_size.x / 2 or name_top_left.y != roundi(item_center.y) - name_size.y / 2 - 20:
+		_fail("ground item name texture was not centered at the original offset")
+		return
+	if not is_equal_approx(float(name_layout.baseline.y), float(name_top_left.y) + name_font.get_ascent(15)):
+		_fail("ground item name baseline did not preserve measured top-left placement")
+		return
 	$WorldRenderer.set("_ground_item_star_ratio", 0.5)
 	if not $WorldRenderer.call("_is_dead_actor", GameState.creatures[9001]):
 		_fail("dead monster did not enter the pre-item draw pass")
@@ -78,6 +93,16 @@ func _ready() -> void:
 	$WorldRenderer.queue_redraw()
 	await get_tree().process_frame
 	if OS.has_environment("MIR2X_GROUND_ITEM_SCREENSHOT"):
+		$WorldRenderer.set_process(false)
+		$WorldRenderer.set("_ground_item_star_ratio", 1.05)
+		var screenshot_center := Vector2(520, 316)
+		GameState.ground_items = {"407,120": [ground_item_id]}
+		Input.warp_mouse(screenshot_center)
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		if not is_equal_approx(float($WorldRenderer.get("_ground_item_star_ratio")), 1.05):
+			_fail("screenshot fixture did not freeze the ground-item star")
+			return
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_GROUND_ITEM_SCREENSHOT"))
 	print("GROUND ITEM PASS: id=%d name=%s death pre-pass, original sprite and rotating notification star" % [ground_item_id, resources.item_name(ground_item_id)])

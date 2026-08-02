@@ -12,6 +12,7 @@ const OBJMAXW := 3
 const OBJMAXH := 25
 const WorldResourceScript = preload("res://scripts/game/world_resource.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const GROUND_ITEM_NAME_FONT: Font = preload("res://assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf")
 const ANIMATION_DELAYS := [150, 200, 250, 300, 350, 400, 420, 450]
 const MAGIC_STAGE_SPELL := 1
 const MAGIC_STAGE_RUN := 2
@@ -23,6 +24,8 @@ const MAGIC_TYPE_FOLLOW := 3
 const GROUND_ITEM_STAR_GFX_ID := 0x00000090
 const GROUND_ITEM_STAR_CYCLE := 2.50
 const GROUND_ITEM_STAR_STEP := 0.05
+const GROUND_ITEM_NAME_FONT_SIZE := 15
+const GROUND_ITEM_NAME_OFFSET_Y := 20
 const DEAD_ACTION := 13
 const DEAD_FRAME_COUNT := 10
 const DEAD_FADE_STEP := 10
@@ -206,7 +209,6 @@ func _draw_object_depth(depth: int, x0: int, y0: int, x1: int, y1: int, view_x: 
 
 func _draw_ground_items(x0: int, y0: int, x1: int, y1: int, view_x: int, view_y: int) -> void:
 	var mouse_grid := grid_from_screen(roundi(get_local_mouse_position().x), roundi(get_local_mouse_position().y))
-	var font := get_theme_default_font()
 	for grid_key in game_state.ground_items:
 		var parts: PackedStringArray = grid_key.split(",")
 		if parts.size() != 2:
@@ -228,18 +230,34 @@ func _draw_ground_items(x0: int, y0: int, x1: int, y1: int, view_x: int, view_y:
 			)
 			draw_texture(texture, position + Vector2(1, -1), Color(0, 0, 0, 0.5))
 			draw_texture(texture, position, Color(1.35, 1.35, 1.35, 1) if mouse_over else Color.WHITE)
-			if mouse_over and font:
+			if mouse_over:
 				var item_name: String = actor_resource.item_name(item_id)
-				var text_size := font.get_string_size(item_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
-				font.draw_string(
+				var name_layout := _ground_item_name_layout(item_name, Vector2(gx * GRID_XP - view_x + GRID_XP / 2, gy * GRID_YP - view_y + GRID_YP / 2))
+				GROUND_ITEM_NAME_FONT.draw_string(
 					get_canvas_item(),
-					Vector2(gx * GRID_XP - view_x + (GRID_XP - text_size.x) * 0.5, gy * GRID_YP - view_y - 4),
+					name_layout.baseline,
 					item_name,
 					HORIZONTAL_ALIGNMENT_LEFT,
 					-1,
-					15,
+					GROUND_ITEM_NAME_FONT_SIZE,
 					Color.YELLOW,
 				)
+
+
+func _ground_item_name_layout(item_name: String, grid_center: Vector2) -> Dictionary:
+	var text_size := GROUND_ITEM_NAME_FONT.get_string_size(item_name, HORIZONTAL_ALIGNMENT_LEFT, -1, GROUND_ITEM_NAME_FONT_SIZE)
+	var raster_size := Vector2i(ceili(text_size.x), ceili(text_size.y))
+	var top_left := Vector2i(
+		roundi(grid_center.x) - raster_size.x / 2,
+		roundi(grid_center.y) - raster_size.y / 2 - GROUND_ITEM_NAME_OFFSET_Y,
+	)
+	return {
+		"font": GROUND_ITEM_NAME_FONT,
+		"font_size": GROUND_ITEM_NAME_FONT_SIZE,
+		"raster_size": raster_size,
+		"top_left": top_left,
+		"baseline": Vector2(top_left.x, top_left.y + GROUND_ITEM_NAME_FONT.get_ascent(GROUND_ITEM_NAME_FONT_SIZE)),
+	}
 
 
 func _draw_dead_actors(view_x: int, view_y: int, now: int) -> void:
