@@ -1151,7 +1151,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 		var hit_transform: Dictionary = _resources.monster_transform(creature.get("monster_id", 0))
 		var hit_needs_reveal: bool = not hit_transform.is_empty() and bool(hit_transform.get("reveal_on_hit", false)) and not bool(creature.get("monster_stand_mode", false))
 		if creature.get("action_type", 0) != 10 and not hit_needs_reveal:
-			_start_monster_hitted_action(uid, action, creature)
+			_start_monster_motion_action(uid, action, creature)
 			return
 	if action_type == 7:
 		direction = _attack_direction(uid, action)
@@ -1170,6 +1170,12 @@ func _handle_action(payload: PackedByteArray) -> void:
 		var mine_from_x: int = game_state.player_x if uid == game_state.player_uid else creature.get("x", x)
 		var mine_from_y: int = game_state.player_y if uid == game_state.player_uid else creature.get("y", y)
 		direction = _direction_to(mine_from_x, mine_from_y, x, y)
+	if not creature.is_empty() and creature.get("type", _creature_type_from_uid(uid)) == 1 and action_type in [2, 3, 7]:
+		if _resources.monster_transform(creature.get("monster_id", 0)).is_empty():
+			var queued_monster_action := action.duplicate(true)
+			queued_monster_action["direction"] = direction
+			_start_monster_motion_action(uid, queued_monster_action, creature)
+			return
 	if action_type == 6:
 		var space_magic_id: int = _resources.magic_id("瞬息移动")
 		if space_magic_id > 0:
@@ -1183,10 +1189,6 @@ func _handle_action(payload: PackedByteArray) -> void:
 			effect["uid"] = uid
 			effect["direction"] = direction
 			game_state.add_magic_effect(effect, "action")
-	if action_type == 7 and world_renderer.supports_monster_attack_magic(action.get("magicID", 0)):
-		var attack_effect := action.duplicate(true)
-		attack_effect["uid"] = uid
-		game_state.add_magic_effect(attack_effect, "monster_attack")
 	if action_type == 11 and (uid == game_state.player_uid or creature.get("type", _creature_type_from_uid(uid)) != 1):
 		game_state.trigger_shield_hit(uid)
 	
@@ -1267,6 +1269,10 @@ func _handle_action(payload: PackedByteArray) -> void:
 		elif creature_type == 3:
 			_configure_npc_motion(creature, action_type, action)
 		game_state.update_creature(uid, creature)
+		if action_type == 7 and stored_action_type != 10 and world_renderer.supports_monster_attack_magic(action.get("magicID", 0)):
+			var attack_effect := action.duplicate(true)
+			attack_effect["uid"] = uid
+			game_state.add_magic_effect(attack_effect, "monster_attack")
 		if creature_type == 1 and stored_action_type == 13:
 			_queue_monster_death_effect(uid, creature)
 		if creature_type == 1 and stored_action_type == 1:
@@ -1540,13 +1546,13 @@ func _start_creature_death_action(uid: int, action: Dictionary, creature: Dictio
 	_advance_creature_forced_action(uid)
 
 
-func _start_monster_hitted_action(uid: int, action: Dictionary, creature: Dictionary) -> void:
+func _start_monster_motion_action(uid: int, action: Dictionary, creature: Dictionary) -> void:
 	var start := Vector2i(creature.get("x", action.get("x", 0)), creature.get("y", action.get("y", 0)))
 	var target := Vector2i(action.get("x", start.x), action.get("y", start.y))
 	var queue: Array[Dictionary] = _forced_correction_steps(start, target, 1)
 	if start != target and queue.is_empty():
 		return
-	queue.append({"kind": "hitted", "action": action.duplicate(true)})
+	queue.append({"kind": "action", "action": action.duplicate(true)})
 	creature["motion_action_queue"] = queue
 	game_state.update_creature(uid, creature)
 	_advance_monster_motion_action(uid)
@@ -1577,18 +1583,33 @@ func _advance_monster_motion_action(uid: int) -> void:
 		_schedule_creature_idle(uid, 3, creature.action_started_ms, _creature_action_duration(3, FORCED_MOVE_SPEED, creature))
 		return
 	var action: Dictionary = queued.get("action", {})
-	creature["action_from_x"] = creature.get("x", 0)
-	creature["action_from_y"] = creature.get("y", 0)
+	var action_type: int = action.get("type", 2)
+	var action_x: int = action.get("x", creature.get("x", 0))
+	var action_y: int = action.get("y", creature.get("y", 0))
+	creature["action_from_x"] = action_x
+	creature["action_from_y"] = action_y
+	if _action_uses_aim_position(action_type):
+		creature["x"] = action.get("aimX", action_x)
+		creature["y"] = action.get("aimY", action_y)
+	else:
+		creature["x"] = action_x
+		creature["y"] = action_y
 	creature["direction"] = action.get("direction", creature.get("direction", 1))
-	creature["action_type"] = 11
+	creature["action_type"] = _creature_stored_action_type(action_type, 1, creature.get("monster_id", 0))
 	creature["action_speed"] = action.get("speed", 100)
-	creature["action_step"] = 0
+	creature["action_magic_id"] = action.get("magicID", 0)
+	creature["action_step"] = _grid_distance(Vector2i(action_x, action_y), Vector2i(creature.x, creature.y)) if action_type in [3, 5] else 0
 	game_state.update_creature(uid, creature)
-	game_state.trigger_shield_hit(uid)
+	if action_type == 11:
+		game_state.trigger_shield_hit(uid)
+	if action_type == 7 and world_renderer.supports_monster_attack_magic(action.get("magicID", 0)):
+		var attack_effect := action.duplicate(true)
+		attack_effect["uid"] = uid
+		game_state.add_magic_effect(attack_effect, "monster_attack")
 	_play_action_seff(uid, action, creature)
-	var duration := _creature_action_duration(11, creature.action_speed, creature)
+	var duration := _creature_action_duration(creature.action_type, creature.action_speed, creature, creature.action_magic_id)
 	if duration > 0.0:
-		_schedule_creature_idle(uid, 11, creature.action_started_ms, duration)
+		_schedule_creature_idle(uid, creature.action_type, creature.action_started_ms, duration)
 
 
 func _advance_creature_forced_action(uid: int) -> void:
@@ -1671,9 +1692,9 @@ func _finish_creature_action(uid: int, action_type: int, started_ms: int) -> voi
 		_start_creature_death_action(uid, forced_pending.get("action", {}), creature)
 		return
 	if action_type == 10 and not pending.is_empty():
-		if pending.get("type", 0) == 11:
+		if pending.get("type", 0) in [7, 11]:
 			game_state.update_creature(uid, creature)
-			_start_monster_hitted_action(uid, pending.get("action", {}), creature)
+			_start_monster_motion_action(uid, pending.get("action", {}), creature)
 			return
 		for key in pending.get("state", {}):
 			creature[key] = pending.state[key]

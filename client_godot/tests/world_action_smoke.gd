@@ -154,6 +154,8 @@ func _ready() -> void:
 		return
 	if not _test_shield_hit_action(main, resources):
 		return
+	if not _test_monster_motion_correction(main, resources):
+		return
 	if not _test_spinkick_direction(main):
 		return
 	if not _test_actor_record_lifecycle(main):
@@ -1709,6 +1711,110 @@ func _test_shield_hit_action(main: Control, resources: RefCounted) -> bool:
 	GameState.attached_magic_effects.clear()
 	main.set("_player_action_timer", -1.0)
 	GameState.player_action_type = 2
+	return true
+
+
+func _test_monster_motion_correction(main: Control, resources: RefCounted) -> bool:
+	var renderer: Control = main.get_node("WorldRenderer")
+	var line := _find_walkable_line(renderer, 5)
+	if line.size() != 5:
+		_fail("unable to find a straight walkable Monster action fixture")
+		return false
+	var monster_id := 0
+	for monster_id_value in resources.monster_meta:
+		if resources.monster_transform(int(monster_id_value)).is_empty():
+			monster_id = int(monster_id_value)
+			break
+	if monster_id == 0:
+		_fail("plain Monster action fixture unavailable")
+		return false
+	var uid: int = (4 << 59) | (monster_id << 35) | 306
+	GameState.update_creature(uid, {
+		"uid": uid, "type": 1, "monster_id": monster_id,
+		"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
+		"action_started_ms": Time.get_ticks_msec(),
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 2, "speed": 100, "direction": 7, "x": line[2].x, "y": line[2].y,
+	}))
+	var creature: Dictionary = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 3 or Vector2i(creature.x, creature.y) != line[1] or creature.get("motion_action_queue", []).size() != 2:
+		_fail("Monster ACTION_STAND did not start its correction queue: %s" % creature)
+		return false
+	main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 2 or Vector2i(creature.x, creature.y) != line[2] or creature.get("direction", 0) != 7:
+		_fail("Monster ACTION_STAND did not start at its corrected endpoint: %s" % creature)
+		return false
+
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 3, "speed": 100, "direction": 0,
+		"x": line[0].x, "y": line[0].y, "aimX": line[1].x, "aimY": line[1].y,
+	}))
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 3 or Vector2i(creature.x, creature.y) != line[1] or creature.get("action_speed", 0) != 500 or creature.get("motion_action_queue", []).size() != 2:
+		_fail("Monster ACTION_MOVE did not correct to its server start one grid at a time: %s" % creature)
+		return false
+	main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 3 or Vector2i(creature.action_from_x, creature.action_from_y) != line[0] or Vector2i(creature.x, creature.y) != line[1] or creature.get("action_speed", 0) != 100:
+		_fail("Monster ACTION_MOVE did not play its requested move after correction: %s" % creature)
+		return false
+
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 7, "speed": 100, "direction": 4, "x": line[3].x, "y": line[3].y,
+	}))
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 3 or Vector2i(creature.x, creature.y) != line[2] or creature.get("motion_action_queue", []).size() != 2:
+		_fail("Monster ACTION_ATTACK did not start its correction queue: %s" % creature)
+		return false
+	main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 7 or Vector2i(creature.x, creature.y) != line[3]:
+		_fail("Monster ACTION_ATTACK did not start at its corrected endpoint: %s" % creature)
+		return false
+
+	var transform_id := 0
+	for monster_id_value in resources.monster_meta:
+		if not resources.monster_transform(int(monster_id_value)).is_empty():
+			transform_id = int(monster_id_value)
+			break
+	if transform_id == 0:
+		_fail("transforming Monster attack fixture unavailable")
+		return false
+	var transform_uid: int = (4 << 59) | (transform_id << 35) | 307
+	GameState.update_creature(transform_uid, {
+		"uid": transform_uid, "type": 1, "monster_id": transform_id,
+		"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
+		"action_started_ms": Time.get_ticks_msec(), "monster_stand_mode": false,
+	})
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(transform_uid, 202, {
+		"type": 7, "speed": 100, "direction": 5, "x": line[2].x, "y": line[2].y,
+	}))
+	var transforming: Dictionary = GameState.get_creature(transform_uid)
+	if transforming.get("action_type", 0) != 10 or Vector2i(transforming.x, transforming.y) != line[0] or transforming.get("monster_pending_action", {}).get("type", 0) != 7:
+		_fail("hidden Monster did not transform before attack correction: %s" % transforming)
+		return false
+	main.call("_finish_creature_action", transform_uid, 10, transforming.action_started_ms)
+	transforming = GameState.get_creature(transform_uid)
+	if transforming.get("action_type", 0) != 3 or Vector2i(transforming.x, transforming.y) != line[1] or transforming.get("motion_action_queue", []).size() != 2:
+		_fail("revealed Monster did not start attack correction: %s" % transforming)
+		return false
+	main.call("_finish_creature_action", transform_uid, 3, transforming.action_started_ms)
+	transforming = GameState.get_creature(transform_uid)
+	main.call("_finish_creature_action", transform_uid, 3, transforming.action_started_ms)
+	transforming = GameState.get_creature(transform_uid)
+	if transforming.get("action_type", 0) != 7 or Vector2i(transforming.x, transforming.y) != line[2]:
+		_fail("revealed Monster attack did not wait for its correction endpoint: %s" % transforming)
+		return false
+	GameState.remove_creature(uid)
+	GameState.remove_creature(transform_uid)
 	return true
 
 
