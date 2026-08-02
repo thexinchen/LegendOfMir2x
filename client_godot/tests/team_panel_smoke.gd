@@ -7,6 +7,7 @@ func _ready() -> void:
 	GameState.team_members = []
 	for index in 12:
 		GameState.team_members.append({"uid": (5 << 59) | (100 + index), "level": 20 + index, "name": "队员%d" % index})
+	GameState.team_members[0].name = ""
 	GameState.team_candidates = [
 		{"uid": (5 << 59) | 201, "level": 30, "name": "申请甲"},
 		{"uid": (5 << 59) | 202, "level": 31, "name": "申请乙"},
@@ -16,6 +17,9 @@ func _ready() -> void:
 	await get_tree().process_frame
 	if panel.size != Vector2(258, 306) or panel.get_node("MemberRows").get_child_count() != 10:
 		_fail("ten-row variable layout mismatch: size=%s rows=%d" % [panel.size, panel.get_node("MemberRows").get_child_count()])
+		return
+	if (panel.get_node("MemberRows/Row0") as Button).text != "0 PLY_100":
+		_fail("empty team-player name did not use original UID fallback: %s" % (panel.get_node("MemberRows/Row0") as Button).text)
 		return
 	if not panel.get_node("AddButton").disabled or panel.get_node("DeleteButton").disabled:
 		_fail("member-mode button gating mismatch")
@@ -53,6 +57,9 @@ func _ready() -> void:
 		return
 	panel.call("_select_uid", 1, GameState.team_candidates[0].uid)
 	if OS.has_environment("MIR2X_TEAM_SCREENSHOT"):
+		GameState.team_members = [{"uid": (5 << 59) | 100, "level": 20, "name": ""}]
+		panel.set("_show_candidates", false)
+		panel.call("_refresh")
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_TEAM_SCREENSHOT"))
 	print("TEAM PANEL PASS: original variable board, mode gating, rows and independent selections")

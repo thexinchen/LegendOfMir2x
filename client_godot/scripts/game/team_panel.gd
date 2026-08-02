@@ -73,7 +73,10 @@ func _add_row(member: Dictionary, item_index: int, visible_index: int, mode: int
 	button.name = "Row%d" % item_index
 	button.position = Vector2(0, visible_index * LINE_HEIGHT)
 	button.size = Vector2(ROW_WIDTH, LINE_HEIGHT)
-	button.text = "%d %s" % [item_index, member.get("name", str(uid))]
+	var player_name := str(member.get("name", ""))
+	if player_name.is_empty():
+		player_name = "PLY_%d" % (uid & 0xFFFFFFFF)
+	button.text = "%d %s" % [item_index, player_name]
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.flat = false
 	button.add_theme_font_size_override("font_size", 12)
