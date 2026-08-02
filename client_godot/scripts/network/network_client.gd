@@ -397,20 +397,27 @@ func send_runtime_pair(config_type: int, first: int, second: int) -> Error:
 	return send_set_runtime_config(config_type, archive)
 
 
-func send_npc_event(uid: int, path: String, event: String, value: String = "") -> Error:
+func _make_npc_event_payload(uid: int, path: String, event: String, value: Variant = null) -> PackedByteArray:
 	var payload := PackedByteArray()
 	payload.resize(410)
 	payload.fill(0)
 	_encode_u64(payload, 0, uid)
 	_write_c_string(payload, 8, 100, path)
 	_write_c_string(payload, 108, 100, event)
-	var value_bytes := value.to_utf8_buffer()
+	if value == null:
+		payload.encode_u16(408, 0xFFFF)
+		return payload
+	var value_bytes := str(value).to_utf8_buffer()
 	if value_bytes.size() > 200:
 		value_bytes = value_bytes.slice(0, 200)
 	for index in value_bytes.size():
 		payload[208 + index] = value_bytes[index]
 	payload.encode_u16(408, value_bytes.size())
-	return _send_fixed_message(CM_NPCEVENT, payload)
+	return payload
+
+
+func send_npc_event(uid: int, path: String, event: String, value: Variant = null) -> Error:
+	return _send_fixed_message(CM_NPCEVENT, _make_npc_event_payload(uid, path, event, value))
 
 
 func send_query_sell_item_list(npc_uid: int, item_id: int) -> Error:

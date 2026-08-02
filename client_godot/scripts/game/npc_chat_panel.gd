@@ -98,7 +98,7 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					var event := {
 						"id": _xml_attribute(parser, "id", ""),
 						"path": _xml_attribute(parser, "path", ""),
-						"args": _xml_attribute(parser, "args", ""),
+						"args": _xml_optional_attribute(parser, "args"),
 						"close": _parse_bool(_xml_attribute(parser, "close", "0")),
 					}
 					var meta := JSON.stringify(event)
@@ -207,6 +207,13 @@ func _xml_attribute(parser: XMLParser, name: String, fallback: String) -> String
 		if parser.get_attribute_name(index) == name:
 			return parser.get_attribute_value(index)
 	return fallback
+
+
+func _xml_optional_attribute(parser: XMLParser, name: String) -> Variant:
+	for index in parser.get_attribute_count():
+		if parser.get_attribute_name(index) == name:
+			return parser.get_attribute_value(index)
+	return null
 
 
 func _bbcode_color(value: String) -> String:

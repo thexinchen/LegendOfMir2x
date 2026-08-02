@@ -16,6 +16,16 @@ func _ready() -> void:
 	if not bbcode.contains("[url=") or not bbcode.contains("购买[/url]") or not bbcode.contains("\"close\":true"):
 		_fail("click event missing: %s" % bbcode)
 		return
+	var no_args_bbcode: String = panel.call("_build_bbcode", "<layout><par><event id=\"hello\">问候</event></par></layout>")
+	if not no_args_bbcode.contains("\"args\":null"):
+		_fail("missing NPC event args did not preserve the original null value: %s" % no_args_bbcode)
+		return
+	var null_payload: PackedByteArray = NetworkClient._make_npc_event_payload(1, "npc/test", "hello")
+	var empty_payload: PackedByteArray = NetworkClient._make_npc_event_payload(1, "npc/test", "hello", "")
+	var value_payload: PackedByteArray = NetworkClient._make_npc_event_payload(1, "npc/test", "hello", "参数")
+	if null_payload.decode_u16(408) != 0xFFFF or empty_payload.decode_u16(408) != 0 or value_payload.decode_u16(408) != 6 or value_payload.slice(208, 214).get_string_from_utf8() != "参数":
+		_fail("NPC event optional value encoding mismatch: null=%d empty=%d value=%d" % [null_payload.decode_u16(408), empty_payload.decode_u16(408), value_payload.decode_u16(408)])
+		return
 	var event_meta := JSON.stringify({"id": "buy", "path": "", "args": "{'id':1}", "close": true})
 	if not (panel.call("_build_bbcode", xml, event_meta) as String).contains("[color=#00ff00]"):
 		_fail("hover event color missing")
