@@ -35,6 +35,11 @@ func _ready() -> void:
 	if initial_inventory_panel.position != Vector2(259, 58) or initial_inventory_panel.size != Vector2(434, 542):
 		_fail("inventory root geometry mismatch: position=%s size=%s" % [initial_inventory_panel.position, initial_inventory_panel.size])
 		return
+	var initial_player_state_panel := main.get_node("PlayerStatePanel") as Control
+	var initial_skill_panel := main.get_node("SkillPanel") as Control
+	if initial_player_state_panel.position != Vector2(236, 67) or initial_player_state_panel.size != Vector2(328, 466) or initial_skill_panel.position != Vector2(220, 76) or initial_skill_panel.size != Vector2(360, 448):
+		_fail("main panel geometry mismatch: player=%s/%s skill=%s/%s" % [initial_player_state_panel.position, initial_player_state_panel.size, initial_skill_panel.position, initial_skill_panel.size])
+		return
 	if OS.has_environment("MIR2X_FPS_SCREENSHOT"):
 		if not await _capture_fps_visual(main):
 			return
