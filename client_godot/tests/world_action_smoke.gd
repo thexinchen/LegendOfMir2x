@@ -57,6 +57,8 @@ func _ready() -> void:
 		return
 	if not _test_magic_actions(main, resources, physical_id):
 		return
+	if not _test_hero_spell_gestures(main, resources):
+		return
 	if not _test_monster_attack_magic_queue(main, resources, physical_id):
 		return
 	if not _test_magic_panel_hotkey_precedence(main, resources):
@@ -579,6 +581,65 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 	main.set("_swing_magic", {})
 	main.call("_cancel_movement")
 	main.get_node("WorldRenderer")._actor_target_rects.clear()
+	return true
+
+
+func _test_hero_spell_gestures(main: Control, resources: RefCounted) -> bool:
+	var renderer: Control = main.get_node("WorldRenderer")
+	var spell0_id: int = resources.magic_id("火球术")
+	var spell1_id: int = resources.magic_id("治愈术")
+	var attack_mode_id: int = resources.magic_id("铁布衫")
+	if 0 in [spell0_id, spell1_id, attack_mode_id]:
+		_fail("spell-gesture metadata unavailable")
+		return false
+	if renderer.call("_hero_motion", 9, spell0_id) != PackedInt32Array([2, 5]) or renderer.call("_hero_motion", 9, spell1_id) != PackedInt32Array([3, 5]) or renderer.call("_hero_motion", 9, attack_mode_id) != PackedInt32Array([7, 3]):
+		_fail("spell body motion did not follow magic metadata")
+		return false
+	for magic_id in [spell0_id, spell1_id, attack_mode_id]:
+		var startup_meta: PackedInt32Array = resources.magic_layout(magic_id, 1)
+		var cast_motion: int = resources.magic_cast_motion(magic_id)
+		var primary_duration := float(maxi(startup_meta[2], 8 if cast_motion == 2 else 10)) * 0.1 * 100.0 / float(clampi(startup_meta[4], 20, 500))
+		var expected_duration := primary_duration + (0.6 if cast_motion == 2 else 0.0)
+		if not is_equal_approx(float(main.call("_action_duration", 9, 250, 2, magic_id)), expected_duration):
+			_fail("spell action duration did not follow synchronized startup: id=%d" % magic_id)
+			return false
+	var spell0_meta: PackedInt32Array = resources.magic_layout(spell0_id, 1)
+	var spell0_primary_ms := float(maxi(spell0_meta[2], 8)) * 10000.0 / float(clampi(spell0_meta[4], 20, 500))
+	var spell0_tail_start: PackedInt32Array = renderer.call("_hero_spell_motion_state", spell0_id, 1000, 1000 + ceili(spell0_primary_ms) + 1)
+	var spell0_tail_end: PackedInt32Array = renderer.call("_hero_spell_motion_state", spell0_id, 1000, 1000 + ceili(spell0_primary_ms) + 250)
+	var spell0_tail_repeat: PackedInt32Array = renderer.call("_hero_spell_motion_state", spell0_id, 1000, 1000 + ceili(spell0_primary_ms) + 350)
+	if spell0_tail_start != PackedInt32Array([7, 0, 0]) or spell0_tail_end != PackedInt32Array([7, 2, 0]) or spell0_tail_repeat != PackedInt32Array([7, 0, 0]):
+		_fail("SPELL0 did not append two C++ attack-mode holds: %s %s %s" % [spell0_tail_start, spell0_tail_end, spell0_tail_repeat])
+		return false
+	var spell1_meta: PackedInt32Array = resources.magic_layout(spell1_id, 1)
+	var spell1_primary_ms := float(maxi(spell1_meta[2], 10)) * 10000.0 / float(clampi(spell1_meta[4], 20, 500))
+	var spell1_freeze: PackedInt32Array = renderer.call("_hero_spell_motion_state", spell1_id, 1000, 1000 + maxi(300, floori(spell1_primary_ms) - 150))
+	var attack_mode_start: PackedInt32Array = renderer.call("_hero_spell_motion_state", attack_mode_id, 1000, 1000)
+	if spell1_freeze[0] != 3 or spell1_freeze[1] != 3 or attack_mode_start != PackedInt32Array([7, 0, 5]):
+		_fail("spell startup freeze or attack-mode direction mismatch: spell1=%s attack=%s" % [spell1_freeze, attack_mode_start])
+		return false
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	GameState.player_x = 10
+	GameState.player_y = 10
+	GameState.player_direction = 3
+	GameState.magic_effects.clear()
+	var cast_action := {"type": 9, "speed": 100, "direction": 3, "x": 10, "y": 10, "aimX": 10, "aimY": 10, "aimUID": 101, "magicID": attack_mode_id}
+	main.call("_handle_action", _sm_action(101, 202, cast_action))
+	if GameState.player_direction != 5 or GameState.magic_effects.is_empty() or GameState.magic_effects.back().get("direction", 0) != 5:
+		_fail("player attack-mode spell did not force C++ down-facing body/effect")
+		return false
+	var remote_uid := 778
+	GameState.update_creature(remote_uid, {"uid": remote_uid, "x": 10, "y": 10, "type": 2, "gender": 0, "desp": {}, "direction": 3, "action_type": 2})
+	main.call("_handle_action", _sm_action(remote_uid, 202, cast_action))
+	var remote: Dictionary = GameState.get_creature(remote_uid)
+	if remote.get("action_type", 0) != 9 or remote.get("direction", 0) != 5 or GameState.magic_effects.back().get("direction", 0) != 5:
+		_fail("remote attack-mode spell did not force C++ down-facing body/effect: %s" % remote)
+		return false
+	GameState.remove_creature(remote_uid)
+	GameState.magic_effects.clear()
+	main.call("_set_player_action", 2)
+	main.set("_player_action_timer", -1.0)
 	return true
 
 

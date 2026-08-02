@@ -1194,6 +1194,55 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MONSTER_BODY_SCREENSHOT"))
+	if OS.has_environment("MIR2X_SPELL_GESTURE_SCREENSHOT"):
+		if not $WorldRenderer.load_map(6):
+			_fail("spell-gesture visual map failed to load")
+			return
+		var spell_source := _find_open_wave_source($WorldRenderer, 8, $WorldRenderer.map_height - 8)
+		if spell_source.x < 0:
+			_fail("no open spell-gesture visual fixture")
+			return
+		var spell0_id: int = resources.magic_id("火球术")
+		var spell1_id: int = resources.magic_id("治愈术")
+		var attack_mode_id: int = resources.magic_id("铁布衫")
+		var spell0_meta: PackedInt32Array = resources.magic_layout(spell0_id, 1)
+		var spell1_meta: PackedInt32Array = resources.magic_layout(spell1_id, 1)
+		var spell0_primary_ms := float(maxi(spell0_meta[2], 8)) * 10000.0 / float(clampi(spell0_meta[4], 20, 500))
+		var spell1_primary_ms := float(maxi(spell1_meta[2], 10)) * 10000.0 / float(clampi(spell1_meta[4], 20, 500))
+		var spell_now := Time.get_ticks_msec()
+		GameState.creatures.clear()
+		GameState.attached_magic_effects.clear()
+		GameState.firewalls.clear()
+		GameState.magic_effects.clear()
+		GameState.player_uid = 920
+		GameState.player_x = spell_source.x - 4
+		GameState.player_y = spell_source.y
+		GameState.player_gender = 0
+		GameState.player_direction = 3
+		GameState.player_desp = {}
+		GameState.player_action_type = 9
+		GameState.player_action_magic_id = spell0_id
+		GameState.player_action_speed = 100
+		GameState.player_action_started_ms = spell_now - ceili(spell0_primary_ms) - 250
+		GameState.creatures[921] = {
+			"uid": 921, "x": spell_source.x, "y": spell_source.y, "type": 2,
+			"gender": 1, "desp": {}, "direction": 7, "action_type": 9,
+			"action_magic_id": spell1_id, "action_speed": 100,
+			"action_started_ms": spell_now - maxi(300, floori(spell1_primary_ms) - 150),
+		}
+		GameState.creatures[922] = {
+			"uid": 922, "x": spell_source.x + 4, "y": spell_source.y, "type": 2,
+			"gender": 0, "desp": {}, "direction": 3, "action_type": 9,
+			"action_magic_id": attack_mode_id, "action_speed": 100,
+			"action_started_ms": spell_now - 100,
+		}
+		GameState.view_x = spell_source.x * 48 - 400
+		GameState.view_y = spell_source.y * 32 - 350
+		$WorldRenderer.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_SPELL_GESTURE_SCREENSHOT"))
 	if OS.has_environment("MIR2X_SPACE_MOVE_SCREENSHOT"):
 		if not $WorldRenderer.load_map(6):
 			_fail("space-move visual map failed to load")

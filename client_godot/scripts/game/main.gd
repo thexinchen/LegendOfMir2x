@@ -434,6 +434,9 @@ func _send_spell_action(action_type: int, magic_id: int, aim_grid: Vector2i, aim
 	game_state.magic_cast_times[magic_id] = Time.get_ticks_msec()
 	if action_type == 9:
 		var effect := action.duplicate(true)
+		if _resources.magic_cast_motion(magic_id) == 7:
+			effect["direction"] = 5
+			game_state.player_direction = 5
 		effect["uid"] = game_state.player_uid
 		game_state.add_magic_effect(effect, "local_action")
 	_set_player_action(action_type, action.speed, magic_id)
@@ -725,12 +728,26 @@ func _action_duration(action_type: int, speed: int, creature_type: int, magic_id
 				var primary_speed := 150 if magic_name == "十方斩" else 100
 				return float(primary_frames) * 0.1 * 100.0 / float(clampi(primary_speed, 20, 500)) + 0.3
 		8: frame_count = 2
-		9: frame_count = 10 if creature_type == 1 else 5
+		9:
+			if creature_type == 1:
+				frame_count = 10
+			else:
+				return _hero_spell_action_duration(magic_id)
 		11: frame_count = 2 if creature_type == 1 else 3
 		12: frame_count = 10
 		14: frame_count = 9
 		_: return -1.0
 	return float(frame_count) * 0.1 * 100.0 / float(clampi(speed, 20, 500))
+
+
+func _hero_spell_action_duration(magic_id: int) -> float:
+	var startup_meta: PackedInt32Array = _resources.magic_layout(magic_id, 1)
+	if startup_meta.is_empty():
+		return 0.5
+	var cast_motion: int = _resources.magic_cast_motion(magic_id)
+	var minimum_effect_frames := 8 if cast_motion == 2 else 10
+	var primary_duration := float(maxi(startup_meta[2], minimum_effect_frames)) * 0.1 * 100.0 / float(clampi(startup_meta[4], 20, 500))
+	return primary_duration + (0.6 if cast_motion == 2 else 0.0)
 
 
 func _creature_action_duration(action_type: int, speed: int, creature: Dictionary, magic_id := 0) -> float:
@@ -982,6 +999,8 @@ func _handle_action(payload: PackedByteArray) -> void:
 	var y: int = action.get("y", 0)
 	var action_type: int = action.get("type", 0)
 	var direction: int = action.get("direction", 0)
+	if action_type == 9 and _resources.magic_cast_motion(action.get("magicID", 0)) == 7:
+		direction = 5
 	var creature: Dictionary = game_state.get_creature(uid) if uid != game_state.player_uid else {}
 	var previous_creature := creature.duplicate(true)
 	var is_new_creature := creature.is_empty()
@@ -1009,6 +1028,7 @@ func _handle_action(payload: PackedByteArray) -> void:
 		if uid != game_state.player_uid or not _has_pending_local_magic(action.get("magicID", 0)):
 			var effect := action.duplicate(true)
 			effect["uid"] = uid
+			effect["direction"] = direction
 			game_state.add_magic_effect(effect, "action")
 	if action_type == 7 and world_renderer.supports_monster_attack_magic(action.get("magicID", 0)):
 		var attack_effect := action.duplicate(true)

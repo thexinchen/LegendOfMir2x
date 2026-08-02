@@ -269,6 +269,13 @@ func magic_target_offset(magic_id: int, stage: int, direction: int) -> Vector2i:
 	return Vector2i(meta[index], meta[index + 1])
 
 
+func magic_cast_motion(magic_id: int) -> int:
+	var meta := magic_layout(magic_id, 1)
+	if meta.size() >= 42 and meta[41] in [3, 4, 8]:
+		return meta[41] - 1
+	return 2
+
+
 func magic_id(name: String) -> int:
 	return magic_ids_by_name.get(name, 0)
 
@@ -498,7 +505,7 @@ func _load_magic_meta() -> void:
 	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
 		return
 	var version := file.get_32()
-	if version not in [1, 2, 3, 4]:
+	if version not in [1, 2, 3, 4, 5]:
 		return
 	var count := file.get_32()
 	for _index in range(count):
@@ -521,6 +528,8 @@ func _load_magic_meta() -> void:
 			for _offset_index in 32:
 				var target_offset := file.get_16()
 				meta.append(target_offset - 0x10000 if target_offset >= 0x8000 else target_offset)
+		if version >= 5:
+			meta.append(file.get_8())
 		magic_meta[magic_id * 8 + stage] = meta
 
 

@@ -174,6 +174,7 @@ struct MagicEffectMetaRecord
     uint8_t flags = 0;
     uint32_t seffID = UINT32_MAX;
     std::array<int16_t, 32> targetOff {};
+    uint8_t motion = 0;
 };
 #pragma pack(pop)
 
@@ -187,7 +188,7 @@ static_assert(sizeof(ItemMetaRecord) == 156);
 static_assert(sizeof(ItemDetailRecord) == 48);
 static_assert(sizeof(SkillMetaRecord) == 16);
 static_assert(sizeof(BuffMetaRecord) == 12);
-static_assert(sizeof(MagicEffectMetaRecord) == 90);
+static_assert(sizeof(MagicEffectMetaRecord) == 91);
 
 static uint32_t monsterSeffID(std::u8string_view monsterName, int offset)
 {
@@ -700,6 +701,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
                     DBCOM_MAGICGFXSEFFID(magicID, magicStageName(stage)).value_or(UINT32_MAX),
                 });
                 auto &meta = metaList.back();
+                meta.motion = check_cast<uint8_t>(gfxEntry->motion);
                 size_t direction = 0;
                 for(const auto &[targetOffX, targetOffY]: gfxEntry->targetOffList){
                     fflassert(direction < 16);
@@ -710,7 +712,7 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
             }
         }
         std::ofstream metaFile(outputDir / "sprites" / "magic.m2xmeta", std::ios::binary);
-        const SpriteHeader metaHeader {.version = 4, .spriteCount = to_u32(metaList.size())};
+        const SpriteHeader metaHeader {.version = 5, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
 

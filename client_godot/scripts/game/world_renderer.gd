@@ -1490,9 +1490,15 @@ func _wrap_player_say(text: String, font: Font) -> Array[String]:
 
 
 func _draw_hero_sprite(gender: int, direction: int, action_type: int, desp: Dictionary, start_x: int, start_y: int, action_started_ms := 0, action_speed := 100, magic_id := 0, uid := 0, map_y := 0) -> bool:
-	var direction_index := clampi(direction, 1, 8) - 1
 	var motion_data := _hero_motion(action_type, magic_id, desp)
 	var frame_index := _motion_frame(action_type, motion_data[1], action_started_ms, action_speed)
+	if action_type == 9:
+		var spell_state := _hero_spell_motion_state(magic_id, action_started_ms)
+		motion_data = PackedInt32Array([spell_state[0], 3 if spell_state[0] == 7 else 5])
+		frame_index = spell_state[1]
+		if spell_state[2] > 0:
+			direction = spell_state[2]
+	var direction_index := clampi(direction, 1, 8) - 1
 	if action_type in [7, 14]:
 		var magic_name: String = actor_resource.magic_names.get(magic_id, "") if action_type == 7 else ""
 		var primary_speed := 150 if magic_name == "十方斩" else 100
@@ -1589,12 +1595,41 @@ func _hero_motion(action_type: int, magic_id := 0, desp: Dictionary = {}) -> Pac
 				return PackedInt32Array([12 if double_handed else 11, 6])
 			return PackedInt32Array([10 if double_handed else 9, 6])
 		8: return PackedInt32Array([8, 2])
-		9: return PackedInt32Array([2, 5])
+		9:
+			var cast_motion: int = actor_resource.magic_cast_motion(magic_id)
+			return PackedInt32Array([cast_motion, 3 if cast_motion == 7 else 5])
 		11: return PackedInt32Array([15, 3])
 		12: return PackedInt32Array([18, 10])
 		13: return PackedInt32Array([19, 10])
 		14: return PackedInt32Array([10, 6])
 		_: return PackedInt32Array([0, 4])
+
+
+func _hero_spell_motion_state(magic_id: int, started_ms: int, now_ms := -1) -> PackedInt32Array:
+	var cast_motion: int = actor_resource.magic_cast_motion(magic_id)
+	var body_frame_count := 3 if cast_motion == 7 else 5
+	var forced_direction := 5 if cast_motion == 7 else 0
+	var sample_now: int = Time.get_ticks_msec() if now_ms < 0 else now_ms
+	var elapsed_ms := sample_now if started_ms <= 0 else maxi(0, sample_now - started_ms)
+	var startup_meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_SPELL)
+	if startup_meta.is_empty():
+		return PackedInt32Array([cast_motion, mini(floori(float(elapsed_ms) / 100.0), body_frame_count - 1), forced_direction])
+	var minimum_effect_frames := 8 if cast_motion == 2 else 10
+	var effect_frame_count := maxi(startup_meta[2], minimum_effect_frames)
+	var effect_speed := clampi(startup_meta[4], 20, 500)
+	var primary_duration_ms := float(effect_frame_count) * 10000.0 / float(effect_speed)
+	if cast_motion == 2 and float(elapsed_ms) >= primary_duration_ms:
+		var tail_elapsed := minf(float(elapsed_ms) - primary_duration_ms, 599.0)
+		return PackedInt32Array([7, floori(tail_elapsed / 100.0) % 3, 0])
+	var sync_frame_count := 3 if cast_motion == 2 else 1
+	var freeze_frame := body_frame_count - 1 - sync_frame_count
+	var sync_start_ms := maxf(float(freeze_frame + 1) * 100.0, primary_duration_ms - float(sync_frame_count) * 100.0)
+	var body_frame: int
+	if float(elapsed_ms) < sync_start_ms:
+		body_frame = mini(floori(float(elapsed_ms) / 100.0), freeze_frame)
+	else:
+		body_frame = mini(freeze_frame + 1 + floori((float(elapsed_ms) - sync_start_ms) / 100.0), body_frame_count - 1)
+	return PackedInt32Array([cast_motion, body_frame, forced_direction])
 
 
 func _hero_double_handed(desp: Dictionary) -> bool:

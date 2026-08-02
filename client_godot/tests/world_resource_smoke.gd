@@ -35,6 +35,20 @@ func _ready() -> void:
 	if actors.item_details.size() != actors.item_meta.size() or actors.buff_names.is_empty():
 		_fail("item-detail or buff-name metadata incomplete")
 		return
+	var spell1_motion_count := 0
+	var attack_mode_motion_count := 0
+	for magic_id_value in actors.magic_names:
+		var startup_meta: PackedInt32Array = actors.magic_layout(int(magic_id_value), 1)
+		if startup_meta.size() < 42:
+			continue
+		spell1_motion_count += 1 if startup_meta[41] == 4 else 0
+		attack_mode_motion_count += 1 if startup_meta[41] == 8 else 0
+	if spell1_motion_count != 29 or attack_mode_motion_count != 3:
+		_fail("magic meta v5 cast-motion count mismatch: spell1=%d attack_mode=%d" % [spell1_motion_count, attack_mode_motion_count])
+		return
+	if actors.magic_cast_motion(actors.magic_id("火球术")) != 2 or actors.magic_cast_motion(actors.magic_id("治愈术")) != 3 or actors.magic_cast_motion(actors.magic_id("铁布衫")) != 7:
+		_fail("magic meta v5 cast-motion identities mismatch")
+		return
 	var durable_item_count := 0
 	var described_item_count := 0
 	for item_id_value in actors.item_details:
