@@ -52,6 +52,9 @@ func _verify() -> void:
 	if GameState.player_hp_max <= 0 or GameState.inventory.size() != 6 or GameState.belt.size() != 6:
 		_fail("incomplete state hp=%d inventory=%d belt=%d" % [GameState.player_hp_max, GameState.inventory.size(), GameState.belt.size()], 6)
 		return
+	if GameState.player_gold != 8500:
+		_fail("initial gold did not match original client query: %d" % GameState.player_gold, 13)
+		return
 	var resources: RefCounted = ActorResourceScript.new()
 	resources.configure_default()
 	var combat := CombatCalculatorScript.calculate(GameState, resources)

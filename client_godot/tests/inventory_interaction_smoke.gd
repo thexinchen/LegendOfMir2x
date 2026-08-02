@@ -50,10 +50,14 @@ func _ready() -> void:
 	var buff_id := int(resources.buff_names.keys()[0])
 	weapon.extAttrList = {1: _portable_s32(3), 39: _portable_s32(buff_id)}
 	GameState.inventory = [potion, weapon]
+	GameState.player_gold = 8500
 	GameState.grabbed_item = {}
 	var panel: Control = load("res://scenes/game/panels/inventory.tscn").instantiate()
 	add_child(panel)
 	await get_tree().process_frame
+	if panel.get_node("Gold").text != "8,500":
+		_fail("inventory gold separator mismatch: %s" % panel.get_node("Gold").text)
+		return
 	if panel.get_node("ItemGrid").position != Vector2(18, 59) or panel.get_node("ItemGrid").size != Vector2(380, 380):
 		_fail("inventory grid geometry mismatch")
 		return

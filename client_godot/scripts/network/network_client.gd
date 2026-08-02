@@ -305,6 +305,10 @@ func send_request_kill_pets() -> Error:
 	return _send_empty_message(CM_REQUESTKILLPETS)
 
 
+func send_query_gold() -> Error:
+	return _send_empty_message(CM_QUERYGOLD)
+
+
 func send_query_player_name(uid: int) -> Error:
 	var payload := PackedByteArray()
 	payload.resize(8)

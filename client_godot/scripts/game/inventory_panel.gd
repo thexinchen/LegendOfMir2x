@@ -109,12 +109,22 @@ func _update_emblem(frame := 0) -> void:
 	$Emblem.size = resource.texture.get_size()
 
 
+static func _format_gold(value: int) -> String:
+	var digits := str(maxi(0, value))
+	var formatted := ""
+	for index in range(digits.length()):
+		if index > 0 and (digits.length() - index) % 3 == 0:
+			formatted += ","
+		formatted += digits.substr(index, 1)
+	return formatted
+
+
 func _refresh() -> void:
 	var tooltip_key := _tooltip_key
 	_sync_bins()
 	_refresh_operation()
 	_update_scroll_from_value()
-	$Gold.text = "%d" % _state.player_gold
+	$Gold.text = _format_gold(_state.player_gold)
 	for child in $ItemGrid.get_children():
 		child.free()
 	for key in _bins:
