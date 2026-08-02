@@ -40,7 +40,8 @@ func _ready() -> void:
 	if not quick_bar.get_node("Hover").visible or quick_bar.get_node("Hover").position != Vector2(17, 6):
 		_fail("original slot hover overlay mismatch")
 		return
-	if quick_bar.call("activate_slot", 0, MOUSE_BUTTON_RIGHT) != QuickBarScript.ACTION_CONSUME:
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	if quick_bar.call("activate_slot", 0, MOUSE_BUTTON_RIGHT) != QuickBarScript.ACTION_CONSUME or AudioService.last_seff_id != resources.item_sound_effect(potion_id):
 		_fail("right-click consume route mismatch")
 		return
 	var key_actions: Array = []
@@ -57,7 +58,8 @@ func _ready() -> void:
 		_fail("beltable grabbed item did not request equip")
 		return
 	GameState.grabbed_item = {"itemID": non_belt_id, "seqID": 303, "count": 1}
-	if quick_bar.call("activate_slot", 1, MOUSE_BUTTON_LEFT) != QuickBarScript.ACTION_RETURN or not GameState.grabbed_item.is_empty() or GameState.inventory.is_empty():
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	if quick_bar.call("activate_slot", 1, MOUSE_BUTTON_LEFT) != QuickBarScript.ACTION_RETURN or not GameState.grabbed_item.is_empty() or GameState.inventory.is_empty() or AudioService.last_seff_id != resources.item_sound_effect(non_belt_id):
 		_fail("non-belt item did not return to inventory")
 		return
 	GameState.grabbed_item = {}

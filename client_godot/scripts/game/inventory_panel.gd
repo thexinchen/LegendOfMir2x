@@ -287,10 +287,12 @@ func _grab_item(key: String) -> void:
 	var bin: Dictionary = _bins[key]
 	var old_grabbed: Dictionary = _state.grabbed_item
 	var selected: Dictionary = bin.item
+	_play_item_sound(int(selected.get("itemID", 0)))
 	_grabbed_origin = Vector2i(bin.x, bin.y)
 	_state.inventory.erase(selected)
 	_bins.erase(key)
 	if not old_grabbed.is_empty():
+		_play_item_sound(int(old_grabbed.get("itemID", 0)))
 		_state.inventory.append(old_grabbed)
 		var old_size := _item_grid_size(int(old_grabbed.get("itemID", 0)))
 		_bins[_item_key(old_grabbed)] = {"x": _grabbed_origin.x, "y": _grabbed_origin.y, "w": old_size.x, "h": old_size.y, "item": old_grabbed}
@@ -300,6 +302,7 @@ func _grab_item(key: String) -> void:
 
 func _place_grabbed(grid: Vector2i) -> void:
 	var item: Dictionary = _state.grabbed_item
+	_play_item_sound(int(item.get("itemID", 0)))
 	var size := _item_grid_size(int(item.get("itemID", 0)))
 	var x := grid.x - floori(size.x * 0.5)
 	var y := grid.y - floori(size.y * 0.5)
@@ -319,11 +322,18 @@ func _consume_or_equip(key: String) -> void:
 	var item: Dictionary = _bins[key].item
 	var item_type: String = _resources.item_type(int(item.get("itemID", 0)))
 	if item_type in ["恢复药水", "强化药水", "技能书"]:
+		_play_item_sound(int(item.get("itemID", 0)))
 		NetworkClient.send_consume_item(item.get("itemID", 0), item.get("seqID", 0), 1)
 		return
 	var wear_types := {"衣服": 1, "头盔": 2, "武器": 3, "鞋": 4, "项链": 5, "手镯": 6, "戒指": 8}
 	if wear_types.has(item_type):
+		_play_item_sound(int(item.get("itemID", 0)))
 		NetworkClient.send_request_equip_wear(item.get("itemID", 0), item.get("seqID", 0), wear_types[item_type])
+
+
+func _play_item_sound(item_id: int) -> void:
+	if item_id > 0:
+		AudioService.play_seff_at(_resources.item_sound_effect(item_id), 0, 0, 0, 0)
 
 
 func _select_operation_item(key: String) -> void:

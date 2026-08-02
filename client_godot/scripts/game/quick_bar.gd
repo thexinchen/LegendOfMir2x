@@ -48,6 +48,7 @@ func activate_slot(slot: int, button: int) -> int:
 		var item := _belt_item(slot)
 		if item.is_empty():
 			return ACTION_NONE
+		AudioService.play_seff_at(_resources.item_sound_effect(int(item.get("itemID", 0))), 0, 0, 0, 0)
 		NetworkClient.send_consume_item(item.get("itemID", 0), item.get("seqID", 0), 1)
 		slot_action_requested.emit(ACTION_CONSUME, slot)
 		return ACTION_CONSUME
@@ -60,6 +61,7 @@ func activate_slot(slot: int, button: int) -> int:
 			slot_action_requested.emit(ACTION_EQUIP, slot)
 			return ACTION_EQUIP
 		_state.inventory.append(grabbed)
+		AudioService.play_seff_at(_resources.item_sound_effect(int(grabbed.get("itemID", 0))), 0, 0, 0, 0)
 		_state.grabbed_item = {}
 		_state.state_changed.emit()
 		slot_action_requested.emit(ACTION_RETURN, slot)

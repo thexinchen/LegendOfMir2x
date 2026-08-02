@@ -854,9 +854,17 @@ func _test_progression_feedback(main: Control, resources: RefCounted) -> bool:
 		return false
 	GameState.chat_log.clear()
 	GameState.player_gold = 0
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
 	main.call("_on_server_message", NetworkClient.SM_GOLD, _u32_payload(80))
+	if AudioService.last_seff_id != 0x0102006A:
+		_fail("gold gain omitted original coin sound")
+		return false
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
 	main.call("_on_server_message", NetworkClient.SM_GOLD, _u32_payload(80))
 	main.call("_on_server_message", NetworkClient.SM_GOLD, _u32_payload(30))
+	if AudioService.last_seff_id != AudioService.INVALID_SEFF_ID:
+		_fail("unchanged or reduced gold incorrectly played the gain sound")
+		return false
 	if GameState.player_gold != 30 or GameState.chat_log.size() != 2 or GameState.chat_log[0].text != "你获得了80金币" or GameState.chat_log[1].text != "你失去了50金币":
 		_fail("gold feedback did not match C++ change semantics: %s" % GameState.chat_log)
 		return false
@@ -881,7 +889,7 @@ func _test_progression_feedback(main: Control, resources: RefCounted) -> bool:
 	if GameState.inventory[0].count != 5 or GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "你获得了3个%s" % resources.item_name(packable_id):
 		_fail("packable item gain feedback mismatch: inventory=%s log=%s" % [GameState.inventory, GameState.chat_log])
 		return false
-	if not control_panel.get("_button_blinks").has("Inventory") or AudioService.last_seff_id != main.call("_item_update_seff", packable_id):
+	if not control_panel.get("_button_blinks").has("Inventory") or AudioService.last_seff_id != resources.item_sound_effect(packable_id):
 		_fail("item gain did not start original blink/sound: blink=%s seff=%08X" % [control_panel.get("_button_blinks"), AudioService.last_seff_id])
 		return false
 	control_panel.set("_button_blinks", {})

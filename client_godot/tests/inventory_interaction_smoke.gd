@@ -163,8 +163,9 @@ func _ready() -> void:
 	var potion_key := "%d:1" % potion_id
 	var weapon_key := "%d:2" % weapon_id
 	var weapon_origin := Vector2i(int(bins[weapon_key].x), int(bins[weapon_key].y))
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
 	panel.call("_grab_item", potion_key)
-	if GameState.grabbed_item.get("itemID", 0) != potion_id or GameState.inventory.size() != 1:
+	if GameState.grabbed_item.get("itemID", 0) != potion_id or GameState.inventory.size() != 1 or AudioService.last_seff_id != resources.item_sound_effect(potion_id):
 		_fail("grab operation mismatch")
 		return
 	panel.call("_grab_item", weapon_key)
@@ -191,6 +192,16 @@ func _ready() -> void:
 	var fallback_potion: Dictionary = panel.get("_bins").get(potion_key, {})
 	if fallback_potion.is_empty() or int(fallback_potion.x) < 0 or int(fallback_potion.y) < 0 or typeof(fallback_potion.x) != TYPE_INT or typeof(fallback_potion.y) != TYPE_INT:
 		_fail("invalid grabbed-item target did not fall back to an integer first-fit position")
+		return
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	panel.call("_consume_or_equip", potion_key)
+	if AudioService.last_seff_id != resources.item_sound_effect(potion_id):
+		_fail("inventory consume omitted original item sound")
+		return
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	panel.call("_consume_or_equip", weapon_key)
+	if AudioService.last_seff_id != 0x0102006F:
+		_fail("inventory equip omitted original weapon sound")
 		return
 	var no_range_wheel := InputEventMouseButton.new()
 	no_range_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN

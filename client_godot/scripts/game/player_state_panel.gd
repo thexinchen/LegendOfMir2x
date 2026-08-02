@@ -108,6 +108,7 @@ func _on_wear_pressed(location: int) -> void:
 			NetworkClient.send_request_equip_wear(grabbed.get("itemID", 0), grabbed.get("seqID", 0), location)
 		else:
 			_state.inventory.append(grabbed)
+			AudioService.play_seff_at(_resources.item_sound_effect(int(grabbed.get("itemID", 0))), 0, 0, 0, 0)
 			_state.grabbed_item = {}
 			_state.state_changed.emit()
 	elif not _state.wear.get(location, {}).is_empty():

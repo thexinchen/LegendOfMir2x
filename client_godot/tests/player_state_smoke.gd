@@ -43,6 +43,12 @@ func _ready() -> void:
 	if not panel.call("_can_wear", weapon_id, 3) or panel.call("_can_wear", weapon_id, 5):
 		_fail("wear slot validation mismatch")
 		return
+	GameState.grabbed_item = _item(dress_id, 79)
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	panel.call("_on_wear_pressed", 3)
+	if not GameState.grabbed_item.is_empty() or AudioService.last_seff_id != resources.item_sound_effect(dress_id):
+		_fail("invalid wear placement did not return the item with original sound")
+		return
 	if panel.get_node("StateValues").get_child_count() != 9 or "攻击" not in panel.get_node("CombatStats").text:
 		_fail("state rows or combat labels missing")
 		return

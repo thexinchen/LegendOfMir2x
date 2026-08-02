@@ -1440,6 +1440,8 @@ func _handle_gold(payload: PackedByteArray) -> void:
 	var previous: int = game_state.player_gold
 	var current: int = Protocol.decode_sm_gold(payload)
 	game_state.update_gold(current)
+	if current > previous:
+		_play_seff(0x0102006A, game_state.player_x, game_state.player_y)
 	if current != previous:
 		game_state.add_chat_log("你%s了%d金币" % ["获得" if current > previous else "失去", absi(current - previous)], 1)
 
@@ -1493,20 +1495,7 @@ func _handle_update_item(payload: PackedByteArray) -> void:
 		game_state.add_chat_log("你%s了%s" % ["获得" if changed > 0 else "失去", item_name], 1)
 	if changed > 0:
 		control_panel.call("start_button_blink", "Inventory", 5000)
-		_play_seff(_item_update_seff(item_id), game_state.player_x, game_state.player_y)
-
-
-func _item_update_seff(item_id: int) -> int:
-	match _resources.item_type(item_id):
-		"恢复药水", "功能药水", "强效药水": return 0x0102006C
-		"武器": return 0x0102006F
-		"衣服": return 0x01020070
-		"戒指": return 0x01020071
-		"手镯": return 0x01020072
-		"项链": return 0x01020073
-		"头盔": return 0x01020074
-		"勋章": return 0x01020075
-		_: return 0x01020076
+		_play_seff(_resources.item_sound_effect(item_id), game_state.player_x, game_state.player_y)
 
 
 func _handle_text(payload: PackedByteArray) -> void:
@@ -1701,8 +1690,10 @@ func _handle_grab_wear(payload: PackedByteArray) -> void:
 	if _reader_ok(reader, "SM_GRABWEAR"):
 		game_state.wear.erase(data.get("wltype", 0))
 		if not game_state.grabbed_item.is_empty():
+			_play_seff(_resources.item_sound_effect(int(game_state.grabbed_item.get("itemID", 0))), game_state.player_x, game_state.player_y)
 			game_state.inventory.append(game_state.grabbed_item)
 		game_state.grabbed_item = data.get("item", {})
+		_play_seff(_resources.item_sound_effect(int(game_state.grabbed_item.get("itemID", 0))), game_state.player_x, game_state.player_y)
 		game_state.state_changed.emit()
 
 
@@ -1729,8 +1720,10 @@ func _handle_grab_belt(payload: PackedByteArray) -> void:
 	if slot >= 0 and slot < game_state.belt.size():
 		game_state.belt[slot] = {}
 		if not game_state.grabbed_item.is_empty():
+			_play_seff(_resources.item_sound_effect(int(game_state.grabbed_item.get("itemID", 0))), game_state.player_x, game_state.player_y)
 			game_state.inventory.append(game_state.grabbed_item)
 		game_state.grabbed_item = data.get("item", {})
+		_play_seff(_resources.item_sound_effect(int(game_state.grabbed_item.get("itemID", 0))), game_state.player_x, game_state.player_y)
 		game_state.state_changed.emit()
 
 

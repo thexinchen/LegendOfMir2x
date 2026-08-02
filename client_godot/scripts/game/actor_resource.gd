@@ -158,6 +158,21 @@ func item_type(item_id: int) -> String:
 	return item_types.get(item_id, "")
 
 
+func item_sound_effect(item_id: int) -> int:
+	if item_id <= 0:
+		return 0xFFFFFFFF
+	match item_type(item_id):
+		"恢复药水", "功能药水", "强效药水": return 0x0102006C
+		"武器": return 0x0102006F
+		"衣服": return 0x01020070
+		"戒指": return 0x01020071
+		"手镯": return 0x01020072
+		"项链": return 0x01020073
+		"头盔": return 0x01020074
+		"勋章": return 0x01020075
+		_: return 0x01020076
+
+
 func item_icon(item_id: int) -> Dictionary:
 	var package_gfx_id := item_package_gfx_id(item_id)
 	var icon := frame("item", package_gfx_id | 0x02000000)
