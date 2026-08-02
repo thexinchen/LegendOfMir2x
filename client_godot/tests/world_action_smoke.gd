@@ -31,6 +31,8 @@ func _ready() -> void:
 	var main: Control = load("res://scenes/game/main.tscn").instantiate()
 	add_child(main)
 	await get_tree().process_frame
+	if not _test_strike_grid_rendering(main):
+		return
 	if not _test_camera_centering(main):
 		return
 	if not _test_missing_minimap_feedback(main):
@@ -98,6 +100,19 @@ func _ready() -> void:
 		return
 	print("WORLD ACTION PASS: team flag, focus channels, mining, exact-frame focus, action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
 	get_tree().quit()
+
+
+func _test_strike_grid_rendering(main: Control) -> bool:
+	var renderer: Control = main.get_node("WorldRenderer")
+	var expected := Color8(0xFF, 0x00, 0x00, 0x60)
+	for age_ms in [0, 500, 1000]:
+		if renderer.call("_strike_grid_color", age_ms) != expected:
+			_fail("strike grid did not keep C++ pure-red alpha-96 color for one second")
+			return false
+	if renderer.call("_strike_grid_color", 1001) != Color.TRANSPARENT or renderer.call("_strike_grid_color", -1) != Color.TRANSPARENT:
+		_fail("strike grid color escaped its original one-second lifecycle")
+		return false
+	return true
 
 
 func _test_camera_centering(main: Control) -> bool:

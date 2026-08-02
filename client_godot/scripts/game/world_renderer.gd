@@ -44,6 +44,8 @@ const PLAYER_SAY_FONT_SIZE := 15
 const PLAYER_SAY_SHOW_TIME := 5000
 const PLAYER_SAY_MARGIN := 2
 const ASCEND_LIFETIME_MS := 3000.0
+const STRIKE_GRID_LIFETIME_MS := 1000
+const STRIKE_GRID_COLOR := Color8(0xFF, 0x00, 0x00, 0x60)
 const FOCUS_COLORS := [
 	Color.WHITE,
 	Color8(0xFF, 0x86, 0x00),
@@ -360,13 +362,16 @@ func _draw_strike_row(y: int, x0: int, x1: int, view_x: int, view_y: int, now: i
 		if not game_state.strike_grids.has(key):
 			continue
 		var age: int = now - game_state.strike_grids[key]
-		if age > 1000:
+		if age > STRIKE_GRID_LIFETIME_MS:
 			to_remove.append(key)
 			continue
-		var alpha := 1.0 - float(age) / 1000.0
-		draw_rect(Rect2(x * GRID_XP - view_x, y * GRID_YP - view_y, GRID_XP, GRID_YP), Color(1, 0.2, 0.2, alpha * 0.5))
+		draw_rect(Rect2(x * GRID_XP - view_x, y * GRID_YP - view_y, GRID_XP, GRID_YP), _strike_grid_color(age))
 	for key in to_remove:
 		game_state.strike_grids.erase(key)
+
+
+func _strike_grid_color(age_ms: int) -> Color:
+	return STRIKE_GRID_COLOR if age_ms >= 0 and age_ms <= STRIKE_GRID_LIFETIME_MS else Color.TRANSPARENT
 
 
 func _resolve_magic_effects(now: int) -> Array:
