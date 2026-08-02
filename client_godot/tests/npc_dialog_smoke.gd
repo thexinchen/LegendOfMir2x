@@ -23,6 +23,24 @@ func _ready() -> void:
 	if not (panel.call("_build_bbcode", xml, event_meta, event_meta) as String).contains("[color=#ff00ff]"):
 		_fail("pressed event color missing")
 		return
+	var emoji_bbcode: String = panel.call("_build_bbcode", "<layout><par>A<emoji id=\"0\"/>B</par></layout>")
+	if emoji_bbcode.contains("☺") or not emoji_bbcode.contains("[[MIR2X_EMOJI:0]]"):
+		_fail("emoji id still degraded to a generic glyph: %s" % emoji_bbcode)
+		return
+	var emoji_definition: Dictionary = panel.call("_emoji_definition", 0)
+	if emoji_definition.get("frame_count", 0) != 8 or emoji_definition.get("fps", 0) != 5 or emoji_definition.get("width", 0) != 24 or emoji_definition.get("height", 0) != 22 or emoji_definition.get("h1", 0) != 22:
+		_fail("emoji 0 atlas metadata mismatch: %s" % emoji_definition)
+		return
+	panel.call("_render_dialog", "<layout><par>A<emoji id=\"0\"/>B</par></layout>")
+	var emoji_frames: Array = panel.get("_emoji_frames")
+	if emoji_frames.size() != 1 or (emoji_frames[0].atlas as AtlasTexture).region.size != Vector2(24, 22):
+		_fail("emoji atlas was not inserted inline: %s" % emoji_frames)
+		return
+	emoji_frames[0].start_ms = Time.get_ticks_msec() - 250
+	panel.call("_process", 0.0)
+	if (emoji_frames[0].atlas as AtlasTexture).region.position != Vector2(24, 0):
+		_fail("emoji atlas did not advance at original 5 FPS: %s" % (emoji_frames[0].atlas as AtlasTexture).region)
+		return
 	var cjk_text := "\u7532\u4e59\u4e19\u4e01"
 	var nowrap_xml := "<layout><par>12345678<event id=\"spawn\" wrap=\"false\">%s</event></par></layout>" % cjk_text
 	var nowrap_bbcode: String = panel.call("_build_bbcode", nowrap_xml, "", "", 100.0)
@@ -32,6 +50,8 @@ func _ready() -> void:
 	var display_xml := xml
 	if OS.has_environment("MIR2X_NPC_NOWRAP_SCREENSHOT"):
 		display_xml = "<layout><par>Monster list:</par><par><event id=\"a\" wrap=\"false\">\u7532\u4e59\u4e19\u4e01\uff0c</event><event id=\"b\" wrap=\"false\">\u620a\u5df1\u5e9a\u8f9b\uff0c</event><event id=\"c\" wrap=\"false\">\u58ec\u7678\u5b50\u4e11\uff0c</event><event id=\"d\" wrap=\"false\">\u5bc5\u536f\u8fb0\u5df3\uff0c</event></par></layout>"
+	elif OS.has_environment("MIR2X_NPC_EMOJI_SCREENSHOT"):
+		display_xml = "<layout><par>Original emoji:</par><par><emoji id=\"0\"/> <emoji id=\"1\"/> <emoji id=\"2\"/> <emoji id=\"3\"/> <emoji id=\"4\"/> <emoji id=\"5\"/> <emoji id=\"6\"/> <emoji id=\"7\"/> <emoji id=\"8\"/> <emoji id=\"9\"/></par></layout>"
 	GameState.npc_dialog = {"npcUID": 1, "eventPath": "npc/test", "xmlLayout": display_xml}
 	GameState.state_changed.emit()
 	await get_tree().process_frame

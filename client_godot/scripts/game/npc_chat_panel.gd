@@ -1,11 +1,14 @@
 extends "res://scripts/game/closable_panel.gd"
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const EmojiResourceScript = preload("res://scripts/game/emoji_resource.gd")
 const MIN_BOARD_WIDTH := 300.0
 const MARGIN := 35.0
 
 var _state: Node
 var _resources: RefCounted = ActorResourceScript.new()
+var _emoji_resources: RefCounted = EmojiResourceScript.new()
+var _emoji_frames: Array[Dictionary] = []
 var _hover_meta := ""
 var _pressed_meta := ""
 
@@ -27,8 +30,23 @@ func _refresh() -> void:
 	var face_frame: Dictionary = _resources.frame("proguse", 0x50000000 | _npc_id(dialog.get("npcUID", 0)))
 	$Face.texture = face_frame.get("texture")
 	$Face.visible = $Face.texture != null
-	$Dialog.text = _build_bbcode(dialog.get("xmlLayout", ""), _hover_meta)
+	_render_dialog(dialog.get("xmlLayout", ""), _hover_meta)
 	_apply_layout.call_deferred()
+
+
+func _process(_delta: float) -> void:
+	var now := Time.get_ticks_msec()
+	for emoji in _emoji_frames:
+		if emoji.frame_count <= 1 or emoji.fps <= 0:
+			continue
+		var frame_index := floori(float(now - emoji.start_ms) * emoji.fps / 1000.0) % int(emoji.frame_count)
+		if frame_index == emoji.frame:
+			continue
+		emoji.frame = frame_index
+		var columns := maxi(1, floori(float(emoji.atlas.atlas.get_width()) / emoji.width))
+		var region: Rect2 = emoji.atlas.region
+		region.position = Vector2((frame_index % columns) * emoji.width, floori(float(frame_index) / columns) * emoji.height)
+		emoji.atlas.region = region
 
 
 func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = "", line_width_override: float = -1.0) -> String:
@@ -93,7 +111,11 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					result += "[color=%s]" % _bbcode_color(_xml_attribute(parser, "color", "white"))
 					tag_stack.append("t")
 				elif name == "emoji":
-					result += "☺"
+					var emoji_id := int(_xml_attribute(parser, "id", "0"))
+					result += "[[MIR2X_EMOJI:%d]]" % emoji_id
+					var emoji_definition := _emoji_definition(emoji_id)
+					if not emoji_definition.is_empty():
+						current_line_width = _advance_object_width(current_line_width, emoji_definition.width, line_width)
 					tag_stack.append("emoji")
 				else:
 					tag_stack.append(name)
@@ -202,6 +224,36 @@ func _escape_bbcode(text: String) -> String:
 	return text.replace("[", "[lb]").replace("]", "[rb]")
 
 
+func _render_dialog(xml: String, hover_meta: String = "", pressed_meta: String = "") -> void:
+	var bbcode := _build_bbcode(xml, hover_meta, pressed_meta)
+	$Dialog.clear()
+	_emoji_frames.clear()
+	var cursor := 0
+	while cursor < bbcode.length():
+		var marker_start := bbcode.find("[[MIR2X_EMOJI:", cursor)
+		if marker_start < 0:
+			$Dialog.append_text(bbcode.substr(cursor))
+			break
+		$Dialog.append_text(bbcode.substr(cursor, marker_start - cursor))
+		var marker_end := bbcode.find("]]", marker_start)
+		if marker_end < 0:
+			$Dialog.append_text(bbcode.substr(marker_start))
+			break
+		var emoji_id := int(bbcode.substr(marker_start + 14, marker_end - marker_start - 14))
+		var emoji: Dictionary = _emoji_resources.frame(emoji_id)
+		if not emoji.is_empty():
+			$Dialog.add_image(emoji.texture, emoji.width, emoji.height)
+			emoji["atlas"] = emoji.texture
+			emoji["start_ms"] = Time.get_ticks_msec()
+			emoji["frame"] = 0
+			_emoji_frames.append(emoji)
+		cursor = marker_end + 2
+
+
+func _emoji_definition(emoji_id: int) -> Dictionary:
+	return _emoji_resources.definition(emoji_id)
+
+
 func _dialog_line_width() -> float:
 	var face_width: float = float($Face.texture.get_width()) if $Face.visible and $Face.texture != null else 0.0
 	var board_width := maxf(get_viewport_rect().size.x / 3.0, MIN_BOARD_WIDTH)
@@ -221,6 +273,10 @@ func _advance_line_width(current: float, text: String, line_width: float) -> flo
 		var character_width: float = _text_width(character)
 		current = character_width if current > 0.0 and current + character_width > line_width else current + character_width
 	return current
+
+
+func _advance_object_width(current: float, width: float, line_width: float) -> float:
+	return width if current > 0.0 and current + width > line_width else current + width
 
 
 func _place_atomic_text(bbcode: String, start: int, text: String, current: float, line_width: float) -> Array:
@@ -254,18 +310,18 @@ func _on_meta_clicked(meta: Variant) -> void:
 
 func _on_meta_hover_started(meta: Variant) -> void:
 	_hover_meta = str(meta)
-	$Dialog.text = _build_bbcode(_state.npc_dialog.get("xmlLayout", ""), _hover_meta)
+	_render_dialog(_state.npc_dialog.get("xmlLayout", ""), _hover_meta)
 
 
 func _on_meta_hover_ended(meta: Variant) -> void:
 	if _hover_meta != str(meta):
 		return
 	_hover_meta = ""
-	$Dialog.text = _build_bbcode(_state.npc_dialog.get("xmlLayout", ""))
+	_render_dialog(_state.npc_dialog.get("xmlLayout", ""))
 
 
 func _on_dialog_gui_input(event: InputEvent) -> void:
 	if not event is InputEventMouseButton or event.button_index != MOUSE_BUTTON_LEFT:
 		return
 	_pressed_meta = _hover_meta if event.pressed else ""
-	$Dialog.text = _build_bbcode(_state.npc_dialog.get("xmlLayout", ""), _hover_meta, _pressed_meta)
+	_render_dialog(_state.npc_dialog.get("xmlLayout", ""), _hover_meta, _pressed_meta)

@@ -30,6 +30,9 @@ cp "$resource_dir/font/01_Yahei.TTF" "$project_dir/assets/font/01_Yahei.ttf"
 cp "$resource_dir/font/0A_WenQuanYi_Bitmap_Song_15_px.TTF" "$project_dir/assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf"
 cp "$resource_dir/font/0B_WenQuanYi_Bitmap_Song_15_px.TTF" "$project_dir/assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf"
 
+mkdir -p "$project_dir/assets/generated/emoji"
+cp -a "$resource_dir/emoji/." "$project_dir/assets/generated/emoji/"
+
 mkdir -p "$project_dir/build/audio/bgm"
 cp -a "$resource_dir/sound/bgm/." "$project_dir/build/audio/bgm/"
 mkdir -p "$project_dir/build/audio/seff"
