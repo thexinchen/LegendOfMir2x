@@ -123,8 +123,8 @@ func _update_overlay_alpha(button: TextureButton) -> void:
 	button.modulate.a = 1.0 if button.get_meta("overlay_hovered", false) or button.get_meta("overlay_pressed", false) else 0.0
 
 
-func start_button_blink(button_name: String, duration_ms := 5000) -> void:
-	_button_blinks[button_name] = Time.get_ticks_msec() + duration_ms
+func start_button_blink(button_name: String, duration_ms := 0) -> void:
+	_button_blinks[button_name] = Time.get_ticks_msec() + duration_ms if duration_ms > 0 else 0
 
 
 func stop_button_blink(button_name: String) -> void:
@@ -138,7 +138,8 @@ func _update_button_blinks() -> void:
 	var now := Time.get_ticks_msec()
 	for button_name in _button_blinks.keys():
 		var button := %BoardButtons.get_node_or_null(button_name) as BaseButton
-		if now >= int(_button_blinks[button_name]):
+		var expires_ms := int(_button_blinks[button_name])
+		if expires_ms > 0 and now >= expires_ms:
 			stop_button_blink(button_name)
 		elif button:
 			button.modulate.a = 1.0 if now % 200 < 100 else 0.0

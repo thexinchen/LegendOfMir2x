@@ -41,13 +41,22 @@ func _ready() -> void:
 	var control := load("res://scenes/game/control_panel.tscn").instantiate() as Control
 	add_child(control)
 	await get_tree().process_frame
-	control.call("start_button_blink", "Quest", 10000)
-	if not control.get("_button_blinks").has("Quest"):
-		_fail("quest button blink did not start")
+	control.call("start_button_blink", "Quest")
+	if control.get("_button_blinks").get("Quest", -1) != 0:
+		_fail("default quest button blink was not indefinite")
 		return
 	control.call("_on_board_button_pressed", control.get_node("Body/BoardButtons/Quest"))
 	if control.get("_button_blinks").has("Quest") or control.get_node("Body/BoardButtons/Quest").modulate.a != 1.0:
 		_fail("quest button click did not stop blink")
+		return
+	control.call("start_button_blink", "Quest", 10000)
+	if int(control.get("_button_blinks").get("Quest", 0)) <= Time.get_ticks_msec():
+		_fail("finite quest button blink did not get an expiry")
+		return
+	control.get("_button_blinks")["Quest"] = Time.get_ticks_msec() - 1
+	control.call("_update_button_blinks")
+	if control.get("_button_blinks").has("Quest"):
+		_fail("finite quest button blink did not expire")
 		return
 	if OS.has_environment("MIR2X_QUEST_SCREENSHOT"):
 		control.hide()
