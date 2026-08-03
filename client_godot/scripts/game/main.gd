@@ -1326,7 +1326,6 @@ func _switch_player_map(map_uid: int, action: Dictionary) -> void:
 	_magic_focus_uid = 0
 	_follow_focus_uid = 0
 	_attack_focus_uid = 0
-	AudioService.stop_seff()
 	game_state.switch_player_map(map_uid, action.get("x", 0), action.get("y", 0))
 	if _load_world_map(game_state.player_map_id):
 		game_state.player_map_name = world_renderer.world_resource.map_name
@@ -1337,6 +1336,7 @@ func _switch_player_map(map_uid: int, action: Dictionary) -> void:
 
 
 func _load_world_map(map_id: int) -> bool:
+	AudioService.stop_seff()
 	map_loading_overlay.show()
 	var loaded: bool = world_renderer.load_map(map_id, _on_map_load_progress)
 	map_loading_overlay.hide()

@@ -3021,6 +3021,16 @@ func _test_monster_jump_stands(main: Control) -> bool:
 
 
 func _test_self_action_map_transition(main: Control) -> bool:
+	AudioService.set_seff_enabled(true)
+	if not AudioService.play_seff_at(AudioService.UI_CLICK_SEFF_ID, 0, 0, 0, 0, 0) or AudioService.active_seff_count() == 0:
+		_fail("looping map-load SEFF fixture did not start")
+		return false
+	if not main.call("_load_world_map", 25):
+		_fail("map-load SEFF cleanup fixture could not reload map 25")
+		return false
+	if AudioService.active_seff_count() != 0:
+		_fail("shared world load did not stop active C++ sound effects")
+		return false
 	GameState.player_uid = 101
 	GameState.player_map_uid = 25 << 35
 	GameState.player_map_id = 25
