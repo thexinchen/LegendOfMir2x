@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=19 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/friend_chat_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/friend/00000810.png" id="2"]
@@ -20,6 +20,13 @@
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_reference"]
 content_margin_left = 5.0
 bg_color = Color(0.25098, 0.25098, 0.25098, 0.705882)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_chat_input"]
+content_margin_left = 4.0
+content_margin_top = 3.0
+content_margin_right = 4.0
+content_margin_bottom = 3.0
+bg_color = Color(0, 0, 0, 0.313726)
 
 [node name="FriendChatPanel" type="Control"]
 custom_minimum_size = Vector2(451, 464)
@@ -207,6 +214,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_chat_input")
+theme_override_styles/focus = SubResource("StyleBoxFlat_chat_input")
 wrap_mode = 1
 
 [node name="SearchPage" type="Control" parent="Page"]

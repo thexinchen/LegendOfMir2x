@@ -48,6 +48,15 @@ func _ready() -> void:
 	if composer.custom_minimum_size.y != 74.0 or chat_input.placeholder_text != "" or panel.get_node_or_null("Page/ChatPage/Composer/Send") != null or reference_bar == null or reference_clear == null:
 		_fail("chat composer does not match the original fixed 74px input and clearable reference bar")
 		return
+	var input_normal := chat_input.get_theme_stylebox("normal") as StyleBoxFlat
+	var input_focus := chat_input.get_theme_stylebox("focus") as StyleBoxFlat
+	var expected_input_bg := Color(0, 0, 0, 80.0 / 255.0)
+	if input_normal == null or input_focus == null or not input_normal.bg_color.is_equal_approx(expected_input_bg) or not input_focus.bg_color.is_equal_approx(expected_input_bg):
+		_fail("chat input normal/focus backgrounds diverged from C++ FrameBg: %s/%s" % [input_normal.bg_color if input_normal != null else Color.TRANSPARENT, input_focus.bg_color if input_focus != null else Color.TRANSPARENT])
+		return
+	if input_normal.border_width_left != 0 or input_focus.border_width_left != 0 or input_normal.content_margin_left != 4.0 or input_normal.content_margin_top != 3.0:
+		_fail("chat input border or FramePadding diverged from C++")
+		return
 	if OS.has_environment("MIR2X_FRIEND_LIST_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FRIEND_LIST_SCREENSHOT"))
@@ -312,6 +321,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	if OS.has_environment("MIR2X_FRIEND_CHAT_SCREENSHOT"):
 		panel.call("_show_reference", 1001, "清风：晚上一起去矿洞吗？")
+		chat_input.grab_focus()
 		await get_tree().process_frame
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FRIEND_CHAT_SCREENSHOT"))
 	print("FRIEND CHAT VISUAL PASS: frames, rows, pending, preview, resize and HUD blink")
