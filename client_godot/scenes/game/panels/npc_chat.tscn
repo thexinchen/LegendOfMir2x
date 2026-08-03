@@ -50,8 +50,8 @@ theme_override_font_sizes/normal_font_size = 15
 text = ""
 bbcode_enabled = true
 fit_content = false
-scroll_active = true
-selection_enabled = true
+scroll_active = false
+selection_enabled = false
 
 [node name="CloseButton" type="TextureButton" parent="."]
 offset_left = 347.0
