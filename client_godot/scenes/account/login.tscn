@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://scripts/account/login.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/login/00000003.png" id="2_background"]
@@ -17,6 +17,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/login/00000010.png" id="15_login_pressed"]
 [ext_resource type="Texture2D" path="res://assets/ui/login/00000011.png" id="16_input_labels"]
 [ext_resource type="Script" path="res://scripts/account/account_notice.gd" id="17_notice"]
+[ext_resource type="FontFile" path="res://assets/font/03_MONOWIDE.ttf" id="18_build_version_font"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_input"]
 
@@ -163,12 +164,13 @@ script = ExtResource("17_notice")
 [node name="BuildVersion" type="Label" parent="."]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 400.0
-offset_bottom = 20.0
+offset_left = -1.0
+offset_top = 1.0
+offset_right = 399.0
+offset_bottom = 21.0
 theme_override_colors/font_color = Color(1, 1, 0, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_fonts/font = ExtResource("18_build_version_font")
+theme_override_font_sizes/font_size = 11
 text = "编译版本号:"
 
 [connection signal="pressed" from="CreateAccountButton" to="." method="_on_create_account_pressed"]

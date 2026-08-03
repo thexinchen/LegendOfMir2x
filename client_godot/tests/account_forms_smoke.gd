@@ -109,6 +109,10 @@ func _ready() -> void:
 	if not build_version.text.begins_with("编译版本号:VENGINEERING-") or build_version.text.ends_with("godot"):
 		_fail("login still displays a hardcoded build signature: %s" % build_version.text)
 		return
+	var build_version_font := build_version.get_theme_font("font")
+	if build_version_font.resource_path != "res://assets/font/03_MONOWIDE.ttf" or build_version.get_theme_font_size("font_size") != 11 or build_version.position != Vector2(-1, 1):
+		_fail("login build-version typography mismatch: %s %s %s" % [build_version_font.resource_path, build_version.get_theme_font_size("font_size"), build_version.position])
+		return
 	var notice_box: Rect2 = notice.call("notice_box")
 	if not notice.visible or not notice.get("draw_background") or notice_box.size.x <= 20.0 or notice_box.size.y <= 20.0 or absf(notice_box.get_center().x - 400.0) > 0.01 or absf(notice_box.get_center().y - 300.0) > 0.01:
 		_fail("login notice is not content-sized and screen-centered")

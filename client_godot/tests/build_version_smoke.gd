@@ -1,5 +1,8 @@
 extends Node
 
+const SIGNATURE_PATH := "res://assets/generated/build_signature.txt"
+const EXPORT_PRESET_PATH := "res://export_presets.cfg"
+
 var _received_heads: Array[int] = []
 var _connection_messages: Array[String] = []
 
@@ -8,9 +11,18 @@ func _ready() -> void:
 	NetworkClient.message_received.connect(_on_message_received)
 	NetworkClient.connection_changed.connect(_on_connection_changed)
 
-	var local_signature := FileAccess.get_file_as_string("res://assets/generated/build_signature.txt").strip_edges()
+	if FileAccess.file_exists(EXPORT_PRESET_PATH):
+		var export_preset := FileAccess.get_file_as_string(EXPORT_PRESET_PATH)
+		if SIGNATURE_PATH.trim_prefix("res://") not in export_preset:
+			_fail("export preset does not include the raw build signature")
+			return
+	if not FileAccess.file_exists(SIGNATURE_PATH):
+		_fail("build signature is unavailable at runtime")
+		return
+	var local_signature := FileAccess.get_file_as_string(SIGNATURE_PATH).strip_edges()
 	if local_signature.is_empty():
-		local_signature = "VENGINEERING-development"
+		_fail("build signature is empty")
+		return
 
 	_feed_build_version(local_signature)
 	if not _received_heads.is_empty():
