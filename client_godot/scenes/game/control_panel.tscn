@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3]
+[gd_scene load_steps=47 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/control_panel.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/control_panel/00000012.png" id="2_base"]
@@ -53,6 +53,14 @@ content_margin_top = 0.0
 content_margin_right = 0.0
 content_margin_bottom = 0.0
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_base_left"]
+atlas = ExtResource("2_base")
+region = Rect2(0, 0, 178, 133)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_base_right"]
+atlas = ExtResource("2_base")
+region = Rect2(634, 0, 166, 133)
+
 [node name="ControlPanel" type="Control"]
 custom_minimum_size = Vector2(800, 152)
 layout_mode = 3
@@ -73,10 +81,11 @@ grow_vertical = 2
 
 [node name="ChatBackground" type="ColorRect" parent="Body"]
 unique_name_in_owner = true
-layout_mode = 0
+layout_mode = 1
+anchor_right = 1.0
 offset_left = 178.0
 offset_top = 19.0
-offset_right = 634.0
+offset_right = -166.0
 offset_bottom = 152.0
 mouse_filter = 2
 color = Color(0, 0, 0, 1)
@@ -84,11 +93,12 @@ color = Color(0, 0, 0, 1)
 [node name="ExpandedMiddle" type="NinePatchRect" parent="Body"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 0
+layout_mode = 1
+anchor_right = 1.0
 offset_left = 178.0
-offset_top = -269.0
-offset_right = 634.0
-offset_bottom = 150.0
+offset_top = -248.0
+offset_right = -166.0
+offset_bottom = 152.0
 mouse_filter = 2
 texture = ExtResource("31_expanded")
 patch_margin_left = 50
@@ -98,10 +108,11 @@ patch_margin_bottom = 55
 
 [node name="CompactMiddle" type="NinePatchRect" parent="Body"]
 unique_name_in_owner = true
-layout_mode = 0
+layout_mode = 1
+anchor_right = 1.0
 offset_left = 178.0
 offset_top = 19.0
-offset_right = 634.0
+offset_right = -166.0
 offset_bottom = 150.0
 mouse_filter = 2
 texture = ExtResource("3_middle")
@@ -111,10 +122,22 @@ patch_margin_right = 119
 [node name="Base" type="TextureRect" parent="Body"]
 layout_mode = 0
 offset_top = 19.0
-offset_right = 800.0
+offset_right = 178.0
 offset_bottom = 152.0
 mouse_filter = 2
-texture = ExtResource("2_base")
+texture = SubResource("AtlasTexture_base_left")
+
+[node name="RightBase" type="TextureRect" parent="Body"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -166.0
+offset_top = 19.0
+offset_bottom = 152.0
+grow_horizontal = 0
+mouse_filter = 2
+texture = SubResource("AtlasTexture_base_right")
 
 [node name="Health" type="TextureProgressBar" parent="Body"]
 unique_name_in_owner = true
@@ -161,38 +184,53 @@ step = 0.01
 
 [node name="Face" type="TextureRect" parent="Body"]
 unique_name_in_owner = true
-offset_left = 533.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -267.0
 offset_top = 36.0
-offset_right = 615.0
+offset_right = -185.0
 offset_bottom = 130.0
+grow_horizontal = 0
 mouse_filter = 2
 expand_mode = 1
 stretch_mode = 0
 
 [node name="FaceHealth" type="ColorRect" parent="Body"]
 unique_name_in_owner = true
-offset_left = 533.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -267.0
 offset_top = 33.0
-offset_right = 615.0
+offset_right = -185.0
 offset_bottom = 36.0
+grow_horizontal = 0
 mouse_filter = 2
 color = Color(1, 0, 0, 1)
 
 [node name="BuffContainer" type="Control" parent="Body"]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 553.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -247.0
 offset_top = 33.0
-offset_right = 633.0
+offset_right = -167.0
 offset_bottom = 129.0
+grow_horizontal = 0
 mouse_filter = 2
 
 [node name="ChatLog" type="RichTextLabel" parent="Body"]
 unique_name_in_owner = true
-layout_mode = 0
+layout_mode = 1
+anchor_right = 1.0
 offset_left = 185.0
 offset_top = 34.0
-offset_right = 529.0
+offset_right = -271.0
 offset_bottom = 118.0
 theme_override_fonts/normal_font = ExtResource("32_chat_font")
 theme_override_font_sizes/normal_font_size = 15
@@ -202,26 +240,37 @@ scroll_active = true
 scroll_following = true
 
 [node name="ChatSliderHitArea" type="Control" parent="Body"]
-offset_left = 615.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -185.0
 offset_top = 49.0
-offset_right = 633.0
+offset_right = -167.0
 offset_bottom = 129.0
+grow_horizontal = 0
 
 [node name="ChatSlider" type="TextureRect" parent="Body"]
-offset_left = 619.5
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -180.5
 offset_top = 110.0
-offset_right = 636.5
+offset_right = -163.5
 offset_bottom = 129.0
+grow_horizontal = 0
 mouse_filter = 2
 texture = ExtResource("37_chat_slider")
 modulate = Color(0.5, 0.5, 0.5, 1)
 
 [node name="Command" type="LineEdit" parent="Body"]
 unique_name_in_owner = true
-layout_mode = 0
+layout_mode = 1
+anchor_right = 1.0
 offset_left = 185.0
 offset_top = 124.0
-offset_right = 529.0
+offset_right = -271.0
 offset_bottom = 148.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/caret_color = Color(1, 1, 1, 1)
@@ -254,11 +303,14 @@ ignore_texture_size = true
 
 [node name="BoardButtons" type="Control" parent="Body"]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 634.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -166.0
 offset_top = 19.0
-offset_right = 800.0
 offset_bottom = 152.0
+grow_horizontal = 0
 mouse_filter = 1
 
 [node name="Guild" type="TextureButton" parent="Body/BoardButtons"]
@@ -352,64 +404,88 @@ texture_pressed = ExtResource("18b_friend_down")
 ignore_texture_size = true
 
 [node name="Exchange" type="TextureButton" parent="Body"]
-layout_mode = 0
-offset_left = 638.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -162.0
 offset_top = 25.0
-offset_right = 662.0
+offset_right = -138.0
 offset_bottom = 45.0
+grow_horizontal = 0
 texture_hover = ExtResource("19_exchange")
 texture_pressed = ExtResource("19_exchange")
 ignore_texture_size = true
 
 [node name="MiniMap" type="TextureButton" parent="Body"]
-layout_mode = 0
-offset_left = 638.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -162.0
 offset_top = 59.0
-offset_right = 662.0
+offset_right = -138.0
 offset_bottom = 79.0
+grow_horizontal = 0
 texture_hover = ExtResource("20_minimap")
 texture_pressed = ExtResource("20_minimap")
 ignore_texture_size = true
 
 [node name="MagicKey" type="TextureButton" parent="Body"]
-layout_mode = 0
-offset_left = 638.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -162.0
 offset_top = 94.0
-offset_right = 662.0
+offset_right = -138.0
 offset_bottom = 114.0
+grow_horizontal = 0
 texture_hover = ExtResource("21_magic")
 texture_pressed = ExtResource("21_magic")
 ignore_texture_size = true
 
 [node name="ACButton" type="Button" parent="Body"]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 635.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -165.0
 offset_top = 124.0
-offset_right = 717.0
+offset_right = -83.0
 offset_bottom = 148.0
+grow_horizontal = 0
 mouse_filter = 1
 flat = true
 
 [node name="ACIcon" type="TextureRect" parent="Body"]
 unique_name_in_owner = true
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 635.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -165.0
 offset_top = 124.0
-offset_right = 664.0
+offset_right = -136.0
 offset_bottom = 142.0
+grow_horizontal = 0
 mouse_filter = 2
 texture = ExtResource("22_ac")
 
 [node name="ACValue" type="Label" parent="Body"]
 unique_name_in_owner = true
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 669.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -131.0
 offset_top = 124.0
-offset_right = 715.0
+offset_right = -85.0
 offset_bottom = 149.0
+grow_horizontal = 0
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 15
@@ -418,33 +494,44 @@ text = "6-12"
 
 [node name="DCButton" type="Button" parent="Body"]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 718.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -82.0
 offset_top = 124.0
-offset_right = 800.0
 offset_bottom = 148.0
+grow_horizontal = 0
 mouse_filter = 1
 flat = true
 
 [node name="DCIcon" type="TextureRect" parent="Body"]
 unique_name_in_owner = true
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 718.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -82.0
 offset_top = 124.0
-offset_right = 747.0
+offset_right = -53.0
 offset_bottom = 142.0
+grow_horizontal = 0
 mouse_filter = 2
 texture = ExtResource("23_dc")
 
 [node name="DCValue" type="Label" parent="Body"]
 unique_name_in_owner = true
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 752.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -48.0
 offset_top = 124.0
-offset_right = 799.0
+offset_right = -1.0
 offset_bottom = 149.0
+grow_horizontal = 0
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 15
@@ -452,42 +539,58 @@ theme_override_fonts/font = ExtResource("32_chat_font")
 text = "3-8"
 
 [node name="ExpandButton" type="TextureButton" parent="Body"]
-layout_mode = 0
-offset_left = 619.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -181.0
 offset_top = 22.0
-offset_right = 632.0
+offset_right = -168.0
 offset_bottom = 39.0
+grow_horizontal = 0
 texture_hover = ExtResource("24_expand")
 texture_pressed = ExtResource("24_expand")
 ignore_texture_size = true
 
 [node name="EmojiButton" type="TextureButton" parent="Body"]
 visible = false
-layout_mode = 0
-offset_left = 540.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -260.0
 offset_top = 108.0
-offset_right = 572.0
+offset_right = -228.0
 offset_bottom = 140.0
+grow_horizontal = 0
 texture_hover = ExtResource("33_emoji_hover")
 texture_pressed = ExtResource("34_emoji_down")
 ignore_texture_size = true
 
 [node name="MuteButton" type="TextureButton" parent="Body"]
 visible = false
-layout_mode = 0
-offset_left = 580.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -220.0
 offset_top = 108.0
-offset_right = 612.0
+offset_right = -188.0
 offset_bottom = 140.0
+grow_horizontal = 0
 texture_hover = ExtResource("35_mute_hover")
 texture_pressed = ExtResource("36_mute_down")
 ignore_texture_size = true
 
 [node name="Title" type="TextureRect" parent="."]
-layout_mode = 0
-offset_left = 342.0
-offset_right = 469.0
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -57.5
+offset_right = 69.5
 offset_bottom = 41.0
+grow_horizontal = 2
 mouse_filter = 1
 texture = ExtResource("6_title")
 
@@ -511,11 +614,15 @@ mouse_filter = 2
 
 [node name="Level" type="Label" parent="."]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 395.0
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -5.0
 offset_top = 19.0
-offset_right = 416.0
+offset_right = 16.0
 offset_bottom = 31.0
+grow_horizontal = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 11

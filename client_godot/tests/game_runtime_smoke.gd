@@ -28,6 +28,11 @@ func _on_message_received(head_code: int, payload: PackedByteArray) -> void:
 			_fail("failed to enter game", 3)
 	elif head_code == NetworkClient.SM_ONLINEOK and not _online:
 		_online = true
+		var test_window_size := OS.get_environment("MIR2X_TEST_WINDOW_SIZE")
+		if not test_window_size.is_empty():
+			var dimensions := test_window_size.split("x")
+			if dimensions.size() == 2:
+				get_tree().root.size = Vector2i(int(dimensions[0]), int(dimensions[1]))
 		var online := Protocol.decode_sm_online_ok(payload)
 		var action: Dictionary = online.get("action", {})
 		GameState.set_player_online({
@@ -77,7 +82,8 @@ func _verify() -> void:
 		_fail("map BGM did not start: %08X %s" % [AudioService.current_bgm_id, AudioService.current_bgm_path], 9)
 		return
 	var minimap := _main.call("_ensure_extra_panel", "res://scenes/game/panels/minimap.tscn") as Control
-	if minimap == null or not minimap.visible or not minimap.call("has_map_texture") or minimap.position != Vector2(600.0, 0.0):
+	var expected_minimap_position := Vector2(_main.size.x - minimap.size.x, 0.0) if minimap != null else Vector2.ZERO
+	if minimap == null or not minimap.visible or not minimap.call("has_map_texture") or minimap.position != expected_minimap_position:
 		_fail("default online minimap lifecycle mismatch", 11)
 		return
 	if OS.has_environment("MIR2X_TEST_PING"):

@@ -93,9 +93,13 @@ func _ready() -> void:
 		_fail("window-size pair did not round-trip through the local archive")
 		return
 	if DisplayServer.get_name() != "headless":
-		await get_tree().process_frame
+		for _frame in 3:
+			await get_tree().process_frame
 		if DisplayServer.window_get_size() != Vector2i(960, 600):
 			_fail("window-size runtime config did not apply to the live window: %s" % DisplayServer.window_get_size())
+			return
+		if get_viewport().get_visible_rect().size != Vector2(960, 600):
+			_fail("window-size runtime config only stretched the 800x600 canvas instead of resizing the game viewport: visible=%s root_size=%s content_mode=%s content_size=%s window=%s" % [get_viewport().get_visible_rect().size, get_tree().root.size, get_tree().root.content_scale_mode, get_tree().root.content_scale_size, DisplayServer.window_get_size()])
 			return
 	panel.get_node("SystemPage/BGM").button_pressed = true
 	if not panel.call("_config_bool", 1, false) or not AudioService.bgm_enabled:

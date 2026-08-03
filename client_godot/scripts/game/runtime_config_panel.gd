@@ -443,7 +443,7 @@ func _set_resolution(index: int) -> void:
 	var window_size: Vector2i = WINDOW_SIZES[index]
 	_set_local_archive(47, _pair_archive(window_size))
 	if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_WINDOWED:
-		DisplayServer.window_set_size(window_size)
+		get_tree().root.size = window_size
 	NetworkClient.send_runtime_pair(47, window_size.x, window_size.y)
 
 
@@ -547,14 +547,15 @@ static func apply_display_config(config: Dictionary) -> Dictionary:
 	var settings := decode_display_settings(config)
 	if DisplayServer.get_name() == "headless":
 		return settings
+	var scene_tree := Engine.get_main_loop() as SceneTree
 	if settings.fullscreen:
 		if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_WINDOWED:
-			DisplayServer.window_set_size(settings.window_size)
+			scene_tree.root.size = settings.window_size
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	else:
 		if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-		DisplayServer.window_set_size(settings.window_size)
+		scene_tree.root.size = settings.window_size
 	return settings
 
 

@@ -126,7 +126,7 @@ func _ready() -> void:
 	skill_panel.z_index = 4
 	skill_buff_hud.z_index = 5
 	control_panel.z_index = 6
-	location_label.z_index = 6
+	location_label.z_index = 7
 	quick_bar.z_index = 7
 	inventory_panel.z_index = 16
 	player_state_panel.z_index = 17

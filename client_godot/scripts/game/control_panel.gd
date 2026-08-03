@@ -317,7 +317,8 @@ func _set_minimized(minimized: bool) -> void:
 		return
 	_minimized = minimized
 	body.visible = not minimized
-	title.position.y = 121.0 if minimized else 0.0
+	title.position.y = 121.0 if minimized else (-269.0 if _expanded else 0.0)
+	level_label.position.y = -250.0 if _expanded else 19.0
 	level_label.visible = not minimized
 	minimize_button.visible = not minimized
 	minimized_changed.emit(minimized)
@@ -346,10 +347,17 @@ func _on_expand_pressed() -> void:
 	face.visible = not _expanded
 	face_health.visible = not _expanded
 	buff_container.visible = not _expanded
-	chat_background.offset_top = -269.0 if _expanded else 19.0
+	chat_background.offset_top = -248.0 if _expanded else 19.0
 	chat_background.color.a = 220.0 / 255.0 if _expanded else 1.0
-	chat_log.offset_top = -220.0 if _expanded else 34.0
-	expand_button.position.y = -266.0 if _expanded else 22.0
+	chat_log.offset_top = -233.0 if _expanded else 34.0
+	chat_log.offset_right = -183.0 if _expanded else -271.0
+	chat_log.offset_bottom = 97.0 if _expanded else 118.0
+	command.offset_top = 102.0 if _expanded else 124.0
+	command.offset_right = -183.0 if _expanded else -271.0
+	command.offset_bottom = 126.0 if _expanded else 148.0
+	expand_button.position.y = -245.0 if _expanded else 22.0
+	title.position.y = -269.0 if _expanded else 0.0
+	level_label.position.y = -250.0 if _expanded else 19.0
 	emoji_button.visible = _expanded
 	mute_button.visible = _expanded
 	_update_chat_slider()
@@ -404,13 +412,13 @@ func _set_chat_slider_from_hit_y(hit_y: float) -> void:
 func _update_chat_slider() -> void:
 	var normalized := _chat_scroll_normalized()
 	if _expanded:
-		chat_slider_hit_area.position = Vector2(615, -218)
-		chat_slider_hit_area.size = Vector2(18, 345)
-		chat_slider.position = Vector2(619.5, -216 + normalized * 324.0)
+		chat_slider_hit_area.position.y = -218.0
+		chat_slider_hit_area.size.y = 345.0
+		chat_slider.position.y = -216.0 + normalized * 324.0
 	else:
-		chat_slider_hit_area.position = Vector2(615, 49)
-		chat_slider_hit_area.size = Vector2(18, 80)
-		chat_slider.position = Vector2(619.5, 51 + normalized * 59.0)
+		chat_slider_hit_area.position.y = 49.0
+		chat_slider_hit_area.size.y = 80.0
+		chat_slider.position.y = 51.0 + normalized * 59.0
 	chat_slider.modulate = Color.WHITE if _chat_slider_dragging else Color(0.5, 0.5, 0.5, 1.0)
 
 

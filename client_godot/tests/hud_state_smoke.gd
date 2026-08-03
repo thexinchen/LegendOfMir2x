@@ -154,6 +154,23 @@ func _ready() -> void:
 	if level_label.position != Vector2(395, 19) or level_label.size != Vector2(21, 12) or ac_value.position != Vector2(669, 124) or ac_value.size != Vector2(46, 25) or dc_value.position != Vector2(752, 124) or dc_value.size != Vector2(47, 25):
 		_fail("persistent HUD text geometry mismatch")
 		return
+	var compact_middle := panel.get_node("%CompactMiddle") as Control
+	var board_buttons := panel.get_node("%BoardButtons") as Control
+	var right_base := panel.get_node_or_null("Body/RightBase") as TextureRect
+	for panel_width in [960.0, 1024.0, 1280.0]:
+		panel.size = Vector2(panel_width, 152)
+		await get_tree().process_frame
+		if compact_middle.position != Vector2(178, 19) or compact_middle.size != Vector2(panel_width - 344.0, 131) \
+				or board_buttons.position != Vector2(panel_width - 166.0, 19) or board_buttons.size != Vector2(166, 133) \
+				or panel.get_node("%Face").position != Vector2(panel_width - 267.0, 36) \
+				or chat_log.position != Vector2(185, 34) or chat_log.size != Vector2(panel_width - 456.0, 84) \
+				or panel.get_node("Title").position != Vector2(panel_width * 0.5 - 57.5, 0) or level_label.position != Vector2(panel_width * 0.5 - 5.0, 19) \
+				or ac_value.position != Vector2(panel_width - 131.0, 124) or dc_value.position != Vector2(panel_width - 48.0, 124) \
+				or right_base == null or right_base.position != Vector2(panel_width - 166.0, 19) or right_base.size != Vector2(166, 133):
+			_fail("HUD did not preserve the original split layout at %spx: middle=%s/%s right=%s/%s face=%s chat=%s/%s title=%s level=%s ac=%s dc=%s base=%s" % [panel_width, compact_middle.position, compact_middle.size, board_buttons.position, board_buttons.size, panel.get_node("%Face").position, chat_log.position, chat_log.size, panel.get_node("Title").position, level_label.position, ac_value.position, dc_value.position, right_base])
+			return
+	panel.size = Vector2(800, 152)
+	await get_tree().process_frame
 	var arc_current := panel.get_node("%ArcCurrent") as TextureRect
 	var arc_next := panel.get_node("%ArcNext") as TextureRect
 	if arc_current.position != Vector2(46, 8) or arc_current.size != Vector2(36, 20) or arc_next.position != Vector2(46, 8) or arc_next.size != Vector2(36, 20):
@@ -230,8 +247,14 @@ func _ready() -> void:
 	if panel.get_node("%Face").visible or panel.get_node("%FaceHealth").visible or panel.get_node("%BuffContainer").visible:
 		_fail("compact focus HUD remains visible while chat is expanded")
 		return
-	if panel.get_node("Body/ExpandButton").position.y != -266.0 or not panel.get_node("Body/EmojiButton").visible or not panel.get_node("Body/MuteButton").visible:
+	if panel.get_node("Body/ExpandButton").position.y != -245.0 or not panel.get_node("Body/EmojiButton").visible or not panel.get_node("Body/MuteButton").visible:
 		_fail("expanded HUD switch or hover-only controls mismatch")
+		return
+	if panel.get_node("Title").position.y != -269.0 or level_label.position.y != -250.0 \
+			or chat_background.position != Vector2(178, -248) or chat_background.size != Vector2(456, 400) \
+			or chat_log.position != Vector2(185, -233) or chat_log.size != Vector2(432, 330) \
+			or command.position != Vector2(185, 102):
+		_fail("expanded HUD geometry did not follow the original hudTop/panelTop split: title=%s level=%s background=%s/%s log=%s/%s command=%s" % [panel.get_node("Title").position, level_label.position, chat_background.position, chat_background.size, chat_log.position, chat_log.size, command.position])
 		return
 	if chat_slider.position != Vector2(619.5, 108) or chat_slider_hit_area.position != Vector2(615, -218) or chat_slider_hit_area.size != Vector2(18, 345):
 		_fail("expanded original chat slider geometry mismatch")

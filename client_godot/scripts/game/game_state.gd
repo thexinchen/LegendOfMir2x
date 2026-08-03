@@ -117,6 +117,8 @@ const HUD_SHIFT_HEIGHT := 131
 
 
 func _ready() -> void:
+	if DisplayServer.get_name() == "headless":
+		get_tree().root.size = Vector2i(SCREEN_W, SCREEN_H)
 	belt.resize(6)
 	for i in range(6):
 		belt[i] = null

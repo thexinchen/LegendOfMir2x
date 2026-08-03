@@ -114,7 +114,7 @@ func _ready() -> void:
 		"SkillPanel": 4,
 		"SkillBuffHUD": 5,
 		"ControlPanel": 6,
-		"Location": 6,
+		"Location": 7,
 		"QuickBar": 7,
 		"InventoryPanel": 16,
 		"PlayerStatePanel": 17,
@@ -129,6 +129,12 @@ func _ready() -> void:
 			or location_label.offset_top != -23.0 or location_label.offset_bottom != 0.0 \
 			or location_label.position != Vector2(4, main.size.y - 23.0):
 		_fail("location text did not follow the original bottom HUD anchor: anchors=%s/%s offsets=%s/%s position=%s main=%s" % [location_label.anchor_top, location_label.anchor_bottom, location_label.offset_top, location_label.offset_bottom, location_label.position, main.size])
+		return
+	var main_control_panel := main.get_node("ControlPanel") as Control
+	if main_control_panel.anchor_top != 1.0 or main_control_panel.anchor_right != 1.0 or main_control_panel.anchor_bottom != 1.0 \
+			or main_control_panel.offset_top != -152.0 or main_control_panel.offset_bottom != 0.0 \
+			or main_control_panel.position != Vector2(0, main.size.y - 152.0) or main_control_panel.size != Vector2(main.size.x, 152):
+		_fail("main HUD did not stay full-width at the viewport bottom: anchors=%s/%s/%s offsets=%s/%s position=%s size=%s main=%s" % [main_control_panel.anchor_top, main_control_panel.anchor_right, main_control_panel.anchor_bottom, main_control_panel.offset_top, main_control_panel.offset_bottom, main_control_panel.position, main_control_panel.size, main.size])
 		return
 	var expected_extra_layers := {
 		"res://scenes/game/panels/minimap.tscn": 1,
