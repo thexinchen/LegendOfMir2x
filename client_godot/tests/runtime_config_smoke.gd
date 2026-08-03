@@ -20,6 +20,16 @@ func _ready() -> void:
 	var panel := load("res://scenes/game/panels/runtime_config.tscn").instantiate() as Control
 	add_child(panel)
 	await get_tree().process_frame
+	if not panel.has_method("_display_settings"):
+		_fail("runtime config has no shared display-settings entry point")
+		return
+	var display_settings: Dictionary = panel.call("_display_settings", {
+		5: _bool_archive(true),
+		47: _pair_archive(Vector2i(1280, 720)),
+	})
+	if not display_settings.get("fullscreen", false) or display_settings.get("window_size", Vector2i.ZERO) != Vector2i(1280, 720):
+		_fail("runtime display settings did not decode the server archive: %s" % display_settings)
+		return
 	if panel.size != Vector2(600, 480) or panel.get_node("Background").patch_margin_left != 58:
 		_fail("native frame size or 58px slicing mismatch")
 		return
@@ -82,6 +92,11 @@ func _ready() -> void:
 	if panel.call("_config_pair", 47, Vector2i.ZERO) != Vector2i(960, 600):
 		_fail("window-size pair did not round-trip through the local archive")
 		return
+	if DisplayServer.get_name() != "headless":
+		await get_tree().process_frame
+		if DisplayServer.window_get_size() != Vector2i(960, 600):
+			_fail("window-size runtime config did not apply to the live window: %s" % DisplayServer.window_get_size())
+			return
 	panel.get_node("SystemPage/BGM").button_pressed = true
 	if not panel.call("_config_bool", 1, false) or not AudioService.bgm_enabled:
 		_fail("BGM toggle did not update runtime state and audio")

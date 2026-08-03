@@ -524,12 +524,38 @@ func _refresh_slider_activity() -> void:
 
 
 func _apply_initial_display_config() -> void:
+	apply_display_config(_state.runtime_config)
+
+
+func _display_settings(config: Dictionary) -> Dictionary:
+	return decode_display_settings(config)
+
+
+static func decode_display_settings(config: Dictionary) -> Dictionary:
+	var fullscreen_data: PackedByteArray = config.get(5, PackedByteArray())
+	var size_data: PackedByteArray = config.get(47, PackedByteArray())
+	var fullscreen := fullscreen_data.size() >= 2 and fullscreen_data[0] != 0 and fullscreen_data[1] != 0
+	var window_size := Vector2i(800, 600)
+	if size_data.size() >= 9 and size_data[0] != 0:
+		window_size = Vector2i(size_data.decode_s32(1), size_data.decode_s32(5))
+	if window_size.x <= 0 or window_size.y <= 0:
+		window_size = Vector2i(800, 600)
+	return {"fullscreen": fullscreen, "window_size": window_size}
+
+
+static func apply_display_config(config: Dictionary) -> Dictionary:
+	var settings := decode_display_settings(config)
 	if DisplayServer.get_name() == "headless":
-		return
-	if _config_bool(5, false):
+		return settings
+	if settings.fullscreen:
+		if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_WINDOWED:
+			DisplayServer.window_set_size(settings.window_size)
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-	elif DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_WINDOWED:
-		DisplayServer.window_set_size(_config_pair(47, Vector2i(800, 600)))
+	else:
+		if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_size(settings.window_size)
+	return settings
 
 
 func _config_bool(key: int, fallback: bool) -> bool:

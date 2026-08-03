@@ -7,6 +7,7 @@ const Protocol = preload("res://scripts/network/protocol.gd")
 const CerealReader = preload("res://scripts/network/cereal_reader.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const WorldPathfinderScript = preload("res://scripts/game/world_pathfinder.gd")
+const RuntimeConfigPanelScript = preload("res://scripts/game/runtime_config_panel.gd")
 const MINIMAP_PANEL_PATH := "res://scenes/game/panels/minimap.tscn"
 const QUEST_PANEL_PATH := "res://scenes/game/panels/quest.tscn"
 const NPC_CHAT_PANEL_PATH := "res://scenes/game/panels/npc_chat.tscn"
@@ -2154,6 +2155,7 @@ func _handle_player_config(payload: PackedByteArray) -> void:
 		game_state.magic_keys = config.get("magicKeys", {})
 		game_state.runtime_config = config.get("runtimeConfig", {})
 		AudioService.apply_runtime_config(game_state.runtime_config)
+		RuntimeConfigPanelScript.apply_display_config(game_state.runtime_config)
 		game_state.state_changed.emit()
 
 
