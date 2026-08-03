@@ -238,15 +238,21 @@ func _zoom_at(canvas_position: Vector2, next_zoom: float) -> void:
 
 
 func _update_tooltip() -> void:
-	var tooltip := $Coordinate
+	var tooltip := $Coordinate as Label
 	if not Rect2(Vector2.ZERO, $MapViewport.size).has_point(_hover_position) or $MapViewport/MapTexture.texture == null or not Rect2(_image_offset, _image_size()).has_point(_hover_position):
 		tooltip.hide()
 		return
 	var location := _canvas_to_map(_hover_position)
 	tooltip.text = "[%d,%d]" % [location.x, location.y]
-	tooltip.add_theme_color_override("font_color", Color.YELLOW)
-	tooltip.add_theme_color_override("font_outline_color", Color.RED if not _world.can_walk(location.x, location.y) else Color.BLACK)
-	tooltip.position = Vector2(clampf(_hover_position.x - 90.0, 0.0, size.x - 90.0), clampf(_hover_position.y - 22.0, 0.0, size.y - 20.0))
+	var font := tooltip.get_theme_font("font")
+	var font_size := tooltip.get_theme_font_size("font_size")
+	tooltip.size = Vector2(
+		ceilf(font.get_string_size(tooltip.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x) + 2.0,
+		ceilf(font.get_height(font_size)) + 1.0,
+	)
+	tooltip.position = _hover_position - tooltip.size
+	var background := tooltip.get_theme_stylebox("normal") as StyleBoxFlat
+	background.bg_color = Color(0, 0, 0, 200.0 / 255.0) if _world.can_walk(location.x, location.y) else Color(1, 0, 0, 200.0 / 255.0)
 	tooltip.show()
 
 

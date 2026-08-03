@@ -22,6 +22,14 @@ func _ready() -> void:
 	if panel.get_node("MapViewport/Markers").get_child_count() != 3:
 		_fail("player/NPC/monster markers missing")
 		return
+	var coordinate := panel.get_node("Coordinate") as Label
+	var zoom_text := panel.get_node("ZoomBackground/ZoomText") as Label
+	if coordinate.get_theme_font("font").resource_path != "res://assets/font/01_Yahei.ttf" or coordinate.get_theme_font_size("font_size") != 12:
+		_fail("coordinate text did not use original font-1/12")
+		return
+	if zoom_text.get_theme_font("font").resource_path != "res://assets/font/01_Yahei.ttf" or zoom_text.get_theme_font_size("font_size") != 12:
+		_fail("zoom text did not use original font-1/12")
+		return
 	if not panel.visible or not panel.call("requested_visible"):
 		_fail("minimap is not visible by default")
 		return
@@ -81,6 +89,34 @@ func _ready() -> void:
 	if not panel.get_node("Coordinate").visible:
 		_fail("coordinate tooltip disappeared inside the minimap image")
 		return
+	var coordinate_style := coordinate.get_theme_stylebox("normal") as StyleBoxFlat
+	var coordinate_location: Vector2i = panel.call("_canvas_to_map", image_center)
+	var coordinate_walkable: bool = panel.get("_world").can_walk(coordinate_location.x, coordinate_location.y)
+	var expected_background := Color(0, 0, 0, 200.0 / 255.0) if coordinate_walkable else Color(1, 0, 0, 200.0 / 255.0)
+	if coordinate_style == null or not coordinate_style.bg_color.is_equal_approx(expected_background):
+		_fail("coordinate tooltip did not use original alpha-200 walkability background")
+		return
+	if not (coordinate.position + coordinate.size).is_equal_approx(image_center):
+		_fail("coordinate tooltip was not tightly anchored above-left of the cursor")
+		return
+	var expected_coordinate_size := Vector2(
+		ceilf(coordinate.get_theme_font("font").get_string_size(coordinate.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x) + 2.0,
+		ceilf(coordinate.get_theme_font("font").get_height(12)) + 1.0,
+	)
+	if not coordinate.size.is_equal_approx(expected_coordinate_size):
+		_fail("coordinate tooltip did not fit replacement-font metrics: actual=%s expected=%s" % [coordinate.size, expected_coordinate_size])
+		return
+	for walkable in [true, false]:
+		var sample_hover := _find_canvas_point(panel, walkable)
+		if sample_hover.x < 0.0:
+			_fail("map fixture has no %s coordinate tooltip sample" % ("walkable" if walkable else "blocked"))
+			return
+		panel.set("_hover_position", sample_hover)
+		panel.call("_update_tooltip")
+		var sample_background := Color(0, 0, 0, 200.0 / 255.0) if walkable else Color(1, 0, 0, 200.0 / 255.0)
+		if not coordinate_style.bg_color.is_equal_approx(sample_background):
+			_fail("coordinate tooltip walkability background mismatch: walkable=%s actual=%s" % [walkable, coordinate_style.bg_color])
+			return
 	panel.call("_zoom_at", image_center, 1.5)
 	GameState.player_map_id = 0
 	GameState.state_changed.emit()
@@ -100,6 +136,15 @@ func _ready() -> void:
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MINIMAP_SCREENSHOT"))
 	print("MINIMAP PASS: original texture, markers, alpha, extend, pan and zoom")
 	get_tree().quit()
+
+
+func _find_canvas_point(panel: Control, walkable: bool) -> Vector2:
+	var world: RefCounted = panel.get("_world")
+	for y in range(0, world.height, 5):
+		for x in range(0, world.width, 5):
+			if world.can_walk(x, y) == walkable:
+				return panel.call("_map_to_canvas", x, y)
+	return Vector2(-1, -1)
 
 
 func _fail(message: String) -> void:
