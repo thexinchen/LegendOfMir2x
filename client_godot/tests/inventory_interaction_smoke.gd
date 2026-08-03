@@ -308,6 +308,20 @@ func _ready() -> void:
 	if panel.get("_scroll_row") != bottom_row - 1:
 		_fail("inventory wheel over occupied cell did not scroll")
 		return
+	panel.set("_selected_key", weapon_key)
+	GameState.inventory_operation = {
+		"invOp": 3,
+		"uid": 9876,
+		"commitTag": "commit_repair",
+		"typeList": [resources.item_type(potion_id)],
+	}
+	if panel.call("_commit_operation") != ERR_INVALID_PARAMETER:
+		_fail("inventory operation switch submitted the stale disallowed selection")
+		return
+	GameState.inventory_operation.typeList = [resources.item_type(weapon_id)]
+	if panel.call("_commit_operation") != ERR_UNCONFIGURED:
+		_fail("inventory operation type guard blocked the current allowed selection")
+		return
 	GameState.inventory_operation = {"invOp": 3, "uid": 9876, "typeList": ["武器"]}
 	panel.show()
 	var escape := InputEventKey.new()

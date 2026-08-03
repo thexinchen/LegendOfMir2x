@@ -376,12 +376,17 @@ func _select_operation_item(key: String) -> void:
 	_refresh()
 
 
-func _commit_operation() -> void:
+func _commit_operation() -> Error:
 	if _selected_key.is_empty() or not _bins.has(_selected_key):
-		return
+		return ERR_INVALID_PARAMETER
 	var item: Dictionary = _bins[_selected_key].item
 	var operation: Dictionary = _state.inventory_operation
-	NetworkClient.send_npc_event(operation.get("uid", 0), "", operation.get("commitTag", ""), "%d:%d" % [item.get("itemID", 0), item.get("seqID", 0)])
+	if int(operation.get("invOp", OP_NONE)) == OP_NONE:
+		return ERR_INVALID_PARAMETER
+	var allowed: Array = operation.get("typeList", [])
+	if not allowed.has(_resources.item_type(int(item.get("itemID", 0)))):
+		return ERR_INVALID_PARAMETER
+	return NetworkClient.send_npc_event(operation.get("uid", 0), "", operation.get("commitTag", ""), "%d:%d" % [item.get("itemID", 0), item.get("seqID", 0)])
 
 
 func _refresh_operation() -> void:
