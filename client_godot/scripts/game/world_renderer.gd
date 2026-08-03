@@ -1429,7 +1429,7 @@ func _hero_attached_magic_draw_policy(magic_id: int, kind: String, actor_directi
 
 
 func _draw_player(view_x: int, view_y: int) -> void:
-	var draw_grid := _action_draw_grid(game_state.player_x, game_state.player_y, game_state.player_action_from_x, game_state.player_action_from_y, game_state.player_action_type, game_state.player_action_started_ms, game_state.player_action_speed)
+	var draw_grid := player_draw_grid()
 	var px: int = roundi(draw_grid.x * GRID_XP) - view_x
 	var py: int = roundi(draw_grid.y * GRID_YP) - view_y
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
@@ -1441,6 +1441,10 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	_draw_player_say(game_state.player_uid, px, py)
 	
 	# The C++ client only enables actor HP/name overlays through debug/runtime flags.
+
+
+func player_draw_grid() -> Vector2:
+	return _action_draw_grid(game_state.player_x, game_state.player_y, game_state.player_action_from_x, game_state.player_action_from_y, game_state.player_action_type, game_state.player_action_started_ms, game_state.player_action_speed)
 
 
 func _draw_team_leader_marker(uid: int, start_x: int, start_y: int) -> void:

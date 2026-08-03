@@ -386,6 +386,24 @@ func _test_camera_centering(main: Control) -> bool:
 	if GameState.hud_minimized or not is_equal_approx(GameState.view_y, float(132 * 32 - 234)):
 		_fail("restored HUD or ESC centering did not return to the 469px viewport")
 		return false
+	GameState.player_action_from_x = 371
+	GameState.player_action_from_y = 132
+	GameState.player_x = 373
+	GameState.player_y = 134
+	GameState.player_action_type = 3
+	GameState.player_action_speed = 100
+	GameState.player_action_started_ms = Time.get_ticks_msec() - 300
+	var world_renderer: Node = main.get_node("WorldRenderer")
+	var visual_grid: Vector2 = world_renderer.call("player_draw_grid")
+	main.call("_center_hero")
+	var expected_visual_x := visual_grid.x * 48.0 - 400.0
+	var expected_visual_y := visual_grid.y * 32.0 - 234.0
+	if absf(GameState.view_x - expected_visual_x) > 2.0 or absf(GameState.view_y - expected_visual_y) > 2.0:
+		_fail("ESC centered on the movement destination instead of the current visual position")
+		return false
+	GameState.player_action_type = 2
+	GameState.player_action_started_ms = 0
+	GameState.center_camera_on_player()
 	return true
 
 

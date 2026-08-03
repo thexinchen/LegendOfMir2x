@@ -712,8 +712,12 @@ func camera_center_y() -> int:
 
 
 func center_camera_on_player() -> void:
-	view_x = float(player_x) * GRID_XP - SCREEN_W * 0.5
-	view_y = float(player_y) * GRID_YP - camera_center_y()
+	center_camera_on_grid(Vector2(player_x, player_y))
+
+
+func center_camera_on_grid(grid_position: Vector2) -> void:
+	view_x = grid_position.x * GRID_XP - SCREEN_W * 0.5
+	view_y = grid_position.y * GRID_YP - camera_center_y()
 	if player_action_type not in [3, 5]:
 		_camera_scrolling = false
 

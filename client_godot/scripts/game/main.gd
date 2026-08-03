@@ -685,8 +685,7 @@ func _direction_to(from_x: int, from_y: int, to_x: int, to_y: int) -> int:
 
 
 func _center_hero() -> void:
-	# Center camera on player immediately
-	game_state.center_camera_on_player()
+	game_state.center_camera_on_grid(world_renderer.player_draw_grid())
 
 
 func _on_control_panel_minimized_changed(minimized: bool) -> void:
