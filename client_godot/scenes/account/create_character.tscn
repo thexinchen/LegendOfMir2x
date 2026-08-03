@@ -24,6 +24,8 @@
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_click"]
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_input"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_name"]
 bg_color = Color(0, 0, 0, 1)
 border_width_left = 1
@@ -95,18 +97,25 @@ mouse_filter = 2
 texture = ExtResource("6_controls")
 expand_mode = 1
 
-[node name="NameInput" type="LineEdit" parent="."]
-unique_name_in_owner = true
+[node name="NameField" type="Panel" parent="."]
 layout_mode = 0
 offset_left = 355.0
 offset_top = 520.0
 offset_right = 445.0
 offset_bottom = 535.0
+clip_contents = true
+theme_override_styles/panel = SubResource("StyleBoxFlat_name")
+
+[node name="NameInput" type="LineEdit" parent="NameField"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 85.0
+offset_bottom = 15.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/caret_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 12
-theme_override_styles/normal = SubResource("StyleBoxFlat_name")
-theme_override_styles/focus = SubResource("StyleBoxFlat_name")
+theme_override_styles/normal = SubResource("StyleBoxEmpty_input")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_input")
 max_length = 63
 flat = true
 
@@ -201,6 +210,6 @@ script = ExtResource("22_notice")
 [connection signal="pressed" from="WarriorButton" to="." method="_on_warrior_pressed"]
 [connection signal="pressed" from="WizardButton" to="." method="_on_wizard_pressed"]
 [connection signal="pressed" from="TaoistButton" to="." method="_on_taoist_pressed"]
-[connection signal="text_submitted" from="NameInput" to="." method="_on_submit_pressed" unbinds=1]
+[connection signal="text_submitted" from="NameField/NameInput" to="." method="_on_submit_pressed" unbinds=1]
 [connection signal="pressed" from="SubmitButton" to="." method="_on_submit_pressed"]
 [connection signal="pressed" from="ExitButton" to="." method="_on_exit_pressed"]

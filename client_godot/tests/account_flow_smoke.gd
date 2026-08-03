@@ -106,6 +106,17 @@ func _ready() -> void:
 		_fail("character-creation BGM mismatch: %08X %s" % [AudioService.current_bgm_id, AudioService.current_bgm_path])
 		return
 	create.set_process(false)
+	var name_field := create.get_node_or_null("NameField") as Panel
+	var name_input := create.get_node_or_null("NameField/NameInput") as LineEdit
+	if name_field == null or name_input == null:
+		_fail("character-name field did not separate the original 90x15 frame from the native input")
+		return
+	if name_field.position != Vector2(355, 520) or name_field.size != Vector2(90, 15) or not name_field.clip_contents or name_input.position != Vector2.ZERO or name_input.size.x != 85.0:
+		_fail("character-name field diverged from C++ frame/input geometry: field=%s/%s/%s input=%s/%s" % [name_field.position, name_field.size, name_field.clip_contents, name_input.position, name_input.size])
+		return
+	if name_input.get_theme_font("font").resource_path != "res://assets/font/01_Yahei.ttf" or name_input.get_theme_font_size("font_size") != 12:
+		_fail("character-name field did not preserve the replacement font-1/12 input")
+		return
 	create.set("_animation_time_ms", 0.0)
 	create.call("_update_characters")
 	var male_preview := create.get_node("MaleSprite") as Control
@@ -140,6 +151,8 @@ func _ready() -> void:
 		_fail("creation cycle job/gender SEFF mismatch: %08X" % AudioService.last_seff_id)
 		return
 	if OS.has_environment("MIR2X_CREATE_CHARACTER_SCREENSHOT"):
+		name_input.text = "亚当"
+		name_input.caret_column = name_input.text.length()
 		create.set("_animation_time_ms", 400.0)
 		create.call("_update_characters")
 		await RenderingServer.frame_post_draw
