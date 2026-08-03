@@ -922,6 +922,40 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 	if 0 in [firewall_id, shield_id, fireball_id, flame_sword_id, half_moon_id]:
 		_fail("spell metadata unavailable")
 		return false
+	GameState.player_action_from_x = 9
+	GameState.player_action_from_y = 10
+	GameState.player_x = 10
+	GameState.player_y = 10
+	GameState.player_action_type = 3
+	GameState.player_action_speed = 100
+	GameState.player_action_started_ms = Time.get_ticks_msec() - 100
+	var remaining_path: Array[Vector2i] = [Vector2i(11, 10)]
+	main.set("_move_path", remaining_path)
+	var brake_effect_count := GameState.magic_effects.size()
+	if not main.call("_cast_magic", firewall_id, Vector2i(12, 10)) \
+			or GameState.player_action_type != 3 or GameState.player_action_speed != 200 \
+			or (main.get("_pending_spell_action") as Dictionary).is_empty() \
+			or GameState.magic_effects.size() != brake_effect_count:
+		_fail("moving spell did not preserve the original speed-200 half-step brake")
+		return false
+	main.call("_process_movement", 0.16)
+	if GameState.player_action_type != 9 or not (main.get("_pending_spell_action") as Dictionary).is_empty() \
+			or GameState.magic_effects.size() != brake_effect_count + 1:
+		_fail("braked movement did not release the deferred spell at the endpoint")
+		return false
+	GameState.magic_cast_times.erase(firewall_id)
+	GameState.player_action_from_x = 9
+	GameState.player_action_from_y = 10
+	GameState.player_action_type = 3
+	GameState.player_action_speed = 100
+	GameState.player_action_started_ms = Time.get_ticks_msec() - 400
+	var late_effect_count := GameState.magic_effects.size()
+	if not main.call("_cast_magic", firewall_id, Vector2i(12, 10)) \
+			or GameState.player_action_type != 9 or not (main.get("_pending_spell_action") as Dictionary).is_empty() \
+			or GameState.magic_effects.size() != late_effect_count + 1:
+		_fail("spell after the movement midpoint did not execute immediately")
+		return false
+	GameState.magic_cast_times.erase(firewall_id)
 	GameState.learned_magic = [{"magicID": firewall_id, "exp": 0}]
 	GameState.magic_keys = {firewall_id: 120}
 	var key_event := InputEventKey.new()

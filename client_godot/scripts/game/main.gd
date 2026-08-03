@@ -63,6 +63,7 @@ var _swing_magic: Dictionary = {}
 var _magic_focus_uid := 0
 var _move_path: Array[Vector2i] = []
 var _move_step_timer := 0.0
+var _pending_spell_action: Dictionary = {}
 var _chase_target_uid := 0
 var _follow_focus_uid := 0
 var _attack_focus_uid := 0
@@ -359,6 +360,7 @@ func _start_pickup_at(target: Vector2i) -> void:
 func _cancel_movement() -> void:
 	_move_path.clear()
 	_move_step_timer = 0.0
+	_pending_spell_action.clear()
 	_chase_target_uid = 0
 	_pickup_target = Vector2i(-1, -1)
 	_mine_target = Vector2i(-1, -1)
@@ -434,7 +436,48 @@ func _cast_magic(magic_id: int, mouse_grid: Vector2i) -> bool:
 
 
 func _send_spell_action(action_type: int, magic_id: int, aim_grid: Vector2i, aim_uid: int) -> bool:
+	var pending_action := {
+		"action_type": action_type,
+		"magic_id": magic_id,
+		"aim_grid": aim_grid,
+		"aim_uid": aim_uid,
+	}
+	if not _pending_spell_action.is_empty():
+		_pending_spell_action = pending_action
+		return true
+	if _should_brake_movement_for_spell():
+		_cancel_movement()
+		_pending_spell_action = pending_action
+		game_state.player_action_speed = 200
+		game_state.player_action_started_ms = Time.get_ticks_msec() - 150
+		_move_step_timer = 0.15
+		game_state.state_changed.emit()
+		return true
 	_cancel_movement()
+	return _execute_spell_action(action_type, magic_id, aim_grid, aim_uid)
+
+
+func _should_brake_movement_for_spell() -> bool:
+	if game_state.player_action_type not in [3, 5] or game_state.player_action_started_ms <= 0:
+		return false
+	var duration_ms := 600.0 * 100.0 / float(clampi(game_state.player_action_speed, 20, 500))
+	return float(Time.get_ticks_msec() - game_state.player_action_started_ms) < duration_ms * 0.5
+
+
+func _release_pending_spell() -> void:
+	if _pending_spell_action.is_empty():
+		return
+	var pending_action := _pending_spell_action
+	_pending_spell_action = {}
+	_execute_spell_action(
+		pending_action.get("action_type", 9),
+		pending_action.get("magic_id", 0),
+		pending_action.get("aim_grid", Vector2i(game_state.player_x, game_state.player_y)),
+		pending_action.get("aim_uid", 0),
+	)
+
+
+func _execute_spell_action(action_type: int, magic_id: int, aim_grid: Vector2i, aim_uid: int) -> bool:
 	var target_grid := aim_grid
 	if aim_uid == game_state.player_uid:
 		target_grid = Vector2i(game_state.player_x, game_state.player_y)
@@ -558,10 +601,11 @@ func _process_movement(delta: float) -> void:
 			_plan_mine_path()
 			return
 		if _chase_target_uid == 0:
-			if game_state.player_action_type == 3:
+			if game_state.player_action_type in [3, 5]:
 				_move_step_timer -= delta
 				if _move_step_timer <= 0.0:
 					_set_player_action(2)
+					_release_pending_spell()
 			return
 		_move_step_timer -= delta
 		if _move_step_timer > 0.0:
