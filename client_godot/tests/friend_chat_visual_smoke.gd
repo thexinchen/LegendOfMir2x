@@ -20,6 +20,9 @@ func _ready() -> void:
 	if first_row == null or first_row.size.y != 58 or first_row.get_child_count() < 3 or not first_row.get_child(0) is TextureRect:
 		_fail("preview row avatar/style geometry mismatch")
 		return
+	if (first_row.get_child(0) as TextureRect).stretch_mode != TextureRect.STRETCH_SCALE:
+		_fail("preview avatar did not stretch the complete texture like the original client")
+		return
 	if panel.get_node("ContentFrame").position != Vector2.ZERO or panel.get_node("ContentFrame").size != panel.size:
 		_fail("full-board foreground frame mismatch")
 		return
@@ -69,6 +72,9 @@ func _ready() -> void:
 	var first_candidate := search_results.get_child(0) as Button
 	if first_candidate.get_node_or_null("Add") == null or first_candidate.get_node("Add").text != "添加" or first_candidate.get_child(1).position.y != 10:
 		_fail("search candidate did not use the original independent Add control")
+		return
+	if not first_candidate.get_child(0) is TextureRect or (first_candidate.get_child(0) as TextureRect).stretch_mode != TextureRect.STRETCH_SCALE:
+		_fail("search candidate avatar did not stretch the complete texture like the original client")
 		return
 	var input_frame := panel.get_node("Page/SearchPage/InputFrame") as NinePatchRect
 	if input_frame.size != Vector2(332, 30) or panel.get_node("Page/SearchPage/SearchIcon").position != Vector2(8, 5) or panel.get_node("Page/SearchPage/Clear").get_theme_font_size("font_size") != 15:
@@ -133,6 +139,11 @@ func _ready() -> void:
 	panel.call("_open_chat", friend.cpid)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	var message_rows := panel.get_node("Page/ChatPage/Messages/MessageRows")
+	var first_message := message_rows.get_child(0) as HBoxContainer
+	if first_message == null or not first_message.get_child(0) is TextureRect or (first_message.get_child(0) as TextureRect).stretch_mode != TextureRect.STRETCH_SCALE:
+		_fail("message avatar did not stretch the complete texture like the original client")
+		return
 	panel.call("_show_reference", 1001, "清风：晚上一起去矿洞吗？")
 	await get_tree().process_frame
 	var active_reference_bar := panel.get_node("Page/ChatPage/Composer/ReferenceBar") as Panel

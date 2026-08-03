@@ -266,7 +266,7 @@ func _add_row(parent: Node, peer: Dictionary, title: String, subtitle: String, a
 	avatar.position = Vector2(4, 4)
 	avatar.size = Vector2(42, 50) if row_height == 58 else Vector2(40, 44)
 	avatar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	avatar.stretch_mode = TextureRect.STRETCH_SCALE
 	avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var avatar_frame := _peer_avatar(peer)
 	if not avatar_frame.is_empty():
@@ -384,7 +384,7 @@ func _add_message_bubble(parent: Node, peer: Dictionary, sender_name: String, te
 	var avatar := TextureRect.new()
 	avatar.custom_minimum_size = Vector2(42, 42)
 	avatar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	avatar.stretch_mode = TextureRect.STRETCH_SCALE
 	var avatar_frame: Dictionary = _peer_avatar(peer)
 	if not avatar_frame.is_empty():
 		avatar.texture = avatar_frame.get("texture")
