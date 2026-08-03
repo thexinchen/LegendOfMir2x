@@ -188,6 +188,14 @@ func _ready() -> void:
 	if main_purchase.position != Vector2(0, npc_panel.size.y):
 		_fail("purchase panel did not stack below NPC chat")
 		return
+	var npc_size := npc_panel.size
+	npc_panel.size = Vector2(npc_size.x, main.size.y)
+	main.call("_show_purchase", {"npcUID": 92, "itemList": [packable_id]})
+	var expected_purchase_y := maxf(0.0, main.size.y - main_purchase.size.y)
+	if main_purchase.position != Vector2(0, expected_purchase_y):
+		_fail("purchase panel escaped the viewport below a tall NPC dialog: position=%s expected_y=%s" % [main_purchase.position, expected_purchase_y])
+		return
+	npc_panel.size = npc_size
 	GameState.chat_log.clear()
 	GameState.npc_sell_detail = {"npcUID": 92, "list": [
 		{"item": {"itemID": unique_id, "seqID": 33}, "costList": [{"itemID": gold_id, "count": 1234}]},

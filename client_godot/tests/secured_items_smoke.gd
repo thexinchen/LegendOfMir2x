@@ -113,6 +113,14 @@ func _ready() -> void:
 	if main_secured.position != Vector2(0, npc_panel.size.y):
 		_fail("secured panel did not stack below NPC chat: %s" % main_secured.position)
 		return
+	var npc_size := npc_panel.size
+	npc_panel.size = Vector2(npc_size.x, main.size.y)
+	main.call("_show_secured_items", secured_items)
+	var expected_secured_y := maxf(0.0, main.size.y - main_secured.size.y)
+	if main_secured.position != Vector2(0, expected_secured_y):
+		_fail("secured panel escaped the viewport below a tall NPC dialog: position=%s expected_y=%s" % [main_secured.position, expected_secured_y])
+		return
+	npc_panel.size = npc_size
 	main.hide()
 	await get_tree().process_frame
 	if OS.has_environment("MIR2X_SECURED_SCREENSHOT"):

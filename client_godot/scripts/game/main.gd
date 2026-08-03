@@ -2451,9 +2451,11 @@ func _show_secured_items(items: Array) -> void:
 	var npc_panel := _extra_panel_nodes.get(NPC_CHAT_PANEL_PATH) as Control
 	var secured_panel := _ensure_extra_panel(SECURED_ITEMS_PANEL_PATH)
 	secured_panel.position = Vector2(0, npc_panel.size.y if npc_panel != null and npc_panel.visible else 0)
+	secured_panel.call("_clamp_to_viewport")
 	secured_panel.show()
 	secured_panel.move_to_front()
 	inventory_panel.position = Vector2(size.x - inventory_panel.size.x, 0)
+	inventory_panel.call("_clamp_to_viewport")
 	inventory_panel.show()
 	inventory_panel.move_to_front()
 
@@ -2538,6 +2540,7 @@ func _show_purchase(data: Dictionary) -> void:
 	var npc_panel := _extra_panel_nodes.get(NPC_CHAT_PANEL_PATH) as Control
 	var purchase_panel := _ensure_extra_panel(PURCHASE_PANEL_PATH)
 	purchase_panel.position = Vector2(0.0, npc_panel.size.y) if npc_panel and npc_panel.visible else Vector2.ZERO
+	purchase_panel.call("_clamp_to_viewport")
 	purchase_panel.show()
 	purchase_panel.move_to_front()
 
@@ -2594,6 +2597,7 @@ func _handle_start_inventory_operation(payload: PackedByteArray) -> void:
 	game_state.start_inventory_operation(operation)
 	inventory_panel.show()
 	inventory_panel.position = Vector2(size.x - inventory_panel.size.x, 0)
+	inventory_panel.call("_clamp_to_viewport")
 	inventory_panel.move_to_front()
 
 
