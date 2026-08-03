@@ -665,20 +665,32 @@ func _test_inventory_transaction_feedback(main: Control, resources: RefCounted) 
 	var known_item_id: int = resources.item_names.keys()[0]
 	var packable_id := 0
 	var non_packable_id := 0
+	var weapon_id := 0
+	var belt_item_id := 0
 	for item_id_value in resources.item_meta:
 		var item_id: int = item_id_value
+		var item_type: String = resources.item_type(item_id)
 		if resources.item_is_packable(item_id) and packable_id == 0:
 			packable_id = item_id
-		elif not resources.item_is_packable(item_id) and resources.item_type(item_id) != "金币" and non_packable_id == 0:
+		elif not resources.item_is_packable(item_id) and item_type != "金币" and non_packable_id == 0:
 			non_packable_id = item_id
-		if packable_id != 0 and non_packable_id != 0:
+		if item_type == "武器" and weapon_id == 0:
+			weapon_id = item_id
+		if item_type in ["恢复药水", "传送卷轴"] and belt_item_id == 0:
+			belt_item_id = item_id
+		if packable_id != 0 and non_packable_id != 0 and weapon_id != 0 and belt_item_id != 0:
 			break
-	if packable_id == 0 or non_packable_id == 0:
+	if packable_id == 0 or non_packable_id == 0 or weapon_id == 0 or belt_item_id == 0:
 		_fail("inventory transaction fixtures unavailable")
 		return false
 	var saved_chat := GameState.chat_log.duplicate(true)
 	var saved_sell := GameState.npc_sell.duplicate(true)
 	var saved_detail := GameState.npc_sell_detail.duplicate(true)
+	var saved_inventory := GameState.inventory.duplicate(true)
+	var saved_wear := GameState.wear.duplicate(true)
+	var saved_belt := GameState.belt.duplicate(true)
+	var saved_grabbed := GameState.grabbed_item.duplicate(true)
+	var saved_uid := GameState.player_uid
 	GameState.chat_log.clear()
 	main.call("_on_server_message", NetworkClient.SM_PICKUPERROR, _u32_payload(known_item_id))
 	main.call("_on_server_message", NetworkClient.SM_PICKUPERROR, _u32_payload(0xFFFFFFFE))
@@ -735,9 +747,38 @@ func _test_inventory_transaction_feedback(main: Control, resources: RefCounted) 
 	if GameState.npc_sell_detail.list.size() != 2 or GameState.npc_sell_detail.list[0].item.itemID != packable_id or GameState.npc_sell_detail.list[1].item.seqID != 10 or not GameState.chat_log.is_empty():
 		_fail("buy success mutation/feedback mismatch: detail=%s log=%s" % [GameState.npc_sell_detail, GameState.chat_log])
 		return false
+	GameState.player_uid = (5 << 59) | 901
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	main.call("_on_server_message", NetworkClient.SM_EQUIPWEAR, _equip_wear_payload(GameState.player_uid, 3, weapon_id, 80, 1))
+	if AudioService.last_seff_id != resources.item_sound_effect(weapon_id):
+		_fail("wear acknowledgement omitted original equip sound: actual=%08X expected=%08X" % [AudioService.last_seff_id, resources.item_sound_effect(weapon_id)])
+		return false
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	main.call("_on_server_message", NetworkClient.SM_EQUIPBELT, _grab_item_payload(1, belt_item_id, 84, 1))
+	if AudioService.last_seff_id != resources.item_sound_effect(belt_item_id):
+		_fail("belt acknowledgement omitted original item sound: actual=%08X expected=%08X" % [AudioService.last_seff_id, resources.item_sound_effect(belt_item_id)])
+		return false
+	GameState.wear[3] = _item_record(non_packable_id, 81, 1)
+	GameState.grabbed_item = {}
+	main.call("_on_server_message", NetworkClient.SM_GRABWEAR, _grab_item_payload(3, non_packable_id, 81, 1))
+	if GameState.wear.has(3) or GameState.grabbed_item.get("itemID", 0) != non_packable_id or GameState.grabbed_item.get("seqID", 0) != 81:
+		_fail("empty-hand wear grab acknowledgement did not set the returned item: wear=%s grabbed=%s" % [GameState.wear, GameState.grabbed_item])
+		return false
+	GameState.belt[2] = _item_record(packable_id, 83, 1)
+	GameState.grabbed_item = _item_record(non_packable_id, 82, 1)
+	var inventory_before_belt_grab := GameState.inventory.size()
+	main.call("_on_server_message", NetworkClient.SM_GRABBELT, _grab_item_payload(2, packable_id, 83, 1))
+	if not GameState.belt[2].is_empty() or GameState.grabbed_item.get("itemID", 0) != packable_id or GameState.grabbed_item.get("seqID", 0) != 83 or GameState.inventory.size() != inventory_before_belt_grab + 1 or GameState.inventory.back().get("seqID", 0) != 82:
+		_fail("occupied-hand belt grab acknowledgement did not swap through inventory: belt=%s grabbed=%s inventory=%s" % [GameState.belt[2], GameState.grabbed_item, GameState.inventory])
+		return false
 	GameState.chat_log = saved_chat
 	GameState.npc_sell = saved_sell
 	GameState.npc_sell_detail = saved_detail
+	GameState.inventory = saved_inventory
+	GameState.wear = saved_wear
+	GameState.belt = saved_belt
+	GameState.grabbed_item = saved_grabbed
+	GameState.player_uid = saved_uid
 	return true
 
 
@@ -1687,6 +1728,33 @@ func _item_record(item_id: int, seq_id: int, count: int) -> Dictionary:
 
 func _sd_item_payload(item_id: int, seq_id: int, count: int) -> PackedByteArray:
 	var payload := PackedByteArray([1])
+	_append_u32(payload, item_id)
+	_append_u32(payload, seq_id)
+	_append_u64(payload, count)
+	_append_u64(payload, 0)
+	_append_u64(payload, 0)
+	_append_u64(payload, 0)
+	payload.append(0)
+	return payload
+
+
+func _grab_item_payload(slot: int, item_id: int, seq_id: int, count: int) -> PackedByteArray:
+	var payload := PackedByteArray([1])
+	_append_u32(payload, slot)
+	_append_u32(payload, item_id)
+	_append_u32(payload, seq_id)
+	_append_u64(payload, count)
+	_append_u64(payload, 0)
+	_append_u64(payload, 0)
+	_append_u64(payload, 0)
+	payload.append(0)
+	return payload
+
+
+func _equip_wear_payload(uid: int, slot: int, item_id: int, seq_id: int, count: int) -> PackedByteArray:
+	var payload := PackedByteArray([1])
+	_append_u64(payload, uid)
+	_append_u32(payload, slot)
 	_append_u32(payload, item_id)
 	_append_u32(payload, seq_id)
 	_append_u64(payload, count)

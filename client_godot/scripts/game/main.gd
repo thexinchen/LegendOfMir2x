@@ -2225,6 +2225,7 @@ func _handle_equip_wear(payload: PackedByteArray) -> void:
 		var equipped: Dictionary = data.get("item", {})
 		if game_state.grabbed_item.get("itemID", 0) == equipped.get("itemID", 0) and game_state.grabbed_item.get("seqID", 0) == equipped.get("seqID", 0):
 			game_state.grabbed_item = {}
+		_play_seff(_resources.item_sound_effect(int(equipped.get("itemID", 0))), game_state.player_x, game_state.player_y)
 		game_state.state_changed.emit()
 	elif not game_state.get_creature(uid).is_empty():
 		var creature: Dictionary = game_state.get_creature(uid)
@@ -2260,6 +2261,7 @@ func _handle_equip_belt(payload: PackedByteArray) -> void:
 		game_state.belt[slot] = equipped
 		if game_state.grabbed_item.get("itemID", 0) == equipped.get("itemID", 0) and game_state.grabbed_item.get("seqID", 0) == equipped.get("seqID", 0):
 			game_state.grabbed_item = {}
+		_play_seff(_resources.item_sound_effect(int(equipped.get("itemID", 0))), game_state.player_x, game_state.player_y)
 		game_state.state_changed.emit()
 
 
