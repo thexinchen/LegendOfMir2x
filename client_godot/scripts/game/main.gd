@@ -2740,8 +2740,7 @@ func _team_flag_frame_index(now_ms: int) -> int:
 
 
 func _request_team_flag_target(uid: int) -> Error:
-	var creature: Dictionary = game_state.get_creature(uid)
-	if creature.get("type", 0) != 2:
+	if uid != game_state.player_uid and game_state.get_creature(uid).get("type", 0) != 2:
 		return ERR_INVALID_PARAMETER
 	return NetworkClient.send_request_join_team(uid)
 

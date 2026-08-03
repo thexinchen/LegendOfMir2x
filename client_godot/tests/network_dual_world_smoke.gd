@@ -3,7 +3,7 @@ extends Node
 const Protocol = preload("res://scripts/network/protocol.gd")
 
 const SAY_MARKER := "双客户端世界交互验证"
-const WAIT_SECONDS := 18.0
+const WAIT_SECONDS := 25.0
 
 var _role := "observer"
 var _main: Control
@@ -17,6 +17,12 @@ var _saw_say := false
 var _saw_move := false
 var _team_request_sent := false
 var _saw_team_candidate := false
+var _actor_team_created := false
+var _actor_candidate_accepted := false
+var _actor_saw_full_team := false
+var _actor_saw_member_leave := false
+var _observer_leave_requested := false
+var _observer_left_team := false
 var _actor_started := false
 var _actor_relocation_requested := false
 var _capture_started := false
@@ -102,6 +108,33 @@ func _process_actor() -> void:
 			_saw_team_candidate = true
 	if not _saw_team_candidate:
 		return
+	if not _actor_team_created:
+		if int(_main.call("_request_team_flag_target", GameState.player_uid)) != OK:
+			_fail("failed to create the actor team through the self team-flag target", 14)
+			return
+		_actor_team_created = true
+		return
+	if not _actor_candidate_accepted:
+		if not _team_has_uid(GameState.player_uid):
+			return
+		_main.call("_on_control_panel_panel_requested", "res://scenes/game/panels/team.tscn")
+		var team_panel := _main.get("_extra_panel_nodes").get("res://scenes/game/panels/team.tscn") as Control
+		if team_panel == null or not team_panel.visible:
+			_fail("actor team panel did not open after creating the team", 15)
+			return
+		team_panel.call("_toggle_mode")
+		team_panel.call("_select_uid", 1, int(remote.get("uid", 0)))
+		team_panel.call("_join_selected")
+		_actor_candidate_accepted = true
+		return
+	if not _actor_saw_full_team:
+		if not _team_has_uid(GameState.player_uid) or not _team_has_uid(int(remote.get("uid", 0))):
+			return
+		_actor_saw_full_team = true
+	if not _actor_saw_member_leave:
+		if GameState.team_members.size() != 1 or not _team_has_uid(GameState.player_uid):
+			return
+		_actor_saw_member_leave = true
 	if _actor_started:
 		return
 	_actor_started = true
@@ -145,10 +178,21 @@ func _process_observer() -> void:
 		for message_value in GameState.player_say_messages.get(_remote_uid, []):
 			if str(message_value.get("text", "")) == SAY_MARKER:
 				_saw_say = true
-	if _saw_remote and _saw_name and _saw_appearance and _team_request_sent and _saw_say and _saw_move and not _capture_started:
+	if _team_has_uid(GameState.player_uid) and _team_has_uid(_remote_uid) and not _observer_leave_requested:
+		_main.call("_on_control_panel_panel_requested", "res://scenes/game/panels/team.tscn")
+		var team_panel := _main.get("_extra_panel_nodes").get("res://scenes/game/panels/team.tscn") as Control
+		if team_panel == null or not team_panel.visible or team_panel.get_node("MemberRows").get_child_count() != 2:
+			_fail("observer team panel did not show both real members", 16)
+			return
+		team_panel.call("_select_uid", 0, GameState.player_uid)
+		team_panel.call("_leave_selected")
+		_observer_leave_requested = true
+	if _observer_leave_requested and GameState.team_members.is_empty():
+		_observer_left_team = true
+	if _saw_remote and _saw_name and _saw_appearance and _team_request_sent and _observer_left_team and _saw_say and _saw_move and not _capture_started:
 		_capture_started = true
 		_capture_dual_world()
-	if _saw_remote and _saw_name and _saw_appearance and _team_request_sent and _saw_say and _saw_move and _capture_done and GameState.get_creature(_remote_uid).is_empty():
+	if _saw_remote and _saw_name and _saw_appearance and _team_request_sent and _observer_left_team and _saw_say and _saw_move and _capture_done and GameState.get_creature(_remote_uid).is_empty():
 		print("NETWORK DUAL WORLD OBSERVER PASS: uid=%d" % _remote_uid)
 		_finished = true
 		NetworkClient.disconnect_from_server()
@@ -184,6 +228,14 @@ func _appearance_ready(creature: Dictionary) -> bool:
 	return desp.has("wear")
 
 
+func _team_has_uid(uid: int) -> bool:
+	for member_value in GameState.team_members:
+		var member: Dictionary = member_value
+		if int(member.get("uid", 0)) == uid:
+			return true
+	return false
+
+
 func _adjacent_walkable_position() -> Vector2i:
 	var origin := Vector2i(GameState.player_x, GameState.player_y)
 	for offset_value in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]:
@@ -196,10 +248,12 @@ func _adjacent_walkable_position() -> Vector2i:
 
 func _on_timeout() -> void:
 	_fail(
-		"timed out role=%s online=%s map=%d pos=(%d,%d) remote=%s name=%s appearance=%s team_request=%s team_candidate=%s say=%s move=%s capture=%s creatures=%s present=%s" % [
+		"timed out role=%s online=%s map=%d pos=(%d,%d) remote=%s name=%s appearance=%s team_request=%s team_candidate=%s team_created=%s accepted=%s full_team=%s actor_leave=%s observer_leave=%s observer_left=%s say=%s move=%s capture=%s members=%s creatures=%s present=%s" % [
 			_role, _online, GameState.player_map_uid, GameState.player_x, GameState.player_y,
 			_saw_remote, _saw_name, _saw_appearance, _team_request_sent, _saw_team_candidate,
-			_saw_say, _saw_move, _capture_done, GameState.creatures,
+			_actor_team_created, _actor_candidate_accepted, _actor_saw_full_team, _actor_saw_member_leave,
+			_observer_leave_requested, _observer_left_team, _saw_say, _saw_move, _capture_done,
+			GameState.team_members, GameState.creatures,
 			GameState.get_creature(_remote_uid) if _remote_uid != 0 else {},
 		],
 		8,

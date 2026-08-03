@@ -650,6 +650,9 @@ func _test_team_flag_cursor(main: Control) -> bool:
 	if main.call("_request_team_flag_target", target_uid) != ERR_UNCONFIGURED:
 		_fail("team-flag player target did not issue the join-team request")
 		return false
+	if main.call("_request_team_flag_target", GameState.player_uid) != ERR_UNCONFIGURED:
+		_fail("team-flag self target did not issue the original team-creation request")
+		return false
 	if main.call("_request_team_flag_target", monster_uid) != ERR_INVALID_PARAMETER:
 		_fail("team-flag accepted a non-player target")
 		return false
