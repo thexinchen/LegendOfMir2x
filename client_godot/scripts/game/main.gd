@@ -308,7 +308,6 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 		_attack_focus_uid = 0
 		_follow_focus_uid = 0
 		if focus_uid != 0:
-			_cancel_movement()
 			_follow_focus_uid = focus_uid
 		else:
 			_start_move_to(grid)
@@ -316,7 +315,6 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 		if focus_uid != 0:
 			var creature: Dictionary = game_state.get_creature(focus_uid)
 			if creature.get("type", 0) == 3:
-				_cancel_movement()
 				NetworkClient.send_npc_event(focus_uid, "", "_RSVD_NAME_ENTER_90360178872")
 			elif creature.get("type", 0) == 1:
 				_start_chase(focus_uid)

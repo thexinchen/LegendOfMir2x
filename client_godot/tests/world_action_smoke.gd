@@ -3320,18 +3320,35 @@ func _test_exact_frame_input(main: Control) -> bool:
 		_fail("exact-frame monster click did not outrank grabbed-item drop")
 		return false
 	main.call("_cancel_movement")
+	var retained_path: Array[Vector2i] = [Vector2i(1, 0), Vector2i(2, 0)]
+	main.set("_move_path", retained_path)
 	var right_click := InputEventMouseButton.new()
 	right_click.button_index = MOUSE_BUTTON_RIGHT
 	right_click.position = Vector2(100, 100)
 	right_click.pressed = true
 	main.call("_handle_mouse_click", right_click)
-	if main.get("_attack_focus_uid") != 0 or main.get("_follow_focus_uid") != 707 or not main.get("_move_path").is_empty():
-		_fail("right-click focused creature incorrectly issued ground movement")
+	var path_after_right_click: Array[Vector2i] = main.get("_move_path")
+	if main.get("_attack_focus_uid") != 0 or main.get("_follow_focus_uid") != 707 \
+			or path_after_right_click.size() != 2 or path_after_right_click[0] != Vector2i(1, 0) or path_after_right_click[1] != Vector2i(2, 0):
+		_fail("right-click focused creature changed state: attack=%s follow=%s path=%s" % [main.get("_attack_focus_uid"), main.get("_follow_focus_uid"), main.get("_move_path")])
 		return false
 	main.call("_cancel_movement")
 	if main.get("_follow_focus_uid") != 707:
 		_fail("generic movement cancellation erased persistent follow focus")
 		return false
+	GameState.update_creature(909, {"uid": 909, "x": 4, "y": 4, "type": 3, "action_type": 2})
+	renderer._actor_target_rects = {909: {"rect": Rect2(90, 90, 20, 20), "map_y": 4}}
+	renderer._mouse_focus_uid = 909
+	var npc_retained_path: Array[Vector2i] = [Vector2i(1, 0)]
+	main.set("_move_path", npc_retained_path)
+	left_click.position = Vector2(100, 100)
+	main.call("_handle_mouse_click", left_click)
+	var path_after_npc_click: Array[Vector2i] = main.get("_move_path")
+	if path_after_npc_click.size() != 1 or path_after_npc_click[0] != Vector2i(1, 0):
+		_fail("left-click NPC event changed the existing action path")
+		return false
+	main.call("_cancel_movement")
+	GameState.remove_creature(909)
 	if renderer.focus_color(1) != Color8(0xFF, 0x86, 0x00) or renderer.focus_color(2) != Color8(0x92, 0xC6, 0x20) or renderer.focus_color(3) != Color8(0x00, 0xC6, 0xF0) or renderer.focus_color(4) != Color8(0xD0, 0x2C, 0x70):
 		_fail("focus channel colors do not match C++")
 		return false
