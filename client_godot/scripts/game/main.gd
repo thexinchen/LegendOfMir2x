@@ -2782,7 +2782,7 @@ func _on_input_committed(value: String) -> void:
 				count,
 			)
 		else:
-			game_state.add_chat_log("无效的购买数量：%s" % value, 3)
+			game_state.add_chat_log("无效输入:%s" % value, 3)
 		_pending_purchase = {}
 		return
 	if not _pending_chat_group.is_empty():
@@ -2807,7 +2807,7 @@ func _on_purchase_quantity_requested(npc_uid: int, item_id: int, item_name: Stri
 	game_state.pending_input = {}
 	_pending_purchase = {"npcUID": npc_uid, "itemID": item_id}
 	var panel := _ensure_extra_panel("res://scenes/game/panels/input_string.tscn")
-	panel.configure("请输入购买 %s 的数量" % item_name, false)
+	panel.configure("请输入你要购买%s的数量" % item_name, false)
 
 
 func _on_friend_group_name_requested(ids: Array) -> void:

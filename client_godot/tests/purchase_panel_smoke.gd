@@ -157,6 +157,17 @@ func _ready() -> void:
 	var main := load("res://scenes/game/main.tscn").instantiate() as Control
 	add_child(main)
 	await get_tree().process_frame
+	var packable_name: String = resources.item_name(packable_id)
+	main.call("_on_purchase_quantity_requested", 88, packable_id, packable_name)
+	var input_panel := main.call("_ensure_extra_panel", "res://scenes/game/panels/input_string.tscn") as Control
+	if input_panel.get_node("Title").text != "请输入你要购买%s的数量" % packable_name:
+		_fail("purchase quantity prompt diverged from original wording: %s" % input_panel.get_node("Title").text)
+		return
+	GameState.chat_log.clear()
+	main.call("_on_input_committed", "0")
+	if GameState.chat_log.size() != 1 or GameState.chat_log[0].get("text", "") != "无效输入:0":
+		_fail("invalid purchase count feedback diverged from original wording: %s" % GameState.chat_log)
+		return
 	main.call("_show_purchase", {"npcUID": 91, "itemList": [packable_id]})
 	var main_purchase := main.call("_ensure_extra_panel", "res://scenes/game/panels/purchase.tscn") as Control
 	if not main_purchase.visible or main_purchase.position != Vector2.ZERO:
