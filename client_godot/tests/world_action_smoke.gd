@@ -148,6 +148,7 @@ func _ready() -> void:
 		"skill": initial_skill_panel,
 		"runtime_config": layered_extra_panels["res://scenes/game/panels/runtime_config.tscn"] as Control,
 		"friend_chat": layered_extra_panels["res://scenes/game/panels/friend_chat.tscn"] as Control,
+		"npc_chat": layered_extra_panels["res://scenes/game/panels/npc_chat.tscn"] as Control,
 	}
 	for panel_name: String in fixed_panels:
 		var fixed_panel := fixed_panels[panel_name] as Control
