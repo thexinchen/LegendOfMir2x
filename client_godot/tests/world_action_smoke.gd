@@ -343,6 +343,25 @@ func _test_camera_centering(main: Control) -> bool:
 	if GameState.camera_center_y() != 234 or not is_equal_approx(GameState.view_y, float(132 * 32 - 234)):
 		_fail("normal HUD camera does not use C++ 469px world viewport")
 		return false
+	var centered_view_x := GameState.view_x
+	GameState.player_x += 1
+	GameState.scroll_camera()
+	if not is_equal_approx(GameState.view_x, centered_view_x):
+		_fail("camera moved inside the original one-sixth-screen horizontal dead zone")
+		return false
+	GameState.player_x += 2
+	GameState.scroll_camera()
+	if not is_equal_approx(GameState.view_x, centered_view_x + 3.0):
+		_fail("camera did not start scrolling after leaving the original horizontal dead zone")
+		return false
+	var scrolling_view_x := GameState.view_x
+	GameState.player_x -= 2
+	GameState.scroll_camera()
+	if not is_equal_approx(GameState.view_x, scrolling_view_x + 3.0):
+		_fail("camera did not keep converging after scrolling started")
+		return false
+	GameState.player_x = 371
+	GameState.center_camera_on_player()
 	var control_panel: Control = main.get_node("ControlPanel")
 	control_panel.call("_on_minimize_pressed")
 	if not GameState.hud_minimized or GameState.camera_center_y() != 300:
@@ -350,8 +369,8 @@ func _test_camera_centering(main: Control) -> bool:
 		return false
 	var previous_view_y := GameState.view_y
 	GameState.scroll_camera()
-	if not is_equal_approx(GameState.view_y, previous_view_y - 2.0):
-		_fail("minimized HUD camera did not smoothly converge at the C++ vertical rate")
+	if not is_equal_approx(GameState.view_y, previous_view_y):
+		_fail("minimized HUD incorrectly moved the camera inside the original vertical dead zone")
 		return false
 	control_panel.call("_on_minimize_pressed")
 	main.call("_center_hero")

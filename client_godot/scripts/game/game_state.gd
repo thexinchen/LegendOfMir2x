@@ -100,6 +100,7 @@ var attached_magic_effects: Array = []
 var view_x: float = 0.0
 var view_y: float = 0.0
 var hud_minimized := false
+var _camera_scrolling := false
 
 # Strike grids (recently attacked grid cells, for red flash overlay)
 var strike_grids: Dictionary = {}  # "x,y" -> timestamp_msec
@@ -713,6 +714,8 @@ func camera_center_y() -> int:
 func center_camera_on_player() -> void:
 	view_x = float(player_x) * GRID_XP - SCREEN_W * 0.5
 	view_y = float(player_y) * GRID_YP - camera_center_y()
+	if player_action_type not in [3, 5]:
+		_camera_scrolling = false
 
 
 func _map_id_from_uid(map_uid: int) -> int:
@@ -735,15 +738,21 @@ func _sum_exp(level: int) -> int:
 
 
 func scroll_camera() -> void:
-	# Smoothly scroll camera toward player
+	# Match ProcessRun::scrollMap(): keep a stable one-sixth-screen dead zone,
+	# then continue converging until the player is centered and no longer moving.
 	var target_x := float(player_x) * GRID_XP - SCREEN_W * 0.5
 	var target_y := float(player_y) * GRID_YP - camera_center_y()
 	var dx := target_x - view_x
 	var dy := target_y - view_y
-	if abs(dx) > 0.5:
-		view_x += sign(dx) * min(abs(dx), 3.0)
-	if abs(dy) > 0.5:
-		view_y += sign(dy) * min(abs(dy), 2.0)
+	var visible_height := SCREEN_H if hud_minimized else SCREEN_H - HUD_SHIFT_HEIGHT
+	if _camera_scrolling or abs(dx) > SCREEN_W / 6.0 or abs(dy) > visible_height / 6.0:
+		_camera_scrolling = true
+		if not is_zero_approx(dx):
+			view_x += sign(dx) * min(abs(dx), 3.0)
+		if not is_zero_approx(dy):
+			view_y += sign(dy) * min(abs(dy), 2.0)
+	if is_equal_approx(view_x, target_x) and is_equal_approx(view_y, target_y) and player_action_type not in [3, 5]:
+		_camera_scrolling = false
 
 
 func add_ascend_miss(pixel_x: int, pixel_y: int) -> void:
