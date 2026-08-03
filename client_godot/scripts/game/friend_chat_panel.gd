@@ -349,31 +349,43 @@ func _is_friend(cpid: int) -> bool:
 
 
 func _add_stranger_operations(parent: Node, peer: Dictionary) -> void:
-	var panel := VBoxContainer.new()
+	var panel := Panel.new()
+	panel.name = "StrangerOperations"
+	panel.custom_minimum_size = Vector2(0, 54)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.906, 0.906, 0.741, 0.25)
+	style.bg_color = Color(231.0 / 255.0, 231.0 / 255.0, 189.0 / 255.0, 64.0 / 255.0)
 	style.corner_radius_top_left = 4
 	style.corner_radius_top_right = 4
 	style.corner_radius_bottom_left = 4
 	style.corner_radius_bottom_right = 4
-	var background := PanelContainer.new()
-	background.add_theme_stylebox_override("panel", style)
+	panel.add_theme_stylebox_override("panel", style)
 	var label := Label.new()
+	label.name = "Text"
 	label.text = "对方不是你的好友，你可以添加对方为好友，或者屏蔽对方的消息。"
 	label.add_theme_font_size_override("font_size", 12)
+	label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	label.offset_left = 8
+	label.offset_top = 6
+	label.offset_right = -8
+	label.offset_bottom = 24
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(label)
-	var actions := HBoxContainer.new()
 	var add := Button.new()
+	add.name = "Add"
+	add.position = Vector2(8, 27)
+	add.size = Vector2(44, 24)
 	add.text = "添加"
 	add.pressed.connect(_request_friend.bind(int(peer.get("cpid", 0)), false))
 	var block := Button.new()
+	block.name = "Block"
+	block.position = Vector2(56, 27)
+	block.size = Vector2(44, 24)
 	block.text = "屏蔽"
 	block.pressed.connect(func(): NetworkClient.send_block_player(int(peer.get("cpid", 0)), func(head: int, _payload: PackedByteArray): _apply_friend_action_result(int(peer.get("cpid", 0)), "block", head)))
-	actions.add_child(add)
-	actions.add_child(block)
-	panel.add_child(actions)
-	background.add_child(panel)
-	parent.add_child(background)
+	panel.add_child(add)
+	panel.add_child(block)
+	parent.add_child(panel)
 
 
 func _add_message_bubble(parent: Node, peer: Dictionary, sender_name: String, text: String, mine: bool, message: Dictionary, pending := false) -> void:

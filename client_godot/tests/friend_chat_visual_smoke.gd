@@ -199,6 +199,26 @@ func _ready() -> void:
 	if panel.get_node("Page/ChatPage/Messages/MessageRows").get_child_count() != 1:
 		_fail("stranger operation strip missing")
 		return
+	var stranger_strip := panel.get_node("Page/ChatPage/Messages/MessageRows").get_child(0) as Panel
+	var stranger_text := stranger_strip.get_node_or_null("Text") as Label
+	var stranger_add := stranger_strip.get_node_or_null("Add") as Button
+	var stranger_block := stranger_strip.get_node_or_null("Block") as Button
+	var stranger_style := stranger_strip.get_theme_stylebox("panel") as StyleBoxFlat
+	if stranger_strip.name != "StrangerOperations" or stranger_strip.custom_minimum_size.y != 54 or stranger_strip.size.y != 54:
+		_fail("stranger operation strip did not keep the original fixed 54px geometry")
+		return
+	if stranger_style.bg_color != Color(row_rgb.r, row_rgb.g, row_rgb.b, 64.0 / 255.0) or stranger_style.corner_radius_top_left != 4 or stranger_style.corner_radius_bottom_right != 4:
+		_fail("stranger operation strip background diverged from C++")
+		return
+	if stranger_text == null or stranger_text.position != Vector2(8, 6) or stranger_text.get_theme_font_size("font_size") != 12:
+		_fail("stranger operation explanation geometry diverged from C++")
+		return
+	if stranger_add == null or stranger_block == null or stranger_add.position != Vector2(8, 27) or stranger_block.position.y != 27 or stranger_add.get_signal_connection_list("pressed").is_empty() or stranger_block.get_signal_connection_list("pressed").is_empty():
+		_fail("stranger operation buttons did not match the original positions and actions")
+		return
+	if OS.has_environment("MIR2X_FRIEND_STRANGER_SCREENSHOT"):
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FRIEND_STRANGER_SCREENSHOT"))
 	panel.call("_open_chat", friend.cpid)
 	await get_tree().process_frame
 	await get_tree().process_frame
