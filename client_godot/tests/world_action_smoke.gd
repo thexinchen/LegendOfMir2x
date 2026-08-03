@@ -59,6 +59,8 @@ func _ready() -> void:
 		get_tree().quit(0)
 		return
 	var world_renderer: Control = main.get_node("WorldRenderer")
+	if not _test_actor_status_overlay(world_renderer, resources):
+		return
 	var actor_draw_order: Array = world_renderer.call("_sorted_actor_row_entries", [
 		{"x": 9, "sequence": 0, "uid": 101},
 		{"x": 3, "sequence": 1, "uid": 102},
@@ -1531,6 +1533,57 @@ func _test_health_feedback(main: Control, resources: RefCounted) -> bool:
 		return false
 	GameState.remove_creature(target_uid)
 	GameState.ascend_strings.clear()
+	return true
+
+
+func _test_actor_status_overlay(renderer: Control, resources: RefCounted) -> bool:
+	if not renderer.has_method("_actor_status_layout") or not renderer.has_method("_should_draw_monster_name"):
+		_fail("actor status overlay helpers unavailable")
+		return false
+	if resources.monster_name(224).is_empty():
+		_fail("monster name metadata unavailable")
+		return false
+	if renderer.call("_monster_display_name", {"monster_id": 224, "name": ""}) != resources.monster_name(224) \
+			or renderer.call("_monster_display_name", {"monster_id": 224, "name": "fixture"}) != "fixture":
+		_fail("monster display name did not use metadata fallback")
+		return false
+	if renderer.call("_buff_favor_color", 1) != Color.GREEN \
+			or renderer.call("_buff_favor_color", 0) != Color.YELLOW \
+			or renderer.call("_buff_favor_color", -1) != Color.RED:
+		_fail("actor buff favor colors mismatch")
+		return false
+	var buff_ids: Array[int] = []
+	for value in resources.buff_meta:
+		var buff_id := int(value)
+		var layout: PackedInt32Array = resources.buff_layout(buff_id)
+		if layout.size() >= 2 and not resources.frame("proguse", layout[0]).is_empty():
+			buff_ids.append(buff_id)
+			if buff_ids.size() == 4:
+				break
+	if buff_ids.size() < 4:
+		_fail("actor status fixture has fewer than four drawable buffs")
+		return false
+	var layout: Dictionary = renderer.call("_actor_status_layout", 100, 200, 25, 100, buff_ids)
+	if layout.get("bar_position") != Vector2i(107, 147) or layout.get("bar_size") != Vector2i(32, 4) or layout.get("fill_width") != 8:
+		_fail("actor HP bar layout mismatch: %s" % [layout])
+		return false
+	var icons: Array = layout.get("icons", [])
+	var expected_positions := [Vector2i(108, 137), Vector2i(118, 137), Vector2i(128, 137), Vector2i(108, 127)]
+	if icons.size() != 4 or icons.map(func(icon: Dictionary): return icon.position) != expected_positions:
+		_fail("actor buff layout mismatch: %s" % [icons])
+		return false
+	var unknown_max: Dictionary = renderer.call("_actor_status_layout", 5, 7, 0, 0, [])
+	if unknown_max.get("fill_width") != 32:
+		_fail("unknown max HP was not rendered as full: %s" % [unknown_max])
+		return false
+	renderer.set("_mouse_focus_uid", 0)
+	if renderer.call("_should_draw_monster_name", 303):
+		_fail("monster name was shown without mouse focus")
+		return false
+	renderer.set("_mouse_focus_uid", 303)
+	if not renderer.call("_should_draw_monster_name", 303) or renderer.call("_should_draw_monster_name", 304):
+		_fail("monster name mouse-focus policy mismatch")
+		return false
 	return true
 
 

@@ -531,6 +531,17 @@ static size_t convertSprites(const char *family, const char *dbPath, const fs::p
         const SpriteHeader metaHeader {.version = 12, .spriteCount = to_u32(metaList.size())};
         metaFile.write(reinterpret_cast<const char *>(&metaHeader), sizeof(metaHeader));
         writeVector(metaFile, metaList);
+
+        std::ofstream nameFile(outputDir / "sprites" / "monster_name.m2xmeta", std::ios::binary);
+        const SpriteHeader nameHeader {.spriteCount = to_u32(metaList.size())};
+        nameFile.write(reinterpret_cast<const char *>(&nameHeader), sizeof(nameHeader));
+        for(const auto &meta: metaList){
+            const std::string name(to_cstr(DBCOM_MONSTERRECORD(meta.monsterID).name));
+            const auto length = check_cast<uint16_t>(name.size());
+            nameFile.write(reinterpret_cast<const char *>(&meta.monsterID), sizeof(meta.monsterID));
+            nameFile.write(reinterpret_cast<const char *>(&length), sizeof(length));
+            nameFile.write(name.data(), length);
+        }
     }
     if(std::strcmp(family, "hero") == 0){
         constexpr std::array<uint8_t, 2640> weaponOrder

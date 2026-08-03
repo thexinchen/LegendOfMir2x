@@ -6,6 +6,7 @@ const MAGIC := "M2SP"
 var base_path: String = ""
 var offsets: Dictionary = {}
 var monster_meta: Dictionary = {}
+var monster_names: Dictionary = {}
 var item_meta: Dictionary = {}
 var item_attributes: Dictionary = {}
 var item_details: Dictionary = {}
@@ -28,6 +29,7 @@ func configure(path: String) -> bool:
 		loaded = _load_index(family) or loaded
 	_load_hero_weapon_orders()
 	_load_monster_meta()
+	_load_monster_names()
 	_load_item_meta()
 	_load_item_details()
 	_load_item_names()
@@ -276,6 +278,10 @@ func buff_layout(buff_id: int) -> PackedInt32Array:
 	return buff_meta.get(buff_id, PackedInt32Array())
 
 
+func monster_name(monster_id: int) -> String:
+	return monster_names.get(monster_id, "")
+
+
 func buff_name(buff_id: int) -> String:
 	return buff_names.get(buff_id, "")
 
@@ -390,6 +396,19 @@ func _load_monster_meta() -> void:
 		if version >= 12:
 			meta.append(file.get_8())
 		monster_meta[monster_id] = meta
+
+
+func _load_monster_names() -> void:
+	var file := FileAccess.open("%s/sprites/monster_name.m2xmeta" % base_path, FileAccess.READ)
+	if file == null or file.get_buffer(4).get_string_from_ascii() != MAGIC:
+		return
+	if file.get_32() != 1:
+		return
+	var count := file.get_32()
+	for _index in range(count):
+		var monster_id := file.get_32()
+		var length := file.get_16()
+		monster_names[monster_id] = file.get_buffer(length).get_string_from_utf8()
 
 
 func _load_item_meta() -> void:

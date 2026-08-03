@@ -24,12 +24,31 @@ func _ready() -> void:
 	if not renderer.load_map(24):
 		_fail("unable to load visual map")
 		return
+	var drawable_buffs: Array[int] = []
+	for value in renderer.actor_resource.buff_meta:
+		var buff_id := int(value)
+		var meta: PackedInt32Array = renderer.actor_resource.buff_layout(buff_id)
+		if meta.size() >= 2 and not renderer.actor_resource.frame("proguse", meta[0]).is_empty():
+			drawable_buffs.append(buff_id)
+			if drawable_buffs.size() == 4:
+				break
+	for index in range(4):
+		var uid := 1001 + index
+		var creature: Dictionary = GameState.creatures[uid]
+		creature["hp"] = 25 * (index + 1)
+		creature["hp_max"] = 100
+		creature["buffs"] = drawable_buffs if index == 0 else []
+		GameState.creatures[uid] = creature
 	renderer.set_focus_channels(1002, 1003, 1004)
 	var mouse_position := get_viewport().get_mouse_position()
 	renderer._actor_target_rects = {
 		1001: {"rect": Rect2(mouse_position - Vector2(5, 5), Vector2(10, 10)), "map_y": 132},
 	}
 	add_child(renderer)
+	await get_tree().process_frame
+	var mouse_target: Dictionary = renderer._actor_target_rects.get(1001, {})
+	if not mouse_target.is_empty():
+		Input.warp_mouse(mouse_target.rect.get_center())
 	await RenderingServer.frame_post_draw
 	var output_path := OS.get_environment("MIR2X_PANEL_OUTPUT")
 	if output_path.is_empty():

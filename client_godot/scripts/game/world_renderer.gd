@@ -15,6 +15,7 @@ const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const GROUND_ITEM_NAME_FONT: Font = preload("res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf")
 const TEAM_LEADER_FONT: Font = preload("res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf")
 const PLAYER_SAY_FONT: Font = preload("res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf")
+const MONSTER_NAME_FONT: Font = preload("res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf")
 const ANIMATION_DELAYS := [150, 200, 250, 300, 350, 400, 420, 450]
 const MAP_ANIMATION_FILE_INDICES := [11, 26, 41, 56, 71]
 const MAGIC_STAGE_SPELL := 1
@@ -52,6 +53,12 @@ const PLAYER_SAY_WIDTH := 160
 const PLAYER_SAY_FONT_SIZE := 15
 const PLAYER_SAY_SHOW_TIME := 5000
 const PLAYER_SAY_MARGIN := 2
+const ACTOR_HP_FRAME_GFX_ID := 0x00000014
+const ACTOR_HP_FILL_GFX_ID := 0x00000015
+const ACTOR_HP_OFFSET := Vector2i(7, -53)
+const ACTOR_BUFF_SIZE := Vector2i(10, 10)
+const ACTOR_BUFF_COLUMNS := 3
+const MONSTER_NAME_FONT_SIZE := 15
 const ASCEND_LIFETIME_MS := 3000.0
 const STRIKE_GRID_LIFETIME_MS := 1000
 const STRIKE_GRID_COLOR := Color8(0xFF, 0x00, 0x00, 0x60)
@@ -1460,10 +1467,10 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id, game_state.player_uid, game_state.player_y, game_state.player_action_step):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
+	if game_state.player_action_type != DEAD_ACTION:
+		_draw_actor_status(px, py, game_state.player_hp, game_state.player_hp_max, game_state.buff_list)
 	_draw_team_leader_marker(game_state.player_uid, px, py)
 	_draw_player_say(game_state.player_uid, px, py)
-	
-	# The C++ client only enables actor HP/name overlays through debug/runtime flags.
 
 
 func player_draw_grid() -> Vector2:
@@ -1519,9 +1526,114 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 				motion_magic_id = actor_resource.monster_attack_motion_magic_id(c.get("monster_id", 0))
 			var motion_frame_count: int = _monster_render_sequence(c).count
 			_draw_monster_attack_motion_effect(motion_magic_id, c.get("direction", 5), c.get("action_started_ms", 0), c.get("action_speed", 100), motion_frame_count, cx, cy)
+	if c_type in [1, 2] and c.get("action_type", 2) != DEAD_ACTION:
+		_draw_actor_status(cx, cy, c.get("hp", 0), c.get("hp_max", 0), c.get("buffs", []))
+		if c_type == 1 and _should_draw_monster_name(uid):
+			_draw_monster_name(_monster_display_name(c), cx, cy)
 	
 	if c_type == 2:
 		_draw_player_say(uid, cx, cy)
+
+
+func _actor_status_layout(start_x: int, start_y: int, hp: int, hp_max: int, buff_values: Array) -> Dictionary:
+	var frame: Dictionary = actor_resource.frame("proguse", ACTOR_HP_FRAME_GFX_ID)
+	var fill: Dictionary = actor_resource.frame("proguse", ACTOR_HP_FILL_GFX_ID)
+	var frame_texture := frame.get("texture") as Texture2D
+	var fill_texture := fill.get("texture") as Texture2D
+	if frame_texture == null or fill_texture == null:
+		return {}
+	var bar_size := Vector2i(fill_texture.get_width(), fill_texture.get_height())
+	var ratio := 1.0 if hp_max <= 0 else clampf(float(hp) / float(hp_max), 0.0, 1.0)
+	var bar_position := Vector2i(start_x, start_y) + ACTOR_HP_OFFSET
+	var icons: Array[Dictionary] = []
+	for value in buff_values:
+		var buff_id := int(value if value is int else value.get("id", 0))
+		var buff_meta: PackedInt32Array = actor_resource.buff_layout(buff_id)
+		if buff_meta.size() < 2:
+			continue
+		var icon: Dictionary = actor_resource.frame("proguse", buff_meta[0])
+		var icon_texture := icon.get("texture") as Texture2D
+		if icon_texture == null:
+			continue
+		var index := icons.size()
+		icons.append({
+			"position": Vector2i(
+				bar_position.x + 1 + index % ACTOR_BUFF_COLUMNS * ACTOR_BUFF_SIZE.x,
+				bar_position.y - ACTOR_BUFF_SIZE.y - index / ACTOR_BUFF_COLUMNS * ACTOR_BUFF_SIZE.y,
+			),
+			"texture": icon_texture,
+			"color": _buff_favor_color(buff_meta[1]),
+		})
+	return {
+		"bar_position": bar_position,
+		"bar_size": bar_size,
+		"fill_width": roundi(bar_size.x * ratio),
+		"frame_texture": frame_texture,
+		"fill_texture": fill_texture,
+		"icons": icons,
+	}
+
+
+func _draw_actor_status(start_x: int, start_y: int, hp: int, hp_max: int, buffs: Array) -> void:
+	var layout := _actor_status_layout(start_x, start_y, hp, hp_max, buffs)
+	if layout.is_empty():
+		return
+	if layout.fill_width > 0:
+		var fill_size := Vector2(layout.fill_width, layout.bar_size.y)
+		draw_texture_rect_region(layout.fill_texture, Rect2(layout.bar_position, fill_size), Rect2(Vector2.ZERO, fill_size))
+	draw_texture(layout.frame_texture, layout.bar_position)
+	for icon_value in layout.icons:
+		var icon: Dictionary = icon_value
+		var rect := Rect2(icon.position, ACTOR_BUFF_SIZE)
+		draw_texture_rect(icon.texture, rect, false)
+		_draw_buff_tint(rect, icon.color)
+
+
+func _buff_favor_color(favor: int) -> Color:
+	if favor > 0:
+		return Color.GREEN
+	if favor == 0:
+		return Color.YELLOW
+	return Color.RED
+
+
+func _draw_buff_tint(rect: Rect2, base_color: Color) -> void:
+	var end_color := Color(base_color, 64.0 / 255.0)
+	var start_color := Color(base_color, 1.0)
+	draw_rect(rect, end_color)
+	var edge_count := int((rect.size.x + rect.size.y) * 2.0 - 4.0)
+	var fade_w := clampi(roundi(edge_count * fmod(Time.get_ticks_msec(), 1500) / 1500.0), 0, int(rect.size.x) / 2)
+	var fade_h := int(rect.size.y) / 2
+	if fade_w > 0:
+		_draw_gradient_quad(Rect2(rect.position, Vector2(fade_w, rect.size.y)), [start_color, end_color, end_color, start_color])
+		_draw_gradient_quad(Rect2(Vector2(rect.end.x - fade_w, rect.position.y), Vector2(fade_w, rect.size.y)), [end_color, start_color, start_color, end_color])
+	if fade_h > 0:
+		_draw_gradient_quad(Rect2(rect.position, Vector2(rect.size.x, fade_h)), [start_color, start_color, end_color, end_color])
+		_draw_gradient_quad(Rect2(Vector2(rect.position.x, rect.end.y - fade_h), Vector2(rect.size.x, fade_h)), [end_color, end_color, start_color, start_color])
+
+
+func _draw_gradient_quad(rect: Rect2, colors: Array[Color]) -> void:
+	draw_polygon(
+		PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]),
+		PackedColorArray(colors),
+	)
+
+
+func _should_draw_monster_name(uid: int) -> bool:
+	return uid != 0 and uid == _mouse_focus_uid
+
+
+func _monster_display_name(creature: Dictionary) -> String:
+	var name: String = creature.get("name", "")
+	return actor_resource.monster_name(creature.get("monster_id", 0)) if name.is_empty() else name
+
+
+func _draw_monster_name(name: String, start_x: int, start_y: int) -> void:
+	if name.is_empty():
+		return
+	var width := MONSTER_NAME_FONT.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, MONSTER_NAME_FONT_SIZE).x
+	var top_left := Vector2(start_x + ACTOR_HP_OFFSET.x + 16.0 - width / 2.0, start_y + ACTOR_HP_OFFSET.y + 20.0)
+	MONSTER_NAME_FONT.draw_string(get_canvas_item(), top_left + Vector2(0, MONSTER_NAME_FONT.get_ascent(MONSTER_NAME_FONT_SIZE)), name, HORIZONTAL_ALIGNMENT_LEFT, -1, MONSTER_NAME_FONT_SIZE, Color.WHITE)
 
 
 func _draw_player_say(uid: int, start_x: int, start_y: int) -> void:
