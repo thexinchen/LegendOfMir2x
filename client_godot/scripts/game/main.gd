@@ -2788,6 +2788,9 @@ func _on_input_committed(value: String) -> void:
 	if not _pending_chat_group.is_empty():
 		var ids := _pending_chat_group.duplicate()
 		_pending_chat_group.clear()
+		if value.is_empty():
+			game_state.add_chat_log("无效输入:%s" % value, 3)
+			return
 		var friend_panel := _ensure_extra_panel(FRIEND_CHAT_PANEL_PATH)
 		friend_panel.call("create_group_named", value, ids)
 		return

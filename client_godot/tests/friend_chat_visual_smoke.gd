@@ -309,6 +309,15 @@ func _ready() -> void:
 	if main.get("_pending_chat_group").size() != 1 or not input_panel.visible:
 		_fail("shared group-name dialog did not open")
 		return
+	GameState.chat_log.clear()
+	main.call("_on_input_committed", "")
+	if GameState.chat_log.size() != 1 or GameState.chat_log[0].text != "无效输入:":
+		_fail("empty group name did not use the original chat-log feedback: %s" % [GameState.chat_log])
+		return
+	main_friend.call("_request_group_name")
+	if main.get("_pending_chat_group").size() != 1 or not input_panel.visible:
+		_fail("group-name dialog did not reopen after invalid input")
+		return
 	main.call("_on_input_cancelled")
 	if not main.get("_pending_chat_group").is_empty():
 		_fail("group-name cancellation left stale context")

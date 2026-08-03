@@ -806,11 +806,10 @@ func _request_group_name() -> void:
 
 
 func create_group_named(group_name: String, ids: Array) -> void:
-	var clean_name := group_name.strip_edges()
-	if clean_name.is_empty() or ids.is_empty():
+	if group_name.is_empty() or ids.is_empty():
 		$Status.text = "无效的群聊名称"
 		return
-	NetworkClient.create_chat_group(clean_name, ids, func(head: int, payload: PackedByteArray):
+	NetworkClient.create_chat_group(group_name, ids, func(head: int, payload: PackedByteArray):
 		if head != NetworkClient.SM_OK:
 			$Status.text = "创建群聊失败"
 			return
