@@ -331,6 +331,12 @@ func _on_quick_pressed() -> void:
 	quick_bar_toggled.emit()
 
 
+func quick_bar_initial_y() -> float:
+	var viewport_height := get_viewport_rect().size.y
+	var hud_height := 31.0 if _minimized else (minf(421.0, viewport_height) if _expanded else 152.0)
+	return maxf(0.0, viewport_height - hud_height - 48.0)
+
+
 func _on_expand_pressed() -> void:
 	_expanded = not _expanded
 	compact_middle.visible = not _expanded

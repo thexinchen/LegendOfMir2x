@@ -2679,6 +2679,8 @@ func _request_team_flag_target(uid: int) -> Error:
 
 
 func _on_control_panel_quick_bar_toggled() -> void:
+	if not quick_bar.visible:
+		quick_bar.call("place_initial", control_panel.call("quick_bar_initial_y"))
 	quick_bar.visible = not quick_bar.visible
 
 

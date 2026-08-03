@@ -21,6 +21,22 @@ func _ready() -> void:
 	GameState.belt.resize(6)
 	GameState.belt.fill(null)
 	GameState.belt[0] = {"itemID": potion_id, "seqID": 101, "count": 3}
+	var expanded_main: Control = load("res://scenes/game/main.tscn").instantiate()
+	add_child(expanded_main)
+	await get_tree().process_frame
+	var expanded_control: Control = expanded_main.get_node("ControlPanel")
+	var expanded_quick_bar: Control = expanded_main.get_node("%QuickBar")
+	expanded_control.call("_on_expand_pressed")
+	expanded_main.call("_on_control_panel_quick_bar_toggled")
+	if not expanded_quick_bar.visible or expanded_quick_bar.position != Vector2(0, 131):
+		_fail("expanded HUD first-open quick-bar placement mismatch: %s" % expanded_quick_bar.position)
+		return
+	if OS.has_environment("MIR2X_QUICK_BAR_EXPANDED_SCREENSHOT"):
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_QUICK_BAR_EXPANDED_SCREENSHOT"))
+	expanded_main.queue_free()
+	await get_tree().process_frame
+
 	var main: Control = load("res://scenes/game/main.tscn").instantiate()
 	add_child(main)
 	await get_tree().process_frame

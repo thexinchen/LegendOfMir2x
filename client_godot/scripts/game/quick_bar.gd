@@ -39,7 +39,6 @@ func _ready() -> void:
 	)
 	mouse_exited.connect(func(): _set_hovered_slot(-1))
 	_refresh()
-	call_deferred("_place_initial")
 
 
 func activate_slot(slot: int, button: int) -> int:
@@ -172,9 +171,15 @@ func _set_hovered_slot(slot: int) -> void:
 
 
 func _place_initial() -> void:
+	if get_parent_control() == null:
+		return
+	place_initial(maxi(0, int(get_parent_control().size.y) - 200))
+
+
+func place_initial(initial_y: float) -> void:
 	if _placed or get_parent_control() == null:
 		return
-	position = Vector2(0, maxi(0, int(get_parent_control().size.y) - 200))
+	position = Vector2(0, initial_y)
 	_placed = true
 	_clamp_position()
 
