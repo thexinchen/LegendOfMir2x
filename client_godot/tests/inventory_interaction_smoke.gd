@@ -55,8 +55,12 @@ func _ready() -> void:
 	var panel: Control = load("res://scenes/game/panels/inventory.tscn").instantiate()
 	add_child(panel)
 	await get_tree().process_frame
-	if panel.get_node("Gold").text != "8,500":
-		_fail("inventory gold separator mismatch: %s" % panel.get_node("Gold").text)
+	var gold_label := panel.get_node("Gold") as Label
+	if gold_label.text != "8,500":
+		_fail("inventory gold separator mismatch: %s" % gold_label.text)
+		return
+	if gold_label.position != Vector2(62, 480) or gold_label.size != Vector2(140, 24) or gold_label.get_theme_font_size("font_size") != 12 or gold_label.get_theme_color("font_color") != Color.YELLOW:
+		_fail("inventory gold geometry/style mismatch: position=%s size=%s color=%s" % [gold_label.position, gold_label.size, gold_label.get_theme_color("font_color")])
 		return
 	var drag_press := InputEventMouseButton.new()
 	drag_press.button_index = MOUSE_BUTTON_LEFT
@@ -84,8 +88,9 @@ func _ready() -> void:
 	if panel.get_node("ItemGrid").position != Vector2(18, 59) or panel.get_node("ItemGrid").size != Vector2(380, 380):
 		_fail("inventory grid geometry mismatch")
 		return
-	if panel.get_node("Title").position.x + panel.get_node("Title").size.x / 2.0 != 238.0:
-		_fail("inventory title center mismatch")
+	var title_label := panel.get_node("Title") as Label
+	if title_label.position != Vector2(138, 25) or title_label.size != Vector2(200, 24):
+		_fail("inventory title geometry mismatch: position=%s size=%s" % [title_label.position, title_label.size])
 		return
 	if panel.get_node("SliderTrack").position != Vector2(403, 56) or panel.get_node("SliderTrack").size != Vector2(22, 383):
 		_fail("inventory slider hit area mismatch")
@@ -335,6 +340,9 @@ func _ready() -> void:
 		return
 	if operation_cost.get_theme_font_size("font_size") != 12 or operation_cost.get_theme_color("font_color") != Color(1.0, 1.0, 0.0, 1.0):
 		_fail("inventory operation cost font style mismatch")
+		return
+	if operation_cost.position != Vector2(62, 497) or operation_cost.size != Vector2(140, 24):
+		_fail("inventory operation cost geometry mismatch: position=%s size=%s" % [operation_cost.position, operation_cost.size])
 		return
 	if OS.has_environment("MIR2X_INVENTORY_OPERATION_SCREENSHOT"):
 		await RenderingServer.frame_post_draw

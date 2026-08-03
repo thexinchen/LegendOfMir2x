@@ -42,9 +42,9 @@ texture = ExtResource("2")
 
 [node name="Title" type="Label" parent="."]
 offset_left = 138.0
-offset_top = 13.0
+offset_top = 25.0
 offset_right = 338.0
-offset_bottom = 37.0
+offset_bottom = 49.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 12
 text = "【背包】"
@@ -68,10 +68,10 @@ expand_mode = 1
 
 [node name="Gold" type="Label" parent="."]
 offset_left = 62.0
-offset_top = 468.0
+offset_top = 480.0
 offset_right = 202.0
-offset_bottom = 492.0
-theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
+offset_bottom = 504.0
+theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 12
 text = ""
 horizontal_alignment = 1
@@ -130,9 +130,9 @@ ignore_texture_size = true
 [node name="OperationCost" type="Label" parent="."]
 visible = false
 offset_left = 62.0
-offset_top = 493.0
+offset_top = 497.0
 offset_right = 202.0
-offset_bottom = 517.0
+offset_bottom = 521.0
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
