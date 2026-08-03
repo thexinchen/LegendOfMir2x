@@ -169,6 +169,22 @@ Player::LuaThreadRunner::LuaThreadRunner(Player *playerPtr)
         return getPlayer()->hasInventoryItem(to_u32(itemID), to_u32(seqID), count);
     });
 
+    bindFunction("getInventoryItemTradeState", [this](int itemID, int seqID) -> int
+    {
+        if(itemID <= 0 || seqID <= 0){
+            return 1;
+        }
+        return getPlayer()->getInventoryItemTradeState(to_u32(itemID), to_u32(seqID));
+    });
+
+    bindFunction("tradeInventoryItem", [this](int itemID, int seqID, size_t price) -> int
+    {
+        if(itemID <= 0 || seqID <= 0 || price == 0){
+            return 1;
+        }
+        return getPlayer()->tradeInventoryItem(to_u32(itemID), to_u32(seqID), price);
+    });
+
     bindFunction("getInventoryItemRepairState", [this](int itemID, int seqID) -> int
     {
         if(itemID <= 0 || seqID <= 0){
@@ -1759,6 +1775,40 @@ const SDItem &Player::findInventoryItem(uint32_t itemID, uint32_t seqID) const
 {
     fflassert(DBCOM_ITEMRECORD(itemID));
     return m_sdItemStorage.inventory.find(itemID, seqID);
+}
+
+int Player::getInventoryItemTradeState(uint32_t itemID, uint32_t seqID) const
+{
+    const auto &ir = DBCOM_ITEMRECORD(itemID);
+    if(!ir || !ir.isWeapon() || seqID == 0){
+        return 1;
+    }
+
+    const auto &item = m_sdItemStorage.inventory.find(itemID, seqID);
+    return (item && item.count == 1) ? 0 : 1;
+}
+
+int Player::tradeInventoryItem(uint32_t itemID, uint32_t seqID, size_t price)
+{
+    if(getInventoryItemTradeState(itemID, seqID) != 0 || price == 0){
+        return 1;
+    }
+    if(price > SIZE_MAX - m_sdItemStorage.gold){
+        return 2;
+    }
+
+    const size_t tradedGold = m_sdItemStorage.gold + price;
+    auto dbTrans = g_dbPod->createTransaction();
+    dbRemoveInventoryItem(itemID, seqID);
+    g_dbPod->exec("update tbl_char set fld_gold = %llu where fld_dbid = %llu", to_llu(tradedGold), to_llu(dbid()));
+    dbTrans.commit();
+
+    const auto [removedCount, removedSeqID, itemPtr] = m_sdItemStorage.inventory.remove(itemID, seqID, 1);
+    fflassert(removedCount == 1 && removedSeqID == seqID && itemPtr == nullptr, removedCount, removedSeqID);
+    m_sdItemStorage.gold = tradedGold;
+    reportRemoveItem(itemID, seqID, 1);
+    reportGold();
+    return 0;
 }
 
 int Player::getInventoryItemRepairState(uint32_t itemID, uint32_t seqID) const

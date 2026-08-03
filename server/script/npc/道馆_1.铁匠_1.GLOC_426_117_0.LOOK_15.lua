@@ -108,8 +108,39 @@ setEventHandler(
     end,
 
     ["npc_goto_query_trade"] = function(uid, value)
-        itemID, seqID = invop.parseItemString(value)
-        price = math.random(100, 200)
+        local itemID, seqID = invop.parseItemString(value)
+        local tradeState = uidRemoteCall(uid, itemID, seqID,
+        [[
+            local itemID, seqID = ...
+            return getInventoryItemTradeState(itemID, seqID)
+        ]])
+
+        if tradeState ~= 0 then
+            uidPostXML(uid,
+            [[
+                <layout>
+                    <par>没有找到这件武器，请重新选择。</par>
+                    <par></par>
+
+                    <par><event id="%s">前一步</event></par>
+                </layout>
+            ]], SYS_ENTER)
+            return
+        end
+
+        local price = math.random(100, 200)
+        uidRemoteCall(uid, getNPCFullName(), itemID, seqID, price,
+        [[
+            local npcName, itemID, seqID, price = ...
+            if not _G.RSVD_NAME_tradeQuote then
+                _G.RSVD_NAME_tradeQuote = {}
+            end
+            _G.RSVD_NAME_tradeQuote[npcName] = {
+                itemID = itemID,
+                seqID = seqID,
+                price = price,
+            }
+        ]])
 
         uidPostXML(uid,
         [[
@@ -125,19 +156,36 @@ setEventHandler(
     end,
 
     ["npc_goto_commit_trade"] = function(uid, value)
-        itemID, seqID = invop.parseItemString(value)
+        local itemID, seqID = invop.parseItemString(value)
+        local tradeResult, price = uidRemoteCall(uid, getNPCFullName(), itemID, seqID,
+        [[
+            local npcName, itemID, seqID = ...
+            local quote = _G.RSVD_NAME_tradeQuote and _G.RSVD_NAME_tradeQuote[npcName]
+            if _G.RSVD_NAME_tradeQuote then
+                _G.RSVD_NAME_tradeQuote[npcName] = nil
+            end
+            if not quote or quote.itemID ~= itemID or quote.seqID ~= seqID then
+                return 1, 0
+            end
+            return tradeInventoryItem(itemID, seqID, quote.price), quote.price
+        ]])
+
+        local resultText = "出售请求已经失效，请重新选择。"
+        if tradeResult == 0 then
+            resultText = string.format("成交！支付你%d金币。", price)
+        elseif tradeResult == 2 then
+            resultText = "你的金币已经达到上限，无法完成交易。"
+        end
+
         uidPostXML(uid,
         [[
             <layout>
-                <par>成交！支付你你%d金币。</par>
+                <par>%s</par>
                 <par></par>
 
                 <par><event id="%s">前一步</event></par>
             </layout>
-        ]], 200, SYS_ENTER)
-
-        uidRemove(uid, {itemID = itemID, seqID = seqID})
-        uidGrantGold(uid, 200)
+        ]], resultText, SYS_ENTER)
     end,
 
     ["npc_goto_query_repair"] = function(uid, value)

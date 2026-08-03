@@ -423,6 +423,10 @@ class Player final: public BattleObject
         const SDItem &findInventoryItem(uint32_t, uint32_t) const;
 
     private:
+        int getInventoryItemTradeState(uint32_t, uint32_t) const;
+        int tradeInventoryItem(uint32_t, uint32_t, size_t);
+
+    private:
         int getInventoryItemRepairState(uint32_t, uint32_t) const;
         int repairInventoryItem(uint32_t, uint32_t, size_t);
 
