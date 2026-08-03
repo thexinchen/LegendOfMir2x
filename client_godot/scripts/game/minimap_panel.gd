@@ -30,7 +30,8 @@ func _ready() -> void:
 	$CenterButton.pressed.connect(_toggle_center)
 	$ConfigButton.pressed.connect(_toggle_creatures)
 	$MapViewport.gui_input.connect(_on_map_input)
-	position = Vector2(get_viewport_rect().size.x - size.x, 0)
+	get_viewport().size_changed.connect(_apply_viewport_geometry)
+	_apply_viewport_geometry()
 	_refresh()
 
 
@@ -264,12 +265,22 @@ func _toggle_alpha() -> void:
 
 func _toggle_size() -> void:
 	_extended = not _extended
+	_auto_center = true
+	_apply_viewport_geometry()
+	_update_button_textures()
+
+
+func _apply_viewport_geometry() -> void:
 	var viewport_size := get_viewport_rect().size
 	size = Vector2(roundf(viewport_size.x * 0.8), roundf(viewport_size.y * 0.5)) if _extended else Vector2(200, 200)
 	position = (viewport_size - size) * 0.5 if _extended else Vector2(viewport_size.x - size.x, 0)
-	_auto_center = true
-	_center_on_player()
-	_update_button_textures()
+	if $MapViewport/MapTexture.texture != null:
+		if _auto_center:
+			_center_on_player()
+		else:
+			_fix_image_offset()
+			_apply_image_rect()
+		_update_markers()
 
 
 func _toggle_center() -> void:

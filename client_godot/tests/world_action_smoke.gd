@@ -110,6 +110,34 @@ func _ready() -> void:
 		if extra_panel == null or extra_panel.position != expected_extra_positions[scene_path]:
 			_fail("extra panel initial position mismatch: scene=%s actual=%s expected=%s" % [scene_path, extra_panel.position if extra_panel != null else Vector2.INF, expected_extra_positions[scene_path]])
 			return
+	var resize_static_panels := {
+		"inventory": initial_inventory_panel,
+		"player_state": initial_player_state_panel,
+		"skill": initial_skill_panel,
+	}
+	var extra_panel_nodes: Dictionary = main.get("_extra_panel_nodes")
+	for scene_path: String in expected_extra_positions:
+		if scene_path != "res://scenes/game/panels/minimap.tscn":
+			resize_static_panels[scene_path] = extra_panel_nodes[scene_path]
+	var resize_static_positions := {}
+	for panel_name: String in resize_static_panels:
+		resize_static_positions[panel_name] = (resize_static_panels[panel_name] as Control).position
+	get_tree().root.size = Vector2i(1024, 768)
+	await get_tree().process_frame
+	for panel_name: String in resize_static_panels:
+		var resized_panel := resize_static_panels[panel_name] as Control
+		if resized_panel.position != resize_static_positions[panel_name]:
+			_fail("C++ board moved instead of preserving its clamped position after viewport growth: panel=%s actual=%s expected=%s" % [panel_name, resized_panel.position, resize_static_positions[panel_name]])
+			return
+	var resized_minimap := extra_panel_nodes["res://scenes/game/panels/minimap.tscn"] as Control
+	if resized_minimap.position != Vector2(824, 0) or resized_minimap.size != Vector2(200, 200):
+		_fail("minimap did not follow its C++ per-frame upper-right geometry in the world panel matrix: position=%s size=%s" % [resized_minimap.position, resized_minimap.size])
+		return
+	get_tree().root.size = Vector2i(800, 600)
+	await get_tree().process_frame
+	if resized_minimap.position != Vector2(600, 0) or resized_minimap.size != Vector2(200, 200):
+		_fail("minimap did not restore its C++ upper-right geometry with the viewport: position=%s size=%s" % [resized_minimap.position, resized_minimap.size])
+		return
 	var expected_direct_layers := {
 		"SkillPanel": 4,
 		"SkillBuffHUD": 5,

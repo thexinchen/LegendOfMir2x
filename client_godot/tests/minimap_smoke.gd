@@ -33,6 +33,13 @@ func _ready() -> void:
 	if not panel.visible or not panel.call("requested_visible"):
 		_fail("minimap is not visible by default")
 		return
+	get_tree().root.size = Vector2i(1024, 768)
+	await get_tree().process_frame
+	if panel.size != Vector2(200, 200) or panel.position != Vector2(824, 0):
+		_fail("compact minimap did not stay on the original upper-right anchor after resize: position=%s size=%s" % [panel.position, panel.size])
+		return
+	get_tree().root.size = Vector2i(800, 600)
+	await get_tree().process_frame
 	GameState.player_map_id = 0
 	GameState.state_changed.emit()
 	if panel.visible or not panel.call("requested_visible"):
@@ -73,6 +80,15 @@ func _ready() -> void:
 	if panel.size.x <= 200.0 or panel.size.y <= 200.0:
 		_fail("extended minimap failed")
 		return
+	get_tree().root.size = Vector2i(1024, 768)
+	await get_tree().process_frame
+	var expected_extended_size := Vector2(roundf(1024.0 * 0.8), roundf(768.0 * 0.5))
+	var expected_extended_position := (Vector2(1024, 768) - expected_extended_size) * 0.5
+	if panel.size != expected_extended_size or panel.position != expected_extended_position:
+		_fail("extended minimap did not follow the original dynamic canvas geometry after resize: position=%s/%s size=%s/%s" % [panel.position, expected_extended_position, panel.size, expected_extended_size])
+		return
+	get_tree().root.size = Vector2i(800, 600)
+	await get_tree().process_frame
 	panel.call("_zoom_at", Vector2(100, 100), 1.5)
 	if absf(panel.get("_zoom") - 1.5) > 0.01 or panel.get_node("ZoomBackground/ZoomText").text != "150%":
 		_fail("cursor zoom failed")
