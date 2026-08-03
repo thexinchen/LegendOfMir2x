@@ -67,6 +67,13 @@ func _ready() -> void:
 	if count_label == null or count_label.text != "1,234" or first_cell.get_node_or_null("Hover") == null:
 		_fail("count formatting/hover overlay mismatch: children=%s count=%s" % [first_cell.get_children().map(func(child): return child.name), count_label.text if count_label else "null"])
 		return
+	var hover_overlay := first_cell.get_node("Hover") as ColorRect
+	var selected_cell := panel.get_node("ItemGrid").get_child(3) as TextureButton
+	var selected_overlay := _find_color_rect(selected_cell)
+	var original_alpha := 96.0 / 255.0
+	if not is_equal_approx(hover_overlay.color.a, original_alpha) or selected_overlay == null or not is_equal_approx(selected_overlay.color.a, original_alpha):
+		_fail("selection/hover overlay alpha diverged from original byte alpha 96: selected=%s hover=%s" % [selected_overlay.color.a if selected_overlay else -1.0, hover_overlay.color.a])
+		return
 	get_viewport().warp_mouse(Vector2(520, 100))
 	panel.call("_show_item_tooltip", 0, secured_items[0])
 	var secured_tooltip := panel.get_node("ItemTooltip") as Panel
@@ -121,3 +128,10 @@ func _label_texts(parent: Node) -> Array[String]:
 		if child is Label:
 			result.append(child.text)
 	return result
+
+
+func _find_color_rect(parent: Node) -> ColorRect:
+	for child in parent.get_children():
+		if child is ColorRect:
+			return child as ColorRect
+	return null

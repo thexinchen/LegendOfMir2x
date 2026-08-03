@@ -82,14 +82,14 @@ func _refresh() -> void:
 				var selected := ColorRect.new()
 				selected.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 				selected.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				selected.color = Color(0, 0, 1, 0.38)
+				selected.color = Color(0, 0, 1, 96.0 / 255.0)
 				cell.add_child(selected)
 			else:
 				var hovered := ColorRect.new()
 				hovered.name = "Hover"
 				hovered.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 				hovered.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				hovered.color = Color(1, 1, 1, 0.38)
+				hovered.color = Color(1, 1, 1, 96.0 / 255.0)
 				hovered.hide()
 				cell.add_child(hovered)
 				cell.mouse_entered.connect(hovered.show)
