@@ -150,24 +150,32 @@ func _draw() -> void:
 	_draw_ground_items(x0, y0, x1, y1, view_x, view_y)
 
 	# Overground objects and actors are interleaved one map row at a time.
-	var creatures_by_row: Dictionary = {}
+	var actors_by_row: Dictionary = {}
+	var actor_sequence := 0
 	for uid in game_state.creatures:
 		var creature: Dictionary = game_state.creatures[uid]
 		if _is_dead_actor(creature):
 			continue
 		var row: int = creature.get("y", 0)
-		var row_creatures: Array = creatures_by_row.get(row, [])
-		row_creatures.append(creature)
-		creatures_by_row[row] = row_creatures
+		var row_actors: Array = actors_by_row.get(row, [])
+		row_actors.append({"x": int(creature.get("x", 0)), "sequence": actor_sequence, "creature": creature})
+		actors_by_row[row] = row_actors
+		actor_sequence += 1
+	if game_state.player_action_type != DEAD_ACTION:
+		var player_row: int = game_state.player_y
+		var row_actors: Array = actors_by_row.get(player_row, [])
+		row_actors.append({"x": int(game_state.player_x), "sequence": actor_sequence, "player": true})
+		actors_by_row[player_row] = row_actors
 	for gy in range(y0, y1 + 1):
 		_draw_object_row(1, gy, x0, x1, view_x, view_y)
 		_draw_firewall_row(gy, x0, x1, view_x, view_y, now)
 		_draw_magic_row(active_magic, gy, true, view_x, view_y)
 		_draw_strike_row(gy, x0, x1, view_x, view_y, now)
-		for creature in creatures_by_row.get(gy, []):
-			_draw_creature(creature, view_x, view_y)
-		if game_state.player_y == gy and game_state.player_action_type != DEAD_ACTION:
-			_draw_player(view_x, view_y)
+		for actor_entry in _sorted_actor_row_entries(actors_by_row.get(gy, [])):
+			if actor_entry.get("player", false):
+				_draw_player(view_x, view_y)
+			else:
+				_draw_creature(actor_entry.creature, view_x, view_y)
 		_draw_object_row(2, gy, x0, x1, view_x, view_y)
 	_draw_object_depth(3, x0, y0, x1, y1, view_x, view_y)
 	_draw_ground_item_stars(x0, y0, x1, y1, view_x, view_y)
@@ -177,6 +185,20 @@ func _draw() -> void:
 	game_state.update_ascend_strings()
 	for entry in game_state.ascend_strings:
 		_draw_ascend_feedback(entry, view_x, view_y, now)
+
+
+func _sorted_actor_row_entries(entries: Array) -> Array:
+	var sorted_entries := entries.duplicate()
+	sorted_entries.sort_custom(_actor_row_entry_before)
+	return sorted_entries
+
+
+func _actor_row_entry_before(left: Dictionary, right: Dictionary) -> bool:
+	var left_x: int = left.get("x", 0)
+	var right_x: int = right.get("x", 0)
+	if left_x != right_x:
+		return left_x < right_x
+	return int(left.get("sequence", 0)) < int(right.get("sequence", 0))
 
 
 func _draw_ascend_feedback(entry: Dictionary, view_x: int, view_y: int, now: int) -> void:

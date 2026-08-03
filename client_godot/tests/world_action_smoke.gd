@@ -59,6 +59,14 @@ func _ready() -> void:
 		get_tree().quit(0)
 		return
 	var world_renderer: Control = main.get_node("WorldRenderer")
+	var actor_draw_order: Array = world_renderer.call("_sorted_actor_row_entries", [
+		{"x": 9, "sequence": 0, "uid": 101},
+		{"x": 3, "sequence": 1, "uid": 102},
+		{"x": 9, "sequence": 2, "uid": 103},
+	])
+	if actor_draw_order.map(func(entry: Dictionary) -> int: return entry.uid) != [102, 101, 103]:
+		_fail("same-row actor draw order does not follow x coordinates: %s" % [actor_draw_order])
+		return
 	if not world_renderer.has_method("_hero_dress_mod_color") or not world_renderer.has_method("_hero_hair_mod_color"):
 		_fail("hero dress/hair color modulation unavailable")
 		return
