@@ -6,6 +6,24 @@ func _ready() -> void:
 	add_child(panel)
 	await get_tree().process_frame
 	var slider := panel.get_node("Slider") as TextureRect
+	var button_positions := {
+		"AnnouncementButton": Vector2(40, 385),
+		"MembersButton": Vector2(90, 385),
+		"ChatButton": Vector2(140, 385),
+		"EditButton": Vector2(290, 385),
+		"RemoveButton": Vector2(340, 385),
+		"DisbandButton": Vector2(390, 385),
+		"PositionButton": Vector2(440, 385),
+		"CovenantButton": Vector2(490, 385),
+	}
+	if panel.size != Vector2(594, 444) or (panel.get_node("Background") as TextureRect).texture.resource_path != "res://assets/ui/game/guild/00000500.png":
+		_fail("native guild background geometry/resource mismatch: size=%s texture=%s" % [panel.size, (panel.get_node("Background") as TextureRect).texture.resource_path])
+		return
+	for button_name in button_positions:
+		var button := panel.get_node(button_name) as TextureButton
+		if button.position != button_positions[button_name] or button.size != Vector2(40, 40):
+			_fail("native guild button geometry mismatch: name=%s position=%s size=%s" % [button_name, button.position, button.size])
+			return
 	if slider.size != Vector2(23, 26) or slider.position != Vector2(559, 41):
 		_fail("native slider geometry mismatch: position=%s size=%s" % [slider.position, slider.size])
 		return
@@ -30,7 +48,7 @@ func _ready() -> void:
 	if OS.has_environment("MIR2X_GUILD_SCREENSHOT"):
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_GUILD_SCREENSHOT"))
-	print("GUILD PANEL PASS: native knob geometry, drag range and active tint")
+	print("GUILD PANEL PASS: native background/buttons, knob geometry, drag range and active tint")
 	get_tree().quit()
 
 

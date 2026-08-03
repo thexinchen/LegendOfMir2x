@@ -38,6 +38,9 @@ func _ready() -> void:
 		if scene_path.ends_with("/horse.tscn") and not _check_horse_layers(panel):
 			panel.free()
 			return
+		if scene_path.ends_with("/auction.tscn") and not _check_auction_stub(panel):
+			panel.free()
+			return
 		panel.free()
 		print("PANEL PASS: ", scene_path)
 	print("ALL PANEL SCENES PASS: ", PANEL_SCENES.size())
@@ -66,6 +69,14 @@ func _check_horse_layers(panel: Node) -> bool:
 		return false
 	if viewport == null or background == null or not (backing.get_index() < viewport.get_index() and viewport.get_index() < background.get_index()):
 		_fail("horse panel draw order is not gray backing -> black viewport -> original texture")
+		return false
+	return true
+
+
+func _check_auction_stub(panel: Node) -> bool:
+	var background := panel.get_node_or_null("Background") as TextureRect
+	if panel.get_child_count() != 1 or panel.get_script().resource_path != "res://scripts/game/closable_panel.gd" or panel.size != Vector2(720, 440) or background == null or background.position != Vector2.ZERO or background.size != Vector2(720, 440) or background.texture.resource_path != "res://assets/ui/game/auction/00001400.png":
+		_fail("auction panel did not preserve the authoritative background-only C++ stub: children=%d script=%s size=%s background=%s" % [panel.get_child_count(), panel.get_script().resource_path, panel.size, background])
 		return false
 	return true
 

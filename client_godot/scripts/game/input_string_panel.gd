@@ -10,27 +10,27 @@ func _ready() -> void:
 	super._ready()
 	$ConfirmButton.pressed.connect(_confirm)
 	$CancelButton.pressed.connect(_cancel)
-	$Value.text_submitted.connect(func(_value: String): _confirm())
-	$Value.text_changed.connect(_on_text_changed)
+	$ValueClip/Value.text_submitted.connect(func(_value: String): _confirm())
+	$ValueClip/Value.text_changed.connect(_on_text_changed)
 
 
 func configure(title: String, security: bool) -> void:
 	$Title.text = _plain_layout_text(title)
-	$Value.secret = security
-	$Value.text = ""
+	$ValueClip/Value.secret = security
+	$ValueClip/Value.text = ""
 	show()
-	$Value.grab_focus()
+	$ValueClip/Value.grab_focus()
 
 
 func _confirm() -> void:
-	var value: String = $Value.text.strip_edges(true, false)
-	$Value.text = ""
+	var value: String = $ValueClip/Value.text.strip_edges(true, false)
+	$ValueClip/Value.text = ""
 	committed.emit(value)
 	hide()
 
 
 func _cancel() -> void:
-	$Value.text = ""
+	$ValueClip/Value.text = ""
 	hide()
 	cancelled.emit()
 
@@ -44,8 +44,8 @@ func _on_text_changed(value: String) -> void:
 	if _clamping_text or value.to_utf8_buffer().size() <= 255:
 		return
 	_clamping_text = true
-	$Value.text = _utf8_prefix(value, 255)
-	$Value.caret_column = $Value.text.length()
+	$ValueClip/Value.text = _utf8_prefix(value, 255)
+	$ValueClip/Value.caret_column = $ValueClip/Value.text.length()
 	_clamping_text = false
 
 

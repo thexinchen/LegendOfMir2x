@@ -12,6 +12,10 @@ func _ready() -> void:
 	if slider.position != Vector2(321, 148) or slider.size != Vector2(23, 26) or slider.modulate.r > 0.6:
 		_fail("native quest slider mismatch: position=%s size=%s tint=%s" % [slider.position, slider.size, slider.modulate])
 		return
+	var first_label := _first_label(panel)
+	if first_label == null or first_label.position != Vector2.ZERO or first_label.size != Vector2(270, 17) or first_label.get_theme_font("font").resource_path != "res://assets/font/01_Yahei.ttf" or first_label.get_theme_font_size("font_size") != 12:
+		_fail("quest line did not preserve original content/font geometry: label=%s position=%s size=%s font=%s font_size=%s" % [first_label, first_label.position if first_label else Vector2.INF, first_label.size if first_label else Vector2.INF, first_label.get_theme_font("font").resource_path if first_label else "", first_label.get_theme_font_size("font_size") if first_label else -1])
+		return
 	if _label_count(panel) != 1 or not panel.get("_folded").get("初入江湖", false):
 		_fail("quest did not start folded")
 		return
@@ -83,6 +87,13 @@ func _label_count(panel: Control) -> int:
 		if child is Label:
 			count += 1
 	return count
+
+
+func _first_label(panel: Control) -> Label:
+	for child in panel.get_node("ContentViewport/Lines").get_children():
+		if child is Label:
+			return child
+	return null
 
 
 func _fail(message: String) -> void:

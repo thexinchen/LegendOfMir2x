@@ -46,11 +46,17 @@ theme_override_font_sizes/font_size = 12
 text = ""
 horizontal_alignment = 1
 
-[node name="Value" type="LineEdit" parent="."]
+[node name="ValueClip" type="Control" parent="."]
 offset_left = 22.0
 offset_top = 225.0
 offset_right = 337.0
 offset_bottom = 248.0
+mouse_filter = 1
+clip_contents = true
+
+[node name="Value" type="LineEdit" parent="ValueClip"]
+offset_right = 315.0
+offset_bottom = 23.0
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_selected_color = Color(1, 1, 1, 1)
