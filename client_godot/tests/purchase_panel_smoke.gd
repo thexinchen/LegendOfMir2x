@@ -50,6 +50,10 @@ func _ready() -> void:
 	if goods.position != Vector2(19, 15) or goods.get_child_count() != 4 or goods.get_child(1).position.y != 42:
 		_fail("goods geometry mismatch")
 		return
+	var goods_selection := goods.get_child(0).get_child(0) as ColorRect
+	if goods_selection == null or goods_selection.color != Color(1, 1, 1, 64.0 / 255.0):
+		_fail("goods selection layer diverged from original byte alpha 64: %s" % [goods_selection.color if goods_selection else Color.TRANSPARENT])
+		return
 	var first_goods_icon := goods.get_child(0).get_child(2) as TextureRect
 	var first_goods_texture: Texture2D = resources.item_icon(unique_id).texture
 	if first_goods_icon == null or first_goods_icon.size != first_goods_texture.get_size() or first_goods_icon.position != (Vector2(38, 38) - first_goods_icon.size) / 2.0:

@@ -77,7 +77,7 @@ func _refresh_goods() -> void:
 		$GoodsList.add_child(row)
 		if index == _selected_index:
 			var highlight := ColorRect.new()
-			highlight.color = Color(1, 1, 1, 0.25)
+			highlight.color = Color(1, 1, 1, 64.0 / 255.0)
 			highlight.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			highlight.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			highlight.show_behind_parent = true

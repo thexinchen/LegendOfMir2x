@@ -23,6 +23,21 @@ func _ready() -> void:
 	if (first_row.get_child(0) as TextureRect).stretch_mode != TextureRect.STRETCH_SCALE:
 		_fail("preview avatar did not stretch the complete texture like the original client")
 		return
+	var row_rgb := Color(231.0 / 255.0, 231.0 / 255.0, 189.0 / 255.0)
+	var row_normal := first_row.get_theme_stylebox("normal") as StyleBoxFlat
+	var row_hover := first_row.get_theme_stylebox("hover") as StyleBoxFlat
+	var row_pressed := first_row.get_theme_stylebox("pressed") as StyleBoxFlat
+	var subtitle := first_row.get_child(2) as Label
+	if row_normal.bg_color != Color.TRANSPARENT or row_normal.border_color != Color(row_rgb.r, row_rgb.g, row_rgb.b, 32.0 / 255.0):
+		_fail("friend row normal state diverged from C++: bg=%s border=%s" % [row_normal.bg_color, row_normal.border_color])
+		return
+	var hovered_color := Color(row_rgb.r, row_rgb.g, row_rgb.b, 64.0 / 255.0)
+	if row_hover.bg_color != hovered_color or row_hover.border_color != hovered_color or row_pressed.bg_color != hovered_color or row_pressed.border_color != hovered_color:
+		_fail("friend row hover/pressed states diverged from C++: hover=%s/%s pressed=%s/%s" % [row_hover.bg_color, row_hover.border_color, row_pressed.bg_color, row_pressed.border_color])
+		return
+	if subtitle.get_theme_color("font_color") != Color(128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0):
+		_fail("friend preview subtitle color diverged from C++: %s" % subtitle.get_theme_color("font_color"))
+		return
 	if panel.get_node("ContentFrame").position != Vector2.ZERO or panel.get_node("ContentFrame").size != panel.size:
 		_fail("full-board foreground frame mismatch")
 		return

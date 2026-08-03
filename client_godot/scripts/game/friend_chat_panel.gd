@@ -257,9 +257,10 @@ func _add_row(parent: Node, peer: Dictionary, title: String, subtitle: String, a
 	button.text = ""
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	button.add_theme_stylebox_override("normal", _row_style(Color(0, 0, 0, 0), 0.125))
-	button.add_theme_stylebox_override("hover", _row_style(Color(0.906, 0.906, 0.741, 0.25), 0.25))
-	button.add_theme_stylebox_override("pressed", _row_style(Color(0.906, 0.906, 0.741, 0.375), 0.375))
+	button.add_theme_stylebox_override("normal", _row_style(Color.TRANSPARENT, 32.0 / 255.0))
+	var hover_color := Color(231.0 / 255.0, 231.0 / 255.0, 189.0 / 255.0, 64.0 / 255.0)
+	button.add_theme_stylebox_override("hover", _row_style(hover_color, 64.0 / 255.0))
+	button.add_theme_stylebox_override("pressed", _row_style(hover_color, 64.0 / 255.0))
 	button.pressed.connect(action)
 	parent.add_child(button)
 	var avatar := TextureRect.new()
@@ -285,7 +286,7 @@ func _add_row(parent: Node, peer: Dictionary, title: String, subtitle: String, a
 		subtitle_label.size = Vector2(290, 18)
 		subtitle_label.text = subtitle
 		subtitle_label.add_theme_font_size_override("font_size", 12)
-		subtitle_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+		subtitle_label.add_theme_color_override("font_color", Color(128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0))
 		subtitle_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		button.add_child(subtitle_label)
 	return button
@@ -294,7 +295,7 @@ func _add_row(parent: Node, peer: Dictionary, title: String, subtitle: String, a
 func _row_style(fill: Color, border_alpha: float) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fill
-	style.border_color = Color(0.906, 0.906, 0.741, border_alpha)
+	style.border_color = Color(231.0 / 255.0, 231.0 / 255.0, 189.0 / 255.0, border_alpha)
 	style.set_border_width_all(1)
 	return style
 
