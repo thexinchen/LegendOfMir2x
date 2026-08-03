@@ -284,6 +284,25 @@ func _ready() -> void:
 		_fail("exchange control did not provide the original feedback")
 		return
 	GameState.chat_log.clear()
+	var overlong_command := ""
+	for _index in 170:
+		overlong_command += "界"
+	overlong_command += "ab"
+	command.text = overlong_command
+	command.text_changed.emit(command.text)
+	if command.text.to_utf8_buffer().size() != 511 or not command.text.ends_with("a"):
+		_fail("HUD command did not preserve the original 511-byte UTF-8 input buffer: bytes=%d suffix=%s" % [command.text.to_utf8_buffer().size(), command.text.right(2)])
+		return
+	var command_screenshot := OS.get_environment("MIR2X_HUD_COMMAND_SCREENSHOT")
+	if not command_screenshot.is_empty():
+		panel.call("focus_command")
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var command_save_error := get_viewport().get_texture().get_image().save_png(command_screenshot)
+		if command_save_error != OK:
+			_fail("failed to save HUD command screenshot: %s" % error_string(command_save_error))
+			return
+		command.release_focus()
 	command.text = "   local echo  "
 	panel.call("focus_command")
 	await get_tree().process_frame

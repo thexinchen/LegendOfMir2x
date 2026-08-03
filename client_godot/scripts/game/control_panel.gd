@@ -57,6 +57,7 @@ var _chat_signature := ""
 var _focus_hud_signature := ""
 var _button_blinks: Dictionary = {}
 var _chat_slider_dragging := false
+var _clamping_command_text := false
 var _title_arc_frames: Array[Texture2D] = []
 var _title_arc_elapsed_ms := 0.0
 
@@ -91,6 +92,7 @@ func _ready() -> void:
 	chat_scroll_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chat_log.gui_input.connect(_on_chat_input)
 	chat_slider_hit_area.gui_input.connect(_on_chat_slider_input)
+	command.text_changed.connect(_on_command_text_changed)
 	_refresh_static()
 	_update_chat_display()
 	$Body/MagicKey.pressed.connect(magic_key_hud_toggled.emit)
@@ -427,6 +429,25 @@ func _on_exchange_pressed() -> void:
 func focus_command() -> void:
 	command.grab_focus()
 	command.caret_column = command.text.length()
+
+
+func _on_command_text_changed(value: String) -> void:
+	if _clamping_command_text or value.to_utf8_buffer().size() <= 511:
+		return
+	_clamping_command_text = true
+	command.text = _utf8_prefix(value, 511)
+	command.caret_column = command.text.length()
+	_clamping_command_text = false
+
+
+func _utf8_prefix(value: String, byte_limit: int) -> String:
+	var result := ""
+	for index in value.length():
+		var next := result + value.substr(index, 1)
+		if next.to_utf8_buffer().size() > byte_limit:
+			break
+		result = next
+	return result
 
 
 func _on_command_submitted(text: String) -> void:
