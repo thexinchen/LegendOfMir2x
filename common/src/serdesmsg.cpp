@@ -370,6 +370,18 @@ const SDItem &SDInventory::add(SDItem newItem, bool keepSeqID)
     throw fflreach();
 }
 
+bool SDInventory::update(SDItem newItem)
+{
+    fflassert(newItem);
+    for(auto &item: m_list){
+        if(item.itemID == newItem.itemID && item.seqID == newItem.seqID){
+            item = std::move(newItem);
+            return true;
+        }
+    }
+    return false;
+}
+
 std::tuple<size_t, uint32_t, const SDItem *> SDInventory::remove(uint32_t itemID, uint32_t seqID, size_t count)
 {
     const auto &ir = DBCOM_ITEMRECORD(itemID);

@@ -486,6 +486,9 @@ class SDInventory final
         const SDItem &add(SDItem, bool);
 
     public:
+        bool update(SDItem);
+
+    public:
         // only do change in one item per call
         // returns:
         //          [0]: how many items get removed, 0 means can't remove any item

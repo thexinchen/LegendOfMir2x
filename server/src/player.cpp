@@ -169,6 +169,22 @@ Player::LuaThreadRunner::LuaThreadRunner(Player *playerPtr)
         return getPlayer()->hasInventoryItem(to_u32(itemID), to_u32(seqID), count);
     });
 
+    bindFunction("getInventoryItemRepairState", [this](int itemID, int seqID) -> int
+    {
+        if(itemID <= 0 || seqID <= 0){
+            return 1;
+        }
+        return getPlayer()->getInventoryItemRepairState(to_u32(itemID), to_u32(seqID));
+    });
+
+    bindFunction("repairInventoryItem", [this](int itemID, int seqID, size_t cost) -> int
+    {
+        if(itemID <= 0 || seqID <= 0 || cost == 0){
+            return 1;
+        }
+        return getPlayer()->repairInventoryItem(to_u32(itemID), to_u32(seqID), cost);
+    });
+
     bindFunction("dbGetVar", [this](std::string var, sol::this_state s)
     {
         return luaf::buildLuaObj(sol::state_view(s), getPlayer()->dbGetVar(var));
@@ -1743,6 +1759,51 @@ const SDItem &Player::findInventoryItem(uint32_t itemID, uint32_t seqID) const
 {
     fflassert(DBCOM_ITEMRECORD(itemID));
     return m_sdItemStorage.inventory.find(itemID, seqID);
+}
+
+int Player::getInventoryItemRepairState(uint32_t itemID, uint32_t seqID) const
+{
+    const auto &ir = DBCOM_ITEMRECORD(itemID);
+    if(!ir || !ir.isWeapon() || seqID == 0){
+        return 1;
+    }
+
+    const auto &item = m_sdItemStorage.inventory.find(itemID, seqID);
+    if(!item){
+        return 1;
+    }
+    if(item.duration[1] == 0 || item.duration[0] >= item.duration[1]){
+        return 2;
+    }
+    return 0;
+}
+
+int Player::repairInventoryItem(uint32_t itemID, uint32_t seqID, size_t cost)
+{
+    if(const int repairState = getInventoryItemRepairState(itemID, seqID); repairState != 0){
+        return repairState;
+    }
+    if(cost == 0 || m_sdItemStorage.gold < cost){
+        return 3;
+    }
+
+    SDItem repairedItem = m_sdItemStorage.inventory.find(itemID, seqID);
+    repairedItem.duration[0] = repairedItem.duration[1];
+    const size_t repairedGold = m_sdItemStorage.gold - cost;
+
+    auto dbTrans = g_dbPod->createTransaction();
+    dbUpdateInventoryItem(repairedItem);
+    g_dbPod->exec("update tbl_char set fld_gold = %llu where fld_dbid = %llu", to_llu(repairedGold), to_llu(dbid()));
+    dbTrans.commit();
+
+    fflassert(m_sdItemStorage.inventory.update(repairedItem));
+    m_sdItemStorage.gold = repairedGold;
+    reportGold();
+    postNetMessage(SM_UPDATEITEM, cerealf::serialize(SDUpdateItem
+    {
+        .item = repairedItem,
+    }));
+    return 0;
 }
 
 void Player::secureItem(uint32_t itemID, uint32_t seqID)

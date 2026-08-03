@@ -141,8 +141,50 @@ setEventHandler(
     end,
 
     ["npc_goto_query_repair"] = function(uid, value)
-        itemID, seqID = invop.parseItemString(value)
-        repairCost = math.random(100, 200)
+        local itemID, seqID = invop.parseItemString(value)
+        local repairState = uidRemoteCall(uid, itemID, seqID,
+        [[
+            local itemID, seqID = ...
+            return getInventoryItemRepairState(itemID, seqID)
+        ]])
+
+        if repairState == 1 then
+            uidPostXML(uid,
+            [[
+                <layout>
+                    <par>没有找到这件武器，请重新选择。</par>
+                    <par></par>
+
+                    <par><event id="%s">前一步</event></par>
+                </layout>
+            ]], SYS_ENTER)
+            return
+        elseif repairState == 2 then
+            uidPostXML(uid,
+            [[
+                <layout>
+                    <par>你的%s不需要修理。</par>
+                    <par></par>
+
+                    <par><event id="%s">前一步</event></par>
+                </layout>
+            ]], getItemName(itemID), SYS_ENTER)
+            return
+        end
+
+        local repairCost = math.random(100, 200)
+        uidRemoteCall(uid, getNPCFullName(), itemID, seqID, repairCost,
+        [[
+            local npcName, itemID, seqID, repairCost = ...
+            if not _G.RSVD_NAME_repairQuote then
+                _G.RSVD_NAME_repairQuote = {}
+            end
+            _G.RSVD_NAME_repairQuote[npcName] = {
+                itemID = itemID,
+                seqID = seqID,
+                cost = repairCost,
+            }
+        ]])
 
         uidPostXML(uid,
         [[
@@ -157,16 +199,38 @@ setEventHandler(
     end,
 
     ["npc_goto_commit_repair"] = function(uid, value)
-        itemID, seqID = invop.parseItemString(value)
+        local itemID, seqID = invop.parseItemString(value)
+        local repairResult = uidRemoteCall(uid, getNPCFullName(), itemID, seqID,
+        [[
+            local npcName, itemID, seqID = ...
+            local quote = _G.RSVD_NAME_repairQuote and _G.RSVD_NAME_repairQuote[npcName]
+            if _G.RSVD_NAME_repairQuote then
+                _G.RSVD_NAME_repairQuote[npcName] = nil
+            end
+            if not quote or quote.itemID ~= itemID or quote.seqID ~= seqID then
+                return 1
+            end
+            return repairInventoryItem(itemID, seqID, quote.cost)
+        ]])
+
+        local resultText = "修理请求已经失效，请重新选择。"
+        if repairResult == 0 then
+            resultText = string.format("你的%s已经修理完毕。", getItemName(itemID))
+        elseif repairResult == 2 then
+            resultText = string.format("你的%s不需要修理。", getItemName(itemID))
+        elseif repairResult == 3 then
+            resultText = "你的金币不够，无法修理。"
+        end
+
         uidPostXML(uid,
         [[
             <layout>
-                <par>你的%s已经修理完毕。</par>
+                <par>%s</par>
                 <par></par>
 
                 <par><event id="%s">前一步</event></par>
             </layout>
-        ]], getItemName(itemID), SYS_ENTER)
+        ]], resultText, SYS_ENTER)
     end,
 
     ["npc_goto_commit_special_repair"] = function(uid, value)
