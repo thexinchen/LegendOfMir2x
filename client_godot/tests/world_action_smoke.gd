@@ -124,6 +124,12 @@ func _ready() -> void:
 		if direct_panel.z_index != expected_direct_layers[node_path]:
 			_fail("direct panel draw layer does not match C++ order: node=%s actual=%d expected=%d" % [node_path, direct_panel.z_index, expected_direct_layers[node_path]])
 			return
+	var location_label := main.get_node("Location") as Label
+	if location_label.anchor_top != 1.0 or location_label.anchor_bottom != 1.0 \
+			or location_label.offset_top != -23.0 or location_label.offset_bottom != 0.0 \
+			or location_label.position != Vector2(4, main.size.y - 23.0):
+		_fail("location text did not follow the original bottom HUD anchor: anchors=%s/%s offsets=%s/%s position=%s main=%s" % [location_label.anchor_top, location_label.anchor_bottom, location_label.offset_top, location_label.offset_bottom, location_label.position, main.size])
+		return
 	var expected_extra_layers := {
 		"res://scenes/game/panels/minimap.tscn": 1,
 		"res://scenes/game/panels/npc_chat.tscn": 2,

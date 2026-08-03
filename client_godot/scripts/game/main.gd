@@ -131,9 +131,7 @@ func _ready() -> void:
 	inventory_panel.z_index = 16
 	player_state_panel.z_index = 17
 	
-	# C++ location format: "mapName: x y", font 10 size 15, white, at {4, localBaseY+110}
-	# localBaseY = screenH - 133 = 600 - 133 = 467, so y = 467 + 110 = 577
-	location_label.position = Vector2(4, 577)
+	# C++ location format: "mapName: x y", font 10 size 15, white, 23 px above the window bottom.
 	location_label.add_theme_font_size_override("font_size", 15)
 	location_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 	
