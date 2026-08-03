@@ -33,6 +33,15 @@ func _ready() -> void:
 	if GameState.quest_reset_serial != reset_serial + 1 or panel.get("_scroll_value") != 0.0 or not panel.get("_folded").get("重置任务", false):
 		_fail("full quest list did not reset folding/scroll")
 		return
+	GameState.set_quest_list({"空状态任务": {"支线": "保留标题"}})
+	GameState.update_quest_description("空状态任务", "支线", null, SYS_QSTFSM)
+	if not GameState.quests.has("空状态任务") or not (GameState.quests["空状态任务"] as Dictionary).is_empty():
+		_fail("child FSM removal did not preserve the original empty quest heading")
+		return
+	if _label_count(panel) != 1 or not panel.get("_folded").get("空状态任务", false):
+		_fail("empty quest heading did not remain visible and folded")
+		return
+	GameState.set_quest_list({"重置任务": {SYS_QSTFSM: "重新开始"}})
 	GameState.update_quest_description("重置任务", "支线", "保留项", SYS_QSTFSM)
 	GameState.update_quest_description("重置任务", SYS_QSTFSM, null, SYS_QSTFSM)
 	if GameState.quests.has("重置任务"):

@@ -176,10 +176,7 @@ func update_quest_description(name: String, fsm: String, desp: Variant, main_fsm
 			state_map.erase(fsm)
 		else:
 			state_map[fsm] = str(desp)
-		if state_map.is_empty():
-			quests.erase(name)
-		else:
-			quests[name] = state_map
+		quests[name] = state_map
 	state_changed.emit()
 
 
