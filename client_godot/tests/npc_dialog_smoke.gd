@@ -129,6 +129,37 @@ func _ready() -> void:
 	if not nowrap_bbcode.contains("12345678\n[color=#ffff00][url=") or not nowrap_bbcode.contains("%s[/url]" % cjk_text):
 		_fail("wrap=false event was not moved to an intact next line: %s" % nowrap_bbcode)
 		return
+	var paragraph_layout_xml := "<layout><par lineWidth=\"80\" lineSpace=\"5\">甲乙丙丁戊己庚辛壬癸子丑</par><par>默认宽度</par><par lineWidth=\"0\">无限单行宽度</par></layout>"
+	panel.call("_render_dialog", paragraph_layout_xml)
+	if dialog.get_child_count() != 3:
+		_fail("NPC paragraphs were not rendered by independent width controls: children=%d" % dialog.get_child_count())
+		return
+	var narrow_paragraph := dialog.get_child(0) as RichTextLabel
+	var default_paragraph := dialog.get_child(1) as RichTextLabel
+	var infinite_paragraph := dialog.get_child(2) as RichTextLabel
+	if narrow_paragraph == null or default_paragraph == null or infinite_paragraph == null:
+		_fail("NPC paragraph controls have the wrong type")
+		return
+	if narrow_paragraph.get_theme_color("default_color") != Color.WHITE:
+		_fail("NPC paragraph default text color is not original white: %s" % narrow_paragraph.get_theme_color("default_color"))
+		return
+	if not is_equal_approx(narrow_paragraph.size.x, 80.0) or narrow_paragraph.get_theme_constant("line_separation") != 5 or narrow_paragraph.autowrap_mode != TextServer.AUTOWRAP_ARBITRARY or narrow_paragraph.get_line_count() < 2:
+		_fail("NPC explicit paragraph width/lineSpace mismatch: size=%s lineSpace=%d wrap=%d" % [narrow_paragraph.size, narrow_paragraph.get_theme_constant("line_separation"), narrow_paragraph.autowrap_mode])
+		return
+	if not is_equal_approx(default_paragraph.size.x, panel.call("_dialog_line_width")):
+		_fail("NPC paragraph did not inherit the board line width: size=%s board=%s" % [default_paragraph.size.x, panel.call("_dialog_line_width")])
+		return
+	if infinite_paragraph.autowrap_mode != TextServer.AUTOWRAP_OFF or infinite_paragraph.get_line_count() != 1 or infinite_paragraph.size.x < infinite_paragraph.get_content_width():
+		_fail("NPC lineWidth=0 did not preserve an infinite single line: size=%s content=%s lines=%d" % [infinite_paragraph.size, infinite_paragraph.get_content_width(), infinite_paragraph.get_line_count()])
+		return
+	if default_paragraph.position.y != narrow_paragraph.size.y or infinite_paragraph.position.y != default_paragraph.position.y + default_paragraph.size.y:
+		_fail("NPC paragraph Y stacking mismatch: %s %s %s" % [narrow_paragraph.get_rect(), default_paragraph.get_rect(), infinite_paragraph.get_rect()])
+		return
+	panel.call("_render_dialog", "<layout><par lineWidth=\"220\" align=\"right\">局部右对齐</par></layout>")
+	var right_aligned_size: Vector2 = panel.get("_dialog_content_size")
+	if not is_equal_approx(right_aligned_size.x, 220.0):
+		_fail("NPC right-aligned paragraph escaped the panel bounds: content=%s" % right_aligned_size)
+		return
 	var display_xml := xml
 	if OS.has_environment("MIR2X_NPC_FONT_SCREENSHOT"):
 		display_xml = "<layout><par font=\"MONOWIDE\">MONOWIDE 123</par><par font=\"SIMSUN\">宋体位置合理</par><par font=\"7\" size=\"12\">12px像素字体</par><par font=\"12\" size=\"18\">18px文泉驿字体</par><par font=\"3\">父字体<t font=\"1\" color=\"yellow\">雅黑内联</t>恢复父字体</par><par><event id=\"close\" font=\"0\" close=\"1\">关闭</event></par></layout>"
@@ -137,7 +168,7 @@ func _ready() -> void:
 	elif OS.has_environment("MIR2X_NPC_NOWRAP_SCREENSHOT"):
 		display_xml = "<layout><par>Monster list:</par><par><event id=\"a\" wrap=\"false\">\u7532\u4e59\u4e19\u4e01\uff0c</event><event id=\"b\" wrap=\"false\">\u620a\u5df1\u5e9a\u8f9b\uff0c</event><event id=\"c\" wrap=\"false\">\u58ec\u7678\u5b50\u4e11\uff0c</event><event id=\"d\" wrap=\"false\">\u5bc5\u536f\u8fb0\u5df3\uff0c</event></par></layout>"
 	elif OS.has_environment("MIR2X_NPC_LAYOUT_SCREENSHOT"):
-		display_xml = "<layout><par wordSpace=\"3\">默认 justify 字距：甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳</par><par align=\"distributed\">distributed 末行保持靠左</par><par><t size=\"18\" font=\"3\">18px MONOWIDE</t> <event id=\"small\" size=\"12\">12px 事件</event></par></layout>"
+		display_xml = "<layout><par lineWidth=\"150\" lineSpace=\"5\" wordSpace=\"3\">150px justify：甲乙丙丁戊己庚辛壬癸子丑</par><par lineWidth=\"220\" align=\"right\">220px 局部右对齐</par><par align=\"distributed\">distributed 靠左</par><par lineWidth=\"0\"><t size=\"18\" font=\"3\">无限宽 18px</t> <event id=\"small\" size=\"12\">12px事件</event></par></layout>"
 	elif OS.has_environment("MIR2X_NPC_EMOJI_SCREENSHOT"):
 		display_xml = "<layout><par>Original emoji:</par><par><emoji id=\"0\"/> <emoji id=\"1\"/> <emoji id=\"2\"/> <emoji id=\"3\"/> <emoji id=\"4\"/> <emoji id=\"5\"/> <emoji id=\"6\"/> <emoji id=\"7\"/> <emoji id=\"8\"/> <emoji id=\"9\"/></par></layout>"
 	GameState.npc_dialog = {"npcUID": 1, "eventPath": "npc/test", "xmlLayout": display_xml}

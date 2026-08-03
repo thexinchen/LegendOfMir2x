@@ -39,6 +39,8 @@ var _state: Node
 var _resources: RefCounted = ActorResourceScript.new()
 var _emoji_resources: RefCounted = EmojiResourceScript.new()
 var _emoji_frames: Array[Dictionary] = []
+var _paragraph_labels: Array[RichTextLabel] = []
+var _dialog_content_size := Vector2.ONE
 var _hover_meta := ""
 var _pressed_meta := ""
 
@@ -52,6 +54,7 @@ func _ready() -> void:
 	$Dialog.meta_hover_started.connect(_on_meta_hover_started)
 	$Dialog.meta_hover_ended.connect(_on_meta_hover_ended)
 	$Dialog.gui_input.connect(_on_dialog_gui_input)
+	$Dialog.clip_contents = false
 	_refresh()
 
 
@@ -91,7 +94,7 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 	var font_size_stack: Array[int] = [$Dialog.get_theme_font_size("normal_font_size")]
 	var word_space_stack: Array[int] = [0]
 	var no_wrap_depth := 0
-	var line_width: float = line_width_override if line_width_override > 0.0 else _dialog_line_width()
+	var line_width: float = line_width_override if line_width_override >= 0.0 else _dialog_line_width()
 	var current_line_width := 0.0
 	var atomic_result_start := -1
 	var atomic_width := 0.0
@@ -282,10 +285,8 @@ func _apply_layout() -> void:
 	var board_width := maxf(get_viewport_rect().size.x / 3.0, MIN_BOARD_WIDTH)
 	var line_width := board_width - MARGIN * (3.0 if $Face.visible else 2.0) - face_size.x
 	line_width = maxf(1.0, line_width)
-	$Dialog.size = Vector2(line_width, 1.0)
-	var content_width := clampf(ceilf($Dialog.get_content_width()), 1.0, line_width)
-	$Dialog.size = Vector2(content_width, 1.0)
-	var content_height := maxf(1.0, ceilf($Dialog.get_content_height()))
+	var content_width := maxf(1.0, ceilf(_dialog_content_size.x))
+	var content_height := maxf(1.0, ceilf(_dialog_content_size.y))
 	var panel_width := MARGIN * (3.0 if $Face.visible else 2.0) + face_size.x + content_width
 	var panel_height := MARGIN * 2.0 + maxf(face_size.y, content_height)
 	custom_minimum_size = Vector2.ZERO
@@ -354,24 +355,107 @@ func _escape_bbcode(text: String) -> String:
 
 
 func _render_dialog(xml: String, hover_meta: String = "", pressed_meta: String = "") -> void:
-	var bbcode := _build_bbcode(xml, hover_meta, pressed_meta)
 	$Dialog.clear()
+	for label in _paragraph_labels:
+		if is_instance_valid(label):
+			$Dialog.remove_child(label)
+			label.queue_free()
+	_paragraph_labels.clear()
 	_emoji_frames.clear()
+	_dialog_content_size = Vector2.ONE
+	var paragraph_y := 0.0
+	var content_width := 0.0
+	for paragraph_xml in _paragraph_xmls(xml):
+		var width_attribute: Variant = _element_attribute(paragraph_xml, "lineWidth")
+		var paragraph_width := maxi(0, int(width_attribute)) if width_attribute != null else ceili(_dialog_line_width())
+		var line_space_attribute: Variant = _element_attribute(paragraph_xml, "lineSpace")
+		var line_space := maxi(0, int(line_space_attribute)) if line_space_attribute != null else 0
+		var label := _create_paragraph_label(paragraph_width, line_space)
+		label.position = Vector2(0.0, paragraph_y)
+		$Dialog.add_child(label)
+		_paragraph_labels.append(label)
+		var bbcode := _build_bbcode(paragraph_xml, hover_meta, pressed_meta, paragraph_width).trim_suffix("\n")
+		_append_rich_text(label, bbcode)
+		var paragraph_content_width := maxf(1.0, ceilf(label.get_content_width()))
+		if paragraph_width == 0:
+			label.size.x = paragraph_content_width
+		var align_attribute: Variant = _element_attribute(paragraph_xml, "align")
+		var paragraph_align := str(align_attribute).to_lower() if align_attribute != null else "justify"
+		if paragraph_align in ["right", "center"]:
+			paragraph_content_width = maxf(paragraph_content_width, paragraph_width)
+		var paragraph_height := maxf(_paragraph_default_font_height(paragraph_xml), ceilf(label.get_content_height()))
+		label.size.y = paragraph_height
+		paragraph_y += paragraph_height
+		content_width = maxf(content_width, paragraph_content_width)
+	_dialog_content_size = Vector2(maxf(1.0, content_width), maxf(1.0, paragraph_y))
+
+
+func _paragraph_xmls(xml: String) -> Array[String]:
+	var regex := RegEx.new()
+	if regex.compile("(?is)<par\\b[^>]*(?:/>|>.*?</par\\s*>)") != OK:
+		return []
+	var result: Array[String] = []
+	for match_result in regex.search_all(xml):
+		result.append(match_result.get_string())
+	return result
+
+
+func _element_attribute(xml: String, attribute: String) -> Variant:
+	var parser := XMLParser.new()
+	if parser.open_buffer(xml.to_utf8_buffer()) != OK:
+		return null
+	while parser.read() == OK:
+		if parser.get_node_type() == XMLParser.NODE_ELEMENT and parser.get_node_name().to_lower() == "par":
+			return _xml_optional_attribute(parser, attribute)
+	return null
+
+
+func _create_paragraph_label(paragraph_width: int, line_space: int) -> RichTextLabel:
+	var label := RichTextLabel.new()
+	label.bbcode_enabled = true
+	label.fit_content = false
+	label.scroll_active = false
+	label.selection_enabled = false
+	label.clip_contents = false
+	label.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY if paragraph_width > 0 else TextServer.AUTOWRAP_OFF
+	label.size = Vector2(maxf(1.0, paragraph_width), 1.0)
+	label.add_theme_font_override("normal_font", $Dialog.get_theme_font("normal_font"))
+	label.add_theme_font_size_override("normal_font_size", $Dialog.get_theme_font_size("normal_font_size"))
+	label.add_theme_color_override("default_color", Color.WHITE)
+	label.add_theme_constant_override("text_highlight_h_padding", 0)
+	label.add_theme_constant_override("text_highlight_v_padding", 0)
+	label.add_theme_constant_override("line_separation", line_space)
+	label.meta_clicked.connect(_on_meta_clicked)
+	label.meta_hover_started.connect(_on_meta_hover_started)
+	label.meta_hover_ended.connect(_on_meta_hover_ended)
+	label.gui_input.connect(_on_dialog_gui_input)
+	return label
+
+
+func _paragraph_default_font_height(paragraph_xml: String) -> float:
+	var font_attribute: Variant = _element_attribute(paragraph_xml, "font")
+	var font: Font = load(_paragraph_font_path(str(font_attribute))) if font_attribute != null else $Dialog.get_theme_font("normal_font")
+	var size_attribute: Variant = _element_attribute(paragraph_xml, "size")
+	var font_size: int = maxi(1, int(size_attribute)) if size_attribute != null else $Dialog.get_theme_font_size("normal_font_size")
+	return font.get_height(font_size)
+
+
+func _append_rich_text(label: RichTextLabel, bbcode: String) -> void:
 	var cursor := 0
 	while cursor < bbcode.length():
 		var marker_start := bbcode.find("[[MIR2X_EMOJI:", cursor)
 		if marker_start < 0:
-			$Dialog.append_text(bbcode.substr(cursor))
+			label.append_text(bbcode.substr(cursor))
 			break
-		$Dialog.append_text(bbcode.substr(cursor, marker_start - cursor))
+		label.append_text(bbcode.substr(cursor, marker_start - cursor))
 		var marker_end := bbcode.find("]]", marker_start)
 		if marker_end < 0:
-			$Dialog.append_text(bbcode.substr(marker_start))
+			label.append_text(bbcode.substr(marker_start))
 			break
 		var emoji_id := int(bbcode.substr(marker_start + 14, marker_end - marker_start - 14))
 		var emoji: Dictionary = _emoji_resources.frame(emoji_id)
 		if not emoji.is_empty():
-			$Dialog.add_image(emoji.texture, emoji.width, emoji.height)
+			label.add_image(emoji.texture, emoji.width, emoji.height)
 			emoji["atlas"] = emoji.texture
 			emoji["start_ms"] = Time.get_ticks_msec()
 			emoji["frame"] = 0
@@ -405,18 +489,18 @@ func _advance_line_width(current: float, text: String, line_width: float, font_p
 		var character_width: float = _text_width(character, font_path, font_size)
 		if current > 0.0:
 			character_width += word_space
-		current = character_width if current > 0.0 and current + character_width > line_width else current + character_width
+		current = character_width if line_width > 0.0 and current > 0.0 and current + character_width > line_width else current + character_width
 	return current
 
 
 func _advance_object_width(current: float, width: float, line_width: float, word_space: int = 0) -> float:
 	var advance := width + (word_space if current > 0.0 else 0)
-	return width if current > 0.0 and current + advance > line_width else current + advance
+	return width if line_width > 0.0 and current > 0.0 and current + advance > line_width else current + advance
 
 
 func _place_atomic_width(bbcode: String, start: int, atomic_width: float, current: float, line_width: float, word_space: int) -> Array:
 	var advance := atomic_width + (word_space if current > 0.0 else 0)
-	if current > 0.0 and current + advance > line_width and atomic_width <= line_width:
+	if line_width > 0.0 and current > 0.0 and current + advance > line_width and atomic_width <= line_width:
 		bbcode = bbcode.insert(start, "\n")
 		current = 0.0
 	return [_advance_object_width(current, atomic_width, line_width, word_space), bbcode]
