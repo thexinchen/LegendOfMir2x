@@ -218,12 +218,12 @@ func _build_unique_detail(list: Array) -> void:
 		var overlay := ColorRect.new()
 		overlay.position = button.position
 		overlay.size = button.size
-		overlay.color = Color(0, 0, 1, 0.375) if _detail_selected == index else Color(1, 1, 1, 0.375)
+		overlay.color = Color(0, 0, 1, 96.0 / 255.0) if _detail_selected == index else Color(1, 1, 1, 96.0 / 255.0)
 		overlay.visible = _detail_selected == index
 		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		$Detail.add_child(overlay)
 		button.mouse_entered.connect(func():
-			overlay.color = Color(0, 0, 1, 0.375) if _detail_selected == index else Color(1, 1, 1, 0.375)
+			overlay.color = Color(0, 0, 1, 96.0 / 255.0) if _detail_selected == index else Color(1, 1, 1, 96.0 / 255.0)
 			overlay.show()
 		)
 		button.mouse_exited.connect(func(): overlay.visible = _detail_selected == index)

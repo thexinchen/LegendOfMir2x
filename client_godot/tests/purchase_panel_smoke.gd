@@ -85,6 +85,11 @@ func _ready() -> void:
 	if not _has_label_text(panel.get_node("Detail"), "1,234") or _count_type(panel.get_node("Detail"), "ColorRect") < 12:
 		_fail("unique price or overlay mismatch")
 		return
+	var original_overlay_alpha := 96.0 / 255.0
+	var hover_overlay := _color_rect_at(panel.get_node("Detail"), Vector2(313, 41))
+	if hover_overlay == null or hover_overlay.color != Color(1, 1, 1, original_overlay_alpha):
+		_fail("unique hover overlay diverged from original byte alpha 96: %s" % [hover_overlay.color if hover_overlay else Color.TRANSPARENT])
+		return
 	var page_label := _find_label_text(panel.get_node("Detail"), "第1/2页")
 	if page_label == null or page_label.position != Vector2(389, 16):
 		_fail("unique page label does not match the original compact text and position")
@@ -102,6 +107,10 @@ func _ready() -> void:
 	panel.call("_refresh_detail")
 	if not purchase_tooltip.visible or panel.get("_tooltip_index") != 0:
 		_fail("purchase tooltip did not survive detail refresh")
+		return
+	var selected_overlay := _color_rect_at(panel.get_node("Detail"), Vector2(313, 41))
+	if selected_overlay == null or selected_overlay.color != Color(0, 0, 1, original_overlay_alpha) or not selected_overlay.visible:
+		_fail("unique selected overlay diverged from original byte alpha 96: %s visible=%s" % [selected_overlay.color if selected_overlay else Color.TRANSPARENT, selected_overlay.visible if selected_overlay else false])
 		return
 	if OS.has_environment("MIR2X_PURCHASE_UNIQUE_SCREENSHOT"):
 		await get_tree().process_frame
@@ -211,6 +220,13 @@ func _count_type(parent: Node, type_name: String) -> int:
 func _texture_button_at(parent: Node, position: Vector2) -> TextureButton:
 	for child in parent.get_children():
 		if child is TextureButton and child.position == position:
+			return child
+	return null
+
+
+func _color_rect_at(parent: Node, position: Vector2) -> ColorRect:
+	for child in parent.get_children():
+		if child is ColorRect and child.position == position:
 			return child
 	return null
 
