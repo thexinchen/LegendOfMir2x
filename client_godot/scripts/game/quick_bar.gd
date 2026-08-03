@@ -1,6 +1,7 @@
 extends Control
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const COUNT_FONT := preload("res://assets/font/01_Yahei.ttf")
 
 const SLOT_COUNT := 6
 const SLOT_SIZE := 36
@@ -102,10 +103,12 @@ func _refresh() -> void:
 			var count_label := Label.new()
 			count_label.name = "Count"
 			count_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			count_label.offset_right = -1.0
 			count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			count_label.text = str(count)
 			count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			count_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+			count_label.add_theme_font_override("font", COUNT_FONT)
 			count_label.add_theme_font_size_override("font_size", 10)
 			count_label.add_theme_color_override("font_color", Color.WHITE)
 			holder.add_child(count_label)

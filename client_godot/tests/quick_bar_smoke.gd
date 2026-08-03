@@ -43,6 +43,13 @@ func _ready() -> void:
 	if not slot0.has_node("Icon") or not slot0.has_node("Count") or slot0.get_node("Count").text != "3":
 		_fail("belt icon/count did not render")
 		return
+	var count_label := slot0.get_node("Count") as Label
+	if count_label.position != Vector2.ZERO or count_label.size != Vector2(35, 36) or count_label.horizontal_alignment != HORIZONTAL_ALIGNMENT_RIGHT:
+		_fail("belt count did not preserve the original x=35 right edge: position=%s size=%s" % [count_label.position, count_label.size])
+		return
+	if not count_label.get_theme_font("font").resource_path.ends_with("/01_Yahei.ttf") or count_label.get_theme_font_size("font_size") != 10 or count_label.get_theme_color("font_color") != Color.WHITE:
+		_fail("belt count did not preserve original font-01/10 white text")
+		return
 	var bar_resources: RefCounted = quick_bar.get("_resources")
 	var expected_icon: Dictionary = bar_resources.frame("item", bar_resources.item_package_gfx_id(potion_id) | 0x01000000)
 	if expected_icon.is_empty() or slot0.get_node("Icon").texture != expected_icon.texture:
