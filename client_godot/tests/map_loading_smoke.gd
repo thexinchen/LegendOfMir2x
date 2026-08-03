@@ -37,6 +37,9 @@ func _ready() -> void:
 	if loading_text.get_theme_font("normal_font").resource_path != "res://assets/font/01_Yahei.ttf" or loading_text.get_theme_font_size("normal_font_size") != 12:
 		_fail("map-loading text did not use original font-1/12px replacement: font=%s size=%d" % [loading_text.get_theme_font("normal_font").resource_path, loading_text.get_theme_font_size("normal_font_size")])
 		return
+	if loading_text.position.y != 84.0 or loading_text.size.y != 136.0 or loading_text.vertical_alignment != VERTICAL_ALIGNMENT_CENTER:
+		_fail("map-loading text did not center within the original 84..220px content region: position=%s size=%s alignment=%d" % [loading_text.position, loading_text.size, loading_text.vertical_alignment])
+		return
 	overlay.show()
 	main.call("_on_map_load_progress", 40, _map_names[0])
 	var text: String = loading_text.text
