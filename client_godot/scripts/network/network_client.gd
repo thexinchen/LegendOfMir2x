@@ -706,15 +706,26 @@ func _send_empty_message(head_code: int) -> Error:
 
 
 func _xor_encode(payload: PackedByteArray) -> Array:
-	var mask_size := (payload.size() + 7) / 8
+	var use_wide := payload.size() >= 256
+	var mask_size := (payload.size() + (63 if use_wide else 7)) / (64 if use_wide else 8)
 	var mask := PackedByteArray()
 	mask.resize(mask_size)
 	mask.fill(0)
 	var body := PackedByteArray()
-	for index in payload.size():
-		if payload[index] != 0:
-			mask[index / 8] |= 1 << (index % 8)
-			body.append(payload[index])
+	if use_wide:
+		for chunk_start in range(0, payload.size(), 8):
+			var chunk_size := mini(8, payload.size() - chunk_start)
+			var has_data := false
+			for offset in chunk_size:
+				has_data = has_data or payload[chunk_start + offset] != 0
+			if has_data:
+				mask[chunk_start / 64] |= 1 << ((chunk_start % 64) / 8)
+				body.append_array(payload.slice(chunk_start, chunk_start + chunk_size))
+	else:
+		for index in payload.size():
+			if payload[index] != 0:
+				mask[index / 8] |= 1 << (index % 8)
+				body.append(payload[index])
 	mask.append_array(body)
 	return [body.size(), mask]
 
@@ -828,7 +839,7 @@ func _try_parse_packet() -> Array:
 		if _receive_buffer.size() < cursor + body_size:
 			return [false]
 		return [true, cursor + body_size, head_code, _receive_buffer.slice(cursor, cursor + body_size), response_id]
-	var mask_size := (data_length + 7) / 8
+	var mask_size := (data_length + 63) / 64 if data_length >= 256 else (data_length + 7) / 8
 	if _receive_buffer.size() < cursor + mask_size + body_size:
 		return [false]
 	var mask := _receive_buffer.slice(cursor, cursor + mask_size)
@@ -859,6 +870,16 @@ func _xor_decode(data_length: int, mask: PackedByteArray, body: PackedByteArray)
 	result.resize(data_length)
 	result.fill(0)
 	var body_index := 0
+	if data_length >= 256:
+		for chunk_start in range(0, data_length, 8):
+			var chunk_size := mini(8, data_length - chunk_start)
+			if mask[chunk_start / 64] & (1 << ((chunk_start % 64) / 8)):
+				if body_index + chunk_size > body.size():
+					break
+				for offset in chunk_size:
+					result[chunk_start + offset] = body[body_index + offset]
+				body_index += chunk_size
+		return result
 	for index in data_length:
 		if mask[index / 8] & (1 << (index % 8)):
 			if body_index >= body.size():

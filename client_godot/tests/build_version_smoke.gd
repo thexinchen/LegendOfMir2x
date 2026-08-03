@@ -24,6 +24,24 @@ func _ready() -> void:
 		_fail("build signature is empty")
 		return
 
+	var wide_payload := PackedByteArray()
+	wide_payload.resize(410)
+	wide_payload.fill(0)
+	wide_payload[0] = 1
+	wide_payload[9] = 2
+	wide_payload[409] = 3
+	var wide_encoded: Array = NetworkClient._xor_encode(wide_payload)
+	var wide_data: PackedByteArray = wide_encoded[1]
+	if int(wide_encoded[0]) != 18 or wide_data.size() != 25 \
+			or wide_data[0] != 0x03 or wide_data[6] != 0x08 \
+			or wide_data[7] != 1 or wide_data[16] != 2 or wide_data[24] != 3:
+		_fail("wide fixed-message XOR encoding does not match the C++ 8-byte chunk protocol: body=%s data=%s" % [wide_encoded[0], wide_data])
+		return
+	var wide_decoded := NetworkClient._xor_decode(410, wide_data.slice(0, 7), wide_data.slice(7))
+	if wide_decoded != wide_payload:
+		_fail("wide fixed-message XOR decoding does not restore the original payload")
+		return
+
 	_feed_build_version(local_signature)
 	if not _received_heads.is_empty():
 		_fail("matching build version leaked to scene message handlers")
