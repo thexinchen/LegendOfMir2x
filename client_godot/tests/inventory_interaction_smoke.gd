@@ -322,6 +322,23 @@ func _ready() -> void:
 	if panel.call("_commit_operation") != ERR_UNCONFIGURED:
 		_fail("inventory operation type guard blocked the current allowed selection")
 		return
+	GameState.inventory_operation_cost = {
+		"invOp": 3,
+		"itemID": weapon.get("itemID", 0),
+		"seqID": weapon.get("seqID", 0),
+		"cost": 1234567,
+	}
+	panel.call("_refresh_operation")
+	var operation_cost: Label = panel.get_node("OperationCost")
+	if not operation_cost.visible or operation_cost.text != "1,234,567":
+		_fail("inventory operation cost separator mismatch: %s" % operation_cost.text)
+		return
+	if operation_cost.get_theme_font_size("font_size") != 12 or operation_cost.get_theme_color("font_color") != Color(1.0, 1.0, 0.0, 1.0):
+		_fail("inventory operation cost font style mismatch")
+		return
+	if OS.has_environment("MIR2X_INVENTORY_OPERATION_SCREENSHOT"):
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_INVENTORY_OPERATION_SCREENSHOT"))
 	GameState.inventory_operation = {"invOp": 3, "uid": 9876, "typeList": ["武器"]}
 	panel.show()
 	var escape := InputEventKey.new()

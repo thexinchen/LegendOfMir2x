@@ -133,7 +133,7 @@ offset_left = 62.0
 offset_top = 493.0
 offset_right = 202.0
 offset_bottom = 517.0
-theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 

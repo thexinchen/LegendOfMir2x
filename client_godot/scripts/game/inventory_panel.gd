@@ -411,7 +411,7 @@ func _refresh_operation() -> void:
 		var selected_item: Dictionary = _bins[_selected_key].item
 		cost_matches = int(cost.get("itemID", 0)) == int(selected_item.get("itemID", -1)) and int(cost.get("seqID", 0)) == int(selected_item.get("seqID", -1))
 	$OperationCost.visible = cost_matches
-	$OperationCost.text = str(cost.get("cost", 0))
+	$OperationCost.text = _format_gold(int(cost.get("cost", 0)))
 
 
 func _close_operation() -> void:
