@@ -90,15 +90,7 @@ func _refresh_goods() -> void:
 		icon_button.gui_input.connect(_on_row_input.bind(index))
 		row.add_child(icon_button)
 		var icon: Dictionary = _resources.item_icon(item_id)
-		if not icon.is_empty():
-			var image := TextureRect.new()
-			image.position = Vector2(0, 0)
-			image.size = Vector2(38, 38)
-			image.texture = icon.texture
-			image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			image.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			row.add_child(image)
+		_add_item_icon(row, icon, Rect2(0, 0, 38, 38))
 		var label := Label.new()
 		label.position = Vector2(48, 0)
 		label.size = Vector2(185, 38)
@@ -210,7 +202,7 @@ func _build_unique_detail(list: Array) -> void:
 		button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 		var icon: Dictionary = _resources.item_icon(item.get("itemID", 0))
 		if not icon.is_empty():
-			button.texture_normal = icon.texture
+			_add_item_icon(button, icon, Rect2(Vector2.ZERO, button.size))
 		button.mouse_entered.connect(_show_item_tooltip.bind(index, sell_item))
 		button.mouse_exited.connect(_hide_item_tooltip)
 		button.pressed.connect(func(): _detail_selected = index; _refresh_detail())
@@ -265,14 +257,7 @@ func _build_packable_detail(sell_item: Dictionary) -> void:
 	var item: Dictionary = sell_item.get("item", {})
 	var item_id: int = item.get("itemID", 0)
 	var icon: Dictionary = _resources.item_icon(item_id)
-	if not icon.is_empty():
-		var image := TextureRect.new()
-		image.position = Vector2(303, 16)
-		image.size = Vector2(38, 38)
-		image.texture = icon.texture
-		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		$Detail.add_child(image)
+	_add_item_icon($Detail, icon, Rect2(303, 16, 38, 38))
 	var price := Label.new()
 	price.position = Vector2(353, 16)
 	price.size = Vector2(145, 38)
@@ -283,6 +268,24 @@ func _build_packable_detail(sell_item: Dictionary) -> void:
 	$Detail.add_child(price)
 	_add_detail_button(Vector2(366, 60), COUNT_NORMAL, COUNT_DOWN, func(): quantity_requested.emit(_state.npc_sell.get("npcUID", 0), item_id, _resources.item_name(item_id)))
 	_add_detail_close(Vector2(474, 56))
+
+
+func _add_item_icon(parent: Node, icon: Dictionary, box: Rect2) -> TextureRect:
+	if icon.is_empty():
+		return null
+	var texture: Texture2D = icon.texture
+	var texture_size := texture.get_size()
+	var scale := minf(1.0, minf(box.size.x / texture_size.x, box.size.y / texture_size.y))
+	var image := TextureRect.new()
+	image.name = "Icon"
+	image.size = texture_size * scale
+	image.position = box.position + (box.size - image.size) / 2.0
+	image.texture = texture
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_SCALE
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(image)
+	return image
 
 
 func _buy_unique(list: Array) -> void:

@@ -15,14 +15,17 @@ func _ready() -> void:
 	var icon_ids: Array[int] = []
 	for item_value in resources.item_names.keys():
 		var item_id: int = item_value
-		if resources.item_icon(item_id).is_empty():
+		var item_icon: Dictionary = resources.item_icon(item_id)
+		if item_icon.is_empty():
 			continue
 		icon_ids.append(item_id)
 		if resources.item_type(item_id) == "金币" and gold_id == 0:
 			gold_id = item_id
-		if resources.item_is_packable(item_id) and packable_id == 0:
+		var texture_size: Vector2 = item_icon.texture.get_size()
+		var original_size_icon := texture_size.x <= 38.0 and texture_size.y <= 38.0
+		if resources.item_is_packable(item_id) and packable_id == 0 and original_size_icon:
 			packable_id = item_id
-		elif not resources.item_is_packable(item_id) and unique_id == 0:
+		elif not resources.item_is_packable(item_id) and unique_id == 0 and original_size_icon:
 			unique_id = item_id
 		if unique_id and packable_id and gold_id and icon_ids.size() >= 6:
 			break
@@ -35,13 +38,22 @@ func _ready() -> void:
 		_fail("SDSellItemList decode mismatch: %s" % decoded)
 		return
 
-	GameState.set_npc_sell({"npcUID": 77, "itemList": icon_ids})
+	var goods_ids: Array[int] = [unique_id, packable_id]
+	for item_id in icon_ids:
+		if item_id not in goods_ids:
+			goods_ids.append(item_id)
+	GameState.set_npc_sell({"npcUID": 77, "itemList": goods_ids})
 	var panel: Control = load("res://scenes/game/panels/purchase.tscn").instantiate()
 	add_child(panel)
 	await get_tree().process_frame
 	var goods := panel.get_node("GoodsList")
 	if goods.position != Vector2(19, 15) or goods.get_child_count() != 4 or goods.get_child(1).position.y != 42:
 		_fail("goods geometry mismatch")
+		return
+	var first_goods_icon := goods.get_child(0).get_child(2) as TextureRect
+	var first_goods_texture: Texture2D = resources.item_icon(unique_id).texture
+	if first_goods_icon == null or first_goods_icon.size != first_goods_texture.get_size() or first_goods_icon.position != (Vector2(38, 38) - first_goods_icon.size) / 2.0:
+		_fail("purchase icon was enlarged instead of preserving the original client size")
 		return
 	var slider_event := InputEventMouseButton.new()
 	slider_event.button_index = MOUSE_BUTTON_LEFT
@@ -63,6 +75,12 @@ func _ready() -> void:
 	GameState.state_changed.emit()
 	if panel.size.x != 488 or panel.get_node("Detail").get_child_count() < 30 or panel.call("_gold_price", unique_list[0]) != 1234:
 		_fail("unique item extension missing")
+		return
+	var unique_button := _texture_button_at(panel.get_node("Detail"), Vector2(313, 41))
+	var unique_icon := unique_button.get_node_or_null("Icon") as TextureRect if unique_button != null else null
+	var unique_texture: Texture2D = resources.item_icon(unique_id).texture
+	if unique_icon == null or unique_icon.size != unique_texture.get_size() or unique_icon.position != (unique_button.size - unique_icon.size) / 2.0:
+		_fail("unique purchase icon was enlarged instead of preserving the original client size")
 		return
 	if not _has_label_text(panel.get_node("Detail"), "1,234") or _count_type(panel.get_node("Detail"), "ColorRect") < 12:
 		_fail("unique price or overlay mismatch")
@@ -109,6 +127,11 @@ func _ready() -> void:
 	var packable_price_label := _find_label_text(panel.get_node("Detail"), "1,288 金币")
 	if panel.size.x != 514 or panel.get_node("Detail").get_child_count() < 3 or packable_price_label == null or packable_price_label.get_theme_font_size("font_size") != 13:
 		_fail("packable item extension missing")
+		return
+	var packable_icon := panel.get_node_or_null("Detail/Icon") as TextureRect
+	var packable_texture: Texture2D = resources.item_icon(packable_id).texture
+	if packable_icon == null or packable_icon.size != packable_texture.get_size() or packable_icon.position != Vector2(303, 16) + (Vector2(38, 38) - packable_icon.size) / 2.0:
+		_fail("packable purchase icon was enlarged instead of preserving the original client size")
 		return
 	if panel.get_node("ItemTooltip").visible:
 		_fail("packable extension unexpectedly exposes unique-item tooltip")
@@ -183,6 +206,13 @@ func _count_type(parent: Node, type_name: String) -> int:
 		if child.get_class() == type_name:
 			count += 1
 	return count
+
+
+func _texture_button_at(parent: Node, position: Vector2) -> TextureButton:
+	for child in parent.get_children():
+		if child is TextureButton and child.position == position:
+			return child
+	return null
 
 
 func _decode_sell_archive(item_id: int) -> Dictionary:
