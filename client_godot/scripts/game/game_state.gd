@@ -292,8 +292,8 @@ func add_chat_log(text: String, log_type: int = 0, background_color: Color = Col
 	match log_type:
 		0: color = Color(1, 1, 1, 1)      # white
 		1: color = Color(0, 1, 0, 1)       # green
-		2: color = Color(0.25, 0.5, 1, 1)  # blue
-		3: color = Color(1, 0.25, 0.25, 1) # red
+		2: color = Color8(64, 128, 255, 255) # blue
+		3: color = Color8(255, 64, 64, 255)  # red
 	chat_log.append({"type": log_type, "text": text, "color": color, "background_color": background_color})
 	if chat_log.size() > CHAT_LOG_MAX:
 		chat_log.pop_front()

@@ -417,7 +417,7 @@ func _cast_magic(magic_id: int, mouse_grid: Vector2i) -> bool:
 	# the target selected by a cooldown-blocked key press.
 	var focus_uid := _update_magic_focus(mouse_grid)
 	if not _magic_ready(magic_id):
-		game_state.add_chat_log("%s尚未冷却" % _resources.magic_names.get(magic_id, "技能"), 2)
+		game_state.add_chat_log("%s尚未冷却" % _resources.magic_names.get(magic_id, "技能"), 3)
 		return false
 	var magic_name: String = _resources.magic_names.get(magic_id, "")
 	if magic_name in SWING_MAGIC_NAMES:

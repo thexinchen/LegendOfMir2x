@@ -941,8 +941,16 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 	main.set("_magic_focus_uid", 404)
 	GameState.magic_cast_times[fireball_id] = Time.get_ticks_msec()
 	var effect_count := GameState.magic_effects.size()
+	var cooldown_log_count := GameState.chat_log.size()
 	if main.call("_cast_magic", fireball_id, Vector2i(12, 10)) or main.get("_magic_focus_uid") != 505 or GameState.magic_effects.size() != effect_count:
 		_fail("cooldown-blocked spell did not refresh magic focus without casting")
+		return false
+	var cooldown_log: Dictionary = GameState.chat_log.back() if not GameState.chat_log.is_empty() else {}
+	if GameState.chat_log.size() != cooldown_log_count + 1 \
+			or cooldown_log.get("text", "") != "%s尚未冷却" % resources.magic_names.get(fireball_id, "") \
+			or cooldown_log.get("type", -1) != 3 \
+			or cooldown_log.get("color", Color.TRANSPARENT) != Color8(255, 64, 64, 255):
+		_fail("cooldown feedback diverged from original error log: %s" % [cooldown_log])
 		return false
 	GameState.magic_cast_times.erase(fireball_id)
 	if not main.call("_cast_magic", fireball_id, Vector2i(12, 10)) or GameState.magic_effects.back().get("aimUID", 0) != 505:
