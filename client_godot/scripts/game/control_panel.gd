@@ -156,10 +156,8 @@ func _process(_delta: float) -> void:
 	_title_arc_elapsed_ms += _delta * 1000.0
 	_update_title_arc(_title_arc_elapsed_ms)
 	# Update HP/MP bars
-	if game_state.player_hp_max > 0:
-		health_bar.value = float(game_state.player_hp) / float(game_state.player_hp_max) * 100.0
-	if game_state.player_mp_max > 0:
-		mana_bar.value = float(game_state.player_mp) / float(game_state.player_mp_max) * 100.0
+	health_bar.value = float(game_state.player_hp) / float(game_state.player_hp_max) * 100.0 if game_state.player_hp_max > 0 else 100.0
+	mana_bar.value = float(game_state.player_mp) / float(game_state.player_mp_max) * 100.0 if game_state.player_mp_max > 0 else 100.0
 	exp_bar.value = game_state.level_ratio() * 100.0
 	_refresh_focus_hud()
 	# Update level

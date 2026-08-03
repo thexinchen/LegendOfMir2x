@@ -53,6 +53,19 @@ func _ready() -> void:
 	var panel: Control = load("res://scenes/game/control_panel.tscn").instantiate()
 	add_child(panel)
 	await get_tree().process_frame
+	panel.call("_process", 0.0)
+	if not is_equal_approx(float(panel.get_node("%Health").value), 75.0) or not is_equal_approx(float(panel.get_node("%Mana").value), 50.0):
+		_fail("player health or mana gauge ratio mismatch")
+		return
+	GameState.player_hp_max = 0
+	GameState.player_mp_max = 0
+	panel.call("_process", 0.0)
+	if not is_equal_approx(float(panel.get_node("%Health").value), 100.0) or not is_equal_approx(float(panel.get_node("%Mana").value), 100.0):
+		_fail("player gauges without health data did not keep the original full values")
+		return
+	GameState.player_hp_max = 100
+	GameState.player_mp_max = 100
+	panel.call("_process", 0.0)
 	var face := panel.get_node("%Face") as TextureRect
 	if not _face_uses_original_crop(face):
 		_fail("player face did not preserve the original right-edge crop")
