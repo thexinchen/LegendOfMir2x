@@ -18,8 +18,18 @@ func _ready() -> void:
 	if panel.size != Vector2(258, 306) or panel.get_node("MemberRows").get_child_count() != 10:
 		_fail("ten-row variable layout mismatch: size=%s rows=%d" % [panel.size, panel.get_node("MemberRows").get_child_count()])
 		return
-	if (panel.get_node("MemberRows/Row0") as Button).text != "0 PLY_100":
-		_fail("empty team-player name did not use original UID fallback: %s" % (panel.get_node("MemberRows/Row0") as Button).text)
+	var title := panel.get_node("Title") as Label
+	var original_font_height := ceilf(title.get_theme_font("font").get_height(12))
+	if title.position != Vector2(0, 57) or title.size != Vector2(258, original_font_height) or title.get_theme_font("font").resource_path != "res://assets/font/01_Yahei.ttf" or title.get_theme_font_size("font_size") != 12:
+		_fail("team title did not use original y=57 font-1/12 layout: position=%s size=%s font=%s" % [title.position, title.size, title.get_theme_font("font").resource_path])
+		return
+	var first_row := panel.get_node("MemberRows/Row0") as Button
+	var first_row_text := first_row.get_node_or_null("Text") as Label
+	if first_row.text != "" or first_row_text == null or first_row_text.text != "0 PLY_100":
+		_fail("empty team-player name did not use original UID fallback label")
+		return
+	if first_row_text.position != Vector2(5, 2) or first_row_text.size != Vector2(226, original_font_height) or first_row_text.get_theme_font("font").resource_path != "res://assets/font/01_Yahei.ttf" or first_row_text.get_theme_font_size("font_size") != 12:
+		_fail("team row text did not use original (5,2) font-1/12 layout: position=%s size=%s font=%s" % [first_row_text.position, first_row_text.size, first_row_text.get_theme_font("font").resource_path])
 		return
 	if not panel.get_node("AddButton").disabled or panel.get_node("DeleteButton").disabled:
 		_fail("member-mode button gating mismatch")

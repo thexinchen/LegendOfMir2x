@@ -6,6 +6,7 @@ const MAX_VISIBLE_ROWS := 10
 const ROW_WIDTH := 231
 const BASE_HEIGHT := 146
 const ROW_OVERLAY_ALPHA := 100.0 / 255.0
+const TEAM_FONT := preload("res://assets/font/01_Yahei.ttf")
 
 var _state: Node
 var _show_candidates := false
@@ -78,13 +79,7 @@ func _add_row(member: Dictionary, item_index: int, visible_index: int, mode: int
 	var player_name := str(member.get("name", ""))
 	if player_name.is_empty():
 		player_name = "PLY_%d" % (uid & 0xFFFFFFFF)
-	button.text = "%d %s" % [item_index, player_name]
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.flat = false
-	button.add_theme_font_size_override("font_size", 12)
-	button.add_theme_color_override("font_color", Color.WHITE)
-	button.add_theme_color_override("font_hover_color", Color.WHITE)
-	button.add_theme_color_override("font_pressed_color", Color.WHITE)
 	var hover_color := Color(0.0, 0.0, 1.0, ROW_OVERLAY_ALPHA)
 	button.add_theme_stylebox_override("normal", _row_style(Color.TRANSPARENT))
 	button.add_theme_stylebox_override("hover", _row_style(hover_color))
@@ -96,6 +91,16 @@ func _add_row(member: Dictionary, item_index: int, visible_index: int, mode: int
 		button.add_theme_stylebox_override("normal", _row_style(selected_color))
 		button.add_theme_stylebox_override("hover", _row_style(selected_hover_color))
 		button.add_theme_stylebox_override("pressed", _row_style(selected_hover_color))
+	var text := Label.new()
+	text.name = "Text"
+	text.position = Vector2(5, 2)
+	text.size = Vector2(ROW_WIDTH - 5, ceilf(TEAM_FONT.get_height(12)))
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text.text = "%d %s" % [item_index, player_name]
+	text.add_theme_font_override("font", TEAM_FONT)
+	text.add_theme_font_size_override("font_size", 12)
+	text.add_theme_color_override("font_color", Color.WHITE)
+	button.add_child(text)
 	button.pressed.connect(_select_uid.bind(mode, uid))
 	$MemberRows.add_child(button)
 
@@ -103,7 +108,6 @@ func _add_row(member: Dictionary, item_index: int, visible_index: int, mode: int
 func _row_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = color
-	style.content_margin_left = 5.0
 	return style
 
 

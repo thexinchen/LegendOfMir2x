@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/team_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000150.png" id="2"]
@@ -14,6 +14,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000181.png" id="12_delete_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/team/00000191.png" id="13_refresh_down"]
 [ext_resource type="Texture2D" path="res://assets/ui/game/inventory/0000001d.png" id="14_close_down"]
+[ext_resource type="FontFile" path="res://assets/font/01_Yahei.ttf" id="15_font"]
 
 [node name="TeamPanel" type="Control"]
 custom_minimum_size = Vector2(258, 226)
@@ -34,12 +35,13 @@ patch_margin_bottom = 80
 axis_stretch_vertical = 1
 
 [node name="Title" type="Label" parent="."]
-offset_left = 13.0
-offset_top = 48.0
-offset_right = 244.0
-offset_bottom = 70.0
+offset_top = 57.0
+offset_right = 258.0
+offset_bottom = 74.0
+mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 12
+theme_override_fonts/font = ExtResource("15_font")
 text = "当前队伍"
 horizontal_alignment = 1
 
