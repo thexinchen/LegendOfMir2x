@@ -31,9 +31,9 @@ mouse_filter = 2
 texture = SubResource("Atlas_background")
 
 [node name="Page" type="Label" parent="."]
-offset_top = 7.0
+offset_top = 18.0
 offset_right = 198.0
-offset_bottom = 30.0
+offset_bottom = 38.0
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_font_sizes/font_size = 12
 text = "（空）"

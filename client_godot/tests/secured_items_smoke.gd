@@ -44,6 +44,10 @@ func _ready() -> void:
 	add_child(panel)
 	panel.position = Vector2(301, 198)
 	await get_tree().process_frame
+	var page_label := panel.get_node("Page") as Label
+	if page_label.position != Vector2(0, 18) or page_label.get_theme_font_size("font_size") != 12 or page_label.get_theme_color("font_color") != Color.YELLOW:
+		_fail("secured page label diverged from the C++ y=18 text origin: position=%s size=%s color=%s" % [page_label.position, page_label.get_theme_font_size("font_size"), page_label.get_theme_color("font_color")])
+		return
 	if panel.get_node("ItemGrid").get_child_count() != 12 or panel.get_node("Page").text != "第1/2页":
 		_fail("first page layout mismatch")
 		return
