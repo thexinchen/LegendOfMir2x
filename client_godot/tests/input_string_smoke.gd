@@ -9,6 +9,14 @@ func _ready() -> void:
 	var cancel_count := [0]
 	panel.committed.connect(func(value: String): commits.append(value))
 	panel.cancelled.connect(func(): cancel_count[0] += 1)
+	var title := panel.get_node("Title") as Label
+	var value_input := panel.get_node("Value") as LineEdit
+	if title.position.y != 120.0 or title.size.y != 60.0 or title.get_theme_font("font").resource_path != "res://assets/font/01_Yahei.ttf" or title.get_theme_font_size("font_size") != 12:
+		_fail("title did not use original y=120 font-1/12 placement: position=%s control_size=%s font=%s font_size=%d" % [title.position, title.size, title.get_theme_font("font").resource_path, title.get_theme_font_size("font_size")])
+		return
+	if value_input.get_theme_font("font").resource_path != "res://assets/font/01_Yahei.ttf" or value_input.get_theme_font_size("font_size") != 14:
+		_fail("input value did not use original font-1/14: font=%s size=%d" % [value_input.get_theme_font("font").resource_path, value_input.get_theme_font_size("font_size")])
+		return
 	panel.configure("<layout><par>请输入密码<br/>用于验证</par></layout>", true)
 	if panel.get_node("Title").text != "请输入密码\n用于验证" or not panel.get_node("Value").secret:
 		_fail("XML title/security mode mismatch: title=%s secret=%s" % [panel.get_node("Title").text, panel.get_node("Value").secret])

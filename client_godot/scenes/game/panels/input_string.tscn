@@ -38,9 +38,9 @@ texture = ExtResource("2")
 
 [node name="Title" type="Label" parent="."]
 offset_left = 22.0
-offset_top = 108.0
+offset_top = 120.0
 offset_right = 336.0
-offset_bottom = 132.0
+offset_bottom = 180.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 12
 text = ""
