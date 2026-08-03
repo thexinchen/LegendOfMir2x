@@ -40,6 +40,12 @@ func _ready() -> void:
 	var main: Control = load("res://scenes/game/main.tscn").instantiate()
 	add_child(main)
 	await get_tree().process_frame
+	if OS.has_environment("MIR2X_ACTION_SEFF_ONLY"):
+		if not await _test_action_seff(main, resources):
+			return
+		print("WORLD ACTION SEFF PASS")
+		get_tree().quit(0)
+		return
 	if OS.has_environment("MIR2X_REMOTE_PLAYER_CORRECTION_SCREENSHOT"):
 		if not await _test_remote_player_motion_correction(main, resources):
 			return
@@ -851,6 +857,7 @@ func _test_action_seff(main: Control, resources: RefCounted) -> bool:
 	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
 	GameState.player_action_type = 3
 	GameState.player_action_started_ms = Time.get_ticks_msec()
+	main.set("_player_action_timer", 1.0)
 	main.call("_play_action_seff", GameState.player_uid, {
 		"type": 3, "speed": 100, "x": 10, "y": 10, "aimX": 11, "aimY": 10,
 	}, {
@@ -863,6 +870,22 @@ func _test_action_seff(main: Control, resources: RefCounted) -> bool:
 	await get_tree().create_timer(0.3).timeout
 	if AudioService.last_seff_id != 0x01000002:
 		_fail("Hero second movement step did not trigger at frame 4")
+		return false
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	GameState.player_action_started_ms = Time.get_ticks_msec()
+	main.set("_player_action_timer", 1.0)
+	main.call("_play_action_seff", GameState.player_uid, {
+		"type": 3, "speed": 100, "x": 10, "y": 10, "aimX": 12, "aimY": 10,
+	}, {
+		"uid": GameState.player_uid, "type": 2, "action_started_ms": GameState.player_action_started_ms,
+	})
+	await get_tree().create_timer(0.15).timeout
+	if AudioService.last_seff_id != 0x01000003:
+		_fail("Hero two-grid run did not use the original first running step sound")
+		return false
+	await get_tree().create_timer(0.3).timeout
+	if AudioService.last_seff_id != 0x01000004:
+		_fail("Hero two-grid run did not use the original second running step sound")
 		return false
 	AudioService.stop_seff()
 	return true
@@ -899,7 +922,8 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 		return false
 	GameState.update_creature(404, {"uid": 404, "x": 9, "y": 10, "type": 1, "action_type": 2})
 	GameState.update_creature(505, {"uid": 505, "x": 12, "y": 10, "type": 1, "action_type": 2})
-	main.get_node("WorldRenderer")._actor_target_rects = {505: {"rect": Rect2(-100, -100, 200, 200), "map_y": 10}}
+	var mouse_position := get_viewport().get_mouse_position()
+	main.get_node("WorldRenderer")._actor_target_rects = {505: {"rect": Rect2(mouse_position - Vector2.ONE, Vector2.ONE * 2.0), "map_y": 10}}
 	main.set("_magic_focus_uid", 404)
 	GameState.magic_cast_times[fireball_id] = Time.get_ticks_msec()
 	var effect_count := GameState.magic_effects.size()

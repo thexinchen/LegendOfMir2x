@@ -889,8 +889,15 @@ func _play_action_seff(uid: int, action: Dictionary, creature: Dictionary) -> vo
 		return
 	match action_type:
 		3:
-			_schedule_hero_step_seff(uid, action, creature, 1, 0x01000001)
-			_schedule_hero_step_seff(uid, action, creature, 4, 0x01000002)
+			var move_step: int = creature.get("action_step", 0)
+			if move_step <= 0:
+				move_step = _grid_distance(
+					Vector2i(action.get("x", source_x), action.get("y", source_y)),
+					Vector2i(action.get("aimX", source_x), action.get("aimY", source_y)),
+				)
+			var step_seff_base := 0x01000003 if move_step == 2 else 0x01000001
+			_schedule_hero_step_seff(uid, action, creature, 1, step_seff_base)
+			_schedule_hero_step_seff(uid, action, creature, 4, step_seff_base + 1)
 		7, 14:
 			var weapon_id := _wear_item_id(creature, 3)
 			_play_seff(0x01010032 + _resources.item_weapon_sound(weapon_id), source_x, source_y)
