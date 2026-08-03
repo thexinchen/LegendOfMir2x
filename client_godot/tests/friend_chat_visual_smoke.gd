@@ -249,6 +249,10 @@ func _ready() -> void:
 	if not active_reference_bar.visible or active_reference_bar.size.y != 20.0 or panel.get_node("Page/ChatPage/Composer").size.y != 74.0 or panel.get("_refer_id") != 1001:
 		_fail("reference bar did not preserve the original fixed composer geometry: visible=%s bar=%s composer=%s refer=%s" % [active_reference_bar.visible, active_reference_bar.size, panel.get_node("Page/ChatPage/Composer").size, panel.get("_refer_id")])
 		return
+	var reference_preview := panel.get_node("Page/ChatPage/Composer/ReferenceBar/Row/Preview") as Label
+	if reference_preview.get_theme_color("font_color") != Color.WHITE:
+		_fail("composer reference preview did not use the original default white text: %s" % reference_preview.get_theme_color("font_color"))
+		return
 	panel.get_node("Page/ChatPage/Composer/ReferenceBar/Row/Clear").emit_signal("pressed")
 	if active_reference_bar.visible or panel.get("_refer_id") != null:
 		_fail("reference clear control did not reset the pending reference")

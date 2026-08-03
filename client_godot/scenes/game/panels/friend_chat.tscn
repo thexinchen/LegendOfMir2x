@@ -190,7 +190,7 @@ grow_vertical = 2
 [node name="Preview" type="Label" parent="Page/ChatPage/Composer/ReferenceBar/Row"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.784314, 0.784314, 0.784314, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 10
 text_overrun_behavior = 3
 
