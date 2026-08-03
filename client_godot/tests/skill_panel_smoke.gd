@@ -80,6 +80,15 @@ func _ready() -> void:
 	if active_icon == null or active_icon.position != Vector2.ZERO or active_icon.size != Vector2(active_frame.texture.get_size()) or active_button.size != active_icon.size + Vector2(8, 8):
 		_fail("learned skill icon was not drawn at native size inside the original +8 hit region")
 		return
+	var level_overlay: Label = null
+	for child_value in active_button.get_children():
+		var child := child_value as Label
+		if child != null and child.text == "1":
+			level_overlay = child
+			break
+	if level_overlay == null or not level_overlay.get_theme_font("font").resource_path.ends_with("/03_MONOWIDE.ttf"):
+		_fail("skill level overlay did not use the original font-03 resource")
+		return
 	panel.set("_scroll", 0.5)
 	panel.call("_apply_scroll")
 	panel.call("_select_tab", active_layout[1])
@@ -135,6 +144,9 @@ func _ready() -> void:
 		return
 	if not key_overlays[0].get_theme_color("font_color").is_equal_approx(Color(0, 0, 0, 224.0 / 255.0)) or not key_overlays[1].get_theme_color("font_color").is_equal_approx(Color(1, 128.0 / 255.0, 0, 224.0 / 255.0)):
 		_fail("magic key overlay colors do not match original alpha/color")
+		return
+	if not key_overlays.all(func(label: Label): return label.get_theme_font("font").resource_path.ends_with("/03_MONOWIDE.ttf")):
+		_fail("magic key overlays did not use the original font-03 resource")
 		return
 
 	panel.call("_show_magic", passive_id)

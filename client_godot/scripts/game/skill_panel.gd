@@ -1,6 +1,7 @@
 extends "res://scripts/game/closable_panel.gd"
 
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const OVERLAY_FONT := preload("res://assets/font/03_MONOWIDE.ttf")
 const PAGE_NAMES := ["火", "冰", "雷", "风", "神圣", "暗黑", "幻影", "无"]
 const PAGE_TEXTURES: Array[Texture2D] = [
 	preload("res://assets/ui/game/skill/05000010.png"),
@@ -119,6 +120,7 @@ func _make_overlay_label(text_value: String, font_size: int, color: Color) -> La
 	var label := Label.new()
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.text = text_value
+	label.add_theme_font_override("font", OVERLAY_FONT)
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	return label
