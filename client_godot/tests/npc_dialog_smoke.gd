@@ -48,6 +48,30 @@ func _ready() -> void:
 			or not font_bbcode.contains("事件[/url][/color][/font][/font]"):
 		_fail("NPC paragraph/inline font tags or fallback missing: %s" % font_bbcode)
 		return
+	var layout_bbcode: String = panel.call("_build_bbcode", "<layout><par wordSpace=\"3\">甲乙丙丁</par><par align=\"distributed\">末行</par></layout>")
+	if not layout_bbcode.begins_with("[fill][font glyph_spacing=3]") or layout_bbcode.contains("[fill]末行"):
+		_fail("NPC justify/distributed or wordSpace mapping mismatch: %s" % layout_bbcode)
+		return
+	var inline_size_bbcode: String = panel.call("_build_bbcode", "<layout><par><t size=\"18\">大字</t><event id=\"small\" size=\"12\">小字</event></par></layout>")
+	if not inline_size_bbcode.contains("[font_size=18]大字[/font_size]") or not inline_size_bbcode.contains("[font_size=12][color=#ffff00][url=") or not inline_size_bbcode.contains("小字[/url][/color][/font_size]"):
+		_fail("NPC inline text/event size mapping mismatch: %s" % inline_size_bbcode)
+		return
+	var mono_font := load(expected_font_paths[3]) as Font
+	var default_font := dialog.get_theme_font("normal_font")
+	var prefix := "iiii"
+	var atomic := "WWWW"
+	var prefix_width := default_font.get_string_size(prefix, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	var mono_atomic_width := mono_font.get_string_size(atomic, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	var default_atomic_width := default_font.get_string_size(atomic, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	if is_equal_approx(mono_atomic_width, default_atomic_width):
+		_fail("NPC font-aware wrap fixture has no measurable font difference")
+		return
+	var font_wrap_width := prefix_width + (mono_atomic_width + default_atomic_width) * 0.5
+	var font_wrap_bbcode: String = panel.call("_build_bbcode", "<layout><par>%s<event id=\"font-wrap\" font=\"3\" wrap=\"false\">%s</event></par></layout>" % [prefix, atomic], "", "", font_wrap_width)
+	var should_wrap := prefix_width + mono_atomic_width > font_wrap_width
+	if font_wrap_bbcode.contains("%s\n[font=" % prefix) != should_wrap:
+		_fail("NPC wrap=false did not measure the event font: mono=%s default=%s width=%s bbcode=%s" % [mono_atomic_width, default_atomic_width, font_wrap_width, font_wrap_bbcode])
+		return
 	var xml := "<layout><par>你好<t color=\"red\">勇士</t></par><par><event id=\"buy\" args=\"{'id':1}\" close=\"1\">购买</event></par></layout>"
 	var bbcode: String = panel.call("_build_bbcode", xml)
 	if not bbcode.contains("你好") or not bbcode.contains("[color=red]勇士[/color]"):
@@ -112,6 +136,8 @@ func _ready() -> void:
 		display_xml = "<layout><par bgcolor=\"rgb(0x00, 0x80, 0x00)\">原版段落背景色</par><par color=\"yellow\">黄色段落<t bgcolor=\"#0000ff\">蓝底继承黄字</t></par><par><event id=\"close\" close=\"1\">关闭</event></par></layout>"
 	elif OS.has_environment("MIR2X_NPC_NOWRAP_SCREENSHOT"):
 		display_xml = "<layout><par>Monster list:</par><par><event id=\"a\" wrap=\"false\">\u7532\u4e59\u4e19\u4e01\uff0c</event><event id=\"b\" wrap=\"false\">\u620a\u5df1\u5e9a\u8f9b\uff0c</event><event id=\"c\" wrap=\"false\">\u58ec\u7678\u5b50\u4e11\uff0c</event><event id=\"d\" wrap=\"false\">\u5bc5\u536f\u8fb0\u5df3\uff0c</event></par></layout>"
+	elif OS.has_environment("MIR2X_NPC_LAYOUT_SCREENSHOT"):
+		display_xml = "<layout><par wordSpace=\"3\">默认 justify 字距：甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳</par><par align=\"distributed\">distributed 末行保持靠左</par><par><t size=\"18\" font=\"3\">18px MONOWIDE</t> <event id=\"small\" size=\"12\">12px 事件</event></par></layout>"
 	elif OS.has_environment("MIR2X_NPC_EMOJI_SCREENSHOT"):
 		display_xml = "<layout><par>Original emoji:</par><par><emoji id=\"0\"/> <emoji id=\"1\"/> <emoji id=\"2\"/> <emoji id=\"3\"/> <emoji id=\"4\"/> <emoji id=\"5\"/> <emoji id=\"6\"/> <emoji id=\"7\"/> <emoji id=\"8\"/> <emoji id=\"9\"/></par></layout>"
 	GameState.npc_dialog = {"npcUID": 1, "eventPath": "npc/test", "xmlLayout": display_xml}

@@ -87,38 +87,51 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 		return _escape_bbcode(xml)
 	var result := ""
 	var tag_stack: Array[String] = []
+	var font_path_stack: Array[String] = [""]
+	var font_size_stack: Array[int] = [$Dialog.get_theme_font_size("normal_font_size")]
+	var word_space_stack: Array[int] = [0]
 	var no_wrap_depth := 0
 	var line_width: float = line_width_override if line_width_override > 0.0 else _dialog_line_width()
 	var current_line_width := 0.0
 	var atomic_result_start := -1
-	var atomic_text := ""
+	var atomic_width := 0.0
+	var atomic_has_text := false
+	var atomic_word_space := 0
 	while parser.read() == OK:
 		match parser.get_node_type():
 			XMLParser.NODE_ELEMENT:
 				var name := parser.get_node_name().to_lower()
+				var effective_font_path: String = font_path_stack.back()
+				var effective_font_size: int = font_size_stack.back()
+				var effective_word_space: int = word_space_stack.back()
 				if name == "par":
 					if not result.is_empty() and not result.ends_with("\n"):
 						result += "\n"
 					current_line_width = 0.0
 					var par_tags: Array[String] = []
 					var align := _xml_attribute(parser, "align", "justify").to_lower()
-					if align == "center":
+					if align == "justify":
+						result += "[fill]"
+						par_tags.append("fill")
+					elif align == "center":
 						result += "[center]"
 						par_tags.append("center")
 					elif align == "right":
 						result += "[right]"
 						par_tags.append("right")
-					elif align == "distributed":
-						result += "[fill]"
-						par_tags.append("fill")
 					var par_font := _xml_attribute(parser, "font", "")
 					if not par_font.is_empty():
-						result += "[font=%s]" % _paragraph_font_path(par_font)
+						effective_font_path = _paragraph_font_path(par_font)
+						result += "[font=%s]" % effective_font_path
 						par_tags.append("font")
-					var font_size := int(_xml_attribute(parser, "size", "15"))
-					if font_size != 15:
-						result += "[font_size=%d]" % max(1, font_size)
+					effective_font_size = max(1, int(_xml_attribute(parser, "size", "15")))
+					if effective_font_size != 15:
+						result += "[font_size=%d]" % effective_font_size
 						par_tags.append("font_size")
+					effective_word_space = int(_xml_attribute(parser, "wordSpace", "0"))
+					if effective_word_space != 0:
+						result += "[font glyph_spacing=%d]" % effective_word_space
+						par_tags.append("font")
 					var par_color := _xml_attribute(parser, "color", "")
 					if not par_color.is_empty():
 						result += "[color=%s]" % _bbcode_color(par_color)
@@ -132,7 +145,9 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					var wrap_enabled := _parse_bool(_xml_attribute(parser, "wrap", "true"))
 					if not wrap_enabled:
 						atomic_result_start = result.length()
-						atomic_text = ""
+						atomic_width = 0.0
+						atomic_has_text = false
+						atomic_word_space = effective_word_space
 					var event := {
 						"id": _xml_attribute(parser, "id", ""),
 						"path": _xml_attribute(parser, "path", ""),
@@ -141,21 +156,34 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					}
 					var meta := JSON.stringify(event)
 					var event_color := "#ff00ff" if meta == pressed_meta else ("#00ff00" if meta == hover_meta else "#ffff00")
-					var event_tag := "event" if wrap_enabled else "event-nowrap"
+					var event_tags: Array[String] = []
 					var event_font := _inline_font_path(_xml_attribute(parser, "font", ""))
 					if not event_font.is_empty():
+						effective_font_path = event_font
 						result += "[font=%s]" % event_font
-						event_tag += ":font"
+						event_tags.append("font")
+					var event_size: Variant = _xml_optional_attribute(parser, "size")
+					if event_size != null:
+						effective_font_size = max(1, int(event_size))
+						result += "[font_size=%d]" % effective_font_size
+						event_tags.append("font_size")
 					result += "[color=%s][url=%s]" % [event_color, meta]
-					tag_stack.append(event_tag)
+					var event_tag := "event" if wrap_enabled else "event-nowrap"
+					tag_stack.append("%s:%s" % [event_tag, ",".join(event_tags)] if not event_tags.is_empty() else event_tag)
 					if not wrap_enabled:
 						no_wrap_depth += 1
 				elif name == "t":
 					var text_tags: Array[String] = []
 					var text_font := _inline_font_path(_xml_attribute(parser, "font", ""))
 					if not text_font.is_empty():
+						effective_font_path = text_font
 						result += "[font=%s]" % text_font
 						text_tags.append("font")
+					var text_size: Variant = _xml_optional_attribute(parser, "size")
+					if text_size != null:
+						effective_font_size = max(1, int(text_size))
+						result += "[font_size=%d]" % effective_font_size
+						text_tags.append("font_size")
 					var text_color := _xml_attribute(parser, "color", "")
 					if not text_color.is_empty():
 						result += "[color=%s]" % _bbcode_color(text_color)
@@ -170,40 +198,55 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					result += "[[MIR2X_EMOJI:%d]]" % emoji_id
 					var emoji_definition := _emoji_definition(emoji_id)
 					if not emoji_definition.is_empty():
-						current_line_width = _advance_object_width(current_line_width, emoji_definition.width, line_width)
+						current_line_width = _advance_object_width(current_line_width, emoji_definition.width, line_width, effective_word_space)
 					tag_stack.append("emoji")
 				else:
 					tag_stack.append(name)
+				font_path_stack.append(effective_font_path)
+				font_size_stack.append(effective_font_size)
+				word_space_stack.append(effective_word_space)
 				if parser.is_empty():
 					var empty_tag: String = tag_stack.pop_back()
 					if empty_tag.begins_with("event-nowrap"):
-						var empty_placement: Array = _place_atomic_text(result, atomic_result_start, atomic_text, current_line_width, line_width)
+						var empty_placement: Array = _place_atomic_width(result, atomic_result_start, atomic_width, current_line_width, line_width, atomic_word_space)
 						current_line_width = empty_placement[0]
 						result = empty_placement[1]
 						atomic_result_start = -1
-						atomic_text = ""
+						atomic_width = 0.0
+						atomic_has_text = false
 					result = _close_tag(result, empty_tag)
 					if empty_tag.begins_with("event-nowrap"):
 						no_wrap_depth -= 1
+					font_path_stack.pop_back()
+					font_size_stack.pop_back()
+					word_space_stack.pop_back()
 			XMLParser.NODE_ELEMENT_END:
 				if not tag_stack.is_empty():
 					var closed_tag: String = tag_stack.pop_back()
 					if closed_tag.begins_with("event-nowrap"):
-						var placement: Array = _place_atomic_text(result, atomic_result_start, atomic_text, current_line_width, line_width)
+						var placement: Array = _place_atomic_width(result, atomic_result_start, atomic_width, current_line_width, line_width, atomic_word_space)
 						current_line_width = placement[0]
 						result = placement[1]
 						atomic_result_start = -1
-						atomic_text = ""
+						atomic_width = 0.0
+						atomic_has_text = false
 					result = _close_tag(result, closed_tag)
 					if closed_tag.begins_with("event-nowrap"):
 						no_wrap_depth -= 1
+					font_path_stack.pop_back()
+					font_size_stack.pop_back()
+					word_space_stack.pop_back()
 			XMLParser.NODE_TEXT:
 				var text := parser.get_node_data()
 				result += _escape_bbcode(text)
 				if no_wrap_depth > 0:
-					atomic_text += text
+					var text_width := _text_width(text, font_path_stack.back(), font_size_stack.back(), word_space_stack.back())
+					if atomic_has_text and not text.is_empty():
+						text_width += word_space_stack.back()
+					atomic_width += text_width
+					atomic_has_text = atomic_has_text or not text.is_empty()
 				else:
-					current_line_width = _advance_line_width(current_line_width, text, line_width)
+					current_line_width = _advance_line_width(current_line_width, text, line_width, font_path_stack.back(), font_size_stack.back(), word_space_stack.back())
 	return result
 
 
@@ -223,8 +266,12 @@ func _close_tag(result: String, name: String) -> String:
 				result += "\n"
 		"event", "event-nowrap":
 			result += "[/url][/color]"
-		"event:font", "event-nowrap:font":
-			result += "[/url][/color][/font]"
+	if name.begins_with("event:") or name.begins_with("event-nowrap:"):
+		result += "[/url][/color]"
+		var tags := name.substr(name.find(":") + 1).split(",", false)
+		tags.reverse()
+		for tag in tags:
+			result += "[/%s]" % tag
 	return result
 
 
@@ -342,31 +389,37 @@ func _dialog_line_width() -> float:
 	return maxf(1.0, board_width - MARGIN * (3.0 if $Face.visible else 2.0) - face_width)
 
 
-func _text_width(text: String) -> float:
-	return $Dialog.get_theme_font("normal_font").get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, $Dialog.get_theme_font_size("normal_font_size")).x
+func _text_width(text: String, font_path: String = "", font_size: int = 0, word_space: int = 0) -> float:
+	var font: Font = load(font_path) if not font_path.is_empty() else $Dialog.get_theme_font("normal_font")
+	var size: int = font_size if font_size > 0 else $Dialog.get_theme_font_size("normal_font_size")
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	return width + max(0, text.length() - 1) * word_space
 
 
-func _advance_line_width(current: float, text: String, line_width: float) -> float:
+func _advance_line_width(current: float, text: String, line_width: float, font_path: String = "", font_size: int = 0, word_space: int = 0) -> float:
 	for index in text.length():
 		var character: String = text[index]
 		if character == "\n":
 			current = 0.0
 			continue
-		var character_width: float = _text_width(character)
+		var character_width: float = _text_width(character, font_path, font_size)
+		if current > 0.0:
+			character_width += word_space
 		current = character_width if current > 0.0 and current + character_width > line_width else current + character_width
 	return current
 
 
-func _advance_object_width(current: float, width: float, line_width: float) -> float:
-	return width if current > 0.0 and current + width > line_width else current + width
+func _advance_object_width(current: float, width: float, line_width: float, word_space: int = 0) -> float:
+	var advance := width + (word_space if current > 0.0 else 0)
+	return width if current > 0.0 and current + advance > line_width else current + advance
 
 
-func _place_atomic_text(bbcode: String, start: int, text: String, current: float, line_width: float) -> Array:
-	var atomic_width: float = _text_width(text)
-	if current > 0.0 and current + atomic_width > line_width and atomic_width <= line_width:
+func _place_atomic_width(bbcode: String, start: int, atomic_width: float, current: float, line_width: float, word_space: int) -> Array:
+	var advance := atomic_width + (word_space if current > 0.0 else 0)
+	if current > 0.0 and current + advance > line_width and atomic_width <= line_width:
 		bbcode = bbcode.insert(start, "\n")
 		current = 0.0
-	return [_advance_line_width(current, text, line_width), bbcode]
+	return [_advance_object_width(current, atomic_width, line_width, word_space), bbcode]
 
 
 func _parse_bool(value: String) -> bool:
