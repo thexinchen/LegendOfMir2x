@@ -144,6 +144,22 @@ func _ready() -> void:
 	if first_message == null or not first_message.get_child(0) is TextureRect or (first_message.get_child(0) as TextureRect).stretch_mode != TextureRect.STRETCH_SCALE:
 		_fail("message avatar did not stretch the complete texture like the original client")
 		return
+	var incoming_bubble := first_message.get_child(1) as PanelContainer
+	var outgoing_bubble := (message_rows.get_child(1) as HBoxContainer).get_child(1) as PanelContainer
+	var incoming_style := incoming_bubble.get_theme_stylebox("panel") as StyleBoxFlat
+	var outgoing_style := outgoing_bubble.get_theme_stylebox("panel") as StyleBoxFlat
+	var half_alpha := 128.0 / 255.0
+	var expected_incoming_width := clampf(40.0 + "晚上一起去矿洞吗？".to_utf8_buffer().size() * 6.0, 80.0, message_rows.size.x - 70.0)
+	var expected_outgoing_width := clampf(40.0 + "好，城门口集合。".to_utf8_buffer().size() * 6.0, 80.0, message_rows.size.x - 70.0)
+	if incoming_style.bg_color != Color(1, 0, 0, half_alpha) or outgoing_style.bg_color != Color(0, 128.0 / 255.0, 0, half_alpha) or incoming_style.border_width_left != 0 or outgoing_style.border_width_left != 0:
+		_fail("message bubble colors/borders diverged from C++: incoming=%s outgoing=%s borders=%d/%d" % [incoming_style.bg_color, outgoing_style.bg_color, incoming_style.border_width_left, outgoing_style.border_width_left])
+		return
+	if incoming_bubble.size.x != expected_incoming_width or outgoing_bubble.size.x != expected_outgoing_width:
+		_fail("message bubble UTF-8 widths diverged from C++: incoming=%s/%s outgoing=%s/%s" % [incoming_bubble.size.x, expected_incoming_width, outgoing_bubble.size.x, expected_outgoing_width])
+		return
+	if (incoming_bubble.get_child(0) as VBoxContainer).get_child_count() != 2 or (outgoing_bubble.get_child(0) as VBoxContainer).get_child_count() != 1:
+		_fail("outgoing bubble kept the non-original sender header")
+		return
 	panel.call("_show_reference", 1001, "清风：晚上一起去矿洞吗？")
 	await get_tree().process_frame
 	var active_reference_bar := panel.get_node("Page/ChatPage/Composer/ReferenceBar") as Panel
@@ -159,6 +175,11 @@ func _ready() -> void:
 	await get_tree().process_frame
 	if panel.get_node("Page/ChatPage/Messages/MessageRows").get_child_count() != 3:
 		_fail("pending message bubble missing")
+		return
+	var pending_bubble := (panel.get_node("Page/ChatPage/Messages/MessageRows").get_child(2) as HBoxContainer).get_child(1) as PanelContainer
+	var pending_style := pending_bubble.get_theme_stylebox("panel") as StyleBoxFlat
+	if pending_style.bg_color != Color(128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0, half_alpha) or pending_style.border_width_left != 0 or (pending_bubble.get_child(0) as VBoxContainer).get_child_count() != 1:
+		_fail("pending bubble style/header diverged from C++: color=%s border=%d" % [pending_style.bg_color, pending_style.border_width_left])
 		return
 	var accepted := {"id": 101, "cpid": (2 << 32) | 101, "type": 2, "name": "新朋友", "gender": true, "job": 2}
 	GameState.add_chat_peer(accepted, true, "新朋友已经通过你的好友申请，现在可以开始聊天了。")

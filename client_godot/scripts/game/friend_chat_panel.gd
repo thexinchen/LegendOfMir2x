@@ -389,33 +389,32 @@ func _add_message_bubble(parent: Node, peer: Dictionary, sender_name: String, te
 	if not avatar_frame.is_empty():
 		avatar.texture = avatar_frame.get("texture")
 	var bubble := PanelContainer.new()
-	bubble.custom_minimum_size = Vector2(90, 48)
+	var bubble_width := clampf(40.0 + text.to_utf8_buffer().size() * 6.0, 80.0, maxf(80.0, parent.size.x - 70.0))
+	bubble.custom_minimum_size = Vector2(bubble_width, 48)
 	bubble.size_flags_horizontal = Control.SIZE_SHRINK_END if mine else Control.SIZE_SHRINK_BEGIN
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.35, 0.35, 0.35, 0.65) if pending else (Color(0.08, 0.38, 0.08, 0.88) if mine else Color(0.43, 0.10, 0.08, 0.88))
-	style.border_color = Color(0.72, 0.72, 0.46, 0.65)
-	style.set_border_width_all(1)
+	style.bg_color = Color(128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0) if pending else (Color(0, 128.0 / 255.0, 0, 128.0 / 255.0) if mine else Color(1, 0, 0, 128.0 / 255.0))
 	style.corner_radius_top_left = 4
 	style.corner_radius_top_right = 4
 	style.corner_radius_bottom_left = 4
 	style.corner_radius_bottom_right = 4
 	style.content_margin_left = 8
 	style.content_margin_right = 8
-	style.content_margin_top = 5
+	style.content_margin_top = 15 if mine else 3
 	style.content_margin_bottom = 5
 	bubble.add_theme_stylebox_override("panel", style)
 	var content := VBoxContainer.new()
-	var name_label := Label.new()
-	name_label.text = sender_name
-	name_label.add_theme_font_size_override("font_size", 10)
-	name_label.add_theme_color_override("font_color", Color(0.82, 0.82, 0.68))
+	content.add_theme_constant_override("separation", 0)
+	if not mine:
+		var name_label := Label.new()
+		name_label.text = sender_name
+		name_label.add_theme_font_size_override("font_size", 10)
+		content.add_child(name_label)
 	var text_label := Label.new()
 	text_label.text = text
-	text_label.custom_minimum_size.x = minf(250.0, maxf(70.0, text.length() * 13.0))
 	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_label.add_theme_font_size_override("font_size", 12)
 	text_label.add_theme_color_override("font_color", Color.WHITE)
-	content.add_child(name_label)
 	content.add_child(text_label)
 	var xml: String = _state.chat_message_xml(message)
 	if FRIEND_RESPONSE_EVENT in xml:
