@@ -7,7 +7,8 @@ const DIRECTIONS := [
 ]
 
 
-func find_path(start: Vector2i, goals: Array[Vector2i], can_walk: Callable, occupied: Dictionary, max_nodes := 50000) -> Array[Vector2i]:
+func find_path(start: Vector2i, goals: Array[Vector2i], can_walk: Callable, occupied: Dictionary, max_nodes := 50000, max_step := 1) -> Array[Vector2i]:
+	max_step = clampi(max_step, 1, 3)
 	var goal_set := {}
 	var valid_goals: Array[Vector2i] = []
 	for goal in goals:
@@ -20,37 +21,49 @@ func find_path(start: Vector2i, goals: Array[Vector2i], can_walk: Callable, occu
 	var open: Array[Dictionary] = []
 	var came_from := {}
 	var best_cost := {start: 0}
-	_push_heap(open, {"point": start, "score": _heuristic(start, valid_goals)})
+	_push_heap(open, {"point": start, "score": _heuristic(start, valid_goals, max_step)})
 	var expanded := 0
 	while not open.is_empty() and expanded < max_nodes:
 		var entry := _pop_heap(open)
 		var current: Vector2i = entry.point
 		var current_cost: int = best_cost.get(current, 0x7FFFFFFF)
-		if int(entry.score) > current_cost + _heuristic(current, valid_goals):
+		if int(entry.score) > current_cost + _heuristic(current, valid_goals, max_step):
 			continue
 		if goal_set.has(current):
 			return _reconstruct(came_from, start, current)
 		expanded += 1
 		for direction_value in DIRECTIONS:
 			var direction: Vector2i = direction_value
-			var next: Vector2i = current + direction
-			if occupied.has(next) or not can_walk.call(next.x, next.y):
-				continue
-			var next_cost := current_cost + (14 if direction.x != 0 and direction.y != 0 else 10)
-			if next_cost >= int(best_cost.get(next, 0x7FFFFFFF)):
-				continue
-			best_cost[next] = next_cost
-			came_from[next] = current
-			_push_heap(open, {"point": next, "score": next_cost + _heuristic(next, valid_goals)})
+			for hop_size in range(max_step, 0, -1):
+				var next: Vector2i = current + direction * hop_size
+				var reachable := true
+				for distance in range(1, hop_size + 1):
+					var crossed := current + direction * distance
+					if occupied.has(crossed) or not can_walk.call(crossed.x, crossed.y):
+						reachable = false
+						break
+				if not reachable:
+					continue
+				var hop_cost := (14 if direction.x != 0 and direction.y != 0 else 10) if max_step == 1 else 10 + hop_size
+				var next_cost := current_cost + hop_cost
+				if next_cost >= int(best_cost.get(next, 0x7FFFFFFF)):
+					continue
+				best_cost[next] = next_cost
+				came_from[next] = current
+				_push_heap(open, {"point": next, "score": next_cost + _heuristic(next, valid_goals, max_step)})
 	return []
 
 
-func _heuristic(point: Vector2i, goals: Array[Vector2i]) -> int:
+func _heuristic(point: Vector2i, goals: Array[Vector2i], max_step: int) -> int:
 	var best := 0x7FFFFFFF
 	for goal in goals:
 		var dx := absi(point.x - goal.x)
 		var dy := absi(point.y - goal.y)
-		best = mini(best, 10 * maxi(dx, dy) + 4 * mini(dx, dy))
+		if max_step == 1:
+			best = mini(best, 10 * maxi(dx, dy) + 4 * mini(dx, dy))
+			continue
+		var distance := maxi(dx, dy)
+		best = mini(best, (distance / max_step) * (10 + max_step) + (10 + distance % max_step if distance % max_step else 0))
 	return best
 
 

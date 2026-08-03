@@ -519,7 +519,7 @@ func _plan_mine_path() -> void:
 	if not _move_path.is_empty():
 		_move_step_timer = 0.0
 		return
-	var unobstructed_path: Array[Vector2i] = _pathfinder.find_path(player_position, goals, world_renderer.can_walk, {})
+	var unobstructed_path: Array[Vector2i] = _pathfinder.find_path(player_position, goals, world_renderer.can_walk, {}, 50000, 2)
 	if unobstructed_path.is_empty():
 		_mine_target = Vector2i(-1, -1)
 	else:
@@ -536,7 +536,7 @@ func _find_path(goals: Array[Vector2i]) -> Array[Vector2i]:
 		var creature_position := Vector2i(creature.get("x", -1), creature.get("y", -1))
 		if creature_position != player_position:
 			occupied[creature_position] = true
-	return _pathfinder.find_path(player_position, goals, world_renderer.can_walk, occupied)
+	return _pathfinder.find_path(player_position, goals, world_renderer.can_walk, occupied, 50000, 2)
 
 
 func _process_movement(delta: float) -> void:

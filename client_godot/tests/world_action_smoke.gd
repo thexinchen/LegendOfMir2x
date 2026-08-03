@@ -12,6 +12,12 @@ func _ready() -> void:
 	if NetworkClient.send_action(offline_action) != ERR_UNCONFIGURED:
 		_fail("offline action unexpectedly initiated a server connection")
 		return
+	if OS.has_environment("MIR2X_PATH_ONLY"):
+		if not _test_path_decomposition():
+			return
+		print("WORLD PATH PASS")
+		get_tree().quit(0)
+		return
 	var resources: RefCounted = ActorResourceScript.new()
 	if not resources.configure_default():
 		_fail("world resources unavailable")
@@ -207,7 +213,7 @@ func _ready() -> void:
 		return
 	if not _test_pickup_action(main, resources):
 		return
-	print("WORLD ACTION PASS: team flag, focus channels, mining, exact-frame focus, action SEFF, attack/chase, magic keys, pickup, one-hop pathing, operation feedback, death and map filtering")
+	print("WORLD ACTION PASS: team flag, focus channels, mining, exact-frame focus, action SEFF, attack/chase, magic keys, pickup, off-horse pathing, operation feedback, death and map filtering")
 	get_tree().quit()
 
 
@@ -3090,18 +3096,60 @@ func _map_message(uid: int, map_uid: int, size: int) -> PackedByteArray:
 
 func _test_path_decomposition() -> bool:
 	var pathfinder: RefCounted = WorldPathfinderScript.new()
+	var open_goals: Array[Vector2i] = [Vector2i(4, 0)]
+	var open_path: Array[Vector2i] = pathfinder.find_path(Vector2i(0, 0), open_goals, _test_open_walkable, {}, 50000, 2)
+	if open_path != [Vector2i(2, 0), Vector2i(4, 0)]:
+		_fail("off-horse pathfinder did not prefer the original two-grid run hops: %s" % [open_path])
+		return false
+	var diagonal_goals: Array[Vector2i] = [Vector2i(4, 4)]
+	var diagonal_path: Array[Vector2i] = pathfinder.find_path(Vector2i(0, 0), diagonal_goals, _test_open_diagonal_walkable, {}, 50000, 2)
+	if diagonal_path != [Vector2i(2, 2), Vector2i(4, 4)]:
+		_fail("off-horse pathfinder did not prefer diagonal two-grid run hops: %s" % [diagonal_path])
+		return false
+	var short_goals: Array[Vector2i] = [Vector2i(2, 0)]
+	var blocked_path: Array[Vector2i] = pathfinder.find_path(Vector2i(0, 0), short_goals, _test_blocked_middle_walkable, {}, 50000, 2)
+	if not blocked_path.is_empty():
+		_fail("two-grid run skipped a blocked intermediate grid: %s" % [blocked_path])
+		return false
+	var occupied_path: Array[Vector2i] = pathfinder.find_path(Vector2i(0, 0), short_goals, _test_open_line_walkable, {Vector2i(1, 0): true}, 50000, 2)
+	if not occupied_path.is_empty():
+		_fail("two-grid run skipped an occupied intermediate grid: %s" % [occupied_path])
+		return false
 	var goals: Array[Vector2i] = [Vector2i(4, 2)]
-	var path: Array[Vector2i] = pathfinder.find_path(Vector2i(0, 2), goals, _test_walkable, {})
+	var path: Array[Vector2i] = pathfinder.find_path(Vector2i(0, 2), goals, _test_walkable, {}, 50000, 2)
 	if path.is_empty() or path.back() != goals[0]:
 		_fail("pathfinder did not reach destination: %s" % path)
 		return false
 	var previous := Vector2i(0, 2)
 	for point in path:
-		if maxi(absi(point.x - previous.x), absi(point.y - previous.y)) != 1:
-			_fail("path contains non one-hop movement: %s" % path)
+		var step := maxi(absi(point.x - previous.x), absi(point.y - previous.y))
+		if step < 1 or step > 2:
+			_fail("path contains a movement outside the original off-horse step range: %s" % path)
 			return false
+		var direction := Vector2i(signi(point.x - previous.x), signi(point.y - previous.y))
+		for distance in range(1, step + 1):
+			var crossed := previous + direction * distance
+			if not _test_walkable(crossed.x, crossed.y):
+				_fail("path skipped a blocked intermediate grid: %s" % path)
+				return false
 		previous = point
 	return true
+
+
+func _test_open_walkable(x: int, y: int) -> bool:
+	return y == 0 and x >= 0 and x <= 4
+
+
+func _test_open_diagonal_walkable(x: int, y: int) -> bool:
+	return x == y and x >= 0 and x <= 4
+
+
+func _test_open_line_walkable(x: int, y: int) -> bool:
+	return y == 0 and x >= 0 and x <= 2
+
+
+func _test_blocked_middle_walkable(x: int, y: int) -> bool:
+	return _test_open_line_walkable(x, y) and x != 1
 
 
 func _test_walkable(x: int, y: int) -> bool:
