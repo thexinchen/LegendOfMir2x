@@ -1605,8 +1605,16 @@ func _test_actor_status_overlay(renderer: Control, resources: RefCounted) -> boo
 		_fail("monster name was shown without mouse focus")
 		return false
 	renderer.set("_mouse_focus_uid", 303)
+	if renderer.call("_should_draw_monster_name", 303):
+		_fail("monster name ignored the original draw-HP-bar gate")
+		return false
+	renderer.set("draw_hp_bar", true)
 	if not renderer.call("_should_draw_monster_name", 303) or renderer.call("_should_draw_monster_name", 304):
 		_fail("monster name mouse-focus policy mismatch")
+		return false
+	renderer.set("always_draw_name", true)
+	if not renderer.call("_should_draw_monster_name", 304):
+		_fail("monster name ignored the original always-draw-name option")
 		return false
 	return true
 

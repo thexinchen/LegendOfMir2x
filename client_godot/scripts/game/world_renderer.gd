@@ -72,6 +72,7 @@ const FOCUS_COLORS := [
 
 var game_state: Node = null
 var draw_hp_bar := OS.get_cmdline_args().has("--draw-hp-bar") or OS.get_cmdline_user_args().has("--draw-hp-bar")
+var always_draw_name := OS.get_cmdline_args().has("--always-draw-name") or OS.get_cmdline_user_args().has("--always-draw-name")
 
 # Map data
 var map_width: int = 0
@@ -1627,7 +1628,7 @@ func _draw_gradient_quad(rect: Rect2, colors: Array[Color]) -> void:
 
 
 func _should_draw_monster_name(uid: int) -> bool:
-	return uid != 0 and uid == _mouse_focus_uid
+	return draw_hp_bar and uid != 0 and (always_draw_name or uid == _mouse_focus_uid)
 
 
 func _monster_display_name(creature: Dictionary) -> String:
