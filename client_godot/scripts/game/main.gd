@@ -199,7 +199,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		control_panel.call("focus_command")
 		get_viewport().set_input_as_handled()
 		return
-	if quick_bar.visible:
+	if quick_bar.visible and not event.shift_pressed:
 		var quick_slot: int = event.keycode - KEY_1
 		if quick_slot >= 0 and quick_slot < 6:
 			quick_bar.call("activate_slot", quick_slot, MOUSE_BUTTON_RIGHT)

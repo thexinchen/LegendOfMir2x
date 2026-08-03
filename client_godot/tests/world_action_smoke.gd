@@ -1107,6 +1107,22 @@ func _test_magic_panel_hotkey_precedence(main: Control, resources: RefCounted) -
 		_fail("unlearned H binding did not fall back to the Godot horse-panel shortcut")
 		return false
 	(panels[horse_path] as Control).hide()
+	var quick_bar := main.get_node("%QuickBar") as Control
+	quick_bar.show()
+	GameState.learned_magic = [{"magicID": firewall_id, "exp": 0}]
+	GameState.magic_keys = {firewall_id: 33}
+	GameState.magic_cast_times.erase(firewall_id)
+	var shifted_digit := InputEventKey.new()
+	shifted_digit.keycode = KEY_1
+	shifted_digit.unicode = 33
+	shifted_digit.shift_pressed = true
+	shifted_digit.pressed = true
+	effect_count = GameState.magic_effects.size()
+	main.call("_unhandled_input", shifted_digit)
+	if GameState.magic_effects.size() != effect_count + 1:
+		_fail("expanded quick bar swallowed the original shifted-digit magic binding")
+		return false
+	quick_bar.hide()
 	GameState.learned_magic = previous_learned
 	GameState.magic_keys = previous_keys
 	GameState.magic_cast_times = previous_cast_times
