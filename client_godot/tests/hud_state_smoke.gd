@@ -37,6 +37,16 @@ func _ready() -> void:
 	GameState.add_chat_log("获得物品", 1)
 	GameState.add_chat_log("广播消息", 2)
 	GameState.add_chat_log("错误消息", 3)
+	var expected_log_colors := [
+		Color8(255, 255, 255, 255),
+		Color8(0, 255, 0, 255),
+		Color8(64, 128, 255, 255),
+		Color8(255, 64, 64, 255),
+	]
+	for index in expected_log_colors.size():
+		if GameState.chat_log[index].color != expected_log_colors[index]:
+			_fail("chat log color %d diverged from original 8-bit value: %s" % [index, GameState.chat_log[index].color])
+			return
 	for index in range(8):
 		GameState.add_chat_log("滚动消息 %02d" % index, index % 4)
 	GameState.add_chat_log("无效的请求。", 0, Color(0.0, 0.5, 0.0, 1.0))

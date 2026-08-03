@@ -384,10 +384,10 @@ func _test_friend_feedback(panel: Control, friend: Dictionary) -> bool:
 	if not _expect_notice("你已经拉黑清风", Color(0.0, 1.0, 0.0, 1.0), Color.TRANSPARENT):
 		return false
 	panel.call("_apply_friend_action_result", int(friend.cpid), "accept", NetworkClient.SM_OK + 1)
-	if not _expect_notice("无效的请求", Color(1.0, 0.25, 0.25, 1.0), Color.TRANSPARENT):
+	if not _expect_notice("无效的请求", Color8(255, 64, 64, 255), Color.TRANSPARENT):
 		return false
 	panel.call("_apply_friend_action_result", int(friend.cpid), "block", NetworkClient.SM_OK + 1)
-	if not _expect_notice("无效的拉黑请求", Color(1.0, 0.25, 0.25, 1.0), Color.TRANSPARENT):
+	if not _expect_notice("无效的拉黑请求", Color8(255, 64, 64, 255), Color.TRANSPARENT):
 		return false
 	GameState.chat_friends = saved_friends
 	GameState.chat_peers = saved_peers
