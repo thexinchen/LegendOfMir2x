@@ -101,8 +101,8 @@ func _ready() -> void:
 	if not GameState.grabbed_item.is_empty() or AudioService.last_seff_id != resources.item_sound_effect(dress_id):
 		_fail("invalid wear placement did not return the item with original sound")
 		return
-	if panel.get_node("StateValues").get_child_count() != 9 or "攻击" not in panel.get_node("CombatStats").text:
-		_fail("state rows or combat labels missing")
+	if panel.get_node("StateValues").get_child_count() != 9:
+		_fail("state rows missing")
 		return
 	var state_values := panel.get_node("StateValues") as Control
 	if state_values.position != Vector2(244, 97) or state_values.size != Vector2(72, 217):
@@ -115,6 +115,25 @@ func _ready() -> void:
 	if combat_stats.position != Vector2(21, 317) or combat_stats.size != Vector2(291, 52):
 		_fail("combat-stat geometry does not match C++ state board: position=%s size=%s" % [combat_stats.position, combat_stats.size])
 		return
+	var combat_labels: Array[Label] = []
+	for child in combat_stats.get_children():
+		if child is Label:
+			combat_labels.append(child)
+	var expected_combat_positions := [Vector2(0, 0), Vector2(109, 0), Vector2(0, 28), Vector2(109, 28), Vector2(212, 28)]
+	if combat_labels.size() != 5:
+		_fail("combat stats still depend on space-padded text columns")
+		return
+	for index in combat_labels.size():
+		if combat_labels[index].position != expected_combat_positions[index]:
+			_fail("combat-stat anchor mismatch at %d: %s" % [index, combat_labels[index].position])
+			return
+	var expected_combat_prefixes := ["攻击 ", "防御 ", "魔法 ", "魔防 ", "道术 "]
+	for index in combat_labels.size():
+		if not combat_labels[index].text.begins_with(expected_combat_prefixes[index]) \
+				or combat_labels[index].get_theme_font_size("font_size") != 15 \
+				or not combat_labels[index].get_theme_font("font").resource_path.ends_with("/09_WenQuanYi_Bitmap_Song_15_px.ttf"):
+			_fail("combat-stat label mismatch at %d: %s" % [index, combat_labels[index].text])
+			return
 	if combat_stats.get_theme_constant("line_spacing") != 13 or combat_stats.get_theme_color("font_color") != Color.WHITE:
 		_fail("combat-stat line spacing/color does not match C++ state board")
 		return

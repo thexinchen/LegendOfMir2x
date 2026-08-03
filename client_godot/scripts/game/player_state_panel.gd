@@ -63,10 +63,7 @@ func _refresh() -> void:
 		"%d/%d" % [weapon_load, combat.load[1]], "%d" % combat.dc_hit, "%d" % combat.dc_dodge]
 	var overloaded := [false, false, false, false, inv_load > combat.load[2], body_load > combat.load[0], weapon_load > combat.load[1], false, false]
 	_refresh_state_values(state_values, overloaded)
-	$CombatStats.text = "攻击 %d - %d          防御 %d - %d\n魔法 %d - %d          魔防 %d - %d       道术 %d - %d" % [
-		combat.dc[0], combat.dc[1], combat.ac[0], combat.ac[1],
-		combat.mc[0], combat.mc[1], combat.mac[0], combat.mac[1], combat.sc[0], combat.sc[1],
-	]
+	_refresh_combat_stats(combat)
 	_refresh_elements(combat)
 	for child in $EquipmentSlots.get_children():
 		child.free()
@@ -105,6 +102,29 @@ func _refresh() -> void:
 	else:
 		_hide_item_tooltip()
 	$CharacterLayers.queue_redraw()
+
+
+func _refresh_combat_stats(combat: Dictionary) -> void:
+	$CombatStats.text = ""
+	for child in $CombatStats.get_children():
+		child.free()
+	var entries := [
+		[Vector2(0, 0), "攻击 %d - %d" % [combat.dc[0], combat.dc[1]]],
+		[Vector2(109, 0), "防御 %d - %d" % [combat.ac[0], combat.ac[1]]],
+		[Vector2(0, 28), "魔法 %d - %d" % [combat.mc[0], combat.mc[1]]],
+		[Vector2(109, 28), "魔防 %d - %d" % [combat.mac[0], combat.mac[1]]],
+		[Vector2(212, 28), "道术 %d - %d" % [combat.sc[0], combat.sc[1]]],
+	]
+	for entry in entries:
+		var label := Label.new()
+		label.position = entry[0]
+		label.size = Vector2(100, 20)
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		label.add_theme_font_override("font", COMBAT_FONT)
+		label.add_theme_font_size_override("font_size", 15)
+		label.add_theme_color_override("font_color", Color.WHITE)
+		label.text = entry[1]
+		$CombatStats.add_child(label)
 
 
 func _add_wear_hover_overlay(icon: TextureButton, location: int) -> void:
