@@ -313,9 +313,15 @@ func _ready() -> void:
 	if not main.get("_pending_chat_group").is_empty():
 		_fail("group-name cancellation left stale context")
 		return
+	var blink_started_ms := Time.get_ticks_msec()
 	main.call("_apply_chat_messages", [_message(1003, 120, friend.cpid, GameState.self_chat_cpid(), "闪烁测试")])
-	if not main.get_node("ControlPanel").get("_button_blinks").has("Friend"):
+	var button_blinks: Dictionary = main.get_node("ControlPanel").get("_button_blinks")
+	if not button_blinks.has("Friend"):
 		_fail("incoming friend message did not start HUD blink")
+		return
+	var blink_duration_ms := int(button_blinks["Friend"]) - blink_started_ms
+	if blink_duration_ms < 4900 or blink_duration_ms > 5100:
+		_fail("incoming friend message blink did not use the original 5000ms duration: %d" % blink_duration_ms)
 		return
 	main.hide()
 	await get_tree().process_frame

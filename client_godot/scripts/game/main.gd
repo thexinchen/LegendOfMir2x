@@ -2554,7 +2554,7 @@ func _apply_chat_messages(messages: Array) -> void:
 	for message in messages:
 		game_state.add_chat_message(message)
 		_query_chat_reference(message)
-	control_panel.call("start_button_blink", "Friend")
+	control_panel.call("start_button_blink", "Friend", 5000)
 
 
 func _query_chat_reference(message: Dictionary) -> void:
