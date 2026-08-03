@@ -21,6 +21,7 @@ func _ready() -> void:
 	var renderer: Control = WorldRendererScript.new()
 	renderer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	renderer.game_state = GameState
+	renderer.draw_hp_bar = true
 	if not renderer.load_map(24):
 		_fail("unable to load visual map")
 		return

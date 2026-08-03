@@ -1553,9 +1553,17 @@ func _test_health_feedback(main: Control, resources: RefCounted) -> bool:
 
 
 func _test_actor_status_overlay(renderer: Control, resources: RefCounted) -> bool:
-	if not renderer.has_method("_actor_status_layout") or not renderer.has_method("_should_draw_monster_name"):
+	if not renderer.has_method("_actor_status_layout") or not renderer.has_method("_should_draw_actor_status") or not renderer.has_method("_should_draw_monster_name"):
 		_fail("actor status overlay helpers unavailable")
 		return false
+	if renderer.get("draw_hp_bar") != false or renderer.call("_should_draw_actor_status", 2):
+		_fail("actor status overlay ignored the original default-off --draw-hp-bar option")
+		return false
+	renderer.set("draw_hp_bar", true)
+	if not renderer.call("_should_draw_actor_status", 2) or renderer.call("_should_draw_actor_status", 13):
+		_fail("actor status overlay opt-in or dead-motion policy mismatch")
+		return false
+	renderer.set("draw_hp_bar", false)
 	if resources.monster_name(224).is_empty():
 		_fail("monster name metadata unavailable")
 		return false

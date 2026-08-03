@@ -71,6 +71,7 @@ const FOCUS_COLORS := [
 ]
 
 var game_state: Node = null
+var draw_hp_bar := OS.get_cmdline_args().has("--draw-hp-bar") or OS.get_cmdline_user_args().has("--draw-hp-bar")
 
 # Map data
 var map_width: int = 0
@@ -1467,7 +1468,7 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id, game_state.player_uid, game_state.player_y, game_state.player_action_step):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
-	if game_state.player_action_type != DEAD_ACTION:
+	if _should_draw_actor_status(game_state.player_action_type):
 		_draw_actor_status(px, py, game_state.player_hp, game_state.player_hp_max, game_state.buff_list)
 	_draw_team_leader_marker(game_state.player_uid, px, py)
 	_draw_player_say(game_state.player_uid, px, py)
@@ -1526,9 +1527,11 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 				motion_magic_id = actor_resource.monster_attack_motion_magic_id(c.get("monster_id", 0))
 			var motion_frame_count: int = _monster_render_sequence(c).count
 			_draw_monster_attack_motion_effect(motion_magic_id, c.get("direction", 5), c.get("action_started_ms", 0), c.get("action_speed", 100), motion_frame_count, cx, cy)
-	if c_type in [1, 2] and c.get("action_type", 2) != DEAD_ACTION:
-		_draw_actor_status(cx, cy, c.get("hp", 0), c.get("hp_max", 0), c.get("buffs", []))
-		if c_type == 1 and _should_draw_monster_name(uid):
+	if c_type in [1, 2]:
+		var action_type: int = c.get("action_type", 2)
+		if _should_draw_actor_status(action_type):
+			_draw_actor_status(cx, cy, c.get("hp", 0), c.get("hp_max", 0), c.get("buffs", []))
+		if c_type == 1 and action_type != DEAD_ACTION and _should_draw_monster_name(uid):
 			_draw_monster_name(_monster_display_name(c), cx, cy)
 	
 	if c_type == 2:
@@ -1572,6 +1575,10 @@ func _actor_status_layout(start_x: int, start_y: int, hp: int, hp_max: int, buff
 		"fill_texture": fill_texture,
 		"icons": icons,
 	}
+
+
+func _should_draw_actor_status(action_type: int) -> bool:
+	return draw_hp_bar and action_type != DEAD_ACTION
 
 
 func _draw_actor_status(start_x: int, start_y: int, hp: int, hp_max: int, buffs: Array) -> void:
