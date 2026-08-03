@@ -115,7 +115,7 @@ func _ready() -> void:
 	var level_label := panel.get_node("%Level") as Label
 	var ac_value := panel.get_node("%ACValue") as Label
 	var dc_value := panel.get_node("%DCValue") as Label
-	if level_label.get_theme_font("font").resource_path != "res://assets/font/00_SIMSUN.ttf" or level_label.get_theme_font_size("font_size") != 12:
+	if level_label.get_theme_font("font").resource_path != "res://assets/font/00_SIMSUN.ttf" or level_label.get_theme_font_size("font_size") != 11:
 		_fail("level font mismatch: %s size=%s" % [level_label.get_theme_font("font").resource_path, level_label.get_theme_font_size("font_size")])
 		return
 	if ac_value.get_theme_font("font").resource_path != "res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf" or dc_value.get_theme_font("font").resource_path != "res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf":
@@ -124,7 +124,7 @@ func _ready() -> void:
 	if ac_value.get_theme_font_size("font_size") != 15 or dc_value.get_theme_font_size("font_size") != 15:
 		_fail("AC/DC font size mismatch")
 		return
-	if level_label.position != Vector2(395, 17) or level_label.size != Vector2(21, 21) or ac_value.position != Vector2(667, 121) or dc_value.position != Vector2(751, 121):
+	if level_label.position != Vector2(395, 19) or level_label.size != Vector2(21, 12) or ac_value.position != Vector2(667, 121) or dc_value.position != Vector2(751, 121):
 		_fail("persistent HUD text geometry mismatch")
 		return
 	var arc_current := panel.get_node("%ArcCurrent") as TextureRect
