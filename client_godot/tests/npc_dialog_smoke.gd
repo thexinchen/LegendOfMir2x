@@ -11,6 +11,43 @@ func _ready() -> void:
 	if not dialog.get_theme_font("normal_font").resource_path.ends_with("/0B_WenQuanYi_Bitmap_Song_15_px.ttf") or dialog.get_theme_font_size("normal_font_size") != 15:
 		_fail("NPC dialog did not use original font-11/15px default: font=%s size=%d" % [dialog.get_theme_font("normal_font").resource_path, dialog.get_theme_font_size("normal_font_size")])
 		return
+	var expected_font_paths := [
+		"res://assets/font/00_SIMSUN.ttf",
+		"res://assets/font/01_Yahei.ttf",
+		"res://assets/font/02_CALIBRI.ttf",
+		"res://assets/font/03_MONOWIDE.ttf",
+		"res://assets/font/04_YaHei_Consolas_Hybrid.ttf",
+		"res://assets/font/05_NSIMSUN.ttf",
+		"res://assets/font/06_YaHei_Monaco_Hybrid.ttf",
+		"res://assets/font/07_fusion-pixel-12px-monospaced-zh_hans.ttf",
+		"res://assets/font/08_fusion-pixel-12px-proportional-zh_hans.ttf",
+		"res://assets/font/09_WenQuanYi_Bitmap_Song_15_px.ttf",
+		"res://assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf",
+		"res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf",
+		"res://assets/font/0C_WenQuanYi_Bitmap_Song_18_px.ttf",
+		"res://assets/font/0D_WenQuanYi_Bitmap_Song_18_px.ttf",
+	]
+	if not panel.has_method("_paragraph_font_path"):
+		_fail("NPC paragraph font mapping is missing")
+		return
+	for font_id in expected_font_paths.size():
+		var font_path: Variant = panel.call("_paragraph_font_path", str(font_id))
+		if font_path != expected_font_paths[font_id] or not ResourceLoader.exists(str(font_path)):
+			_fail("NPC font ID %d unavailable: path=%s expected=%s" % [font_id, font_path, expected_font_paths[font_id]])
+			return
+	if panel.call("_paragraph_font_path", "MONOWIDE") != expected_font_paths[3] \
+			or panel.call("_paragraph_font_path", "WenQuanYi_Bitmap_Song_15_px") != expected_font_paths[9] \
+			or panel.call("_paragraph_font_path", "WenQuanYi_Bitmap_Song_18_px") != expected_font_paths[12] \
+			or panel.call("_paragraph_font_path", "unifont_17_0_04") != expected_font_paths[11] \
+			or panel.call("_paragraph_font_path", "missing-font") != expected_font_paths[0]:
+		_fail("NPC named font mapping did not match the original font database order")
+		return
+	var font_xml := "<layout><par font=\"MONOWIDE\">段落<t font=\"1\">内联</t><t font=\"255\">继承</t><event id=\"font-event\" font=\"0\">事件</event></par></layout>"
+	var font_bbcode: String = panel.call("_build_bbcode", font_xml)
+	if not font_bbcode.contains("[font=%s]段落[font=%s]内联[/font]继承[font=%s][color=#ffff00][url=" % [expected_font_paths[3], expected_font_paths[1], expected_font_paths[0]]) \
+			or not font_bbcode.contains("事件[/url][/color][/font][/font]"):
+		_fail("NPC paragraph/inline font tags or fallback missing: %s" % font_bbcode)
+		return
 	var xml := "<layout><par>你好<t color=\"red\">勇士</t></par><par><event id=\"buy\" args=\"{'id':1}\" close=\"1\">购买</event></par></layout>"
 	var bbcode: String = panel.call("_build_bbcode", xml)
 	if not bbcode.contains("你好") or not bbcode.contains("[color=red]勇士[/color]"):
@@ -69,7 +106,9 @@ func _ready() -> void:
 		_fail("wrap=false event was not moved to an intact next line: %s" % nowrap_bbcode)
 		return
 	var display_xml := xml
-	if OS.has_environment("MIR2X_NPC_BGCOLOR_SCREENSHOT"):
+	if OS.has_environment("MIR2X_NPC_FONT_SCREENSHOT"):
+		display_xml = "<layout><par font=\"MONOWIDE\">MONOWIDE 123</par><par font=\"SIMSUN\">宋体位置合理</par><par font=\"7\" size=\"12\">12px像素字体</par><par font=\"12\" size=\"18\">18px文泉驿字体</par><par font=\"3\">父字体<t font=\"1\" color=\"yellow\">雅黑内联</t>恢复父字体</par><par><event id=\"close\" font=\"0\" close=\"1\">关闭</event></par></layout>"
+	elif OS.has_environment("MIR2X_NPC_BGCOLOR_SCREENSHOT"):
 		display_xml = "<layout><par bgcolor=\"rgb(0x00, 0x80, 0x00)\">原版段落背景色</par><par color=\"yellow\">黄色段落<t bgcolor=\"#0000ff\">蓝底继承黄字</t></par><par><event id=\"close\" close=\"1\">关闭</event></par></layout>"
 	elif OS.has_environment("MIR2X_NPC_NOWRAP_SCREENSHOT"):
 		display_xml = "<layout><par>Monster list:</par><par><event id=\"a\" wrap=\"false\">\u7532\u4e59\u4e19\u4e01\uff0c</event><event id=\"b\" wrap=\"false\">\u620a\u5df1\u5e9a\u8f9b\uff0c</event><event id=\"c\" wrap=\"false\">\u58ec\u7678\u5b50\u4e11\uff0c</event><event id=\"d\" wrap=\"false\">\u5bc5\u536f\u8fb0\u5df3\uff0c</event></par></layout>"

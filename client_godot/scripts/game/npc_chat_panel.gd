@@ -4,6 +4,36 @@ const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const EmojiResourceScript = preload("res://scripts/game/emoji_resource.gd")
 const MIN_BOARD_WIDTH := 300.0
 const MARGIN := 35.0
+const FONT_PATHS := [
+	"res://assets/font/00_SIMSUN.ttf",
+	"res://assets/font/01_Yahei.ttf",
+	"res://assets/font/02_CALIBRI.ttf",
+	"res://assets/font/03_MONOWIDE.ttf",
+	"res://assets/font/04_YaHei_Consolas_Hybrid.ttf",
+	"res://assets/font/05_NSIMSUN.ttf",
+	"res://assets/font/06_YaHei_Monaco_Hybrid.ttf",
+	"res://assets/font/07_fusion-pixel-12px-monospaced-zh_hans.ttf",
+	"res://assets/font/08_fusion-pixel-12px-proportional-zh_hans.ttf",
+	"res://assets/font/09_WenQuanYi_Bitmap_Song_15_px.ttf",
+	"res://assets/font/0A_WenQuanYi_Bitmap_Song_15_px.ttf",
+	"res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf",
+	"res://assets/font/0C_WenQuanYi_Bitmap_Song_18_px.ttf",
+	"res://assets/font/0D_WenQuanYi_Bitmap_Song_18_px.ttf",
+]
+const FONT_NAME_IDS := {
+	"SIMSUN": 0,
+	"Yahei": 1,
+	"CALIBRI": 2,
+	"MONOWIDE": 3,
+	"YaHei_Consolas_Hybrid": 4,
+	"NSIMSUN": 5,
+	"YaHei_Monaco_Hybrid": 6,
+	"fusion-pixel-12px-monospaced-zh_hans": 7,
+	"fusion-pixel-12px-proportional-zh_hans": 8,
+	"WenQuanYi_Bitmap_Song_15_px": 9,
+	"unifont_17_0_04": 11,
+	"WenQuanYi_Bitmap_Song_18_px": 12,
+}
 
 var _state: Node
 var _resources: RefCounted = ActorResourceScript.new()
@@ -81,6 +111,10 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					elif align == "distributed":
 						result += "[fill]"
 						par_tags.append("fill")
+					var par_font := _xml_attribute(parser, "font", "")
+					if not par_font.is_empty():
+						result += "[font=%s]" % _paragraph_font_path(par_font)
+						par_tags.append("font")
 					var font_size := int(_xml_attribute(parser, "size", "15"))
 					if font_size != 15:
 						result += "[font_size=%d]" % max(1, font_size)
@@ -107,12 +141,21 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					}
 					var meta := JSON.stringify(event)
 					var event_color := "#ff00ff" if meta == pressed_meta else ("#00ff00" if meta == hover_meta else "#ffff00")
+					var event_tag := "event" if wrap_enabled else "event-nowrap"
+					var event_font := _inline_font_path(_xml_attribute(parser, "font", ""))
+					if not event_font.is_empty():
+						result += "[font=%s]" % event_font
+						event_tag += ":font"
 					result += "[color=%s][url=%s]" % [event_color, meta]
-					tag_stack.append("event" if wrap_enabled else "event-nowrap")
+					tag_stack.append(event_tag)
 					if not wrap_enabled:
 						no_wrap_depth += 1
 				elif name == "t":
 					var text_tags: Array[String] = []
+					var text_font := _inline_font_path(_xml_attribute(parser, "font", ""))
+					if not text_font.is_empty():
+						result += "[font=%s]" % text_font
+						text_tags.append("font")
 					var text_color := _xml_attribute(parser, "color", "")
 					if not text_color.is_empty():
 						result += "[color=%s]" % _bbcode_color(text_color)
@@ -133,26 +176,26 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					tag_stack.append(name)
 				if parser.is_empty():
 					var empty_tag: String = tag_stack.pop_back()
-					if empty_tag == "event-nowrap":
+					if empty_tag.begins_with("event-nowrap"):
 						var empty_placement: Array = _place_atomic_text(result, atomic_result_start, atomic_text, current_line_width, line_width)
 						current_line_width = empty_placement[0]
 						result = empty_placement[1]
 						atomic_result_start = -1
 						atomic_text = ""
 					result = _close_tag(result, empty_tag)
-					if empty_tag == "event-nowrap":
+					if empty_tag.begins_with("event-nowrap"):
 						no_wrap_depth -= 1
 			XMLParser.NODE_ELEMENT_END:
 				if not tag_stack.is_empty():
 					var closed_tag: String = tag_stack.pop_back()
-					if closed_tag == "event-nowrap":
+					if closed_tag.begins_with("event-nowrap"):
 						var placement: Array = _place_atomic_text(result, atomic_result_start, atomic_text, current_line_width, line_width)
 						current_line_width = placement[0]
 						result = placement[1]
 						atomic_result_start = -1
 						atomic_text = ""
 					result = _close_tag(result, closed_tag)
-					if closed_tag == "event-nowrap":
+					if closed_tag.begins_with("event-nowrap"):
 						no_wrap_depth -= 1
 			XMLParser.NODE_TEXT:
 				var text := parser.get_node_data()
@@ -180,6 +223,8 @@ func _close_tag(result: String, name: String) -> String:
 				result += "\n"
 		"event", "event-nowrap":
 			result += "[/url][/color]"
+		"event:font", "event-nowrap:font":
+			result += "[/url][/color][/font]"
 	return result
 
 
@@ -225,6 +270,25 @@ func _xml_optional_attribute(parser: XMLParser, name: String) -> Variant:
 		if parser.get_attribute_name(index) == name:
 			return parser.get_attribute_value(index)
 	return null
+
+
+func _paragraph_font_path(value: String) -> String:
+	var font_id := _font_id(value, true)
+	return FONT_PATHS[font_id if font_id >= 0 else 0]
+
+
+func _inline_font_path(value: String) -> String:
+	var font_id := _font_id(value, false)
+	return FONT_PATHS[font_id] if font_id >= 0 else ""
+
+
+func _font_id(value: String, allow_name: bool) -> int:
+	if value.is_valid_int():
+		var font_id := int(value)
+		return font_id if font_id >= 0 and font_id < FONT_PATHS.size() else -1
+	if allow_name:
+		return int(FONT_NAME_IDS.get(value, 0))
+	return -1
 
 
 func _bbcode_color(value: String) -> String:
