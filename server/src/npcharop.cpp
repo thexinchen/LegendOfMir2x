@@ -32,9 +32,20 @@ corof::awaitable<> NPChar::on_AM_NPCEVENT(const ActorMsgPack &mpk)
     fflassert(mpk.from());
     auto sdNPCE = mpk.deserialize<SDNPCEvent>();
 
-    if(!sdNPCE.event.empty() && sdNPCE.event != SYS_ENTER){
+    const auto plainEventList = m_plainEventList.find(mpk.from());
+    const bool plainEventAllowed = true
+        && plainEventList != m_plainEventList.end()
+        && plainEventList->second.contains(sdNPCE.event);
+
+    if(sdNPCE.event == SYS_ENTER){
+        m_plainEventList.erase(mpk.from());
+    }
+    else if(!sdNPCE.event.empty() && !plainEventAllowed){
         sdNPCE.event = AESHelper(this, mpk.from()).decode(sdNPCE.event.c_str());
         // m_xmlLayoutSeqIDList.erase(mpk.from());
+    }
+    if(plainEventAllowed && sdNPCE.path.empty()){
+        sdNPCE.path = SYS_EPDEF;
     }
 
     // when CO initially sends a message to NPC, we assume its UID is the callStackUID
@@ -43,6 +54,7 @@ corof::awaitable<> NPChar::on_AM_NPCEVENT(const ActorMsgPack &mpk)
     if(false
             || sdNPCE.event == SYS_EXIT
             || sdNPCE.event == SYS_NPCERROR){
+        m_plainEventList.erase(mpk.from());
         m_luaRunner->close(mpk.from());
         return {};
     }
@@ -51,6 +63,7 @@ corof::awaitable<> NPChar::on_AM_NPCEVENT(const ActorMsgPack &mpk)
     // script event defines like text button pressed etc
 
     if(sdNPCE.mapUID != mapUID() || mathf::LDistance2(sdNPCE.x, sdNPCE.y, X(), Y()) >= SYS_MAXNPCDISTANCE * SYS_MAXNPCDISTANCE){
+        m_plainEventList.erase(mpk.from());
         AMNPCError amNPCE;
         std::memset(&amNPCE, 0, sizeof(amNPCE));
 

@@ -55,6 +55,7 @@ class NPChar final: public CharObject
         // because it's possible to received event while no lua thread is running
         uint64_t m_xmlLayoutSeqID = 1;
         std::unordered_map<uint64_t, uint64_t> m_xmlLayoutSeqIDList;
+        std::unordered_map<uint64_t, std::set<std::string>> m_plainEventList;
 
     public:
         NPChar(const SDInitNPChar &initNPChar);

@@ -258,9 +258,9 @@ func _on_item_input(event: InputEvent, key: String) -> void:
 		_consume_or_equip(key)
 	elif event.button_index == MOUSE_BUTTON_LEFT:
 		if int(_state.inventory_operation.get("invOp", OP_NONE)) != OP_NONE:
-			_select_operation_item(key)
+			call_deferred("_select_operation_item", key)
 		else:
-			_grab_item(key)
+			call_deferred("_grab_item", key)
 
 
 func _on_grid_input(event: InputEvent) -> void:

@@ -426,6 +426,11 @@ void NPChar::postStartInvOp(uint64_t uid, int invOp, std::string queryTag, std::
     fflassert(invOp >= INVOP_BEGIN);
     fflassert(invOp <  INVOP_END);
 
+    auto &plainEventList = m_plainEventList[uid];
+    plainEventList.clear();
+    plainEventList.insert(queryTag);
+    plainEventList.insert(commitTag);
+
     forwardNetPackage(uid, SM_STARTINVOP, cerealf::serialize(SDStartInvOp
     {
         .invOp = invOp,
@@ -438,6 +443,10 @@ void NPChar::postStartInvOp(uint64_t uid, int invOp, std::string queryTag, std::
 
 void NPChar::postStartInput(uint64_t uid, std::string title, std::string commitTag, bool show)
 {
+    auto &plainEventList = m_plainEventList[uid];
+    plainEventList.clear();
+    plainEventList.insert(commitTag);
+
     forwardNetPackage(uid, SM_STARTINPUT, cerealf::serialize(SDStartInput
     {
         .uid = UID(),

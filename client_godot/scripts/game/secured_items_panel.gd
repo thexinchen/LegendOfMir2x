@@ -67,7 +67,7 @@ func _refresh() -> void:
 				cell.add_child(image)
 			cell.mouse_entered.connect(_show_item_tooltip.bind(index, item))
 			cell.mouse_exited.connect(_hide_item_tooltip)
-			cell.pressed.connect(_select_index.bind(index))
+			cell.pressed.connect(_defer_select_index.bind(index))
 			cell.gui_input.connect(_on_cell_input)
 			if _resources.item_is_packable(item_id) and int(item.get("count", 0)) > 0:
 				var count := Label.new()
@@ -118,6 +118,10 @@ func _hide_item_tooltip() -> void:
 func _select_index(index: int) -> void:
 	_selected_index = index
 	_refresh()
+
+
+func _defer_select_index(index: int) -> void:
+	call_deferred("_select_index", index)
 
 
 func _on_cell_input(event: InputEvent) -> void:
