@@ -19,6 +19,14 @@ func _ready() -> void:
 	if not bbcode.contains("[url=") or not bbcode.contains("购买[/url]") or not bbcode.contains("\"close\":true"):
 		_fail("click event missing: %s" % bbcode)
 		return
+	var background_xml := "<layout><par bgcolor=\"rgb(0x00, 0x80, 0x00)\">段落<t bgcolor=\"#0000ff\">内联</t></par></layout>"
+	var background_bbcode: String = panel.call("_build_bbcode", background_xml)
+	if not background_bbcode.contains("[bgcolor=#008000]段落[bgcolor=#0000ff]内联[/bgcolor][/bgcolor]"):
+		_fail("NPC text background color missing: %s" % background_bbcode)
+		return
+	if dialog.get_theme_constant("text_highlight_h_padding") != 0 or dialog.get_theme_constant("text_highlight_v_padding") != 0:
+		_fail("NPC text background padding exceeded the original token box: h=%d v=%d" % [dialog.get_theme_constant("text_highlight_h_padding"), dialog.get_theme_constant("text_highlight_v_padding")])
+		return
 	var no_args_bbcode: String = panel.call("_build_bbcode", "<layout><par><event id=\"hello\">问候</event></par></layout>")
 	if not no_args_bbcode.contains("\"args\":null"):
 		_fail("missing NPC event args did not preserve the original null value: %s" % no_args_bbcode)
@@ -61,7 +69,9 @@ func _ready() -> void:
 		_fail("wrap=false event was not moved to an intact next line: %s" % nowrap_bbcode)
 		return
 	var display_xml := xml
-	if OS.has_environment("MIR2X_NPC_NOWRAP_SCREENSHOT"):
+	if OS.has_environment("MIR2X_NPC_BGCOLOR_SCREENSHOT"):
+		display_xml = "<layout><par bgcolor=\"rgb(0x00, 0x80, 0x00)\">原版段落背景色</par><par color=\"yellow\">黄色段落<t bgcolor=\"#0000ff\">蓝底继承黄字</t></par><par><event id=\"close\" close=\"1\">关闭</event></par></layout>"
+	elif OS.has_environment("MIR2X_NPC_NOWRAP_SCREENSHOT"):
 		display_xml = "<layout><par>Monster list:</par><par><event id=\"a\" wrap=\"false\">\u7532\u4e59\u4e19\u4e01\uff0c</event><event id=\"b\" wrap=\"false\">\u620a\u5df1\u5e9a\u8f9b\uff0c</event><event id=\"c\" wrap=\"false\">\u58ec\u7678\u5b50\u4e11\uff0c</event><event id=\"d\" wrap=\"false\">\u5bc5\u536f\u8fb0\u5df3\uff0c</event></par></layout>"
 	elif OS.has_environment("MIR2X_NPC_EMOJI_SCREENSHOT"):
 		display_xml = "<layout><par>Original emoji:</par><par><emoji id=\"0\"/> <emoji id=\"1\"/> <emoji id=\"2\"/> <emoji id=\"3\"/> <emoji id=\"4\"/> <emoji id=\"5\"/> <emoji id=\"6\"/> <emoji id=\"7\"/> <emoji id=\"8\"/> <emoji id=\"9\"/></par></layout>"

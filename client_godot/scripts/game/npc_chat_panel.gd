@@ -89,6 +89,10 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					if not par_color.is_empty():
 						result += "[color=%s]" % _bbcode_color(par_color)
 						par_tags.append("color")
+					var par_bgcolor := _xml_attribute(parser, "bgcolor", "")
+					if not par_bgcolor.is_empty():
+						result += "[bgcolor=%s]" % _bbcode_color(par_bgcolor)
+						par_tags.append("bgcolor")
 					tag_stack.append("par:%s" % ",".join(par_tags))
 				elif name == "event":
 					var wrap_enabled := _parse_bool(_xml_attribute(parser, "wrap", "true"))
@@ -108,8 +112,16 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 					if not wrap_enabled:
 						no_wrap_depth += 1
 				elif name == "t":
-					result += "[color=%s]" % _bbcode_color(_xml_attribute(parser, "color", "white"))
-					tag_stack.append("t")
+					var text_tags: Array[String] = []
+					var text_color := _xml_attribute(parser, "color", "")
+					if not text_color.is_empty():
+						result += "[color=%s]" % _bbcode_color(text_color)
+						text_tags.append("color")
+					var text_bgcolor := _xml_attribute(parser, "bgcolor", "")
+					if not text_bgcolor.is_empty():
+						result += "[bgcolor=%s]" % _bbcode_color(text_bgcolor)
+						text_tags.append("bgcolor")
+					tag_stack.append("t:%s" % ",".join(text_tags))
 				elif name == "emoji":
 					var emoji_id := int(_xml_attribute(parser, "id", "0"))
 					result += "[[MIR2X_EMOJI:%d]]" % emoji_id
@@ -153,12 +165,13 @@ func _build_bbcode(xml: String, hover_meta: String = "", pressed_meta: String = 
 
 
 func _close_tag(result: String, name: String) -> String:
-	if name.begins_with("par:"):
-		var tags := name.trim_prefix("par:").split(",", false)
+	if name.begins_with("par:") or name.begins_with("t:"):
+		var is_paragraph := name.begins_with("par:")
+		var tags := name.substr(name.find(":") + 1).split(",", false)
 		tags.reverse()
 		for tag in tags:
 			result += "[/%s]" % tag
-		if not result.ends_with("\n"):
+		if is_paragraph and not result.ends_with("\n"):
 			result += "\n"
 		return result
 	match name:
@@ -167,8 +180,6 @@ func _close_tag(result: String, name: String) -> String:
 				result += "\n"
 		"event", "event-nowrap":
 			result += "[/url][/color]"
-		"t":
-			result += "[/color]"
 	return result
 
 
