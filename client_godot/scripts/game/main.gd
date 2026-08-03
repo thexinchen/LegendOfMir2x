@@ -309,7 +309,7 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 		_follow_focus_uid = 0
 		if focus_uid != 0:
 			_follow_focus_uid = focus_uid
-		else:
+		elif grid != Vector2i(game_state.player_x, game_state.player_y):
 			_start_move_to(grid)
 	elif event.button_index == MOUSE_BUTTON_LEFT:
 		if focus_uid != 0:

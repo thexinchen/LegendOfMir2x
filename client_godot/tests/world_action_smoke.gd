@@ -3419,6 +3419,14 @@ func _test_mining(main: Control, resources: RefCounted) -> bool:
 	if GameState.player_action_type != 14 or float(main.get("_player_action_timer")) < 0.89:
 		_fail("mine action did not repeat after attack-mode timing")
 		return false
+	var same_grid_click := InputEventMouseButton.new()
+	same_grid_click.button_index = MOUSE_BUTTON_RIGHT
+	same_grid_click.position = Vector2(GameState.player_x * 48 + 1, GameState.player_y * 32 + 1)
+	same_grid_click.pressed = true
+	main.call("_handle_mouse_click", same_grid_click)
+	if main.get("_mine_target") != mine_grid:
+		_fail("right-clicking the current motion endpoint cancelled the original no-op mining action")
+		return false
 	main.call("_cancel_movement")
 	if main.get("_mine_target") != Vector2i(-1, -1):
 		_fail("new operation did not cancel mining")
