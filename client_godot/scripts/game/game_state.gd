@@ -751,6 +751,8 @@ func scroll_camera() -> void:
 			view_x += sign(dx) * min(abs(dx), 3.0)
 		if not is_zero_approx(dy):
 			view_y += sign(dy) * min(abs(dy), 2.0)
+		view_x = maxf(0.0, view_x)
+		view_y = maxf(0.0, view_y)
 	if is_equal_approx(view_x, target_x) and is_equal_approx(view_y, target_y) and player_action_type not in [3, 5]:
 		_camera_scrolling = false
 

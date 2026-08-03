@@ -360,7 +360,16 @@ func _test_camera_centering(main: Control) -> bool:
 	if not is_equal_approx(GameState.view_x, scrolling_view_x + 3.0):
 		_fail("camera did not keep converging after scrolling started")
 		return false
+	GameState.player_x = 0
+	GameState.player_y = 0
+	GameState.view_x = 1.0
+	GameState.view_y = 1.0
+	GameState.scroll_camera()
+	if not is_zero_approx(GameState.view_x) or not is_zero_approx(GameState.view_y):
+		_fail("camera scrolling crossed the original zero lower bound: %s,%s" % [GameState.view_x, GameState.view_y])
+		return false
 	GameState.player_x = 371
+	GameState.player_y = 132
 	GameState.center_camera_on_player()
 	var control_panel: Control = main.get_node("ControlPanel")
 	control_panel.call("_on_minimize_pressed")
