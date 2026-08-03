@@ -16,6 +16,7 @@ const GROUND_ITEM_NAME_FONT: Font = preload("res://assets/font/0B_WenQuanYi_Bitm
 const TEAM_LEADER_FONT: Font = preload("res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf")
 const PLAYER_SAY_FONT: Font = preload("res://assets/font/0B_WenQuanYi_Bitmap_Song_15_px.ttf")
 const ANIMATION_DELAYS := [150, 200, 250, 300, 350, 400, 420, 450]
+const MAP_ANIMATION_FILE_INDICES := [11, 26, 41, 56, 71]
 const MAGIC_STAGE_SPELL := 1
 const MAGIC_STAGE_RUN := 2
 const MAGIC_STAGE_EXPLODE := 3
@@ -353,7 +354,7 @@ func _draw_object_row(depth: int, y: int, x0: int, x1: int, view_x: int, view_y:
 			var texture_id: int = object_data[0]
 			var flags: int = object_data[1]
 			var frame_count: int = object_data[3]
-			if flags & 1 and frame_count > 0:
+			if (flags & 1) != 0 and frame_count > 0 and (texture_id >> 16) in MAP_ANIMATION_FILE_INDICES:
 				var tick_type: int = clampi(object_data[2], 0, ANIMATION_DELAYS.size() - 1)
 				texture_id += floori(float(Time.get_ticks_msec()) / ANIMATION_DELAYS[tick_type]) % frame_count
 			var texture: Texture2D = world_resource.texture(texture_id)

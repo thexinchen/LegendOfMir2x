@@ -2,6 +2,16 @@ extends Node
 
 const WorldResourceScript = preload("res://scripts/game/world_resource.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
+const WorldRendererScript = preload("res://scripts/game/world_renderer.gd")
+
+
+class MapTextureProbe extends RefCounted:
+	var objects: Array[Dictionary] = [{}, {}, {}, {}]
+	var requested_texture_id := -1
+
+	func texture(texture_id: int) -> Texture2D:
+		requested_texture_id = texture_id
+		return null
 
 
 func _ready() -> void:
@@ -20,6 +30,8 @@ func _ready() -> void:
 		return
 	if world.bgm_id != 0x00010002:
 		_fail("unexpected BGM ID: %08X" % world.bgm_id)
+		return
+	if not await _test_map_object_animation_gate():
 		return
 	var first_texture_id: int = world.tiles.values()[0]
 	if world.texture(first_texture_id) == null:
@@ -205,6 +217,45 @@ func _ready() -> void:
 		return
 	print("WORLD RESOURCE PASS: map=%d size=%dx%d tiles=%d actor_frames=%d magic_seff=%d magic_target_offsets=%d fade_monster=%d persistent_corpse=%d special_spawn=%d transform=%d death_magic=%d transform_effect=%d weapon_sound=%d mine_weapon=%d durable=%d described=%d buffs=%d" % [world.map_id, world.width, world.height, world.tiles.size(), actors.offsets.size(), magic_seff_count, magic_target_offset_count, fade_monster_count, persistent_corpse_count, special_spawn_count, transform_count, death_magic_count, transform_effect_magic_count, weapon_sound_count, mine_weapon_count, durable_item_count, described_item_count, actors.buff_names.size()])
 	get_tree().quit()
+
+
+func _test_map_object_animation_gate() -> bool:
+	var affected_world: RefCounted = WorldResourceScript.new()
+	if not affected_world.load_map(95):
+		_fail("unable to load affected map 95: %s" % affected_world.last_error)
+		return false
+	var key: int = 22 + 12 * int(affected_world.width)
+	var affected_record := PackedInt32Array()
+	for record_value in affected_world.objects[1].get(key, []):
+		var record: PackedInt32Array = record_value
+		if record[0] == 0x000C34AF and (record[1] & 1) != 0 and record[3] == 8:
+			affected_record = record
+			break
+	if affected_record.is_empty() or affected_world.texture(0x000C34B0) != null:
+		_fail("affected outside-whitelist map object fixture is unavailable")
+		return false
+	while floori(float(Time.get_ticks_msec()) / 200.0) % 8 in [0, 7]:
+		await get_tree().process_frame
+	var expected_frame := floori(float(Time.get_ticks_msec()) / 200.0) % 8
+	var renderer: Control = WorldRendererScript.new()
+	var probe := MapTextureProbe.new()
+	probe.objects[1][0] = [affected_record]
+	renderer.world_resource = probe
+	renderer.map_width = 1
+	renderer.call("_draw_object_row", 1, 0, 0, 0, 0, 0)
+	if probe.requested_texture_id != affected_record[0]:
+		renderer.free()
+		_fail("outside-whitelist map object incorrectly animated to %08X" % probe.requested_texture_id)
+		return false
+	var whitelisted_record := PackedInt32Array([0x000B0100, 1, 1, 8])
+	probe.objects[1][0] = [whitelisted_record]
+	renderer.call("_draw_object_row", 1, 0, 0, 0, 0, 0)
+	var whitelisted_texture_id: int = probe.requested_texture_id
+	renderer.free()
+	if whitelisted_texture_id != whitelisted_record[0] + expected_frame:
+		_fail("whitelisted map object stopped animating: requested=%08X frame=%d" % [whitelisted_texture_id, expected_frame])
+		return false
+	return true
 
 
 func _fail(message: String) -> void:
