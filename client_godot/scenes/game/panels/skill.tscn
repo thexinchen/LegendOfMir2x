@@ -31,6 +31,7 @@ offset_right = 360.0
 offset_bottom = 448.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+allow_drag = false
 ui_click_button_paths = Array[NodePath]([NodePath("Tab0"), NodePath("Tab1"), NodePath("Tab2"), NodePath("Tab3"), NodePath("Tab4"), NodePath("Tab5"), NodePath("Tab6"), NodePath("Tab7"), NodePath("CloseButton")])
 
 [node name="Background" type="TextureRect" parent="."]

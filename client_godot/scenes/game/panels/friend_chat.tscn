@@ -34,6 +34,7 @@ offset_right = 451.0
 offset_bottom = 464.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+allow_drag = false
 ui_click_button_paths = Array[NodePath]([NodePath("Toolbar/Back"), NodePath("Toolbar/Search"), NodePath("Toolbar/CreateGroup"), NodePath("Toolbar/GroupConfirm"), NodePath("Toolbar/Invert"), NodePath("Toolbar/Friends"), NodePath("CloseButton")])
 
 [node name="OuterFrame" type="NinePatchRect" parent="."]

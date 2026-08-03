@@ -23,6 +23,7 @@ offset_right = 600.0
 offset_bottom = 480.0
 script = ExtResource("1")
 close_button_path = NodePath("CloseButton")
+allow_drag = false
 ui_click_button_paths = Array[NodePath]([NodePath("CloseButton")])
 overlay_button_paths = Array[NodePath]([NodePath("CloseButton")])
 

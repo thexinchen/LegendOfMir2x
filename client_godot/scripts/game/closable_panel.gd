@@ -1,6 +1,7 @@
 extends Control
 
 @export var close_button_path: NodePath
+@export var allow_drag := true
 @export var ui_click_button_paths: Array[NodePath] = []
 @export var overlay_button_paths: Array[NodePath] = []
 @export var silent_overlay_button_paths: Array[NodePath] = []
@@ -31,6 +32,8 @@ func _ready() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if not allow_drag:
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_dragging = event.pressed and event.position.y <= 42.0
 		accept_event()

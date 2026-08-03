@@ -144,6 +144,30 @@ func _ready() -> void:
 		if extra_panel == null or extra_panel.z_index != expected_extra_layers[scene_path]:
 			_fail("extra panel draw layer does not match C++ order: scene=%s actual=%s expected=%d" % [scene_path, extra_panel.z_index if extra_panel != null else -1, expected_extra_layers[scene_path]])
 			return
+	var fixed_panels := {
+		"skill": initial_skill_panel,
+		"runtime_config": layered_extra_panels["res://scenes/game/panels/runtime_config.tscn"] as Control,
+		"friend_chat": layered_extra_panels["res://scenes/game/panels/friend_chat.tscn"] as Control,
+	}
+	for panel_name: String in fixed_panels:
+		var fixed_panel := fixed_panels[panel_name] as Control
+		var original_position := fixed_panel.position
+		var drag_press := InputEventMouseButton.new()
+		drag_press.button_index = MOUSE_BUTTON_LEFT
+		drag_press.pressed = true
+		drag_press.position = Vector2(30, 20)
+		fixed_panel.call("_gui_input", drag_press)
+		var drag_motion := InputEventMouseMotion.new()
+		drag_motion.position = Vector2(50, 40)
+		drag_motion.relative = Vector2(20, 20)
+		fixed_panel.call("_gui_input", drag_motion)
+		var drag_release := InputEventMouseButton.new()
+		drag_release.button_index = MOUSE_BUTTON_LEFT
+		drag_release.position = Vector2(50, 40)
+		fixed_panel.call("_gui_input", drag_release)
+		if fixed_panel.position != original_position:
+			_fail("fixed C++ panel remained draggable: panel=%s actual=%s expected=%s" % [panel_name, fixed_panel.position, original_position])
+			return
 	if OS.has_environment("MIR2X_EXTRA_PANEL_SCREENSHOT"):
 		var visual_scene := OS.get_environment("MIR2X_EXTRA_PANEL_SCENE")
 		if not expected_extra_positions.has(visual_scene):
