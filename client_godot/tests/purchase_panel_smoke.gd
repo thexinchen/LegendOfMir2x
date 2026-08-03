@@ -95,7 +95,7 @@ func _ready() -> void:
 		_fail("unique hover overlay diverged from original byte alpha 96: %s" % [hover_overlay.color if hover_overlay else Color.TRANSPARENT])
 		return
 	var page_label := _find_label_text(panel.get_node("Detail"), "第1/2页")
-	if page_label == null or page_label.position != Vector2(389, 16):
+	if page_label == null or page_label.position != Vector2(389, 18):
 		_fail("unique page label does not match the original compact text and position")
 		return
 	get_viewport().warp_mouse(Vector2(520, 100))
