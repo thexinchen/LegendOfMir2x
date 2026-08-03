@@ -4,6 +4,7 @@ const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const CombatCalculatorScript = preload("res://scripts/game/combat_calculator.gd")
 const ItemTooltipFormatterScript = preload("res://scripts/game/item_tooltip_formatter.gd")
 const ItemTooltipRendererScript = preload("res://scripts/game/item_tooltip_renderer.gd")
+const COMBAT_FONT: Font = preload("res://assets/font/09_WenQuanYi_Bitmap_Song_15_px.ttf")
 
 var _state: Node
 var _resources: RefCounted = ActorResourceScript.new()
@@ -29,6 +30,7 @@ func _ready() -> void:
 	_state = get_node("/root/GameState")
 	_resources.configure_default()
 	ItemTooltipRendererScript.configure($ItemTooltip, true, true)
+	$CombatStats.add_theme_font_override("font", COMBAT_FONT)
 	_state.state_changed.connect(_refresh)
 	_refresh()
 
@@ -189,6 +191,7 @@ func _refresh_elements(combat: Dictionary) -> void:
 		var title := Label.new()
 		title.position = Vector2(-8, row[1] - 4)
 		title.text = row[0]
+		title.add_theme_font_override("font", COMBAT_FONT)
 		title.add_theme_font_size_override("font_size", 15)
 		title.add_theme_color_override("font_color", Color(0.86, 0.8, 0.61))
 		$Elements.add_child(title)

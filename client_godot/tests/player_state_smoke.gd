@@ -101,6 +101,14 @@ func _ready() -> void:
 	if panel.get_node("StateValues").get_child_count() != 9 or "攻击" not in panel.get_node("CombatStats").text:
 		_fail("state rows or combat labels missing")
 		return
+	var combat_stats := panel.get_node("CombatStats") as Label
+	var element_titles: Array[Label] = []
+	for child in panel.get_node("Elements").get_children():
+		if child is Label and child.get_theme_font_size("font_size") == 15:
+			element_titles.append(child)
+	if not combat_stats.get_theme_font("font").resource_path.ends_with("/09_WenQuanYi_Bitmap_Song_15_px.ttf") or element_titles.size() != 3 or element_titles.any(func(label: Label) -> bool: return not label.get_theme_font("font").resource_path.ends_with("/09_WenQuanYi_Bitmap_Song_15_px.ttf")):
+		_fail("player-state combat/element headings do not use C++ font-09")
+		return
 	get_viewport().warp_mouse(Vector2(520, 100))
 	panel.call("_show_item_tooltip", 3, weapon)
 	var tooltip := panel.get_node("ItemTooltip") as Panel
