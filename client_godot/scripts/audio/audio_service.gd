@@ -244,6 +244,8 @@ func _find_bgm_path(bgm_id: int) -> String:
 	var prefix := "%08X_" % bgm_id
 	for directory in _audio_base_paths():
 		var bgm_dir := directory.path_join("bgm")
+		if not DirAccess.dir_exists_absolute(bgm_dir):
+			continue
 		for file_name in DirAccess.get_files_at(bgm_dir):
 			if file_name.to_upper().begins_with(prefix) and file_name.get_extension().to_lower() in ["mp3", "wav"]:
 				return bgm_dir.path_join(file_name)
@@ -253,6 +255,8 @@ func _find_bgm_path(bgm_id: int) -> String:
 func _find_seff_path(seff_id: int) -> String:
 	for directory in _audio_base_paths():
 		var seff_dir := directory.path_join("seff")
+		if not DirAccess.dir_exists_absolute(seff_dir):
+			continue
 		var exact_path := seff_dir.path_join("%08X.WAV" % seff_id)
 		if FileAccess.file_exists(exact_path):
 			return exact_path
