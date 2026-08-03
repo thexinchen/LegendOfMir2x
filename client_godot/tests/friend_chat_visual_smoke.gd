@@ -79,6 +79,45 @@ func _ready() -> void:
 	if search_results.get_child(0).size.y != 30:
 		_fail("search suggestion row mismatch")
 		return
+	var suggestion := search_results.get_child(0) as Button
+	var match_label := suggestion.get_node_or_null("MatchText/Match") as Label
+	var suggestion_normal := suggestion.get_theme_stylebox("normal") as StyleBoxFlat
+	var suggestion_hover := suggestion.get_theme_stylebox("hover") as StyleBoxFlat
+	var suggestion_pressed := suggestion.get_theme_stylebox("pressed") as StyleBoxFlat
+	var search_normal_color := Color(128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0, 64.0 / 255.0)
+	var search_hover_color := Color(row_rgb.r, row_rgb.g, row_rgb.b, 64.0 / 255.0)
+	if not suggestion.text.is_empty() or match_label == null or match_label.text != "清" or match_label.get_theme_color("font_color") != Color.RED:
+		_fail("search suggestion did not split and highlight the matched text like C++")
+		return
+	if suggestion_normal.bg_color != search_normal_color or suggestion_normal.border_color != Color(row_rgb.r, row_rgb.g, row_rgb.b, 32.0 / 255.0):
+		_fail("search suggestion normal state diverged from C++: %s/%s" % [suggestion_normal.bg_color, suggestion_normal.border_color])
+		return
+	if suggestion_hover.bg_color != search_hover_color or suggestion_hover.border_color != search_hover_color or suggestion_pressed.bg_color != search_hover_color or suggestion_pressed.border_color != search_hover_color:
+		_fail("search suggestion hover/pressed states diverged from C++")
+		return
+	if OS.has_environment("MIR2X_FRIEND_SUGGESTION_SCREENSHOT"):
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FRIEND_SUGGESTION_SCREENSHOT"))
+	panel.get_node("Page/SearchPage/Query").text = "99"
+	panel.set("_search_show_candidates", false)
+	panel.call("_render_search_results")
+	await get_tree().process_frame
+	var id_suggestion := search_results.get_child(0) as Button
+	var id_prefix := id_suggestion.get_node_or_null("MatchText/Prefix") as Label
+	var id_match := id_suggestion.get_node_or_null("MatchText/Match") as Label
+	var id_suffix := id_suggestion.get_node_or_null("MatchText/Suffix") as Label
+	if id_prefix == null or id_match == null or id_suffix == null or id_prefix.text != "清风（" or id_match.text != "99" or id_suffix.text != "）" or id_match.get_theme_color("font_color") != Color.RED:
+		_fail("numeric friend search did not highlight the exact ID like C++")
+		return
+	id_suggestion.emit_signal("pressed")
+	await get_tree().process_frame
+	if panel.get_node("Page/SearchPage/Query").text != "99" or not panel.get("_search_show_candidates") or search_results.get_child(0).size.y != 52:
+		_fail("numeric friend suggestion did not switch to the candidate view")
+		return
+	panel.get_node("Page/SearchPage/Query").text = "清"
+	panel.set("_search_show_candidates", false)
+	panel.call("_render_search_results")
+	await get_tree().process_frame
 	panel.call("_show_search_candidates", "清")
 	await get_tree().process_frame
 	if search_results.get_child(0).size.y != 52:
@@ -87,6 +126,15 @@ func _ready() -> void:
 	var first_candidate := search_results.get_child(0) as Button
 	if first_candidate.get_node_or_null("Add") == null or first_candidate.get_node("Add").text != "添加" or first_candidate.get_child(1).position.y != 10:
 		_fail("search candidate did not use the original independent Add control")
+		return
+	var candidate_normal := first_candidate.get_theme_stylebox("normal") as StyleBoxFlat
+	var candidate_hover := first_candidate.get_theme_stylebox("hover") as StyleBoxFlat
+	var candidate_pressed := first_candidate.get_theme_stylebox("pressed") as StyleBoxFlat
+	if candidate_normal.bg_color != search_normal_color or candidate_normal.border_color != Color(row_rgb.r, row_rgb.g, row_rgb.b, 32.0 / 255.0):
+		_fail("search candidate normal state diverged from C++: %s/%s" % [candidate_normal.bg_color, candidate_normal.border_color])
+		return
+	if candidate_hover.bg_color != search_hover_color or candidate_hover.border_color != search_hover_color or candidate_pressed.bg_color != search_hover_color or candidate_pressed.border_color != search_hover_color:
+		_fail("search candidate hover/pressed states diverged from C++")
 		return
 	if not first_candidate.get_child(0) is TextureRect or (first_candidate.get_child(0) as TextureRect).stretch_mode != TextureRect.STRETCH_SCALE:
 		_fail("search candidate avatar did not stretch the complete texture like the original client")

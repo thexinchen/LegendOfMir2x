@@ -611,6 +611,11 @@ func _render_search_results() -> void:
 func _add_search_candidate(parent: Node, peer: Dictionary, cpid: int) -> void:
 	var row := _add_row(parent, peer, "%s（%d）" % [peer.get("name", "未知"), peer.get("id", 0)], "", func(): pass)
 	row.mouse_default_cursor_shape = Control.CURSOR_ARROW
+	var normal_fill := Color(128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0, 64.0 / 255.0)
+	var highlighted := Color(231.0 / 255.0, 231.0 / 255.0, 189.0 / 255.0, 64.0 / 255.0)
+	row.add_theme_stylebox_override("normal", _row_style(normal_fill, 32.0 / 255.0))
+	row.add_theme_stylebox_override("hover", _row_style(highlighted, 64.0 / 255.0))
+	row.add_theme_stylebox_override("pressed", _row_style(highlighted, 64.0 / 255.0))
 	var title := row.get_child(1) as Label
 	title.position.y = 10
 	if cpid == _state.self_chat_cpid():
@@ -630,12 +635,12 @@ func _add_search_suggestion(parent: Node, peer: Dictionary, query: String) -> vo
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, 30)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_size_override("font_size", 14)
-	button.text = "      %s（%d）" % [peer.get("name", "未知"), peer.get("id", 0)]
-	button.add_theme_stylebox_override("normal", _row_style(Color(0.5, 0.5, 0.5, 0.25), 0.125))
-	button.add_theme_stylebox_override("hover", _row_style(Color(0.906, 0.906, 0.741, 0.25), 0.25))
+	var normal_fill := Color(128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0, 64.0 / 255.0)
+	var highlighted := Color(231.0 / 255.0, 231.0 / 255.0, 189.0 / 255.0, 64.0 / 255.0)
+	button.add_theme_stylebox_override("normal", _row_style(normal_fill, 32.0 / 255.0))
+	button.add_theme_stylebox_override("hover", _row_style(highlighted, 64.0 / 255.0))
+	button.add_theme_stylebox_override("pressed", _row_style(highlighted, 64.0 / 255.0))
 	button.pressed.connect(func():
 		$Page/SearchPage/Query.text = str(peer.get("id", 0)) if query == str(peer.get("id", 0)) else peer.get("name", "")
 		_search_show_candidates = true
@@ -652,6 +657,45 @@ func _add_search_suggestion(parent: Node, peer: Dictionary, query: String) -> vo
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(icon)
+	var peer_name := str(peer.get("name", "未知"))
+	var peer_id := str(peer.get("id", 0))
+	var prefix := "%s（" % peer_name
+	var matched := ""
+	var suffix := "）"
+	if query == peer_id:
+		matched = query
+	else:
+		var match_offset := peer_name.find(query)
+		if match_offset >= 0:
+			prefix = peer_name.left(match_offset)
+			matched = query
+			suffix = "%s（%s）" % [peer_name.substr(match_offset + query.length()), peer_id]
+		else:
+			prefix = "%s（%s）" % [peer_name, peer_id]
+			suffix = ""
+	var text_row := HBoxContainer.new()
+	text_row.name = "MatchText"
+	text_row.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	text_row.offset_left = 33
+	text_row.offset_top = 5
+	text_row.offset_right = -4
+	text_row.offset_bottom = 25
+	text_row.add_theme_constant_override("separation", 0)
+	text_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(text_row)
+	_add_search_text_segment(text_row, "Prefix", prefix, Color.WHITE)
+	_add_search_text_segment(text_row, "Match", matched, Color.RED)
+	_add_search_text_segment(text_row, "Suffix", suffix, Color.WHITE)
+
+
+func _add_search_text_segment(parent: Node, node_name: String, text: String, color: Color) -> void:
+	var label := Label.new()
+	label.name = node_name
+	label.text = text
+	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_color_override("font_color", color)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(label)
 
 
 func _request_friend(cpid: int, switch_to_preview: bool = true) -> void:
