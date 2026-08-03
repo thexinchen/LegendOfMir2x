@@ -46,6 +46,9 @@ func _ready() -> void:
 	if name_label.text != "角色状态测试" or name_label.get_theme_color("font_color") != Color8(0x11, 0x22, 0x33):
 		_fail("player name text/color does not match C++ state board: text=%s color=%s" % [name_label.text, name_label.get_theme_color("font_color")])
 		return
+	if name_label.position != Vector2(36, 38) or name_label.size != Vector2(256, 24):
+		_fail("player name geometry does not match C++ state board: position=%s size=%s" % [name_label.position, name_label.size])
+		return
 	if panel.get_node("EquipmentSlots").get_child_count() != 11:
 		_fail("all eleven wear grids are not interactive")
 		return
@@ -101,7 +104,20 @@ func _ready() -> void:
 	if panel.get_node("StateValues").get_child_count() != 9 or "攻击" not in panel.get_node("CombatStats").text:
 		_fail("state rows or combat labels missing")
 		return
+	var state_values := panel.get_node("StateValues") as Control
+	if state_values.position != Vector2(244, 97) or state_values.size != Vector2(72, 217):
+		_fail("state-value geometry does not match C++ state board: position=%s size=%s" % [state_values.position, state_values.size])
+		return
+	if state_values.get_child(0).position.y != 0.0 or state_values.get_child(8).position.y != 192.0:
+		_fail("state-value row spacing does not match C++ state board")
+		return
 	var combat_stats := panel.get_node("CombatStats") as Label
+	if combat_stats.position != Vector2(21, 317) or combat_stats.size != Vector2(291, 52):
+		_fail("combat-stat geometry does not match C++ state board: position=%s size=%s" % [combat_stats.position, combat_stats.size])
+		return
+	if combat_stats.get_theme_constant("line_spacing") != 13 or combat_stats.get_theme_color("font_color") != Color.WHITE:
+		_fail("combat-stat line spacing/color does not match C++ state board")
+		return
 	var element_titles: Array[Label] = []
 	for child in panel.get_node("Elements").get_children():
 		if child is Label and child.get_theme_font_size("font_size") == 15:
@@ -109,6 +125,23 @@ func _ready() -> void:
 	if not combat_stats.get_theme_font("font").resource_path.ends_with("/09_WenQuanYi_Bitmap_Song_15_px.ttf") or element_titles.size() != 3 or element_titles.any(func(label: Label) -> bool: return not label.get_theme_font("font").resource_path.ends_with("/09_WenQuanYi_Bitmap_Song_15_px.ttf")):
 		_fail("player-state combat/element headings do not use C++ font-09")
 		return
+	for index in element_titles.size():
+		var expected_position := Vector2(-8, index * 30)
+		if element_titles[index].position != expected_position or element_titles[index].get_theme_color("font_color") != Color.WHITE:
+			_fail("element heading geometry/color does not match C++ state board at row %d" % index)
+			return
+	panel.call("_refresh_elements", {
+		"dc_elem": [1, 0, 0, 0, 0, 0, 0],
+		"ac_elem": [-1, 0, 0, 0, 0, 0, 0],
+	})
+	var element_values: Array[Label] = []
+	for child in panel.get_node("Elements").get_children():
+		if child is Label and child.get_theme_font_size("font_size") == 12:
+			element_values.append(child)
+	if element_values.size() != 2 or element_values[0].position != Vector2(64, -1) or element_values[1].position != Vector2(64, 59):
+		_fail("element value anchors do not match C++ state board")
+		return
+	panel.call("_refresh_elements", combat)
 	get_viewport().warp_mouse(Vector2(520, 100))
 	panel.call("_show_item_tooltip", 3, weapon)
 	var tooltip := panel.get_node("ItemTooltip") as Panel

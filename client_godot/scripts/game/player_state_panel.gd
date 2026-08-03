@@ -189,11 +189,11 @@ func _refresh_elements(combat: Dictionary) -> void:
 		child.free()
 	for row in [["攻击元素", 0, 0x06000010], ["防御元素", 30, 0x06000010], ["弱点元素", 60, 0x06000020]]:
 		var title := Label.new()
-		title.position = Vector2(-8, row[1] - 4)
+		title.position = Vector2(-8, row[1])
 		title.text = row[0]
 		title.add_theme_font_override("font", COMBAT_FONT)
 		title.add_theme_font_size_override("font_size", 15)
-		title.add_theme_color_override("font_color", Color(0.86, 0.8, 0.61))
+		title.add_theme_color_override("font_color", Color.WHITE)
 		$Elements.add_child(title)
 		for index in range(7):
 			var value: int = combat.dc_elem[index] if row[0] == "攻击元素" else combat.ac_elem[index]
@@ -207,7 +207,7 @@ func _refresh_elements(combat: Dictionary) -> void:
 				image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 				$Elements.add_child(image)
 			var value_label := Label.new()
-			value_label.position = Vector2(64 + index * 37, row[1] - 3)
+			value_label.position = Vector2(64 + index * 37, row[1] - 1)
 			value_label.text = "%+d" % value
 			value_label.add_theme_font_size_override("font_size", 12)
 			value_label.add_theme_color_override("font_color", Color.RED if value < 0 else Color.GREEN)
