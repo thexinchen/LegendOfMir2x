@@ -81,7 +81,7 @@ const SM_FRIENDLIST := 24
 const SM_LEARNEDMAGICLIST := 25
 const SM_PLAYERWLDESP := 26
 const SM_ACTION := 27
-const SM_COREORD := 28
+const SM_CORECORD := 28
 const SM_HEALTH := 29
 const SM_NEXTSTRIKE := 30
 const SM_NOTIFYDEAD := 31
@@ -899,7 +899,7 @@ func _server_message_attribute(head_code: int) -> Array:
 		SM_LEARNEDMAGICLIST:     return [3, 0]
 		SM_PLAYERWLDESP:         return [3, 0]
 		SM_ACTION:               return [1, 43]
-		SM_COREORD:              return [1, 48]
+		SM_CORECORD:             return [1, 48]
 		SM_HEALTH:               return [3, 0]
 		SM_NEXTSTRIKE:           return [0, 0]
 		SM_NOTIFYDEAD:           return [1, 8]

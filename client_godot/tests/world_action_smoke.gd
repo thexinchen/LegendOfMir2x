@@ -2171,12 +2171,12 @@ func _test_remote_player_motion_correction(main: Control, resources: RefCounted)
 
 	GameState.update_creature(uid, base_creature.duplicate(true))
 	var union_data := PackedByteArray([7, 99, 0, 0, 0])
-	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(uid, 202, {
+	main.call("_on_server_message", NetworkClient.SM_CORECORD, _sm_corecord(uid, 202, {
 		"type": 2, "speed": 100, "direction": 6, "x": line[2].x, "y": line[2].y,
 	}, union_data))
 	creature = GameState.get_creature(uid)
 	if creature.get("action_type", 0) != 3 or Vector2i(creature.x, creature.y) != line[1] or creature.get("motion_action_queue", []).size() != 2 or creature.get("gender", -1) != 0 or creature.get("job", -1) != 1 or creature.get("level", -1) != 20:
-		_fail("existing remote Hero SM_COREORD did not reuse action correction or overwrote constructor metadata: %s" % creature)
+		_fail("existing remote Hero SM_CORECORD did not reuse action correction or overwrote constructor metadata: %s" % creature)
 		return false
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
 		"type": 11, "speed": 100, "direction": 5, "x": line[3].x, "y": line[3].y,
@@ -2290,23 +2290,23 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 		"type": 3, "speed": 100, "direction": 5, "x": 8, "y": 9, "aimX": 9, "aimY": 9,
 	}))
 	if not GameState.get_creature(player_uid).is_empty():
-		_fail("unknown player action created a blank phantom before SM_COREORD")
+		_fail("unknown player action created a blank phantom before SM_CORECORD")
 		return false
 	var player_union := PackedByteArray([5, 18, 0, 0, 0])
-	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(player_uid, 202, {
+	main.call("_on_server_message", NetworkClient.SM_CORECORD, _sm_corecord(player_uid, 202, {
 		"type": 3, "speed": 100, "direction": 0, "x": 9, "y": 9, "aimX": 8, "aimY": 10,
 	}, player_union))
 	var resolved: Dictionary = GameState.get_creature(player_uid)
 	if resolved.get("type", 0) != 2 or resolved.get("gender", 0) != 1 or resolved.get("job", 0) != 2 or resolved.get("level", 0) != 18 or resolved.get("direction", 0) != 6:
-		_fail("matching SM_COREORD did not create the queried player: %s" % resolved)
+		_fail("matching SM_CORECORD did not create the queried player: %s" % resolved)
 		return false
 
 	var stale_uid: int = (5 << 59) | 405
-	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(stale_uid, 999, {
+	main.call("_on_server_message", NetworkClient.SM_CORECORD, _sm_corecord(stale_uid, 999, {
 		"type": 2, "speed": 100, "direction": 5, "x": 30, "y": 31,
 	}, player_union))
 	if not GameState.get_creature(stale_uid).is_empty():
-		_fail("stale-map SM_COREORD inserted an actor into the current world")
+		_fail("stale-map SM_CORECORD inserted an actor into the current world")
 		return false
 	var new_monster_uid: int = (4 << 59) | (225 << 35) | 406
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(new_monster_uid, 202, {
@@ -2423,7 +2423,7 @@ func _test_monster_spawn_actions(main: Control, resources: RefCounted) -> bool:
 		var ground_union := PackedByteArray()
 		ground_union.resize(4)
 		ground_union.encode_u32(0, ground_id)
-		main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(ground_uid, 202, {
+		main.call("_on_server_message", NetworkClient.SM_CORECORD, _sm_corecord(ground_uid, 202, {
 			"type": 1, "speed": 100, "direction": 3 + index, "x": 36 + index * 2, "y": 37,
 		}, ground_union))
 		var ground_creature: Dictionary = GameState.get_creature(ground_uid)
@@ -2450,14 +2450,14 @@ func _test_monster_spawn_actions(main: Control, resources: RefCounted) -> bool:
 	var ordinary_union := PackedByteArray()
 	ordinary_union.resize(4)
 	ordinary_union.encode_u32(0, ordinary_id)
-	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(ordinary_uid, 202, {
+	main.call("_on_server_message", NetworkClient.SM_CORECORD, _sm_corecord(ordinary_uid, 202, {
 		"type": 1, "speed": 100, "direction": 3, "x": 34, "y": 35,
 	}, ordinary_union))
 	var ordinary: Dictionary = GameState.get_creature(ordinary_uid)
 	ordinary_meta[2] = ordinary_spawn_seff
 	runtime_resources.monster_meta[ordinary_id] = ordinary_meta
 	if ordinary.get("monster_id", 0) != ordinary_id or ordinary.get("action_type", 0) != 2:
-		_fail("ordinary SM_COREORD spawn did not create a standing monster: %s" % ordinary)
+		_fail("ordinary SM_CORECORD spawn did not create a standing monster: %s" % ordinary)
 		return false
 	GameState.remove_creature(special_uid)
 	GameState.remove_creature(ordinary_uid)
@@ -2564,7 +2564,7 @@ func _test_monster_body_profiles(main: Control, resources: RefCounted) -> bool:
 			var union_data := PackedByteArray()
 			union_data.resize(4)
 			union_data.encode_u32(0, monster_id)
-			main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(uid, 202, {"type": 1, "speed": 100, "direction": 2, "x": 44, "y": 43}, union_data))
+			main.call("_on_server_message", NetworkClient.SM_CORECORD, _sm_corecord(uid, 202, {"type": 1, "speed": 100, "direction": 2, "x": 44, "y": 43}, union_data))
 		var spawned: Dictionary = GameState.get_creature(uid)
 		monster_meta[2] = spawn_seff
 		runtime_resources.monster_meta[monster_id] = monster_meta
@@ -2600,7 +2600,7 @@ func _test_monster_transform_actions(main: Control, resources: RefCounted) -> bo
 	var union_data := PackedByteArray()
 	union_data.resize(4)
 	union_data.encode_u32(0, monster_id)
-	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(uid, 202, {
+	main.call("_on_server_message", NetworkClient.SM_CORECORD, _sm_corecord(uid, 202, {
 		"type": 1, "speed": 100, "direction": 5, "x": 40, "y": 41,
 	}, union_data))
 	var creature: Dictionary = GameState.get_creature(uid)

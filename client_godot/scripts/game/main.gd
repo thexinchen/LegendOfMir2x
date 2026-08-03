@@ -993,7 +993,7 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 			game_state.strike_grids["%d,%d" % [sg.get("x", 0), sg.get("y", 0)]] = Time.get_ticks_msec()
 		NetworkClient.SM_CASTMAGIC:
 			_handle_cast_magic(payload)
-		NetworkClient.SM_COREORD:
+		NetworkClient.SM_CORECORD:
 			_handle_corecord(payload)
 		NetworkClient.SM_PLAYERNAME:
 			_handle_player_name(payload)
