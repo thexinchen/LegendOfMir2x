@@ -40,6 +40,12 @@ func _ready() -> void:
 	var main: Control = load("res://scenes/game/main.tscn").instantiate()
 	add_child(main)
 	await get_tree().process_frame
+	if OS.has_environment("MIR2X_REMOTE_PLAYER_CORRECTION_SCREENSHOT"):
+		if not await _test_remote_player_motion_correction(main, resources):
+			return
+		print("REMOTE PLAYER CORRECTION VISUAL PASS")
+		get_tree().quit(0)
+		return
 	var world_renderer: Control = main.get_node("WorldRenderer")
 	if not world_renderer.has_method("_hero_dress_mod_color") or not world_renderer.has_method("_hero_hair_mod_color"):
 		_fail("hero dress/hair color modulation unavailable")
@@ -155,6 +161,8 @@ func _ready() -> void:
 	if not await _test_action_seff(main, resources):
 		return
 	if not _test_shield_hit_action(main, resources):
+		return
+	if not await _test_remote_player_motion_correction(main, resources):
 		return
 	if not _test_monster_motion_correction(main, resources):
 		return
@@ -1984,6 +1992,123 @@ func _test_monster_motion_correction(main: Control, resources: RefCounted) -> bo
 		return false
 	GameState.remove_creature(uid)
 	GameState.remove_creature(transform_uid)
+	return true
+
+
+func _test_remote_player_motion_correction(main: Control, resources: RefCounted) -> bool:
+	var renderer: Control = main.get_node("WorldRenderer")
+	if renderer.map_width <= 0 and not renderer.load_map(24):
+		_fail("unable to load remote-player correction map fixture")
+		return false
+	var line := _find_walkable_line(renderer, 4)
+	if line.size() != 4:
+		_fail("unable to find a straight walkable remote-player correction fixture")
+		return false
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	var uid: int = (5 << 59) | 811
+	var base_creature := {
+		"uid": uid, "type": 2, "gender": 0, "job": 1, "level": 20,
+		"x": line[0].x, "y": line[0].y, "direction": 1, "action_type": 2,
+		"action_started_ms": Time.get_ticks_msec(),
+	}
+	GameState.update_creature(uid, base_creature.duplicate(true))
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 2, "speed": 100, "direction": 7, "x": line[2].x, "y": line[2].y,
+	}))
+	var creature: Dictionary = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 3 or Vector2i(creature.x, creature.y) != line[1] or creature.get("action_speed", 0) != 500 or creature.get("motion_action_queue", []).size() != 2:
+		_fail("remote Hero ACTION_STAND did not start one-grid correction: %s" % creature)
+		return false
+	if OS.has_environment("MIR2X_REMOTE_PLAYER_CORRECTION_SCREENSHOT"):
+		GameState.player_x = line[0].x
+		GameState.player_y = line[0].y + 3
+		GameState.center_camera_on_player()
+		await get_tree().create_timer(0.06).timeout
+		await RenderingServer.frame_post_draw
+		var screenshot_error := get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_REMOTE_PLAYER_CORRECTION_SCREENSHOT"))
+		if screenshot_error != OK:
+			_fail("failed to save remote-player correction screenshot: %s" % error_string(screenshot_error))
+			return false
+		return true
+	main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	if Vector2i(creature.x, creature.y) != line[2] or creature.get("motion_action_queue", []).size() != 1:
+		_fail("remote Hero ACTION_STAND did not finish its correction segments: %s" % creature)
+		return false
+	main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 2 or Vector2i(creature.x, creature.y) != line[2] or creature.get("direction", 0) != 7 or creature.has("motion_action_queue"):
+		_fail("remote Hero ACTION_STAND did not start at the authoritative endpoint: %s" % creature)
+		return false
+
+	GameState.update_creature(uid, base_creature.merged({"x": line[2].x, "y": line[2].y}, true))
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 3, "speed": 100, "direction": 0,
+		"x": line[0].x, "y": line[0].y, "aimX": line[1].x, "aimY": line[1].y,
+	}))
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 3 or Vector2i(creature.x, creature.y) != line[1] or creature.get("action_speed", 0) != 500 or creature.get("motion_action_queue", []).size() != 2:
+		_fail("remote Hero ACTION_MOVE did not correct to its server start first: %s" % creature)
+		return false
+	main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 3 or Vector2i(creature.action_from_x, creature.action_from_y) != line[0] or Vector2i(creature.x, creature.y) != line[1] or creature.get("action_speed", 0) != 100 or creature.has("motion_action_queue"):
+		_fail("remote Hero ACTION_MOVE did not run after correction: %s" % creature)
+		return false
+
+	var spell_id := 0
+	for magic_id_value in resources.magic_meta:
+		var candidate_id: int = magic_id_value
+		if not resources.magic_layout(candidate_id, 1).is_empty():
+			spell_id = candidate_id
+			break
+	if spell_id == 0:
+		_fail("remote Hero spell correction fixture unavailable")
+		return false
+	for action_type in [7, 8, 9, 12]:
+		GameState.magic_effects.clear()
+		GameState.update_creature(uid, base_creature.duplicate(true))
+		var action := {
+			"type": action_type, "speed": 100, "direction": 4,
+			"x": line[2].x, "y": line[2].y,
+			"magicID": spell_id if action_type == 9 else 0,
+		}
+		main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, action))
+		creature = GameState.get_creature(uid)
+		if creature.get("action_type", 0) != 3 or Vector2i(creature.x, creature.y) != line[1] or creature.get("motion_action_queue", []).size() != 2:
+			_fail("remote Hero action %d skipped its correction queue: %s" % [action_type, creature])
+			return false
+		main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+		creature = GameState.get_creature(uid)
+		main.call("_finish_creature_action", uid, 3, creature.action_started_ms)
+		creature = GameState.get_creature(uid)
+		if creature.get("action_type", 0) != action_type or Vector2i(creature.x, creature.y) != line[2] or creature.has("motion_action_queue"):
+			_fail("remote Hero action %d did not start after correction: %s" % [action_type, creature])
+			return false
+		if action_type == 9 and not GameState.magic_effects.any(func(effect: Dictionary) -> bool: return effect.get("source", "") == "action" and effect.get("uid", 0) == uid and effect.get("magicID", 0) == spell_id):
+			_fail("remote Hero spell effect was not deferred until correction completion")
+			return false
+
+	GameState.update_creature(uid, base_creature.duplicate(true))
+	var union_data := PackedByteArray([7, 99, 0, 0, 0])
+	main.call("_on_server_message", NetworkClient.SM_COREORD, _sm_corecord(uid, 202, {
+		"type": 2, "speed": 100, "direction": 6, "x": line[2].x, "y": line[2].y,
+	}, union_data))
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 3 or Vector2i(creature.x, creature.y) != line[1] or creature.get("motion_action_queue", []).size() != 2 or creature.get("gender", -1) != 0 or creature.get("job", -1) != 1 or creature.get("level", -1) != 20:
+		_fail("existing remote Hero SM_COREORD did not reuse action correction or overwrote constructor metadata: %s" % creature)
+		return false
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {
+		"type": 11, "speed": 100, "direction": 5, "x": line[3].x, "y": line[3].y,
+	}))
+	creature = GameState.get_creature(uid)
+	if creature.get("action_type", 0) != 11 or Vector2i(creature.x, creature.y) != line[1] or creature.has("motion_action_queue"):
+		_fail("new remote Hero action did not replace the pending correction queue: %s" % creature)
+		return false
+	GameState.remove_creature(uid)
 	return true
 
 

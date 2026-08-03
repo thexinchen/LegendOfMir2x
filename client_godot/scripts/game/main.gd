@@ -1099,7 +1099,10 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 
 
 func _handle_action(payload: PackedByteArray) -> void:
-	var data := Protocol.decode_sm_action(payload)
+	_handle_action_data(Protocol.decode_sm_action(payload))
+
+
+func _handle_action_data(data: Dictionary, correction_applied := false) -> void:
 	var uid: int = data.get("uid", 0)
 	var action: Dictionary = data.get("action", {})
 	var action_map_uid: int = data.get("mapUID", 0)
@@ -1171,6 +1174,11 @@ func _handle_action(payload: PackedByteArray) -> void:
 		var mine_from_x: int = game_state.player_x if uid == game_state.player_uid else creature.get("x", x)
 		var mine_from_y: int = game_state.player_y if uid == game_state.player_uid else creature.get("y", y)
 		direction = _direction_to(mine_from_x, mine_from_y, x, y)
+	if not correction_applied and uid != game_state.player_uid and not creature.is_empty() and creature.get("type", _creature_type_from_uid(uid)) == 2 and action_type in [2, 3, 7, 8, 9, 12]:
+		var correction_start := Vector2i(creature.get("x", x), creature.get("y", y))
+		if correction_start != Vector2i(x, y):
+			_start_remote_player_motion_action(uid, data, creature)
+			return
 	if not creature.is_empty() and creature.get("type", _creature_type_from_uid(uid)) == 1 and _resources.monster_behave_mode(creature.get("monster_id", 0)) == 2:
 		for queue_key in ["motion_action_queue", "forced_action_queue", "monster_pending_action", "monster_pending_forced_action", "monster_pending_form_modes"]:
 			creature.erase(queue_key)
@@ -1573,7 +1581,20 @@ func _start_monster_motion_action(uid: int, action: Dictionary, creature: Dictio
 	queue.append({"kind": "action", "action": action.duplicate(true)})
 	creature["motion_action_queue"] = queue
 	game_state.update_creature(uid, creature)
-	_advance_monster_motion_action(uid)
+	_advance_creature_motion_action(uid)
+
+
+func _start_remote_player_motion_action(uid: int, data: Dictionary, creature: Dictionary) -> void:
+	var action: Dictionary = data.get("action", {})
+	var start := Vector2i(creature.get("x", action.get("x", 0)), creature.get("y", action.get("y", 0)))
+	var target := Vector2i(action.get("x", start.x), action.get("y", start.y))
+	var queue: Array[Dictionary] = _forced_correction_steps(start, target, 1)
+	if start != target and queue.is_empty():
+		return
+	queue.append({"kind": "player_action", "data": data.duplicate(true)})
+	creature["motion_action_queue"] = queue
+	game_state.update_creature(uid, creature)
+	_advance_creature_motion_action(uid)
 
 
 func _start_monster_current_hitted_action(uid: int, action: Dictionary, creature: Dictionary) -> void:
@@ -1584,7 +1605,7 @@ func _start_monster_current_hitted_action(uid: int, action: Dictionary, creature
 	_start_monster_motion_action(uid, current_action, creature)
 
 
-func _advance_monster_motion_action(uid: int) -> void:
+func _advance_creature_motion_action(uid: int) -> void:
 	var creature: Dictionary = game_state.get_creature(uid)
 	var queue: Array = creature.get("motion_action_queue", [])
 	if creature.is_empty() or queue.is_empty():
@@ -1607,6 +1628,10 @@ func _advance_monster_motion_action(uid: int) -> void:
 		creature["action_step"] = 1
 		game_state.update_creature(uid, creature)
 		_schedule_creature_idle(uid, 3, creature.action_started_ms, _creature_action_duration(3, FORCED_MOVE_SPEED, creature))
+		return
+	if queued.get("kind", "") == "player_action":
+		game_state.update_creature(uid, creature)
+		_handle_action_data(queued.get("data", {}), true)
 		return
 	var action: Dictionary = queued.get("action", {})
 	var action_type: int = action.get("type", 2)
@@ -1688,7 +1713,7 @@ func _finish_creature_action(uid: int, action_type: int, started_ms: int) -> voi
 		_advance_creature_forced_action(uid)
 		return
 	if not creature.get("motion_action_queue", []).is_empty():
-		_advance_monster_motion_action(uid)
+		_advance_creature_motion_action(uid)
 		return
 	var pending: Dictionary = creature.get("monster_pending_action", {})
 	var forced_pending: Dictionary = creature.get("monster_pending_forced_action", {})
@@ -1757,6 +1782,13 @@ func _handle_corecord(payload: PackedByteArray) -> void:
 		return
 	var uid: int = data.get("uid", 0)
 	var action: Dictionary = data.get("action", {})
+	if not game_state.get_creature(uid).is_empty():
+		_handle_action_data({
+			"uid": uid,
+			"mapUID": data.get("mapUID", 0),
+			"action": action,
+		})
+		return
 	
 	# Determine creature type from UID type bits
 	# UID type is in bits 59-62 (4 bits at offset 59)
