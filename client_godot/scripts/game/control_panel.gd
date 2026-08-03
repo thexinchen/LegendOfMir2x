@@ -230,7 +230,7 @@ func _apply_focus_hud(focus_creature: Dictionary) -> void:
 		return
 	_focus_hud_signature = signature
 	var hp_max: int = hud_creature.get("hp_max", 0)
-	face_health.size.x = 82.0 * clampf(float(hud_creature.get("hp", 0)) / float(hp_max), 0.0, 1.0) if hp_max > 0 else 0.0
+	face_health.size.x = 82.0 * (clampf(float(hud_creature.get("hp", 0)) / float(hp_max), 0.0, 1.0) if hp_max > 0 else 1.0)
 	var face_frame: Dictionary = {}
 	if hud_creature.get("type", 0) == 1:
 		var look_id: int = _resources.monster_look(hud_creature.get("monster_id", 0))

@@ -68,6 +68,10 @@ func _ready() -> void:
 	if panel.get_node("%BuffContainer").get_child_count() != 1:
 		_fail("focused monster buff missing")
 		return
+	panel.call("_apply_focus_hud", {"uid": 102, "type": 1, "monster_id": monster_id, "hp": 0, "hp_max": 0, "buffs": []})
+	if absf(panel.get_node("%FaceHealth").size.x - 82.0) > 0.01:
+		_fail("focused creature without health data did not keep the original full health indicator")
+		return
 	var renderer: Control = WorldRendererScript.new()
 	renderer.game_state = GameState
 	GameState.team_leader = GameState.player_uid
