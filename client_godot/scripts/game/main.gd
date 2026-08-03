@@ -12,6 +12,7 @@ const MINIMAP_PANEL_PATH := "res://scenes/game/panels/minimap.tscn"
 const QUEST_PANEL_PATH := "res://scenes/game/panels/quest.tscn"
 const NPC_CHAT_PANEL_PATH := "res://scenes/game/panels/npc_chat.tscn"
 const PURCHASE_PANEL_PATH := "res://scenes/game/panels/purchase.tscn"
+const AUCTION_PANEL_PATH := "res://scenes/game/panels/auction.tscn"
 const FRIEND_CHAT_PANEL_PATH := "res://scenes/game/panels/friend_chat.tscn"
 const SECURED_ITEMS_PANEL_PATH := "res://scenes/game/panels/secured_items.tscn"
 const TEAM_PANEL_PATH := "res://scenes/game/panels/team.tscn"
@@ -20,6 +21,22 @@ const GUILD_PANEL_PATH := "res://scenes/game/panels/guild.tscn"
 const INPUT_STRING_PANEL_PATH := "res://scenes/game/panels/input_string.tscn"
 const RUNTIME_CONFIG_PANEL_PATH := "res://scenes/game/panels/runtime_config.tscn"
 const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
+
+# ImMainUI draws its retained-mode boards in this fixed order every frame.
+const EXTRA_PANEL_DRAW_LAYERS := {
+	MINIMAP_PANEL_PATH: 1,
+	NPC_CHAT_PANEL_PATH: 2,
+	FRIEND_CHAT_PANEL_PATH: 3,
+	AUCTION_PANEL_PATH: 8,
+	HORSE_PANEL_PATH: 9,
+	GUILD_PANEL_PATH: 10,
+	INPUT_STRING_PANEL_PATH: 11,
+	RUNTIME_CONFIG_PANEL_PATH: 12,
+	QUEST_PANEL_PATH: 13,
+	TEAM_PANEL_PATH: 14,
+	SECURED_ITEMS_PANEL_PATH: 15,
+	PURCHASE_PANEL_PATH: 18,
+}
 
 @onready var world_renderer: Control = $WorldRenderer
 @onready var inventory_panel: Control = %InventoryPanel
@@ -106,6 +123,13 @@ func _ready() -> void:
 	skill_panel.hide()
 	quick_bar.hide()
 	team_flag_cursor.hide()
+	skill_panel.z_index = 4
+	skill_buff_hud.z_index = 5
+	control_panel.z_index = 6
+	location_label.z_index = 6
+	quick_bar.z_index = 7
+	inventory_panel.z_index = 16
+	player_state_panel.z_index = 17
 	
 	# C++ location format: "mapName: x y", font 10 size 15, white, at {4, localBaseY+110}
 	# localBaseY = screenH - 133 = 600 - 133 = 467, so y = 467 + 110 = 577
@@ -2774,6 +2798,7 @@ func _ensure_extra_panel(scene_path: String) -> Control:
 		return null
 	panel = packed.instantiate() as Control
 	add_child(panel)
+	panel.z_index = int(EXTRA_PANEL_DRAW_LAYERS.get(scene_path, 0))
 	panel.position = _extra_panel_initial_position(scene_path, panel.size)
 	if scene_path == MINIMAP_PANEL_PATH:
 		panel.call("set_requested_visible", true)

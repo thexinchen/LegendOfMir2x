@@ -110,6 +110,40 @@ func _ready() -> void:
 		if extra_panel == null or extra_panel.position != expected_extra_positions[scene_path]:
 			_fail("extra panel initial position mismatch: scene=%s actual=%s expected=%s" % [scene_path, extra_panel.position if extra_panel != null else Vector2.INF, expected_extra_positions[scene_path]])
 			return
+	var expected_direct_layers := {
+		"SkillPanel": 4,
+		"SkillBuffHUD": 5,
+		"ControlPanel": 6,
+		"Location": 6,
+		"QuickBar": 7,
+		"InventoryPanel": 16,
+		"PlayerStatePanel": 17,
+	}
+	for node_path: String in expected_direct_layers:
+		var direct_panel := main.get_node(node_path) as Control
+		if direct_panel.z_index != expected_direct_layers[node_path]:
+			_fail("direct panel draw layer does not match C++ order: node=%s actual=%d expected=%d" % [node_path, direct_panel.z_index, expected_direct_layers[node_path]])
+			return
+	var expected_extra_layers := {
+		"res://scenes/game/panels/minimap.tscn": 1,
+		"res://scenes/game/panels/npc_chat.tscn": 2,
+		"res://scenes/game/panels/friend_chat.tscn": 3,
+		"res://scenes/game/panels/auction.tscn": 8,
+		"res://scenes/game/panels/horse.tscn": 9,
+		"res://scenes/game/panels/guild.tscn": 10,
+		"res://scenes/game/panels/input_string.tscn": 11,
+		"res://scenes/game/panels/runtime_config.tscn": 12,
+		"res://scenes/game/panels/quest.tscn": 13,
+		"res://scenes/game/panels/team.tscn": 14,
+		"res://scenes/game/panels/secured_items.tscn": 15,
+		"res://scenes/game/panels/purchase.tscn": 18,
+	}
+	var layered_extra_panels: Dictionary = main.get("_extra_panel_nodes")
+	for scene_path: String in expected_extra_layers:
+		var extra_panel := layered_extra_panels.get(scene_path) as Control
+		if extra_panel == null or extra_panel.z_index != expected_extra_layers[scene_path]:
+			_fail("extra panel draw layer does not match C++ order: scene=%s actual=%s expected=%d" % [scene_path, extra_panel.z_index if extra_panel != null else -1, expected_extra_layers[scene_path]])
+			return
 	if OS.has_environment("MIR2X_EXTRA_PANEL_SCREENSHOT"):
 		var visual_scene := OS.get_environment("MIR2X_EXTRA_PANEL_SCENE")
 		if not expected_extra_positions.has(visual_scene):
