@@ -742,10 +742,14 @@ func _sum_exp(level: int) -> int:
 
 
 func scroll_camera() -> void:
-	# Match ProcessRun::scrollMap(): keep a stable one-sixth-screen dead zone,
-	# then continue converging until the player is centered and no longer moving.
-	var target_x := float(player_x) * GRID_XP - SCREEN_W * 0.5
-	var target_y := float(player_y) * GRID_YP - camera_center_y()
+	scroll_camera_to(Vector2(player_x, player_y))
+
+
+func scroll_camera_to(target_grid: Vector2) -> void:
+	# Keep a stable one-sixth-screen dead zone, then continue converging until
+	# the player's visual position is centered and the movement has ended.
+	var target_x := target_grid.x * GRID_XP - SCREEN_W * 0.5
+	var target_y := target_grid.y * GRID_YP - camera_center_y()
 	var dx := target_x - view_x
 	var dy := target_y - view_y
 	var visible_height := SCREEN_H if hud_minimized else SCREEN_H - HUD_SHIFT_HEIGHT

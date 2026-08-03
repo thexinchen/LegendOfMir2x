@@ -403,6 +403,37 @@ func _test_camera_centering(main: Control) -> bool:
 		return false
 	GameState.player_action_type = 2
 	GameState.player_action_started_ms = 0
+	GameState.center_camera_on_grid(Vector2(371, 132))
+	GameState.player_action_from_x = 371
+	GameState.player_action_from_y = 132
+	GameState.player_x = 375
+	GameState.player_y = 132
+	GameState.player_action_type = 3
+	GameState.player_action_speed = 100
+	GameState.player_action_started_ms = Time.get_ticks_msec() - 60
+	main.call("_cancel_movement")
+	main.set("_move_step_timer", 1.0)
+	(main.get("_player_forced_action_queue") as Array).clear()
+	main.set("_pickup_action_timer", -1.0)
+	main.set("_player_action_timer", -1.0)
+	var pre_scroll_view_x := GameState.view_x
+	var scroll_visual_grid: Vector2 = world_renderer.call("player_draw_grid")
+	if scroll_visual_grid.x >= 372.0:
+		_fail("camera visual-position fixture advanced beyond its intended dead-zone position")
+		return false
+	if bool(GameState.get("_camera_scrolling")):
+		_fail("camera scrolling state was not reset before the visual-position check")
+		return false
+	GameState.scroll_camera_to(scroll_visual_grid)
+	if not is_equal_approx(GameState.view_x, pre_scroll_view_x):
+		_fail("visual-position camera target moved while still inside the dead zone")
+		return false
+	main.call("_process", 0.0)
+	if not is_equal_approx(GameState.view_x, pre_scroll_view_x):
+		_fail("camera scrolled toward the movement destination before the visual player left the dead zone")
+		return false
+	GameState.player_action_type = 2
+	GameState.player_action_started_ms = 0
 	GameState.center_camera_on_player()
 	return true
 

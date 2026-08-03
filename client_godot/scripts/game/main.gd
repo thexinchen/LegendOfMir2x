@@ -130,7 +130,7 @@ func _process(delta: float) -> void:
 	_process_pickup_action(delta)
 	_process_movement(delta)
 	# Update camera
-	game_state.scroll_camera()
+	game_state.scroll_camera_to(world_renderer.player_draw_grid())
 	
 	# Update location label
 	var map_name: String = game_state.player_map_name
