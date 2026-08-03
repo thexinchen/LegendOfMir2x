@@ -124,7 +124,7 @@ func _ready() -> void:
 	if ac_value.get_theme_font_size("font_size") != 15 or dc_value.get_theme_font_size("font_size") != 15:
 		_fail("AC/DC font size mismatch")
 		return
-	if level_label.position != Vector2(395, 19) or level_label.size != Vector2(21, 12) or ac_value.position != Vector2(667, 121) or dc_value.position != Vector2(751, 121):
+	if level_label.position != Vector2(395, 19) or level_label.size != Vector2(21, 12) or ac_value.position != Vector2(669, 124) or ac_value.size != Vector2(46, 25) or dc_value.position != Vector2(752, 124) or dc_value.size != Vector2(47, 25):
 		_fail("persistent HUD text geometry mismatch")
 		return
 	var arc_current := panel.get_node("%ArcCurrent") as TextureRect
