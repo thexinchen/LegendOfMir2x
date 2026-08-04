@@ -241,6 +241,24 @@ func item_type(item_id: int) -> String:
 	return item_types.get(item_id, "")
 
 
+func item_can_wear(item_id: int, location: int, gender: bool) -> bool:
+	var expected := {
+		1: ["衣服"], 2: ["头盔"], 3: ["武器"], 4: ["鞋"], 5: ["项链"],
+		6: ["手镯"], 7: ["手镯"], 8: ["戒指"], 9: ["戒指"], 10: ["火把"],
+		11: ["魅力", "护身符", "药粉"],
+	}
+	if item_type(item_id) not in expected.get(location, []):
+		return false
+	if location != 1:
+		return true
+	var name := item_name(item_id)
+	if "（男）" in name:
+		return gender
+	if "（女）" in name:
+		return not gender
+	return false
+
+
 func item_sound_effect(item_id: int) -> int:
 	if item_id <= 0:
 		return 0xFFFFFFFF

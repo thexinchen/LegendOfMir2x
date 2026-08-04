@@ -339,19 +339,22 @@ func _place_grabbed(grid: Vector2i) -> void:
 	_state.state_changed.emit()
 
 
-func _consume_or_equip(key: String) -> void:
+func _consume_or_equip(key: String) -> Error:
 	if not _bins.has(key):
-		return
+		return ERR_INVALID_PARAMETER
 	var item: Dictionary = _bins[key].item
 	var item_type: String = _resources.item_type(int(item.get("itemID", 0)))
 	if item_type in ["恢复药水", "强化药水", "技能书"]:
 		_play_item_sound(int(item.get("itemID", 0)))
-		NetworkClient.send_consume_item(item.get("itemID", 0), item.get("seqID", 0), 1)
-		return
+		return NetworkClient.send_consume_item(item.get("itemID", 0), item.get("seqID", 0), 1)
 	var wear_types := {"衣服": 1, "头盔": 2, "武器": 3, "鞋": 4, "项链": 5, "手镯": 6, "戒指": 8}
 	if wear_types.has(item_type):
 		_play_item_sound(int(item.get("itemID", 0)))
-		NetworkClient.send_request_equip_wear(item.get("itemID", 0), item.get("seqID", 0), wear_types[item_type])
+		var wear_type: int = wear_types[item_type]
+		if not _resources.item_can_wear(int(item.get("itemID", 0)), wear_type, bool(_state.player_gender)):
+			return ERR_INVALID_PARAMETER
+		return NetworkClient.send_request_equip_wear(item.get("itemID", 0), item.get("seqID", 0), wear_type)
+	return ERR_INVALID_PARAMETER
 
 
 func _play_item_sound(item_id: int) -> void:

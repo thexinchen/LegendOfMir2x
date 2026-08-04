@@ -274,6 +274,20 @@ func _ready() -> void:
 	if AudioService.last_seff_id != 0x0102006F:
 		_fail("inventory equip omitted original weapon sound")
 		return
+	var dress_id := _find_type(resources, "衣服")
+	var panel_resources: RefCounted = panel.get("_resources")
+	var original_dress_name: String = panel_resources.item_names.get(dress_id, "")
+	panel_resources.item_names[dress_id] = "测试衣服（女）"
+	GameState.player_gender = 1
+	var wrong_gender_key := "%d:99" % dress_id
+	panel.get("_bins")[wrong_gender_key] = {"item": _item(dress_id, 99, 1)}
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	var wrong_gender_result: Variant = panel.call("_consume_or_equip", wrong_gender_key)
+	if wrong_gender_result != ERR_INVALID_PARAMETER or AudioService.last_seff_id != resources.item_sound_effect(dress_id):
+		_fail("inventory did not play the original double-click sound and reject a wrong-gender dress locally")
+		return
+	panel.get("_bins").erase(wrong_gender_key)
+	panel_resources.item_names[dress_id] = original_dress_name
 	var no_range_wheel := InputEventMouseButton.new()
 	no_range_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
 	no_range_wheel.pressed = true

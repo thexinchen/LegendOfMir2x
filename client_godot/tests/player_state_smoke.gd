@@ -96,10 +96,11 @@ func _ready() -> void:
 		return
 	panel_resources.item_names[dress_id] = original_dress_name
 	GameState.grabbed_item = _item(dress_id, 79)
+	var inventory_before_invalid := GameState.inventory.duplicate(true)
 	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
 	panel.call("_on_wear_pressed", 3)
-	if not GameState.grabbed_item.is_empty() or AudioService.last_seff_id != resources.item_sound_effect(dress_id):
-		_fail("invalid wear placement did not return the item with original sound")
+	if GameState.grabbed_item != _item(dress_id, 79) or GameState.inventory != inventory_before_invalid or AudioService.last_seff_id != AudioService.INVALID_SEFF_ID:
+		_fail("invalid wear placement did not preserve the grabbed item silently like C++")
 		return
 	if panel.get_node("StateValues").get_child_count() != 9:
 		_fail("state rows missing")

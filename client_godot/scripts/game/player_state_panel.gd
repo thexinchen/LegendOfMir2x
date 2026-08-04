@@ -164,32 +164,12 @@ func _on_wear_pressed(location: int) -> void:
 		var grabbed: Dictionary = _state.grabbed_item
 		if _can_wear(int(grabbed.get("itemID", 0)), location):
 			NetworkClient.send_request_equip_wear(grabbed.get("itemID", 0), grabbed.get("seqID", 0), location)
-		else:
-			_state.inventory.append(grabbed)
-			AudioService.play_seff_at(_resources.item_sound_effect(int(grabbed.get("itemID", 0))), 0, 0, 0, 0)
-			_state.grabbed_item = {}
-			_state.state_changed.emit()
 	elif not _state.wear.get(location, {}).is_empty():
 		NetworkClient.send_request_grab_wear(location)
 
 
 func _can_wear(item_id: int, location: int) -> bool:
-	var item_type: String = _resources.item_type(item_id)
-	var expected := {
-		1: ["衣服"], 2: ["头盔"], 3: ["武器"], 4: ["鞋"], 5: ["项链"],
-		6: ["手镯"], 7: ["手镯"], 8: ["戒指"], 9: ["戒指"], 10: ["火把"],
-		11: ["魅力", "护身符", "药粉"],
-	}
-	if item_type not in expected.get(location, []):
-		return false
-	if location == 1:
-		var name: String = _resources.item_name(item_id)
-		if "（男）" in name:
-			return bool(_state.player_gender)
-		if "（女）" in name:
-			return not bool(_state.player_gender)
-		return false
-	return true
+	return _resources.item_can_wear(item_id, location, bool(_state.player_gender))
 
 
 func _show_item_tooltip(location: int, item: Dictionary) -> void:
