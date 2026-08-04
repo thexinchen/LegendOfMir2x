@@ -1267,6 +1267,7 @@ func _test_magic_panel_hotkey_precedence(main: Control, resources: RefCounted) -
 
 func _test_death_correction_queue(main: Control, resources: RefCounted) -> bool:
 	var renderer: Control = main.get_node("WorldRenderer")
+	var previous_hp := GameState.player_hp
 	var line := _find_walkable_line(renderer, 5)
 	if line.size() != 5:
 		_fail("unable to find a straight walkable death-correction fixture")
@@ -1276,6 +1277,7 @@ func _test_death_correction_queue(main: Control, resources: RefCounted) -> bool:
 	GameState.player_x = line[0].x
 	GameState.player_y = line[0].y
 	GameState.player_direction = 1
+	GameState.player_hp = 0
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
 		"type": 13, "x": line[4].x, "y": line[4].y,
 	}))
@@ -1394,6 +1396,7 @@ func _test_death_correction_queue(main: Control, resources: RefCounted) -> bool:
 	GameState.remove_creature(remote_uid)
 	GameState.remove_creature(monster_uid)
 	GameState.remove_creature(transform_uid)
+	GameState.player_hp = previous_hp
 	return true
 
 
@@ -1512,7 +1515,15 @@ func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 	if main.get("_follow_focus_uid") != 777:
 		_fail("dead player still processed a world mouse command")
 		return false
-	main.call("_set_player_action", 2)
+	GameState.player_hp = 1
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
+		"type": 2, "speed": 100, "direction": 5,
+		"x": GameState.player_x, "y": GameState.player_y,
+		"aimX": GameState.player_x, "aimY": GameState.player_y,
+	}))
+	if GameState.player_action_type != 2:
+		_fail("authoritative revive stand did not clear local Hero death")
+		return false
 	main.call("_update_death_overlay")
 	main.call("_unhandled_input", blocked_click)
 	if death_overlay.visible or main.get("_follow_focus_uid") != 0:

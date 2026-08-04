@@ -1195,7 +1195,8 @@ func _handle_action_data(data: Dictionary, correction_applied := false) -> void:
 		creature.erase("motion_action_queue")
 		game_state.update_creature(uid, creature)
 		previous_creature = creature.duplicate(true)
-	if uid == game_state.player_uid and (game_state.player_action_type == 13 or not _player_forced_action_queue.is_empty()):
+	var reviving_player: bool = uid == game_state.player_uid and game_state.player_action_type == 13 and action_type == 2 and game_state.player_hp > 0
+	if uid == game_state.player_uid and (not _player_forced_action_queue.is_empty() or (game_state.player_action_type == 13 and not reviving_player)):
 		return
 	if previous_creature.get("action_type", 0) == 13 or not previous_creature.get("forced_action_queue", []).is_empty():
 		return
