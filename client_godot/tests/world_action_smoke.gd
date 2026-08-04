@@ -1284,6 +1284,20 @@ func _test_death_correction_queue(main: Control, resources: RefCounted) -> bool:
 	if GameState.player_action_type != 3 or GameState.player_action_step != 2 or Vector2i(GameState.player_x, GameState.player_y) != line[2] or (main.get("_player_forced_action_queue") as Array).size() != 2:
 		_fail("local Hero death did not start with a two-grid forced correction segment")
 		return false
+	GameState.chat_log.clear()
+	main.get_node("ControlPanel").call("_on_command_submitted", "@revive")
+	if GameState.chat_log.is_empty() or GameState.chat_log.back().get("text", "") != "复活":
+		_fail("health-dead Hero could not request revive during forced correction")
+		return false
+	GameState.player_hp = 1
+	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
+		"type": 2, "speed": 100, "direction": 5,
+		"x": line[4].x, "y": line[4].y,
+		"aimX": line[4].x, "aimY": line[4].y,
+	}))
+	if GameState.player_action_type != 3 or (main.get("_player_post_forced_action") as Dictionary).is_empty():
+		_fail("early revive stand did not wait behind forced death correction")
+		return false
 	main.call("_on_server_message", NetworkClient.SM_NOTIFYDEAD, _u64_payload(101))
 	if GameState.player_action_type != 3:
 		_fail("SM_NOTIFYDEAD interrupted the local Hero forced death correction")
@@ -1293,17 +1307,17 @@ func _test_death_correction_queue(main: Control, resources: RefCounted) -> bool:
 		_fail("local Hero death did not advance the second forced correction segment")
 		return false
 	main.call("_process_player_action", 1.0)
-	if GameState.player_action_type != 13 or Vector2i(GameState.player_x, GameState.player_y) != line[4] or not (main.get("_player_forced_action_queue") as Array).is_empty():
+	if GameState.player_action_type != 13 or Vector2i(GameState.player_x, GameState.player_y) != line[4] or not (main.get("_player_forced_action_queue") as Array).is_empty() or float(main.get("_player_action_timer")) <= 0.0:
 		_fail("local Hero death did not start at the authoritative correction endpoint")
 		return false
-	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
-		"type": 2, "direction": 1, "x": line[0].x, "y": line[0].y,
-	}))
-	if GameState.player_action_type != 13 or Vector2i(GameState.player_x, GameState.player_y) != line[4]:
-		_fail("action received after local Hero death interrupted the forced terminal motion")
+	main.call("_process_player_action", 0.5)
+	if GameState.player_action_type != 13:
+		_fail("early revive skipped the original death motion")
 		return false
-	main.call("_set_player_action", 2)
-	main.set("_player_action_timer", -1.0)
+	main.call("_process_player_action", 1.0)
+	if GameState.player_action_type != 2 or Vector2i(GameState.player_x, GameState.player_y) != line[4] or not (main.get("_player_post_forced_action") as Dictionary).is_empty():
+		_fail("early revive stand did not run after the forced death motion")
+		return false
 
 	var remote_uid: int = (5 << 59) | 801
 	GameState.update_creature(remote_uid, {
@@ -1521,8 +1535,12 @@ func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 		"x": GameState.player_x, "y": GameState.player_y,
 		"aimX": GameState.player_x, "aimY": GameState.player_y,
 	}))
+	if GameState.player_action_type != 13 or (main.get("_player_post_forced_action") as Dictionary).is_empty():
+		_fail("authoritative revive stand did not wait behind local Hero death motion")
+		return false
+	main.call("_process_player_action", 2.0)
 	if GameState.player_action_type != 2:
-		_fail("authoritative revive stand did not clear local Hero death")
+		_fail("authoritative revive stand did not clear local Hero death after its motion")
 		return false
 	main.call("_update_death_overlay")
 	main.call("_unhandled_input", blocked_click)

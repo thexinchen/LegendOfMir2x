@@ -509,7 +509,7 @@ func _handle_user_command(command_text: String) -> void:
 			NetworkClient.send_request_die()
 			game_state.add_chat_log("自杀", 1)
 		"revive":
-			if game_state.player_action_type == 13:
+			if game_state.player_hp <= 0:
 				NetworkClient.send_request_add_hp(1)
 				game_state.add_chat_log("复活", 1)
 		"help":

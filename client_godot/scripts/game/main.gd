@@ -89,6 +89,7 @@ var _mine_target := Vector2i(-1, -1)
 var _pickup_action_timer := -1.0
 var _player_action_timer := -1.0
 var _player_forced_action_queue: Array[Dictionary] = []
+var _player_post_forced_action: Dictionary = {}
 var _team_flag_active := false
 
 # C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame).
@@ -795,7 +796,12 @@ func _process_player_action(delta: float) -> void:
 	if _player_action_timer <= 0.0:
 		_player_action_timer = -1.0
 		if _player_forced_action_queue.is_empty():
-			_set_player_action(2)
+			if _player_post_forced_action.is_empty():
+				_set_player_action(2)
+			else:
+				var pending := _player_post_forced_action
+				_player_post_forced_action = {}
+				_handle_action_data(pending, true)
 		else:
 			_advance_player_forced_action()
 
@@ -804,6 +810,7 @@ func _start_player_death_action(action: Dictionary) -> void:
 	_cancel_movement()
 	_pickup_action_timer = -1.0
 	_player_action_timer = -1.0
+	_player_post_forced_action = {}
 	var start := Vector2i(game_state.player_x, game_state.player_y)
 	var target := Vector2i(action.get("x", start.x), action.get("y", start.y))
 	_player_forced_action_queue = _forced_correction_steps(start, target, 2)
@@ -830,7 +837,7 @@ func _advance_player_forced_action() -> void:
 	game_state.player_action_from_x = game_state.player_x
 	game_state.player_action_from_y = game_state.player_y
 	_set_player_action(13, 100)
-	_player_action_timer = -1.0
+	_player_action_timer = _action_duration(13, 100, 2) if not _player_post_forced_action.is_empty() else -1.0
 	_play_action_seff(game_state.player_uid, action, {
 		"uid": game_state.player_uid,
 		"type": 2,
@@ -908,7 +915,7 @@ func _action_duration(action_type: int, speed: int, creature_type: int, magic_id
 			else:
 				return _hero_spell_action_duration(magic_id)
 		11: frame_count = 2 if creature_type == 1 else 3
-		12: frame_count = 10
+		12, 13: frame_count = 10
 		14: frame_count = 9
 		_: return -1.0
 	return float(frame_count) * 0.1 * 100.0 / float(clampi(speed, 20, 500))
@@ -1159,6 +1166,7 @@ func _handle_start_game_scene(payload: PackedByteArray) -> void:
 	_pickup_action_timer = -1.0
 	_player_action_timer = -1.0
 	_player_forced_action_queue.clear()
+	_player_post_forced_action = {}
 	game_state.start_game_scene(data)
 	NetworkClient.send_query_gold()
 	if _load_world_map(game_state.player_map_id):
@@ -1195,9 +1203,21 @@ func _handle_action_data(data: Dictionary, correction_applied := false) -> void:
 		creature.erase("motion_action_queue")
 		game_state.update_creature(uid, creature)
 		previous_creature = creature.duplicate(true)
-	var reviving_player: bool = uid == game_state.player_uid and game_state.player_action_type == 13 and action_type == 2 and game_state.player_hp > 0
-	if uid == game_state.player_uid and (not _player_forced_action_queue.is_empty() or (game_state.player_action_type == 13 and not reviving_player)):
-		return
+	var reviving_player: bool = uid == game_state.player_uid and action_type == 2 and game_state.player_hp > 0
+	if uid == game_state.player_uid:
+		if not _player_forced_action_queue.is_empty():
+			if reviving_player:
+				_player_post_forced_action = data.duplicate(true)
+			return
+		if game_state.player_action_type == 13:
+			if not reviving_player:
+				return
+			if not correction_applied:
+				_player_post_forced_action = data.duplicate(true)
+				var death_duration := _action_duration(13, game_state.player_action_speed, 2)
+				var elapsed := float(Time.get_ticks_msec() - game_state.player_action_started_ms) / 1000.0
+				_player_action_timer = maxf(0.001, death_duration - elapsed)
+				return
 	if previous_creature.get("action_type", 0) == 13 or not previous_creature.get("forced_action_queue", []).is_empty():
 		return
 	if previous_creature.get("monster_pending_forced_action", {}).get("type", 0) == 13:
@@ -1388,6 +1408,7 @@ func _switch_player_map(map_uid: int, action: Dictionary) -> void:
 	_pickup_action_timer = -1.0
 	_player_action_timer = -1.0
 	_player_forced_action_queue.clear()
+	_player_post_forced_action = {}
 	_magic_focus_uid = 0
 	_follow_focus_uid = 0
 	_attack_focus_uid = 0

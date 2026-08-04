@@ -9,9 +9,14 @@ var _stage := Stage.WAIT_READY
 var _health_received := false
 var _revive_health_msec := 0
 var _finished := false
+var _early_revive := false
+var _saw_forced_correction := false
+var _saw_death_after_revive := false
+var _authoritative_position := Vector2i.ZERO
 
 
 func _ready() -> void:
+	_early_revive = OS.has_environment("MIR2X_NETWORK_DEATH_EARLY_REVIVE")
 	NetworkClient.connection_changed.connect(_on_connection_changed)
 	NetworkClient.message_received.connect(_on_message_received)
 	NetworkClient.connect_to_server()
@@ -30,10 +35,24 @@ func _process(_delta: float) -> void:
 			var world: RefCounted = renderer.get("world_resource")
 			if int(world.get("map_id")) != GameState.player_map_id:
 				return
+			_authoritative_position = Vector2i(GameState.player_x, GameState.player_y)
+			if _early_revive and not _prepare_forced_correction(renderer):
+				_fail("no walkable client/server death-correction fixture was available", 13)
+				return
 			_submit_command("@die")
 			_stage = Stage.WAIT_DEAD
 		Stage.WAIT_DEAD:
-			if GameState.player_hp != 0 or GameState.player_action_type != 13:
+			if GameState.player_hp != 0:
+				return
+			if _early_revive:
+				var forced_queue: Array = _main.get("_player_forced_action_queue")
+				if forced_queue.is_empty() or GameState.player_action_type == 13:
+					return
+				_saw_forced_correction = true
+				_submit_command("@revive")
+				_stage = Stage.WAIT_REVIVED
+				return
+			if GameState.player_action_type != 13:
 				return
 			_main.call("_update_death_overlay")
 			if not overlay.visible or not overlay.color.is_equal_approx(Color(128.0 / 255.0, 0, 0, 64.0 / 255.0)):
@@ -62,8 +81,13 @@ func _process(_delta: float) -> void:
 			if _revive_health_msec == 0:
 				_revive_health_msec = Time.get_ticks_msec()
 			if GameState.player_action_type == 13:
-				if Time.get_ticks_msec() - _revive_health_msec >= 2000:
-					_fail("revive health recovered but the authoritative stand action was rejected", 10)
+				_saw_death_after_revive = true
+			if GameState.player_action_type != 2 or not (_main.get("_player_forced_action_queue") as Array).is_empty() or not (_main.get("_player_post_forced_action") as Dictionary).is_empty():
+				if Time.get_ticks_msec() - _revive_health_msec >= 5000:
+					_fail("revive health recovered but correction/death/stand did not finish", 10)
+				return
+			if _early_revive and (not _saw_forced_correction or not _saw_death_after_revive or Vector2i(GameState.player_x, GameState.player_y) != _authoritative_position):
+				_fail("early revive skipped correction/death or missed authoritative position: forced=%s death=%s pos=%s expected=%s" % [_saw_forced_correction, _saw_death_after_revive, Vector2i(GameState.player_x, GameState.player_y), _authoritative_position], 14)
 				return
 			_main.call("_update_death_overlay")
 			if overlay.visible:
@@ -77,7 +101,7 @@ func _process(_delta: float) -> void:
 			if int(_main.get("_follow_focus_uid")) != 0:
 				_fail("revived player did not regain world mouse input", 12)
 				return
-			print("NETWORK DEATH REVIVE PASS: visible @die hp=0/action=13/veil -> @revive hp=%d/action=%d/world-input" % [GameState.player_hp, GameState.player_action_type])
+			print("NETWORK DEATH REVIVE PASS: visible @die -> @revive hp=%d/action=%d forced=%s death=%s pos=%s world-input" % [GameState.player_hp, GameState.player_action_type, _saw_forced_correction, _saw_death_after_revive, Vector2i(GameState.player_x, GameState.player_y)])
 			_finished = true
 			NetworkClient.disconnect_from_server()
 			get_tree().quit()
@@ -87,6 +111,24 @@ func _submit_command(text: String) -> void:
 	var command := _main.get_node("ControlPanel").get_node("%Command") as LineEdit
 	command.text = text
 	command.text_submitted.emit(command.text)
+
+
+func _prepare_forced_correction(renderer: Control) -> bool:
+	for radius in range(6, 2, -1):
+		for offset_value in [Vector2i(radius, 0), Vector2i(-radius, 0), Vector2i(0, radius), Vector2i(0, -radius)]:
+			var offset: Vector2i = offset_value
+			var candidate: Vector2i = _authoritative_position + offset
+			if not renderer.call("can_walk", candidate.x, candidate.y):
+				continue
+			var correction: Array = _main.call("_forced_correction_steps", candidate, _authoritative_position, 2)
+			if correction.size() < 2:
+				continue
+			GameState.player_x = candidate.x
+			GameState.player_y = candidate.y
+			GameState.player_action_from_x = candidate.x
+			GameState.player_action_from_y = candidate.y
+			return true
+	return false
 
 
 func _on_connection_changed(connected: bool, _message: String) -> void:
