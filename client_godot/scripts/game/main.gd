@@ -512,17 +512,24 @@ func _execute_spell_action(action_type: int, magic_id: int, aim_grid: Vector2i, 
 		else:
 			target_grid = Vector2i(target.get("x", aim_grid.x), target.get("y", aim_grid.y))
 	var direction: int = int(game_state.player_direction)
-	var can_turn: bool = true
-	if action_type == 9:
+	if action_type == 12:
+		direction = _spinkick_direction(game_state.player_uid, {
+			"x": game_state.player_x,
+			"y": game_state.player_y,
+			"aimUID": aim_uid,
+		})
+	else:
+		var can_turn: bool = true
 		# C++ ActionSpell only inserts a turn for a live UID target or a
 		# traversable ground target. Invalid map-edge clicks keep the current
 		# direction while the spell itself is still cast.
-		can_turn = aim_uid != 0 if requested_aim_uid != 0 else world_renderer.can_walk(target_grid.x, target_grid.y)
-	if can_turn:
-		direction = _direction_to(game_state.player_x, game_state.player_y, target_grid.x, target_grid.y)
+		if action_type == 9:
+			can_turn = aim_uid != 0 if requested_aim_uid != 0 else world_renderer.can_walk(target_grid.x, target_grid.y)
+		if can_turn:
+			direction = _direction_to(game_state.player_x, game_state.player_y, target_grid.x, target_grid.y)
 	if direction == 0:
 		direction = game_state.player_direction
-	if direction != game_state.player_direction:
+	if action_type != 12 and direction != game_state.player_direction:
 		var stand := {
 			"type": 2, "speed": 100, "direction": direction,
 			"x": game_state.player_x, "y": game_state.player_y,
@@ -531,13 +538,15 @@ func _execute_spell_action(action_type: int, magic_id: int, aim_grid: Vector2i, 
 		NetworkClient.send_action(Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, stand))
 		game_state.player_direction = direction
 	var action := {
-		"type": action_type, "speed": 100, "direction": direction,
+		"type": action_type, "speed": 100, "direction": 0 if action_type == 12 else direction,
 		"x": game_state.player_x, "y": game_state.player_y,
 		"aimX": target_grid.x, "aimY": target_grid.y, "aimUID": aim_uid,
 		"magicID": magic_id,
 	}
 	NetworkClient.send_action(Protocol.encode_cm_action(game_state.player_uid, game_state.player_map_uid, action))
 	game_state.magic_cast_times[magic_id] = Time.get_ticks_msec()
+	if action_type == 12:
+		game_state.player_direction = direction
 	if action_type == 9:
 		var effect := action.duplicate(true)
 		if _resources.magic_cast_motion(magic_id) == 7:

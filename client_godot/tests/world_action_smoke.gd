@@ -1021,7 +1021,8 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 	var fireball_id: int = resources.magic_id("火球术")
 	var flame_sword_id: int = resources.magic_id("烈火剑法")
 	var half_moon_id: int = resources.magic_id("半月弯刀")
-	if 0 in [firewall_id, shield_id, fireball_id, flame_sword_id, half_moon_id]:
+	var spin_kick_id: int = resources.magic_id("空拳刀法")
+	if 0 in [firewall_id, shield_id, fireball_id, flame_sword_id, half_moon_id, spin_kick_id]:
 		_fail("spell metadata unavailable")
 		return false
 	GameState.player_action_from_x = 9
@@ -1082,6 +1083,17 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 		return false
 	if not main.call("_cast_magic", shield_id, Vector2i(12, 12)) or GameState.magic_effects.back().get("aimUID", 0) != GameState.player_uid:
 		_fail("self spell did not target player UID")
+		return false
+	GameState.update_creature(606, {"uid": 606, "x": 11, "y": 10, "type": 1, "action_type": 2})
+	GameState.player_direction = 5
+	if not main.call("_execute_spell_action", 12, spin_kick_id, Vector2i(11, 10), 606) \
+			or GameState.player_action_type != 12 or GameState.player_direction != 7:
+		_fail("local spin-kick did not face away from its adjacent target like C++")
+		return false
+	GameState.remove_creature(606)
+	GameState.player_direction = 5
+	if not main.call("_execute_spell_action", 12, spin_kick_id, Vector2i(12, 10), 0) or GameState.player_direction != 5:
+		_fail("ground-only spin-kick did not preserve its current C++ direction")
 		return false
 	GameState.update_creature(404, {"uid": 404, "x": 9, "y": 10, "type": 1, "action_type": 2})
 	GameState.update_creature(505, {"uid": 505, "x": 12, "y": 10, "type": 1, "action_type": 2})
