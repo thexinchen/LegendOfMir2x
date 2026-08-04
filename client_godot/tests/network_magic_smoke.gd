@@ -18,6 +18,7 @@ var _finished := false
 var _capture_started := false
 var _cast_started_msec := 0
 var _initial_hp := 0
+var _expected_buff_id := 0
 
 
 func _ready() -> void:
@@ -42,6 +43,10 @@ func _process(_delta: float) -> void:
 				return
 			var panel := _main.get_node("SkillPanel") as Control
 			var resources: RefCounted = _main.get("_resources")
+			_expected_buff_id = _buff_id_by_name(resources, "治愈术")
+			if _expected_buff_id == 0:
+				_fail("healing buff metadata is unavailable", 12)
+				return
 			var layout: PackedInt32Array = resources.call("skill_layout", MAGIC_ID)
 			if layout.size() < 5:
 				_fail("healing skill layout is unavailable", 8)
@@ -90,7 +95,20 @@ func _process(_delta: float) -> void:
 		Stage.WAIT_CAST:
 			if not _local_action_started or not _buff_list_received or not _health_received or GameState.player_hp <= _initial_hp:
 				return
-			print("NETWORK MAGIC PASS: healing=%d key=X hp=%d->%d local-action+authoritative-buff/health" % [MAGIC_ID, _initial_hp, GameState.player_hp])
+			if not GameState.buff_list.has(_expected_buff_id):
+				_fail("authoritative healing buff is missing: expected=%d actual=%s" % [_expected_buff_id, GameState.buff_list], 13)
+				return
+			var hud := _main.get_node("SkillBuffHUD") as Control
+			if int(hud.call("buff_icon_count")) < 1:
+				_fail("authoritative healing buff has no drawable HUD icon: id=%d" % _expected_buff_id, 14)
+				return
+			if OS.has_environment("MIR2X_NETWORK_MAGIC_RESULT_SCREENSHOT"):
+				await RenderingServer.frame_post_draw
+				var error := get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_NETWORK_MAGIC_RESULT_SCREENSHOT"))
+				if error != OK:
+					_fail("failed to save authoritative-buff screenshot: %s" % error, 15)
+					return
+			print("NETWORK MAGIC PASS: healing=%d buff=%d key=X hp=%d->%d local-action+authoritative-buff/health+HUD" % [MAGIC_ID, _expected_buff_id, _initial_hp, GameState.player_hp])
 			_finished = true
 			NetworkClient.disconnect_from_server()
 			get_tree().quit()
@@ -101,6 +119,14 @@ func _has_learned_magic() -> bool:
 		if value is Dictionary and int(value.get("magicID", 0)) == MAGIC_ID:
 			return true
 	return false
+
+
+func _buff_id_by_name(resources: RefCounted, buff_name: String) -> int:
+	var names: Dictionary = resources.get("buff_names")
+	for id_value in names:
+		if str(names[id_value]) == buff_name:
+			return int(id_value)
+	return 0
 
 
 func _magic_button(panel: Control) -> TextureButton:
@@ -143,7 +169,7 @@ func _on_message_received(head_code: int, payload: PackedByteArray) -> void:
 
 
 func _on_timeout() -> void:
-	_fail("timed out stage=%d learned=%s keys=%s hp=%d local_action=%s buff=%s health=%s cast_ms=%d" % [_stage, GameState.learned_magic, GameState.magic_keys, GameState.player_hp, _local_action_started, _buff_list_received, _health_received, _cast_started_msec], 6)
+	_fail("timed out stage=%d learned=%s keys=%s hp=%d local_action=%s buff_message=%s buffs=%s expected_buff=%d health=%s cast_ms=%d" % [_stage, GameState.learned_magic, GameState.magic_keys, GameState.player_hp, _local_action_started, _buff_list_received, GameState.buff_list, _expected_buff_id, _health_received, _cast_started_msec], 6)
 
 
 func _fail(message: String, code: int) -> void:
