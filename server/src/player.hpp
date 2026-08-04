@@ -192,6 +192,7 @@ class Player final: public BattleObject
         corof::awaitable<> net_CM_PLAYERSAY                 (uint8_t, const uint8_t *, size_t, uint64_t);
         corof::awaitable<> net_CM_PLAYERBROADCAST           (uint8_t, const uint8_t *, size_t, uint64_t);
         corof::awaitable<> net_CM_CONSUMEITEM               (uint8_t, const uint8_t *, size_t, uint64_t);
+        corof::awaitable<> net_CM_CONSUMEBELTITEM           (uint8_t, const uint8_t *, size_t, uint64_t);
         corof::awaitable<> net_CM_DROPITEM                  (uint8_t, const uint8_t *, size_t, uint64_t);
         corof::awaitable<> net_CM_MAKEITEM                  (uint8_t, const uint8_t *, size_t, uint64_t);
         corof::awaitable<> net_CM_NPCEVENT                  (uint8_t, const uint8_t *, size_t, uint64_t);

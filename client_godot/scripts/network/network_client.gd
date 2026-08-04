@@ -49,6 +49,7 @@ const CM_REQUESTGRABBELT := 45
 const CM_REQUESTJOINTEAM := 46
 const CM_REQUESTLEAVETEAM := 47
 const CM_REQUESTLATESTCHATMESSAGE := 48
+const CM_CONSUMEBELTITEM := 49
 const CM_REQUESTRETRIEVESECUREDITEM := 16
 const CM_REQUESTSPACEMOVE := 17
 const CM_CREATEACCOUNT := 28
@@ -454,6 +455,10 @@ func send_consume_item(item_id: int, seq_id: int, count: int = 1) -> Error:
 	payload.encode_u32(4, seq_id)
 	payload.encode_u16(8, clampi(count, 0, 0xFFFF))
 	return _send_fixed_message(CM_CONSUMEITEM, payload)
+
+
+func send_consume_belt_item(slot: int) -> Error:
+	return _send_u16(CM_CONSUMEBELTITEM, slot)
 
 
 func send_make_item(item_id: int, count: int = 1) -> Error:

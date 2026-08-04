@@ -586,6 +586,7 @@ corof::awaitable<> Player::operateNet(uint8_t nType, const uint8_t *pData, size_
         _support_cm(CM_PLAYERSAY                 );
         _support_cm(CM_PLAYERBROADCAST           );
         _support_cm(CM_CONSUMEITEM               );
+        _support_cm(CM_CONSUMEBELTITEM           );
         _support_cm(CM_DROPITEM                  );
         _support_cm(CM_MAKEITEM                  );
         _support_cm(CM_NPCEVENT                  );

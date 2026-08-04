@@ -1109,7 +1109,7 @@ void ImMainUI::consumeQuickSlot(int slot) const
     if(slot >= 0 && slot < 6){
         if(const auto &item = m_processRun->getMyHero()->getBelt(slot)){
             InvPack::playItemSoundEffect(item.itemID, true);
-            m_processRun->requestConsumeItem(item.itemID, item.seqID, 1);
+            m_processRun->requestConsumeBeltItem(slot);
         }
     }
 }

@@ -482,6 +482,7 @@ class ProcessRun: public Process
         void requestBuy(uint64_t, uint32_t, uint32_t, size_t);
         void requestMakeItem(uint32_t, size_t);
         void requestConsumeItem(uint32_t, uint32_t, size_t);
+        void requestConsumeBeltItem(int);
         void requestEquipWear(uint32_t, uint32_t, int);
         void requestGrabWear(int);
         void requestEquipBelt(uint32_t, uint32_t, int);

@@ -64,6 +64,7 @@ enum CMType: uint8_t
     CM_REQUESTJOINTEAM,
     CM_REQUESTLEAVETEAM,
     CM_REQUESTLATESTCHATMESSAGE,
+    CM_CONSUMEBELTITEM,
     CM_END,
 };
 
@@ -308,6 +309,11 @@ struct CMRequestGrabBelt
     uint16_t slot;
 };
 
+struct CMConsumeBeltItem
+{
+    uint16_t slot;
+};
+
 struct CMRequestJoinTeam
 {
     uint64_t uid;
@@ -393,6 +399,7 @@ namespace
         _RSVD_register_clientmsg(CM_REQUESTJOINTEAM,            1, sizeof(CMRequestJoinTeam)           );
         _RSVD_register_clientmsg(CM_REQUESTLEAVETEAM,           1, sizeof(CMRequestLeaveTeam)          );
         _RSVD_register_clientmsg(CM_REQUESTLATESTCHATMESSAGE,   1, sizeof(CMRequestLatestChatMessage)  );
+        _RSVD_register_clientmsg(CM_CONSUMEBELTITEM,            1, sizeof(CMConsumeBeltItem)           );
 
 #undef _RSVD_register_clientmsg
         return result;

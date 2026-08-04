@@ -2464,6 +2464,18 @@ void ProcessRun::requestConsumeItem(uint32_t itemID, uint32_t seqID, size_t coun
     g_client->send({CM_CONSUMEITEM, cmCI});
 }
 
+void ProcessRun::requestConsumeBeltItem(int slot)
+{
+    if(!(slot >= 0 && slot < 6)){
+        throw fflpanic("invalid belt slot: {}", slot);
+    }
+
+    CMConsumeBeltItem cmCBI;
+    std::memset(&cmCBI, 0, sizeof(cmCBI));
+    cmCBI.slot = slot;
+    g_client->send({CM_CONSUMEBELTITEM, cmCBI});
+}
+
 void ProcessRun::requestMakeItem(uint32_t itemID, size_t count)
 {
     CMMakeItem cmMI;

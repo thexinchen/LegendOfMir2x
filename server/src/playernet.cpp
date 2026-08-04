@@ -1103,6 +1103,36 @@ corof::awaitable<> Player::net_CM_CONSUMEITEM(uint8_t, const uint8_t *buf, size_
     return {};
 }
 
+corof::awaitable<> Player::net_CM_CONSUMEBELTITEM(uint8_t, const uint8_t *buf, size_t, uint64_t)
+{
+    const auto cmCBI = ClientMsg::conv<CMConsumeBeltItem>(buf);
+    const auto slot = to_d(cmCBI.slot);
+    if(!(slot >= 0 && slot < 6)){
+        return {};
+    }
+
+    auto &item = m_sdItemStorage.belt.list.at(slot);
+    if(!item){
+        return {};
+    }
+
+    const auto &ir = DBCOM_ITEMRECORD(item.itemID);
+    if(!ir || !ir.isPotion() || !consumePotion(item.itemID)){
+        return {};
+    }
+
+    fflassert(item.count > 0);
+    if(--item.count > 0){
+        dbUpdateBeltItem(slot, item);
+    }
+    else{
+        item = {};
+        dbRemoveBeltItem(slot);
+    }
+    postNetMessage(SM_BELT, cerealf::serialize(m_sdItemStorage.belt));
+    return {};
+}
+
 corof::awaitable<> Player::net_CM_MAKEITEM(uint8_t, const uint8_t *buf, size_t, uint64_t)
 {
     const auto cmMI = ClientMsg::conv<CMMakeItem>(buf);
