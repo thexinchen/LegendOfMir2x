@@ -1,0 +1,155 @@
+extends Node
+
+const Protocol = preload("res://scripts/network/protocol.gd")
+
+const MAGIC_ID := 17
+const MAGIC_KEY := 120
+
+enum Stage { WAIT_READY, WAIT_BOUND, WAIT_CAST }
+
+var _main: Control
+var _stage := Stage.WAIT_READY
+var _learned_received := false
+var _config_received := false
+var _health_received := false
+var _local_action_started := false
+var _buff_list_received := false
+var _finished := false
+var _capture_started := false
+var _cast_started_msec := 0
+var _initial_hp := 0
+
+
+func _ready() -> void:
+	NetworkClient.connection_changed.connect(_on_connection_changed)
+	NetworkClient.message_received.connect(_on_message_received)
+	NetworkClient.connect_to_server()
+	get_tree().create_timer(35.0).timeout.connect(_on_timeout)
+
+
+func _process(_delta: float) -> void:
+	if _finished or _main == null:
+		return
+	match _stage:
+		Stage.WAIT_READY:
+			if not _learned_received or not _config_received or not _health_received:
+				return
+			if not _has_learned_magic() or GameState.player_hp <= 0:
+				return
+			_initial_hp = GameState.player_hp
+			if _initial_hp >= GameState.player_hp_max:
+				_fail("healing fixture reached full health before casting: %d/%d" % [_initial_hp, GameState.player_hp_max], 7)
+				return
+			var panel := _main.get_node("SkillPanel") as Control
+			var resources: RefCounted = _main.get("_resources")
+			var layout: PackedInt32Array = resources.call("skill_layout", MAGIC_ID)
+			if layout.size() < 5:
+				_fail("healing skill layout is unavailable", 8)
+				return
+			panel.show()
+			panel.call("_select_tab", layout[1])
+			var button := _magic_button(panel)
+			if button == null or not button.visible:
+				return
+			button.mouse_entered.emit()
+			if OS.has_environment("MIR2X_NETWORK_MAGIC_EXPECT_PERSISTED"):
+				if int(GameState.magic_keys.get(MAGIC_ID, 0)) != MAGIC_KEY:
+					_fail("server-generated player config did not reload healing=X: %s" % GameState.magic_keys, 9)
+					return
+			else:
+				var bind_event := InputEventKey.new()
+				bind_event.keycode = KEY_X
+				bind_event.unicode = MAGIC_KEY
+				bind_event.pressed = true
+				panel.call("_unhandled_key_input", bind_event)
+				if int(GameState.magic_keys.get(MAGIC_ID, 0)) != MAGIC_KEY:
+					_fail("visible skill panel did not bind healing=X: %s" % GameState.magic_keys, 10)
+					return
+			_stage = Stage.WAIT_BOUND
+		Stage.WAIT_BOUND:
+			if OS.has_environment("MIR2X_NETWORK_MAGIC_SCREENSHOT") and not _capture_started:
+				_capture_started = true
+				await RenderingServer.frame_post_draw
+				var error := get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_NETWORK_MAGIC_SCREENSHOT"))
+				if error != OK:
+					_fail("failed to save learned-skill screenshot: %s" % error, 11)
+					return
+			var panel := _main.get_node("SkillPanel") as Control
+			panel.hide()
+			_local_action_started = false
+			_buff_list_received = false
+			_health_received = false
+			var cast_event := InputEventKey.new()
+			cast_event.keycode = KEY_X
+			cast_event.unicode = MAGIC_KEY
+			cast_event.pressed = true
+			_main.call("_unhandled_input", cast_event)
+			_local_action_started = GameState.player_action_type == 9 and GameState.magic_cast_times.has(MAGIC_ID)
+			_cast_started_msec = Time.get_ticks_msec()
+			_stage = Stage.WAIT_CAST
+		Stage.WAIT_CAST:
+			if not _local_action_started or not _buff_list_received or not _health_received or GameState.player_hp <= _initial_hp:
+				return
+			print("NETWORK MAGIC PASS: healing=%d key=X hp=%d->%d local-action+authoritative-buff/health" % [MAGIC_ID, _initial_hp, GameState.player_hp])
+			_finished = true
+			NetworkClient.disconnect_from_server()
+			get_tree().quit()
+
+
+func _has_learned_magic() -> bool:
+	for value in GameState.learned_magic:
+		if value is Dictionary and int(value.get("magicID", 0)) == MAGIC_ID:
+			return true
+	return false
+
+
+func _magic_button(panel: Control) -> TextureButton:
+	for child_value in panel.get_node("PageViewport/LearnedSkills").get_children():
+		var button := child_value as TextureButton
+		if button != null and int(button.get_meta("magic_id", 0)) == MAGIC_ID:
+			return button
+	return null
+
+
+func _on_connection_changed(connected: bool, _message: String) -> void:
+	if connected and NetworkClient.login("id_4", "123456") != OK:
+		_fail("failed to send login", 2)
+
+
+func _on_message_received(head_code: int, payload: PackedByteArray) -> void:
+	if _finished:
+		return
+	match head_code:
+		NetworkClient.SM_LOGINOK:
+			if NetworkClient.enter_game() != OK:
+				_fail("failed to enter game", 3)
+		NetworkClient.SM_ONLINEOK:
+			var online := Protocol.decode_sm_online_ok(payload)
+			var action: Dictionary = online.get("action", {})
+			GameState.set_player_online({"uid": online.get("uid", 0), "name": online.get("name", ""), "gender": online.get("gender", 0), "job": online.get("job", 0), "map_uid": online.get("mapUID", 0), "x": action.get("x", 0), "y": action.get("y", 0), "direction": action.get("direction", 0)})
+			_main = load("res://scenes/game/main.tscn").instantiate() as Control
+			add_child(_main)
+		NetworkClient.SM_LEARNEDMAGICLIST:
+			_learned_received = true
+		NetworkClient.SM_PLAYERCONFIG:
+			_config_received = true
+		NetworkClient.SM_HEALTH:
+			_health_received = true
+		NetworkClient.SM_BUFFIDLIST:
+			if _stage == Stage.WAIT_CAST:
+				_buff_list_received = true
+		NetworkClient.SM_LOGINERROR, NetworkClient.SM_ONLINEERROR:
+			_fail("server rejected login or online", 4)
+
+
+func _on_timeout() -> void:
+	_fail("timed out stage=%d learned=%s keys=%s hp=%d local_action=%s buff=%s health=%s cast_ms=%d" % [_stage, GameState.learned_magic, GameState.magic_keys, GameState.player_hp, _local_action_started, _buff_list_received, _health_received, _cast_started_msec], 6)
+
+
+func _fail(message: String, code: int) -> void:
+	if _finished:
+		return
+	_finished = true
+	push_error("NETWORK_MAGIC_SMOKE %s" % message)
+	NetworkClient.disconnect_from_server()
+	get_tree().quit(code)
