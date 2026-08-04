@@ -366,13 +366,19 @@ func _test_panel_escape_precedence(main: Control) -> bool:
 		_fail("runtime Escape did not close runtime and continue to inventory: runtime=%s inventory=%s" % [runtime.visible, inventory.visible])
 		return false
 	var purchase := main.call("_ensure_extra_panel", "res://scenes/game/panels/purchase.tscn") as Control
+	inventory.show()
 	purchase.show()
+	main.call("_center_hero")
+	GameState.view_x += 37.0
+	GameState.view_y += 29.0
+	var purchase_view_before := Vector2(GameState.view_x, GameState.view_y)
 	Input.parse_input_event(escape)
 	await get_tree().process_frame
-	if not purchase.visible:
-		_fail("purchase panel consumed Escape although C++ purchase board ignores it")
+	if not purchase.visible or not inventory.visible or not Vector2(GameState.view_x, GameState.view_y).is_equal_approx(purchase_view_before):
+		_fail("visible purchase panel did not consume Escape before later panels and HUD like C++: purchase=%s inventory=%s view=%s expected_view=%s" % [purchase.visible, inventory.visible, Vector2(GameState.view_x, GameState.view_y), purchase_view_before])
 		return false
 	purchase.hide()
+	inventory.hide()
 	return true
 
 

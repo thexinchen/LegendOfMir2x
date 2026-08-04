@@ -277,8 +277,18 @@ func _try_panel_hotkey(keycode: int) -> bool:
 
 
 func handle_panel_escape() -> bool:
-	# Match ImMainUI::processEvent(). Purchase, auction, NPC chat and minimap do
-	# not consume Escape. Runtime config closes but deliberately returns false.
+	# Child panels can receive _unhandled_key_input() before GameMain receives
+	# _unhandled_input(), so repeat the two modal gates here before closing any
+	# panel behind them.
+	if map_loading_overlay.visible:
+		get_viewport().set_input_as_handled()
+		return true
+	var purchase_panel := _extra_panel_nodes.get(PURCHASE_PANEL_PATH) as Control
+	if purchase_panel != null and purchase_panel.visible:
+		get_viewport().set_input_as_handled()
+		return true
+	# Match ImMainUI::processEvent(). Auction, NPC chat and minimap do not consume
+	# Escape. Runtime config closes but deliberately returns false.
 	var ordered_panels: Array[Control] = [
 		_extra_panel_nodes.get(HORSE_PANEL_PATH) as Control,
 		_extra_panel_nodes.get(GUILD_PANEL_PATH) as Control,
