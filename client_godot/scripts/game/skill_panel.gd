@@ -208,6 +208,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		key += 32
 	if not ((key >= 48 and key <= 57) or (key >= 97 and key <= 122)):
 		return
+	if not _has_learned_magic(_hovered_magic_id):
+		get_viewport().set_input_as_handled()
+		return
 	var layout: PackedInt32Array = _resources.skill_layout(_hovered_magic_id)
 	if layout.size() >= 5 and (layout[4] & 1) != 0:
 		_state.add_chat_log("无法为被动技能设置快捷键：%s" % _resources.magic_names.get(_hovered_magic_id, ""), 1)
@@ -220,3 +223,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	NetworkClient.send_set_magic_key(_hovered_magic_id, key)
 	_refresh_learned_skills()
 	get_viewport().set_input_as_handled()
+
+
+func _has_learned_magic(magic_id: int) -> bool:
+	for magic_value in _state.learned_magic:
+		if int((magic_value as Dictionary).get("magicID", 0)) == magic_id:
+			return true
+	return false

@@ -72,6 +72,24 @@ func _ready() -> void:
 	if panel.get_node("PageViewport/LearnedSkills").get_child_count() != page_skill_ids.size():
 		_fail("unlearned skill hover regions are missing: actual=%d expected=%d" % [panel.get_node("PageViewport/LearnedSkills").get_child_count(), page_skill_ids.size()])
 		return
+	var unlearned_id := 0
+	for magic_id in page_skill_ids:
+		if not active_ids.has(magic_id) and magic_id != passive_id:
+			unlearned_id = magic_id
+			break
+	if unlearned_id == 0:
+		_fail("unlearned skill binding fixture unavailable")
+		return
+	panel.call("_show_magic", unlearned_id)
+	var unlearned_event := InputEventKey.new()
+	unlearned_event.keycode = KEY_Z
+	unlearned_event.unicode = 122
+	unlearned_event.pressed = true
+	panel.call("_unhandled_key_input", unlearned_event)
+	if GameState.magic_keys != {active_ids[1]: 120} or not GameState.chat_log.is_empty():
+		_fail("unlearned transparent skill slot accepted a shortcut: id=%d keys=%s log=%s" % [unlearned_id, GameState.magic_keys, GameState.chat_log])
+		return
+	panel.call("_hide_magic", unlearned_id)
 	var active_button := _magic_button(panel, active_ids[0])
 	var active_icon: TextureRect = null
 	if active_button != null:
