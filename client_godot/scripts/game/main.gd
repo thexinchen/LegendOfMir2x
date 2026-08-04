@@ -502,6 +502,7 @@ func _release_pending_spell() -> void:
 
 func _execute_spell_action(action_type: int, magic_id: int, aim_grid: Vector2i, aim_uid: int) -> bool:
 	var target_grid := aim_grid
+	var requested_aim_uid := aim_uid
 	if aim_uid == game_state.player_uid:
 		target_grid = Vector2i(game_state.player_x, game_state.player_y)
 	elif aim_uid != 0:
@@ -510,7 +511,15 @@ func _execute_spell_action(action_type: int, magic_id: int, aim_grid: Vector2i, 
 			aim_uid = 0
 		else:
 			target_grid = Vector2i(target.get("x", aim_grid.x), target.get("y", aim_grid.y))
-	var direction := _direction_to(game_state.player_x, game_state.player_y, target_grid.x, target_grid.y)
+	var direction: int = int(game_state.player_direction)
+	var can_turn: bool = true
+	if action_type == 9:
+		# C++ ActionSpell only inserts a turn for a live UID target or a
+		# traversable ground target. Invalid map-edge clicks keep the current
+		# direction while the spell itself is still cast.
+		can_turn = aim_uid != 0 if requested_aim_uid != 0 else world_renderer.can_walk(target_grid.x, target_grid.y)
+	if can_turn:
+		direction = _direction_to(game_state.player_x, game_state.player_y, target_grid.x, target_grid.y)
 	if direction == 0:
 		direction = game_state.player_direction
 	if direction != game_state.player_direction:

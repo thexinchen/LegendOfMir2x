@@ -1069,6 +1069,17 @@ func _test_magic_actions(main: Control, resources: RefCounted, physical_id: int)
 	if GameState.magic_effects.is_empty() or GameState.magic_effects.back().get("magicID", 0) != firewall_id:
 		_fail("ground spell did not create local magic effect")
 		return false
+	GameState.magic_cast_times.erase(firewall_id)
+	GameState.player_direction = 5
+	var invalid_ground_effect_count := GameState.magic_effects.size()
+	if not main.call("_cast_magic", firewall_id, Vector2i(-1, -1)) \
+			or GameState.magic_effects.size() != invalid_ground_effect_count + 1:
+		_fail("ground spell rejected an invalid mouse grid instead of casting in the current direction")
+		return false
+	var invalid_ground_effect: Dictionary = GameState.magic_effects.back()
+	if GameState.player_direction != 5 or int(invalid_ground_effect.get("direction", -1)) != 5:
+		_fail("ground spell turned toward an invalid mouse grid: player=%d effect=%s" % [GameState.player_direction, invalid_ground_effect])
+		return false
 	if not main.call("_cast_magic", shield_id, Vector2i(12, 12)) or GameState.magic_effects.back().get("aimUID", 0) != GameState.player_uid:
 		_fail("self spell did not target player UID")
 		return false
