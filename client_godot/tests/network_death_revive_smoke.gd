@@ -49,6 +49,8 @@ func _process(_delta: float) -> void:
 				if forced_queue.is_empty() or GameState.player_action_type == 13:
 					return
 				_saw_forced_correction = true
+				if not _escape_recenters("forced death correction"):
+					return
 				_submit_command("@revive")
 				_stage = Stage.WAIT_REVIVED
 				return
@@ -66,6 +68,8 @@ func _process(_delta: float) -> void:
 			_main.call("_unhandled_input", blocked_click)
 			if int(_main.get("_follow_focus_uid")) != 777:
 				_fail("dead player accepted a world mouse command", 8)
+				return
+			if not _escape_recenters("dead player"):
 				return
 			if OS.has_environment("MIR2X_NETWORK_DEATH_SCREENSHOT"):
 				await RenderingServer.frame_post_draw
@@ -111,6 +115,21 @@ func _submit_command(text: String) -> void:
 	var command := _main.get_node("ControlPanel").get_node("%Command") as LineEdit
 	command.text = text
 	command.text_submitted.emit(command.text)
+
+
+func _escape_recenters(context: String) -> bool:
+	_main.call("_center_hero")
+	var centered_view := Vector2(GameState.view_x, GameState.view_y)
+	GameState.view_x += 123.0
+	GameState.view_y += 77.0
+	var escape_key := InputEventKey.new()
+	escape_key.keycode = KEY_ESCAPE
+	escape_key.pressed = true
+	_main.call("_unhandled_input", escape_key)
+	if not Vector2(GameState.view_x, GameState.view_y).is_equal_approx(centered_view):
+		_fail("%s did not preserve the original Escape camera recenter" % context, 15)
+		return false
+	return true
 
 
 func _prepare_forced_correction(renderer: Control) -> bool:

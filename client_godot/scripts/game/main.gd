@@ -216,7 +216,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _player_dead() or not _player_forced_action_queue.is_empty():
 		if event is InputEventKey:
-			if event.keycode in [KEY_ENTER, KEY_KP_ENTER]:
+			if event.keycode == KEY_ESCAPE:
+				_center_hero()
+			elif event.keycode in [KEY_ENTER, KEY_KP_ENTER]:
 				control_panel.call("focus_command")
 				get_viewport().set_input_as_handled()
 			elif not event.alt_pressed:

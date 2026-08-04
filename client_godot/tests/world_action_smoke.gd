@@ -1554,6 +1554,17 @@ func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 	if main.get("_follow_focus_uid") != 777:
 		_fail("dead player still processed a world mouse command")
 		return false
+	main.call("_center_hero")
+	var centered_view := Vector2(GameState.view_x, GameState.view_y)
+	GameState.view_x += 123.0
+	GameState.view_y += 77.0
+	var escape_key := InputEventKey.new()
+	escape_key.keycode = KEY_ESCAPE
+	escape_key.pressed = true
+	main.call("_unhandled_input", escape_key)
+	if not Vector2(GameState.view_x, GameState.view_y).is_equal_approx(centered_view):
+		_fail("dead-player gate swallowed the original Escape camera recenter")
+		return false
 	GameState.player_hp = 1
 	main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(101, 202, {
 		"type": 2, "speed": 100, "direction": 5,
