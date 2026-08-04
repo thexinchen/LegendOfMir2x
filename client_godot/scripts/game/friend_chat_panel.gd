@@ -458,19 +458,28 @@ func _add_friend_request_actions(parent: VBoxContainer, xml: String) -> void:
 	if not matched:
 		return
 	var cpid := int(matched.get_string(1))
-	var row := HBoxContainer.new()
-	var accept := Button.new()
-	accept.text = "同意并互加" if "addfriend" in xml else "同意"
-	accept.pressed.connect(func(): _respond_friend_request(cpid, true, "addfriend" in xml, false))
-	var reject := Button.new()
-	reject.text = "拒绝"
-	reject.pressed.connect(func(): _respond_friend_request(cpid, false, false, false))
-	var block := Button.new()
-	block.text = "拒绝并拉黑"
-	block.pressed.connect(func(): _respond_friend_request(cpid, false, false, true))
-	row.add_child(accept)
-	row.add_child(reject)
-	row.add_child(block)
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", 3)
+	if 'accept=""' in xml:
+		var accept := Button.new()
+		accept.text = "同意"
+		accept.pressed.connect(func(): _respond_friend_request(cpid, true, false, false))
+		row.add_child(accept)
+	if 'addfriend=""' in xml:
+		var accept_add := Button.new()
+		accept_add.text = "同意并添加对方为好友"
+		accept_add.pressed.connect(func(): _respond_friend_request(cpid, true, true, false))
+		row.add_child(accept_add)
+	if 'reject=""' in xml:
+		var reject := Button.new()
+		reject.text = "拒绝"
+		reject.pressed.connect(func(): _respond_friend_request(cpid, false, false, false))
+		row.add_child(reject)
+	if 'block=""' in xml:
+		var block := Button.new()
+		block.text = "拒绝并将对方加入黑名单"
+		block.pressed.connect(func(): _respond_friend_request(cpid, false, false, true))
+		row.add_child(block)
 	parent.add_child(row)
 
 

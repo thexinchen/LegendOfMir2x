@@ -169,6 +169,8 @@ func _ready() -> void:
 	if not panel.get_node("Page/SearchPage/Query").text.is_empty() or search_results.get_child_count() != 0 or panel.get("_search_show_candidates"):
 		_fail("search clear control did not reset input, candidates and results")
 		return
+	if not _test_friend_request_controls(panel):
+		return
 	if not _test_friend_feedback(panel, friend):
 		return
 	panel.call("_open_group_page")
@@ -334,6 +336,20 @@ func _ready() -> void:
 		return
 	main.hide()
 	await get_tree().process_frame
+	if OS.has_environment("MIR2X_FRIEND_REQUEST_SCREENSHOT"):
+		var requester := {"id": 606, "cpid": (2 << 32) | 606, "type": 2, "name": "好友申请人", "gender": false, "job": 1}
+		GameState.chat_peers[requester.cpid] = requester
+		var system_cpid := (1 << 32) | 0xFFFFFF01
+		var request_xml := '<layout><par><t color="red">好友申请人</t>申请添加你为好友，你可以选择</par><par><event id="_RSVD_NAME_AFRESP_8368138412597" accept="" cpid="%d">同意</event></par><par><event id="_RSVD_NAME_AFRESP_8368138412597" accept="" cpid="%d" addfriend="">同意并添加对方为好友</event></par><par><event id="_RSVD_NAME_AFRESP_8368138412597" reject="" cpid="%d">拒绝</event></par><par><event id="_RSVD_NAME_AFRESP_8368138412597" reject="" cpid="%d" block="">拒绝并将对方加入黑名单</event></par></layout>' % [requester.cpid, requester.cpid, requester.cpid, requester.cpid]
+		GameState.add_chat_message({
+			"seq": {"id": 1004, "timestamp": 130}, "refer": null,
+			"from": system_cpid, "to": GameState.self_chat_cpid(),
+			"message": NetworkClient._serialize_cereal_string(request_xml),
+		})
+		panel.call("_open_chat", system_cpid)
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_FRIEND_REQUEST_SCREENSHOT"))
 	if OS.has_environment("MIR2X_FRIEND_CHAT_SCREENSHOT"):
 		panel.call("_show_reference", 1001, "清风：晚上一起去矿洞吗？")
 		chat_input.grab_focus()
@@ -394,6 +410,25 @@ func _test_friend_feedback(panel: Control, friend: Dictionary) -> bool:
 	GameState.chat_conversations = saved_conversations
 	GameState.chat_log = saved_log
 	GameState.state_changed.emit()
+	return true
+
+
+func _test_friend_request_controls(panel: Control) -> bool:
+	var content := VBoxContainer.new()
+	panel.add_child(content)
+	panel.call("_add_friend_request_actions", content, '<event id="_RSVD_NAME_AFRESP_8368138412597" accept="" addfriend="" reject="" block="" cpid="8589934996">申请</event>')
+	if not content.get_child(0) is VBoxContainer:
+		content.queue_free()
+		_fail("friend request actions were not stacked vertically like C++")
+		return false
+	var row := content.get_child(0) as VBoxContainer
+	var labels: Array[String] = []
+	for child in row.get_children():
+		labels.append((child as Button).text)
+	content.queue_free()
+	if labels != ["同意", "同意并添加对方为好友", "拒绝", "拒绝并将对方加入黑名单"]:
+		_fail("friend request action labels diverged from C++: %s" % [labels])
+		return false
 	return true
 
 
