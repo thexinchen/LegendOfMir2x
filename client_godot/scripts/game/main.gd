@@ -2795,7 +2795,7 @@ func _handle_chat_group(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var peer := reader.read_sd_chat_peer()
 	if _reader_ok(reader, "SM_CREATECHATGROUP"):
-		game_state.add_chat_peer(peer, true, "你已经加入了群聊，现在就可以聊天了。")
+		game_state.add_chat_group(peer, "你已经加入了群聊，现在就可以聊天了。")
 
 
 func _handle_friend_result(payload: PackedByteArray, accepted: bool) -> void:

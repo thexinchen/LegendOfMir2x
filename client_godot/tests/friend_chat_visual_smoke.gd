@@ -287,6 +287,18 @@ func _ready() -> void:
 	var main := load("res://scenes/game/main.tscn").instantiate() as Control
 	add_child(main)
 	await get_tree().process_frame
+	GameState.chat_conversations = [
+		{"cpid": friend.cpid, "messages": [], "unread": 0, "preview": "好友最近消息"},
+		{"cpid": group.cpid, "messages": [], "unread": 0, "preview": "群聊最近消息"},
+	]
+	var conversations_before_duplicate := GameState.chat_conversations.duplicate(true)
+	if GameState.add_chat_group(group, "你已经加入了群聊，现在就可以聊天了。") or GameState.chat_conversations != conversations_before_duplicate:
+		_fail("duplicate group notification reordered conversations or replaced the latest preview")
+		return
+	var joined_group := {"id": 78, "cpid": (3 << 32) | 78, "type": 3, "name": "新建群聊", "members": [{"dbid": 42}, {"dbid": 99}]}
+	if not GameState.add_chat_group(joined_group, "你已经加入了群聊，现在就可以聊天了。") or GameState.chat_conversations[0].cpid != joined_group.cpid:
+		_fail("first group notification did not add and promote the new conversation")
+		return
 	var notified := {"id": 505, "cpid": (2 << 32) | 505, "type": 2, "name": "远方来客", "gender": true, "job": 1}
 	GameState.chat_log = []
 	main.call("_apply_friend_result", notified, true)

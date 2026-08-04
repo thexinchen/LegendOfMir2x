@@ -343,6 +343,14 @@ func add_chat_peer(peer: Dictionary, friend: bool = false, preview: String = "")
 	state_changed.emit()
 
 
+func add_chat_group(peer: Dictionary, preview: String) -> bool:
+	var cpid := int(peer.get("cpid", 0))
+	if cpid == 0 or chat_peers.has(cpid):
+		return false
+	add_chat_peer(peer, true, preview)
+	return true
+
+
 func ensure_chat_conversation(cpid: int, preview: String) -> void:
 	for index in range(chat_conversations.size()):
 		if int(chat_conversations[index].get("cpid", 0)) == cpid:

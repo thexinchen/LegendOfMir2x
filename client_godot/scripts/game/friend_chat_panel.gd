@@ -825,6 +825,6 @@ func create_group_named(group_name: String, ids: Array) -> void:
 		var reader := CerealReader.new(payload)
 		var peer := reader.read_sd_chat_peer()
 		if reader.valid:
-			_state.add_chat_peer(peer, true, "你已经加入了群聊，现在就可以聊天了。")
+			_state.add_chat_group(peer, "你已经加入了群聊，现在就可以聊天了。")
 			_open_chat(int(peer.get("cpid", 0)))
 	)
