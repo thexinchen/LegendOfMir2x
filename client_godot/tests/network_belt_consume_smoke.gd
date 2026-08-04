@@ -6,7 +6,7 @@ const ITEM_ID := 6
 const ITEM_COUNT := 10
 const BELT_SLOT := 0
 
-enum Stage { WAIT_READY, WAIT_GRABBED, WAIT_EQUIPPED, WAIT_CONSUMED, WAIT_RETURNED, WAIT_PLACED, WAIT_INVENTORY_CONSUMED }
+enum Stage { WAIT_READY, WAIT_GRABBED, WAIT_EQUIPPED, WAIT_DEAD, WAIT_CONSUMED, WAIT_RETURNED, WAIT_PLACED, WAIT_INVENTORY_CONSUMED }
 
 var _main: Control
 var _stage := Stage.WAIT_READY
@@ -17,9 +17,11 @@ var _initial_seq_id := 0
 var _expected_count := ITEM_COUNT - 1
 var _deferred_failure := ""
 var _consume_started_msec := 0
+var _death_key_mode := false
 
 
 func _ready() -> void:
+	_death_key_mode = OS.has_environment("MIR2X_NETWORK_BELT_DEAD_KEY")
 	NetworkClient.connection_changed.connect(_on_connection_changed)
 	NetworkClient.message_received.connect(_on_message_received)
 	NetworkClient.connect_to_server()
@@ -59,18 +61,40 @@ func _process(_delta: float) -> void:
 				if error != OK:
 					_fail("failed to save belt-consume screenshot: %s" % error, 8)
 					return
+			if _death_key_mode:
+				_submit_command("@die")
+				_stage = Stage.WAIT_DEAD
+				return
 			if int(quick_bar.call("activate_slot", BELT_SLOT, MOUSE_BUTTON_RIGHT)) == 0:
 				_fail("visible quick slot rejected potion consumption", 9)
 				return
 			_consume_started_msec = Time.get_ticks_msec()
 			_stage = Stage.WAIT_CONSUMED
+		Stage.WAIT_DEAD:
+			if GameState.player_hp != 0:
+				return
+			var key_event := InputEventKey.new()
+			key_event.keycode = KEY_1
+			key_event.pressed = true
+			_main.call("_unhandled_input", key_event)
+			_consume_started_msec = Time.get_ticks_msec()
+			_stage = Stage.WAIT_CONSUMED
 		Stage.WAIT_CONSUMED:
 			var belt_count := int(_belt_item().get("count", 0))
 			if belt_count == ITEM_COUNT - 1:
+				if _death_key_mode:
+					print("NETWORK DEAD BELT KEY PASS: item=%d:%d hp=%d belt=%d->%d" % [ITEM_ID, _initial_seq_id, GameState.player_hp, ITEM_COUNT, belt_count])
+					_finished = true
+					NetworkClient.disconnect_from_server()
+					get_tree().quit()
+					return
 				quick_bar.call("activate_slot", BELT_SLOT, MOUSE_BUTTON_LEFT)
 				_stage = Stage.WAIT_RETURNED
 				return
 			if Time.get_ticks_msec() - _consume_started_msec < 1000:
+				return
+			if _death_key_mode:
+				_fail("dead number key did not decrement belt slot 0: %s" % [_belt_item()], 11)
 				return
 			_expected_count = ITEM_COUNT
 			_deferred_failure = "belt potion consumption applied without decrementing slot 0: %s" % [_belt_item()]
@@ -116,6 +140,12 @@ func _emit_inventory_click(panel: Control, seq_id: int, button := MOUSE_BUTTON_L
 			child.gui_input.emit(event)
 			return true
 	return false
+
+
+func _submit_command(text: String) -> void:
+	var command := _main.get_node("ControlPanel").get_node("%Command") as LineEdit
+	command.text = text
+	command.text_submitted.emit(command.text)
 
 
 func _belt_item() -> Dictionary:

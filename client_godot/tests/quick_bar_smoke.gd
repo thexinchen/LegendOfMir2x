@@ -88,6 +88,20 @@ func _ready() -> void:
 	if key_actions.is_empty() or key_actions.back() != [QuickBarScript.ACTION_CONSUME, 0]:
 		_fail("number-key consume route mismatch: %s" % [key_actions])
 		return
+	key_actions.clear()
+	GameState.player_action_type = 13
+	main.call("_unhandled_input", key_event)
+	if key_actions != [[QuickBarScript.ACTION_CONSUME, 0]]:
+		_fail("dead-player gate swallowed the original quick-slot key: %s" % [key_actions])
+		return
+	GameState.player_action_type = 2
+	(main.get("_player_forced_action_queue") as Array).append({"kind": "move"})
+	key_actions.clear()
+	main.call("_unhandled_input", key_event)
+	if key_actions != [[QuickBarScript.ACTION_CONSUME, 0]]:
+		_fail("forced-action gate swallowed the original quick-slot key: %s" % [key_actions])
+		return
+	(main.get("_player_forced_action_queue") as Array).clear()
 	GameState.grabbed_item = {"itemID": scroll_id, "seqID": 202, "count": 1}
 	if quick_bar.call("activate_slot", 1, MOUSE_BUTTON_LEFT) != QuickBarScript.ACTION_EQUIP:
 		_fail("beltable grabbed item did not request equip")

@@ -214,6 +214,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not event.is_pressed() or event.is_echo():
 		return
+	if event is InputEventKey and quick_bar.visible and not event.shift_pressed:
+		var quick_slot: int = event.keycode - KEY_1
+		if quick_slot >= 0 and quick_slot < 6:
+			quick_bar.call("activate_slot", quick_slot, MOUSE_BUTTON_RIGHT)
+			get_viewport().set_input_as_handled()
+			return
 	if _player_dead() or not _player_forced_action_queue.is_empty():
 		if event is InputEventKey:
 			if event.keycode == KEY_ESCAPE:
@@ -233,12 +239,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		control_panel.call("focus_command")
 		get_viewport().set_input_as_handled()
 		return
-	if quick_bar.visible and not event.shift_pressed:
-		var quick_slot: int = event.keycode - KEY_1
-		if quick_slot >= 0 and quick_slot < 6:
-			quick_bar.call("activate_slot", quick_slot, MOUSE_BUTTON_RIGHT)
-			get_viewport().set_input_as_handled()
-			return
 	
 	# C++ key bindings: ESC=center hero, TAB=pickup, Alt+E=exit, Alt+F=fullscreen
 	if event.keycode == KEY_ESCAPE:
