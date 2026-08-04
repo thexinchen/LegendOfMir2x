@@ -606,6 +606,7 @@ class ActorPool final
 
     public:
         bool checkUIDValid(uint64_t) const;
+        bool checkUIDOccupied(uint64_t) const;
 
     public:
         void launch();  // --launch-+-closeAcceptor

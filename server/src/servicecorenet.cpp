@@ -111,6 +111,16 @@ corof::awaitable<> ServiceCore::net_CM_ONLINE(uint32_t channID, uint8_t, const u
         co_return;
     }
 
+    // Channel cleanup and player-actor detach run on different actor buckets.
+    // A rapid reconnect can therefore outlive m_dbidList by a few ticks while
+    // the old UID is still present in ActorPool. Treat it as a normal duplicate
+    // online request instead of constructing a second Player and throwing from
+    // ActorPool::attach().
+    if(g_actorPool->checkUIDOccupied(uidf::getPlayerUID(dbidOpt.value().first))){
+        fnOnlineError(ONLINEERR_MULTIONLINE);
+        co_return;
+    }
+
     auto queryChar = g_dbPod->createQuery("select * from tbl_char where fld_dbid = %llu", to_llu(dbidOpt.value().first));
     if(!queryChar.executeStep()){
         fnOnlineError(ONLINEERR_NOCHAR);

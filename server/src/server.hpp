@@ -37,6 +37,7 @@ class Server final
 
     private:
         std::atomic_flag m_hasExcept;
+        std::mutex m_exceptionLock;
         std::exception_ptr m_currException;
 
     private:

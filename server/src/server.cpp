@@ -6,6 +6,7 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <cinttypes>
+#include <utility>
 
 #include "log.hpp"
 #include "jobf.hpp"
@@ -517,7 +518,12 @@ void Server::propagateException() noexcept
     catch(...){
         // must have one exception...
         // now we are sure main thread will always capture an std::exception
-        m_currException = std::current_exception();
+        {
+            const std::lock_guard<std::mutex> lockGuard(m_exceptionLock);
+            m_currException = std::current_exception();
+        }
+        m_hasExcept.test_and_set();
+        m_hasExcept.notify_all();
         if(g_guiCore){
             g_guiCore->wake(); // GUI frame loop runs checkException()
         }
@@ -526,8 +532,13 @@ void Server::propagateException() noexcept
 
 void Server::checkException()
 {
-    if(m_currException){
-        std::rethrow_exception(m_currException);
+    std::exception_ptr currException;
+    {
+        const std::lock_guard<std::mutex> lockGuard(m_exceptionLock);
+        currException = std::exchange(m_currException, {});
+    }
+    if(currException){
+        std::rethrow_exception(currException);
     }
 }
 

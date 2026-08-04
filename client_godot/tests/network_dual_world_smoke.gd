@@ -3,6 +3,7 @@ extends Node
 const Protocol = preload("res://scripts/network/protocol.gd")
 
 const SAY_MARKER := "双客户端世界交互验证"
+const BROADCAST_MARKER := "双客户端全服广播验证"
 const WAIT_SECONDS := 25.0
 
 var _role := "observer"
@@ -14,6 +15,7 @@ var _saw_remote := false
 var _saw_name := false
 var _saw_appearance := false
 var _saw_say := false
+var _saw_broadcast := false
 var _saw_move := false
 var _team_request_sent := false
 var _saw_team_candidate := false
@@ -138,6 +140,13 @@ func _process_actor() -> void:
 	if _actor_started:
 		return
 	_actor_started = true
+	var command := _main.get_node("ControlPanel/%Command") as LineEdit
+	command.text = "!%s" % BROADCAST_MARKER
+	command.text_submitted.emit(command.text)
+	await get_tree().create_timer(1.0).timeout
+	if not _chat_has("夏娃: %s" % BROADCAST_MARKER, 1):
+		_fail("actor did not receive its own broadcast through the real command control", 17)
+		return
 	await get_tree().create_timer(1.0).timeout
 	if NetworkClient.send_player_say(SAY_MARKER) != OK:
 		_fail("failed to send player say", 6)
@@ -178,6 +187,7 @@ func _process_observer() -> void:
 		for message_value in GameState.player_say_messages.get(_remote_uid, []):
 			if str(message_value.get("text", "")) == SAY_MARKER:
 				_saw_say = true
+	_saw_broadcast = _saw_broadcast or _chat_has("夏娃: %s" % BROADCAST_MARKER, 1)
 	if _team_has_uid(GameState.player_uid) and _team_has_uid(_remote_uid) and not _observer_leave_requested:
 		_main.call("_on_control_panel_panel_requested", "res://scenes/game/panels/team.tscn")
 		var team_panel := _main.get("_extra_panel_nodes").get("res://scenes/game/panels/team.tscn") as Control
@@ -189,10 +199,10 @@ func _process_observer() -> void:
 		_observer_leave_requested = true
 	if _observer_leave_requested and GameState.team_members.is_empty():
 		_observer_left_team = true
-	if _saw_remote and _saw_name and _saw_appearance and _team_request_sent and _observer_left_team and _saw_say and _saw_move and not _capture_started:
+	if _saw_remote and _saw_name and _saw_appearance and _team_request_sent and _observer_left_team and _saw_say and _saw_broadcast and _saw_move and not _capture_started:
 		_capture_started = true
 		_capture_dual_world()
-	if _saw_remote and _saw_name and _saw_appearance and _team_request_sent and _observer_left_team and _saw_say and _saw_move and _capture_done and GameState.get_creature(_remote_uid).is_empty():
+	if _saw_remote and _saw_name and _saw_appearance and _team_request_sent and _observer_left_team and _saw_say and _saw_broadcast and _saw_move and _capture_done and GameState.get_creature(_remote_uid).is_empty():
 		print("NETWORK DUAL WORLD OBSERVER PASS: uid=%d" % _remote_uid)
 		_finished = true
 		NetworkClient.disconnect_from_server()
@@ -236,6 +246,14 @@ func _team_has_uid(uid: int) -> bool:
 	return false
 
 
+func _chat_has(text: String, log_type: int) -> bool:
+	for entry_value in GameState.chat_log:
+		var entry: Dictionary = entry_value
+		if str(entry.get("text", "")) == text and int(entry.get("type", -1)) == log_type:
+			return true
+	return false
+
+
 func _adjacent_walkable_position() -> Vector2i:
 	var origin := Vector2i(GameState.player_x, GameState.player_y)
 	for offset_value in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]:
@@ -248,11 +266,11 @@ func _adjacent_walkable_position() -> Vector2i:
 
 func _on_timeout() -> void:
 	_fail(
-		"timed out role=%s online=%s map=%d pos=(%d,%d) remote=%s name=%s appearance=%s team_request=%s team_candidate=%s team_created=%s accepted=%s full_team=%s actor_leave=%s observer_leave=%s observer_left=%s say=%s move=%s capture=%s members=%s creatures=%s present=%s" % [
+		"timed out role=%s online=%s map=%d pos=(%d,%d) remote=%s name=%s appearance=%s team_request=%s team_candidate=%s team_created=%s accepted=%s full_team=%s actor_leave=%s observer_leave=%s observer_left=%s say=%s broadcast=%s move=%s capture=%s members=%s creatures=%s present=%s" % [
 			_role, _online, GameState.player_map_uid, GameState.player_x, GameState.player_y,
 			_saw_remote, _saw_name, _saw_appearance, _team_request_sent, _saw_team_candidate,
 			_actor_team_created, _actor_candidate_accepted, _actor_saw_full_team, _actor_saw_member_leave,
-			_observer_leave_requested, _observer_left_team, _saw_say, _saw_move, _capture_done,
+			_observer_leave_requested, _observer_left_team, _saw_say, _saw_broadcast, _saw_move, _capture_done,
 			GameState.team_members, GameState.creatures,
 			GameState.get_creature(_remote_uid) if _remote_uid != 0 else {},
 		],
