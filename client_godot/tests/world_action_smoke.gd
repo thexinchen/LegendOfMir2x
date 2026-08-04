@@ -350,6 +350,15 @@ func _test_panel_escape_precedence(main: Control) -> bool:
 	skill.hide()
 	var runtime := main.call("_ensure_extra_panel", "res://scenes/game/panels/runtime_config.tscn") as Control
 	runtime.show()
+	inventory.hide()
+	var blocked_hotkey := InputEventKey.new()
+	blocked_hotkey.keycode = KEY_B
+	blocked_hotkey.pressed = true
+	Input.parse_input_event(blocked_hotkey)
+	await get_tree().process_frame
+	if not runtime.visible or inventory.visible:
+		_fail("runtime config did not consume non-Escape keys like C++: runtime=%s inventory=%s" % [runtime.visible, inventory.visible])
+		return false
 	inventory.show()
 	Input.parse_input_event(escape)
 	await get_tree().process_frame

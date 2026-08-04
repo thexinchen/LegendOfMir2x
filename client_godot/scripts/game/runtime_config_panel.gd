@@ -82,6 +82,16 @@ func close_for_escape() -> bool:
 	return false
 
 
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not visible or not event is InputEventKey or not event.pressed:
+		return
+	if event.keycode == KEY_ESCAPE:
+		super._unhandled_key_input(event)
+	else:
+		# ImRuntimeConfigBoard consumes every non-Escape key while shown.
+		get_viewport().set_input_as_handled()
+
+
 func _ready() -> void:
 	super._ready()
 	_state = get_node("/root/GameState")
