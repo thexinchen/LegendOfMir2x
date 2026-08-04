@@ -46,6 +46,9 @@ func _ready() -> void:
 	var main: Control = load("res://scenes/game/main.tscn").instantiate()
 	add_child(main)
 	await get_tree().process_frame
+	GameState.player_health_initialized = true
+	GameState.player_hp = 1
+	GameState.player_hp_max = maxi(GameState.player_hp_max, 1)
 	if OS.has_environment("MIR2X_ACTION_SEFF_ONLY"):
 		if not await _test_action_seff(main, resources):
 			return
@@ -1473,6 +1476,37 @@ func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 		return false
 	GameState.player_uid = 101
 	GameState.player_map_uid = 202
+	(main.get("_player_forced_action_queue") as Array).clear()
+	var health_gate_click := InputEventMouseButton.new()
+	health_gate_click.button_index = MOUSE_BUTTON_RIGHT
+	health_gate_click.pressed = true
+	health_gate_click.position = Vector2(500, 300)
+	var death_overlay := main.get_node("DeathOverlay") as ColorRect
+	GameState.player_health_initialized = false
+	GameState.player_hp = 0
+	GameState.player_action_type = 2
+	main.set("_follow_focus_uid", 777)
+	main.call("_update_death_overlay")
+	main.call("_unhandled_input", health_gate_click)
+	if death_overlay.visible or main.get("_follow_focus_uid") != 777:
+		_fail("uninitialized C++ health semantics did not hide the veil and block world input")
+		return false
+	GameState.player_health_initialized = true
+	main.set("_follow_focus_uid", 777)
+	main.call("_update_death_overlay")
+	main.call("_unhandled_input", health_gate_click)
+	if not death_overlay.visible or main.get("_follow_focus_uid") != 777:
+		_fail("authoritative HP=0 did not immediately show the veil and block world input before ACTION_DIE")
+		return false
+	GameState.player_hp = 1
+	GameState.player_action_type = 13
+	main.call("_update_death_overlay")
+	main.call("_unhandled_input", health_gate_click)
+	if death_overlay.visible or main.get("_follow_focus_uid") == 777:
+		_fail("authoritative HP recovery did not immediately clear the C++ death gate before ACTION_STAND")
+		return false
+	main.call("_cancel_movement")
+	GameState.player_hp = 0
 	GameState.player_action_type = 2
 	GameState.update_creature(303, {
 		"uid": 303, "type": 1, "monster_id": fade_monster_id,
@@ -1518,7 +1552,6 @@ func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 		_fail("player death notification invented a non-original chat entry: %s" % GameState.chat_log)
 		return false
 	main.call("_update_death_overlay")
-	var death_overlay := main.get_node("DeathOverlay") as ColorRect
 	if not death_overlay.visible or not death_overlay.color.is_equal_approx(Color(128.0 / 255.0, 0, 0, 64.0 / 255.0)):
 		_fail("player death veil color or visibility mismatch: %s" % death_overlay.color)
 		return false

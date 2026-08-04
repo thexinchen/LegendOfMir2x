@@ -220,7 +220,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			quick_bar.call("activate_slot", quick_slot, MOUSE_BUTTON_RIGHT)
 			get_viewport().set_input_as_handled()
 			return
-	if _player_dead() or not _player_forced_action_queue.is_empty():
+	if _player_input_blocked() or not _player_forced_action_queue.is_empty():
 		if event is InputEventKey:
 			if event.keycode == KEY_ESCAPE:
 				_center_hero()
@@ -301,7 +301,11 @@ func handle_panel_escape() -> bool:
 
 
 func _player_dead() -> bool:
-	return game_state.player_action_type == 13
+	return game_state.player_health_initialized and game_state.player_hp <= 0
+
+
+func _player_input_blocked() -> bool:
+	return not game_state.player_health_initialized or game_state.player_hp <= 0
 
 
 func _update_death_overlay() -> void:

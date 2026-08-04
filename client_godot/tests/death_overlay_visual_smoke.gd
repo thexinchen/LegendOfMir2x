@@ -8,6 +8,8 @@ func _ready() -> void:
 	GameState.player_y = 132
 	GameState.player_direction = 5
 	GameState.player_gender = 0
+	GameState.player_health_initialized = true
+	GameState.player_hp = 0
 	GameState.player_action_type = 13
 	GameState.player_action_started_ms = Time.get_ticks_msec()
 	GameState.player_map_name = "边境城市"

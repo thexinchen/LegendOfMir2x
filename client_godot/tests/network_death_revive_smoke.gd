@@ -12,6 +12,8 @@ var _finished := false
 var _early_revive := false
 var _saw_forced_correction := false
 var _saw_death_after_revive := false
+var _saw_health_death_gate := false
+var _saw_health_revive_release := false
 var _authoritative_position := Vector2i.ZERO
 
 
@@ -90,6 +92,9 @@ func _process(_delta: float) -> void:
 				if Time.get_ticks_msec() - _revive_health_msec >= 5000:
 					_fail("revive health recovered but correction/death/stand did not finish", 10)
 				return
+			if not _saw_health_death_gate or not _saw_health_revive_release:
+				_fail("real health packets did not drive both sides of the C++ death gate", 16)
+				return
 			if _early_revive and (not _saw_forced_correction or not _saw_death_after_revive or Vector2i(GameState.player_x, GameState.player_y) != _authoritative_position):
 				_fail("early revive skipped correction/death or missed authoritative position: forced=%s death=%s pos=%s expected=%s" % [_saw_forced_correction, _saw_death_after_revive, Vector2i(GameState.player_x, GameState.player_y), _authoritative_position], 14)
 				return
@@ -101,8 +106,9 @@ func _process(_delta: float) -> void:
 			live_click.button_index = MOUSE_BUTTON_RIGHT
 			live_click.pressed = true
 			live_click.position = Vector2(500, 300)
+			_main.set("_follow_focus_uid", 777)
 			_main.call("_unhandled_input", live_click)
-			if int(_main.get("_follow_focus_uid")) != 0:
+			if int(_main.get("_follow_focus_uid")) == 777:
 				_fail("revived player did not regain world mouse input", 12)
 				return
 			print("NETWORK DEATH REVIVE PASS: visible @die -> @revive hp=%d/action=%d forced=%s death=%s pos=%s world-input" % [GameState.player_hp, GameState.player_action_type, _saw_forced_correction, _saw_death_after_revive, Vector2i(GameState.player_x, GameState.player_y)])
@@ -170,6 +176,22 @@ func _on_message_received(head_code: int, payload: PackedByteArray) -> void:
 			add_child(_main)
 		NetworkClient.SM_HEALTH:
 			_health_received = true
+			if _main != null and _stage in [Stage.WAIT_DEAD, Stage.WAIT_REVIVED]:
+				# This callback was connected before Main, so apply the authoritative
+				# health packet here to inspect the state before the following action.
+				_main.call("_handle_health", payload)
+				_main.call("_update_death_overlay")
+				var overlay := _main.get_node("DeathOverlay") as ColorRect
+				if _stage == Stage.WAIT_DEAD and GameState.player_hp == 0:
+					if not bool(_main.call("_player_dead")) or not overlay.visible:
+						_fail("HP=0 did not activate the death gate before ACTION_DIE", 17)
+						return
+					_saw_health_death_gate = true
+				elif _stage == Stage.WAIT_REVIVED and GameState.player_hp > 0:
+					if bool(_main.call("_player_dead")) or overlay.visible:
+						_fail("HP recovery did not release the death gate before ACTION_STAND", 18)
+						return
+					_saw_health_revive_release = true
 		NetworkClient.SM_LOGINERROR, NetworkClient.SM_ONLINEERROR:
 			_fail("server rejected login or online", 4)
 
