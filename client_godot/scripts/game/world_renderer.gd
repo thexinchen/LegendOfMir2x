@@ -510,6 +510,8 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 		return _resolve_monster_spawn_ground_effect(effect, magic_id, now - int(effect.get("start_time", now)))
 	if effect.get("source", "") == "space_move":
 		return _resolve_space_move_magic(effect, magic_id, maxi(0, now - int(effect.get("start_time", now))))
+	if effect.get("source", "") == "summon_spawn":
+		return _resolve_summon_spawn_magic(effect, magic_id, maxi(0, now - int(effect.get("start_time", now))))
 	var monster_attack_kind := _monster_attack_magic_kind(magic_id)
 	if effect.get("source", "") == "monster_attack" and not monster_attack_kind.is_empty():
 		return _resolve_monster_attack_magic(effect, magic_id, monster_attack_kind, maxi(0, now - int(effect.get("start_time", now))))
@@ -538,6 +540,18 @@ func _resolve_magic_effect(effect: Dictionary, now: int) -> Dictionary:
 			return resolved
 		elapsed -= duration
 	return {}
+
+
+func _resolve_summon_spawn_magic(effect: Dictionary, magic_id: int, elapsed: int) -> Dictionary:
+	var meta: PackedInt32Array = actor_resource.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	if meta.is_empty():
+		return {}
+	var duration := _magic_stage_duration(meta, effect)
+	if elapsed >= duration:
+		return {}
+	var resolved := _make_resolved_magic(effect, meta, MAGIC_STAGE_RUN, elapsed, duration)
+	_play_magic_stage_seff(effect, magic_id, MAGIC_STAGE_RUN, resolved.position)
+	return resolved
 
 
 func _projectile_action_magic_kind(magic_id: int) -> String:

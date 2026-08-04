@@ -91,6 +91,7 @@ var _player_action_timer := -1.0
 var _player_forced_action_queue: Array[Dictionary] = []
 var _player_post_forced_action: Dictionary = {}
 var _team_flag_active := false
+var _summon_spawn_blockers: Dictionary = {}
 
 # C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame).
 # Keep a small network margin before sending the next one-hop action.
@@ -110,6 +111,13 @@ const TARGET_MAGIC_NAMES := [
 ]
 const GROUND_MAGIC_NAMES := ["火墙", "风震天", "地狱火", "冰沙掌", "魄冰刺", "疾光电影", "焰天火雨", "瞬息移动", "异形换位"]
 const SELF_MAGIC_NAMES := ["隐身术", "凝血离魂", "妙影无踪", "魔法盾", "铁布衫", "阴阳法环", "抗拒火环", "破血狂杀", "召唤骷髅", "超强召唤骷髅", "召唤神兽"]
+const SUMMON_MAGIC_BY_MONSTER := {
+	"变异骷髅": "召唤骷髅",
+	"超强骷髅": "超强召唤骷髅",
+	"神兽": "召唤神兽",
+}
+const DELAYED_SUMMON_MONSTERS := ["变异骷髅", "超强骷髅"]
+const MAGIC_STAGE_RUN := 2
 
 
 func _ready() -> void:
@@ -1211,6 +1219,8 @@ func _handle_action_data(data: Dictionary, correction_applied := false) -> void:
 	var y: int = action.get("y", 0)
 	var action_type: int = action.get("type", 0)
 	var direction: int = action.get("direction", 0)
+	if _summon_spawn_blockers.has(uid):
+		return
 	var action_step := _grid_distance(Vector2i(x, y), Vector2i(action.get("aimX", x), action.get("aimY", y))) if action_type in [3, 5] else 0
 	if action_type == 9 and _resources.magic_cast_motion(action.get("magicID", 0)) == 7:
 		direction = 5
@@ -1354,6 +1364,14 @@ func _handle_action_data(data: Dictionary, correction_applied := false) -> void:
 		var creature_type: int = creature.get("type", _creature_type_from_uid(uid))
 		var monster_id: int = creature.get("monster_id", (uid >> 35) & 0xFFFFFF if creature_type == 1 else 0)
 		var stored_action_type := _creature_stored_action_type(action_type, creature_type, monster_id)
+		if is_new_creature and creature_type == 1 and action_type == 1:
+			var monster_name: String = _resources.monster_name(monster_id)
+			var summon_magic_name: String = SUMMON_MAGIC_BY_MONSTER.get(monster_name, "")
+			if not summon_magic_name.is_empty():
+				game_state.add_chat_log("使用魔法: %s" % summon_magic_name, 1)
+				if monster_name in DELAYED_SUMMON_MONSTERS:
+					_start_summon_spawn(uid, monster_id, action, summon_magic_name)
+					return
 		if creature.is_empty():
 			var inferred_type := creature_type
 			creature = {
@@ -1430,6 +1448,7 @@ func _switch_player_map(map_uid: int, action: Dictionary) -> void:
 	_magic_focus_uid = 0
 	_follow_focus_uid = 0
 	_attack_focus_uid = 0
+	_summon_spawn_blockers.clear()
 	game_state.switch_player_map(map_uid, action.get("x", 0), action.get("y", 0))
 	if _load_world_map(game_state.player_map_id):
 		game_state.player_map_name = world_renderer.world_resource.map_name
@@ -1437,6 +1456,79 @@ func _switch_player_map(map_uid: int, action: Dictionary) -> void:
 	else:
 		AudioService.stop_bgm()
 	_center_hero()
+
+
+func _start_summon_spawn(uid: int, monster_id: int, action: Dictionary, magic_name: String) -> void:
+	var magic_id: int = _resources.magic_id(magic_name)
+	if magic_id <= 0:
+		return
+	var token := Time.get_ticks_usec()
+	_summon_spawn_blockers[uid] = {
+		"token": token,
+		"map_uid": game_state.player_map_uid,
+		"monster_id": monster_id,
+		"action": action.duplicate(true),
+	}
+	var effect := action.duplicate(true)
+	effect["uid"] = uid
+	effect["magicID"] = magic_id
+	effect["aimX"] = action.get("x", 0)
+	effect["aimY"] = action.get("y", 0)
+	effect["summon_uid"] = uid
+	game_state.add_magic_effect(effect, "summon_spawn")
+	get_tree().create_timer(_summon_spawn_delay(magic_id)).timeout.connect(_finish_summon_spawn.bind(uid, token))
+
+
+func _summon_spawn_delay(magic_id: int) -> float:
+	var run_meta: PackedInt32Array = _resources.magic_layout(magic_id, MAGIC_STAGE_RUN)
+	if run_meta.size() < 5:
+		return 1.0
+	var fps := 10.0 * maxi(1, run_meta[4]) / 100.0
+	return maxf(0.1, 10.0 / fps)
+
+
+func _finish_summon_spawn(uid: int, token: int) -> void:
+	var blocker: Dictionary = _summon_spawn_blockers.get(uid, {})
+	if blocker.is_empty() or blocker.get("token", 0) != token:
+		return
+	_summon_spawn_blockers.erase(uid)
+	_remove_summon_spawn_effect(uid)
+	if blocker.get("map_uid", 0) != game_state.player_map_uid or not game_state.get_creature(uid).is_empty():
+		return
+	var action: Dictionary = blocker.get("action", {})
+	var x: int = action.get("x", 0)
+	var y: int = action.get("y", 0)
+	var monster_id: int = blocker.get("monster_id", 0)
+	var direction: int = _resources.monster_spawn_direction(monster_id)
+	if direction < 1:
+		direction = 6
+	game_state.update_creature(uid, {
+		"uid": uid,
+		"x": x,
+		"y": y,
+		"action_from_x": x,
+		"action_from_y": y,
+		"type": 1,
+		"name": "",
+		"monster_id": monster_id,
+		"action_type": 2,
+		"action_started_ms": Time.get_ticks_msec(),
+		"action_speed": action.get("speed", 100),
+		"action_magic_id": 0,
+		"action_step": 0,
+		"direction": direction,
+	})
+	NetworkClient.send_query_uid_buff(uid)
+	NetworkClient.send_query_corecord(uid)
+
+
+func _remove_summon_spawn_effect(uid: int) -> void:
+	var pending: Array = []
+	for effect_value in game_state.magic_effects:
+		var effect: Dictionary = effect_value
+		if effect.get("source", "") != "summon_spawn" or effect.get("summon_uid", 0) != uid:
+			pending.append(effect)
+	game_state.magic_effects = pending
 
 
 func _load_world_map(map_id: int) -> bool:

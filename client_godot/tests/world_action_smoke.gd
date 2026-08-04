@@ -2771,6 +2771,77 @@ func _test_npc_actions(main: Control) -> bool:
 
 
 func _test_monster_spawn_actions(main: Control, resources: RefCounted) -> bool:
+	var summon_monsters := {
+		"变异骷髅": "召唤骷髅",
+		"超强骷髅": "超强召唤骷髅",
+		"神兽": "召唤神兽",
+	}
+	var summon_ids := {}
+	for monster_id_value in resources.monster_names:
+		var summon_monster_id: int = monster_id_value
+		var summon_monster_name: String = resources.monster_name(summon_monster_id)
+		if summon_monsters.has(summon_monster_name):
+			summon_ids[summon_monster_name] = summon_monster_id
+	if summon_ids.size() != summon_monsters.size():
+		_fail("summon monster metadata unavailable: %s" % [summon_ids])
+		return false
+	GameState.chat_log.clear()
+	GameState.magic_effects.clear()
+	var summon_uids: Array[int] = []
+	var summon_index := 0
+	for summon_monster_name in summon_monsters:
+		var summon_monster_id: int = summon_ids[summon_monster_name]
+		var summon_uid: int = (4 << 59) | (summon_monster_id << 35) | (690 + summon_index)
+		summon_uids.append(summon_uid)
+		var spawn_payload := _sm_action(summon_uid, 202, {
+			"type": 1, "speed": 100, "direction": 5, "x": 24 + summon_index * 2, "y": 25,
+		})
+		main.call("_on_server_message", NetworkClient.SM_ACTION, spawn_payload)
+		main.call("_on_server_message", NetworkClient.SM_ACTION, spawn_payload)
+		if summon_monster_name in ["变异骷髅", "超强骷髅"]:
+			if not GameState.get_creature(summon_uid).is_empty():
+				_fail("summoned skeleton appeared before the original frame-10 barrier completed")
+				return false
+			var blockers: Dictionary = main.get("_summon_spawn_blockers")
+			if not blockers.has(summon_uid):
+				_fail("summoned skeleton did not install its original action blocker")
+				return false
+			var matching_effects := GameState.magic_effects.filter(func(effect: Dictionary) -> bool:
+				return effect.get("source", "") == "summon_spawn" and effect.get("summon_uid", 0) == summon_uid
+			)
+			if matching_effects.size() != 1 or matching_effects[0].get("magicID", 0) != resources.magic_id(summon_monsters[summon_monster_name]):
+				_fail("summoned skeleton did not retain one matching run-stage effect: %s" % [matching_effects])
+				return false
+		else:
+			if GameState.get_creature(summon_uid).is_empty() or main.get("_summon_spawn_blockers").has(summon_uid):
+				_fail("TaoDog did not retain its original immediate spawn semantics")
+				return false
+		summon_index += 1
+	if GameState.chat_log.size() != summon_monsters.size():
+		_fail("summon ACTION_SPAWN feedback count mismatch: %s" % [GameState.chat_log])
+		return false
+	for index in summon_monsters.size():
+		var summon_monster_name: String = summon_monsters.keys()[index]
+		var expected_log := "使用魔法: %s" % summon_monsters[summon_monster_name]
+		if GameState.chat_log[index].text != expected_log or GameState.chat_log[index].type != 1:
+			_fail("summon ACTION_SPAWN feedback mismatch at %d: %s" % [index, GameState.chat_log])
+			return false
+	for summon_uid in summon_uids:
+		var blockers: Dictionary = main.get("_summon_spawn_blockers")
+		if blockers.has(summon_uid):
+			main.call("_finish_summon_spawn", summon_uid, blockers[summon_uid].token)
+			var skeleton: Dictionary = GameState.get_creature(summon_uid)
+			if skeleton.get("action_type", 0) != 2 or skeleton.get("direction", 0) != resources.monster_spawn_direction(skeleton.get("monster_id", 0)):
+				_fail("summoned skeleton did not finish in its original stand/down-left state: %s" % skeleton)
+				return false
+			if main.get("_summon_spawn_blockers").has(summon_uid):
+				_fail("summoned skeleton action blocker survived completion")
+				return false
+		GameState.remove_creature(summon_uid)
+	if GameState.magic_effects.any(func(effect: Dictionary) -> bool: return effect.get("source", "") == "summon_spawn"):
+		_fail("completed summon run-stage effects were not removed")
+		return false
+	GameState.chat_log.clear()
 	var special_id := 0
 	for monster_id_value in resources.monster_meta:
 		if resources.monster_spawn_look(int(monster_id_value)) > 0:
@@ -2947,6 +3018,11 @@ func _test_monster_body_profiles(main: Control, resources: RefCounted) -> bool:
 		var uid: int = (4 << 59) | (monster_id << 35) | (730 + index)
 		if index == 0:
 			main.call("_on_server_message", NetworkClient.SM_ACTION, _sm_action(uid, 202, {"type": 1, "speed": 100, "direction": 2, "x": 42, "y": 43}))
+			var blockers: Dictionary = main.get("_summon_spawn_blockers")
+			if not blockers.has(uid):
+				_fail("Tao skeleton initial spawn did not enter its original frame-10 barrier")
+				return false
+			main.call("_finish_summon_spawn", uid, blockers[uid].token)
 		else:
 			var union_data := PackedByteArray()
 			union_data.resize(4)
