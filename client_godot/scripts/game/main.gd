@@ -2692,7 +2692,7 @@ func _handle_sell_item_list(payload: PackedByteArray) -> void:
 	var reader := CerealReader.new(payload)
 	var data := reader.read_sd_sell_item_list()
 	if _reader_ok(reader, "SM_SELLITEMLIST"):
-		game_state.npc_sell_detail = data
+		game_state.npc_sell_detail = data if int(data.get("npcUID", 0)) == int(game_state.npc_sell.get("npcUID", 0)) else {}
 		game_state.state_changed.emit()
 
 

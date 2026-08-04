@@ -197,6 +197,11 @@ func _ready() -> void:
 		return
 	npc_panel.size = npc_size
 	GameState.chat_log.clear()
+	GameState.npc_sell_detail = {}
+	main.call("_on_server_message", NetworkClient.SM_SELLITEMLIST, _sell_archive(unique_id, 91))
+	if not GameState.npc_sell_detail.is_empty():
+		_fail("stale sell detail from another NPC was retained instead of cleared like C++: %s" % GameState.npc_sell_detail)
+		return
 	GameState.npc_sell_detail = {"npcUID": 92, "list": [
 		{"item": {"itemID": unique_id, "seqID": 33}, "costList": [{"itemID": gold_id, "count": 1234}]},
 	]}
@@ -255,8 +260,13 @@ func _color_rect_at(parent: Node, position: Vector2) -> ColorRect:
 
 
 func _decode_sell_archive(item_id: int) -> Dictionary:
+	var reader: RefCounted = CerealReader.new(_sell_archive(item_id, 77))
+	return reader.read_sd_sell_item_list()
+
+
+func _sell_archive(item_id: int, npc_uid: int) -> PackedByteArray:
 	var bytes := PackedByteArray([1])
-	_append_u64(bytes, 77)
+	_append_u64(bytes, npc_uid)
 	_append_u64(bytes, 1)
 	_append_u32(bytes, item_id)
 	_append_u32(bytes, 9)
@@ -268,8 +278,7 @@ func _decode_sell_archive(item_id: int) -> Dictionary:
 	_append_u32(bytes, 1)
 	_append_u64(bytes, 123)
 	bytes.append(0)
-	var reader: RefCounted = CerealReader.new(bytes)
-	return reader.read_sd_sell_item_list()
+	return bytes
 
 
 func _append_u32(bytes: PackedByteArray, value: int) -> void:
