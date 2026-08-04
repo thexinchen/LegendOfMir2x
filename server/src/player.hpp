@@ -370,7 +370,7 @@ class Player final: public BattleObject
         void dbLoadPlayerConfig();
         std::optional<SDChatPeer> dbLoadChatPeer(uint64_t);
         std::optional<SDChatMessage> dbQueryChatMessage(uint64_t);
-        std::vector<uint32_t> dbLoadChatGroupMemberList(uint32_t);
+        std::vector<SDChatGroupMember> dbLoadChatGroupMemberList(uint32_t);
         SDChatPeerList dbQueryChatPeerList(const std::string &, bool, bool);
 
     private:

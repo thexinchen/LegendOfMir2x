@@ -268,6 +268,7 @@ std::optional<SDChatPeer> Player::dbLoadChatPeer(uint64_t argCPID)
                 {
                     .creator = query.getColumn("fld_creator"),
                     .createtime = check_cast<uint64_t>(query.getColumn("fld_createtime").getInt64()),
+                    .memberList = dbLoadChatGroupMemberList(sdCPID.id()),
                 },
             };
         }
@@ -347,13 +348,17 @@ std::optional<SDChatMessage> Player::dbQueryChatMessage(uint64_t argMsgID)
     return std::nullopt;
 }
 
-std::vector<uint32_t> Player::dbLoadChatGroupMemberList(uint32_t chatGroup)
+std::vector<SDChatGroupMember> Player::dbLoadChatGroupMemberList(uint32_t chatGroup)
 {
-    std::vector<uint32_t> result;
+    std::vector<SDChatGroupMember> result;
     auto query = g_dbPod->createQuery("select * from tbl_chatgroupmember where fld_group = %llu", to_llu(chatGroup));
 
     while(query.executeStep()){
-        result.push_back(to_u32(query.getColumn("fld_member").getInt64())); // self may not be in this group
+        result.push_back(SDChatGroupMember
+        {
+            .dbid = to_u32(query.getColumn("fld_member").getInt64()), // self may not be in this group
+            .priority = to_u16(query.getColumn("fld_permission").getInt64()),
+        });
     }
     return result;
 }
@@ -401,6 +406,7 @@ SDChatPeerList Player::dbQueryChatPeerList(const std::string &query, bool includ
                 {
                     .creator = queryGroup.getColumn("fld_creator"),
                     .createtime = check_cast<uint64_t>(queryGroup.getColumn("fld_createtime").getInt64()),
+                    .memberList = dbLoadChatGroupMemberList(to_u32(queryGroup.getColumn("fld_id").getInt64())),
                 },
             });
         }
@@ -679,6 +685,7 @@ void Player::dbLoadFriendList()
             {
                 .creator = queryChatGroup.getColumn("fld_creator"),
                 .createtime = to_u64(queryChatGroup.getColumn("fld_createtime").getInt64()),
+                .memberList = dbLoadChatGroupMemberList(to_u32(queryChatGroup.getColumn("fld_id").getInt64())),
             },
         });
     }
@@ -923,6 +930,7 @@ SDChatPeer Player::dbCreateChatGroup(const char *name, const std::span<const uin
                 valStr.c_str());
 
         addMemberQuery.executeStep();
+        std::get<SDChatPeerGroupVar>(groupCP.despvar).memberList = dbLoadChatGroupMemberList(groupCP.id);
         return groupCP;
     }
     else{

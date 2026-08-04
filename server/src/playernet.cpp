@@ -389,9 +389,9 @@ corof::awaitable<> Player::net_CM_CHATMESSAGE(uint8_t, const uint8_t *buf, size_
             }
         case CPR_GROUP:
             {
-                for(const auto memberDBID: dbLoadChatGroupMemberList(toCPID.id())){
-                    if(memberDBID != dbid()){
-                        fnForwardChatMessage(memberDBID);
+                for(const auto &member: dbLoadChatGroupMemberList(toCPID.id())){
+                    if(member.dbid != dbid()){
+                        fnForwardChatMessage(member.dbid);
                     }
                 }
                 break;
