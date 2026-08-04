@@ -2538,9 +2538,12 @@ func _handle_notify_dead(payload: PackedByteArray) -> void:
 
 func _request_dead_fade_out(uid: int) -> void:
 	var creature: Dictionary = game_state.get_creature(uid)
-	if creature.get("type", 0) != 1 or creature.get("action_type", 0) != 13:
+	var creature_type: int = creature.get("type", 0)
+	if creature.get("action_type", 0) != 13:
 		return
-	if not _resources.monster_dead_fade_out(creature.get("monster_id", 0)):
+	if creature_type == 1 and not _resources.monster_dead_fade_out(creature.get("monster_id", 0)):
+		return
+	if creature_type != 1 and creature_type != 2:
 		return
 	creature["dead_fade_requested_ms"] = Time.get_ticks_msec()
 	game_state.update_creature(uid, creature)

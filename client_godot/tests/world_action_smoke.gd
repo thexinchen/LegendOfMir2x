@@ -1596,9 +1596,18 @@ func _test_death_and_map_filter(main: Control, resources: RefCounted) -> bool:
 	if GameState.get_creature(304).has("dead_fade_requested_ms"):
 		_fail("persistent corpse incorrectly started fading")
 		return false
+	GameState.update_creature(307, {
+		"uid": 307, "type": 2, "gender": 0, "job": 0,
+		"x": 9, "y": 5, "direction": 5, "action_type": 13, "action_speed": 100,
+		"action_started_ms": requested_ms - 2000,
+	})
+	main.call("_on_server_message", NetworkClient.SM_DEADFADEOUT, _map_message(307, 202, 24))
+	if GameState.get_creature(307).get("dead_fade_requested_ms", 0) <= 0:
+		_fail("dead remote player did not start the original Hero fade-out")
+		return false
 	renderer.call("_update_dead_fades", requested_ms + 3600)
-	if not GameState.get_creature(303).is_empty() or GameState.get_creature(304).is_empty():
-		_fail("faded/persistent corpse cleanup mismatch")
+	if not GameState.get_creature(303).is_empty() or GameState.get_creature(304).is_empty() or not GameState.get_creature(307).is_empty():
+		_fail("faded/persistent/player corpse cleanup mismatch")
 		return false
 	GameState.remove_creature(304)
 	GameState.remove_creature(305)
