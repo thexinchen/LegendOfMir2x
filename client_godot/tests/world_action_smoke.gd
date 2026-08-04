@@ -289,6 +289,8 @@ func _ready() -> void:
 		return
 	if not _test_spinkick_direction(main):
 		return
+	if not await _test_action_created_monster_queries(main):
+		return
 	if not _test_actor_record_lifecycle(main):
 		return
 	if not _test_npc_actions(main):
@@ -2711,6 +2713,98 @@ func _test_actor_record_lifecycle(main: Control) -> bool:
 	GameState.remove_creature(new_monster_uid)
 	GameState.remove_creature(new_npc_uid)
 	return true
+
+
+func _test_action_created_monster_queries(main: Control) -> bool:
+	var listener := TCPServer.new()
+	if listener.listen(0, "127.0.0.1") != OK:
+		_fail("unable to open action-created monster query capture")
+		return false
+	var client_peer := StreamPeerTCP.new()
+	if client_peer.connect_to_host("127.0.0.1", listener.get_local_port()) != OK:
+		listener.stop()
+		_fail("unable to connect action-created monster query capture")
+		return false
+	var capture_peer: StreamPeerTCP = null
+	for _attempt in 120:
+		client_peer.poll()
+		if listener.is_connection_available():
+			capture_peer = listener.take_connection()
+			break
+		await get_tree().process_frame
+	if capture_peer == null or client_peer.get_status() != StreamPeerTCP.STATUS_CONNECTED:
+		listener.stop()
+		_fail("action-created monster query capture did not connect")
+		return false
+	NetworkClient.disconnect_from_server()
+	NetworkClient.set("_peer", client_peer)
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	var monster_id := 224
+	var action_uid: int = (4 << 59) | (monster_id << 35) | 661
+	main.call("_handle_action_data", {
+		"uid": action_uid,
+		"mapUID": 202,
+		"action": {"type": 2, "speed": 100, "direction": 3, "x": 20, "y": 21},
+	})
+	var runtime_resources: RefCounted = main.get("_resources")
+	var spawn_meta: PackedInt32Array = runtime_resources.monster_meta[monster_id]
+	var spawn_seff: int = spawn_meta[2]
+	spawn_meta[2] = 0xFFFFFFFF
+	runtime_resources.monster_meta[monster_id] = spawn_meta
+	var spawn_uid: int = (4 << 59) | (monster_id << 35) | 662
+	main.call("_handle_action_data", {
+		"uid": spawn_uid,
+		"mapUID": 202,
+		"action": {"type": 1, "speed": 100, "direction": 3, "x": 22, "y": 21},
+	})
+	spawn_meta[2] = spawn_seff
+	runtime_resources.monster_meta[monster_id] = spawn_meta
+	for _attempt in 5:
+		capture_peer.poll()
+		await get_tree().process_frame
+	var packet_data := PackedByteArray()
+	var available := capture_peer.get_available_bytes()
+	if available > 0:
+		var capture_result: Array = capture_peer.get_data(available)
+		if capture_result[0] == OK:
+			packet_data = capture_result[1]
+	var query_heads := _fixed_u64_packet_heads(packet_data)
+	NetworkClient.disconnect_from_server()
+	listener.stop()
+	for uid in [action_uid, spawn_uid]:
+		GameState.remove_creature(uid)
+	var expected_heads := [
+		NetworkClient.CM_QUERYUIDBUFF,
+		NetworkClient.CM_QUERYUIDBUFF, NetworkClient.CM_QUERYCORECORD,
+	]
+	if query_heads != expected_heads:
+		_fail("action-created monster initial query sequence mismatch: actual=%s expected=%s bytes=%s" % [query_heads, expected_heads, packet_data])
+		return false
+	return true
+
+
+func _fixed_u64_packet_heads(packet_data: PackedByteArray) -> Array[int]:
+	var heads: Array[int] = []
+	var cursor := 0
+	while cursor < packet_data.size():
+		heads.append(packet_data[cursor] & 0x7F)
+		cursor += 1
+		var body_size := 0
+		var shift := 0
+		while cursor < packet_data.size():
+			var byte := packet_data[cursor]
+			cursor += 1
+			body_size |= (byte & 0x7F) << shift
+			if not byte & 0x80:
+				break
+			shift += 7
+		if cursor >= packet_data.size():
+			return []
+		cursor += 1 + body_size # one mask byte for the fixed eight-byte UID payload
+		if cursor > packet_data.size():
+			return []
+	return heads
 
 
 func _test_npc_actions(main: Control) -> bool:

@@ -1422,6 +1422,10 @@ func _handle_action_data(data: Dictionary, correction_applied := false) -> void:
 		elif creature_type == 3:
 			_configure_npc_motion(creature, action_type, action)
 		game_state.update_creature(uid, creature)
+		if is_new_creature and creature_type == 1:
+			_query_initial_creature_state(uid, true)
+			if action_type == 1:
+				NetworkClient.send_query_corecord(uid)
 		if action_type == 7 and stored_action_type != 10 and world_renderer.supports_monster_attack_magic(action.get("magicID", 0)):
 			var attack_effect := action.duplicate(true)
 			attack_effect["uid"] = uid
