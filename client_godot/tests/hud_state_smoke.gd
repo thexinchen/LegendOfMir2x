@@ -70,6 +70,33 @@ func _ready() -> void:
 	GameState.attached_magic_effects = [{"magicID": 1, "uid": 901}]
 	GameState.strike_grids = {"9,9": 1}
 	GameState.ascend_strings = [{"x": 9, "y": 9, "type": 0, "value": 1, "start_time": 1}]
+	GameState.player_gold = 99
+	GameState.belt = [{"itemID": 1}, null, null, null, null, null]
+	GameState.wear = {3: {"itemID": 1}}
+	GameState.player_desp = {"wear": GameState.wear}
+	GameState.grabbed_item = {"itemID": 1}
+	GameState.secured_items = [{"itemID": 1}]
+	GameState.chat_friends = [{"cpid": 1}]
+	GameState.chat_peers = {1: {"cpid": 1}}
+	GameState.chat_conversations = [1]
+	GameState.chat_messages = {1: {"id": 1}}
+	GameState.learned_magic = [{"magicID": 1}]
+	GameState.magic_keys = {1: 65}
+	GameState.magic_cast_times = {1: 1}
+	GameState.magic_key_hud_visible = false
+	GameState.runtime_config = {1: PackedByteArray([1])}
+	GameState.team_leader = 901
+	GameState.team_members = [{"uid": 901}]
+	GameState.team_candidates = [{"uid": 902}]
+	GameState.quests = {"stale": {}}
+	GameState.npc_dialog = {"npcUID": 901}
+	GameState.npc_sell = {"npcUID": 901}
+	GameState.npc_sell_detail = {"itemID": 1}
+	GameState.pending_input = {"uid": 901}
+	GameState.inventory_operation = {"invOp": 1}
+	GameState.inventory_operation_cost = {"cost": 1}
+	GameState.ac_magic = true
+	GameState.dc_magic = true
 	GameState.set_player_online({
 		"uid": 900,
 		"name": "session-reset",
@@ -90,6 +117,21 @@ func _ready() -> void:
 			or not GameState.attached_magic_effects.is_empty() or not GameState.strike_grids.is_empty() \
 			or not GameState.ascend_strings.is_empty():
 		_fail("new online session retained previous world entities or transient effects")
+		return
+	if GameState.player_gold != 0 or not GameState.wear.is_empty() or not GameState.player_desp.is_empty() \
+			or not GameState.grabbed_item.is_empty() or not GameState.secured_items.is_empty() \
+			or GameState.belt.any(func(item: Variant) -> bool: return item != null) \
+			or not GameState.chat_friends.is_empty() or not GameState.chat_peers.is_empty() \
+			or not GameState.chat_conversations.is_empty() or not GameState.chat_messages.is_empty() \
+			or not GameState.learned_magic.is_empty() or not GameState.magic_keys.is_empty() \
+			or not GameState.magic_cast_times.is_empty() or not GameState.magic_key_hud_visible \
+			or not GameState.runtime_config.is_empty() or GameState.team_leader != 0 \
+			or not GameState.team_members.is_empty() or not GameState.team_candidates.is_empty() \
+			or not GameState.quests.is_empty() or not GameState.npc_dialog.is_empty() \
+			or not GameState.npc_sell.is_empty() or not GameState.npc_sell_detail.is_empty() \
+			or not GameState.pending_input.is_empty() or not GameState.inventory_operation.is_empty() \
+			or not GameState.inventory_operation_cost.is_empty() or GameState.ac_magic or GameState.dc_magic:
+		_fail("new online session retained previous panel or interaction state")
 		return
 	if not panel.get_node("%ChatLog").get_parsed_text().is_empty() \
 			or not is_zero_approx(float(panel.get_node("%Experience").value)) \

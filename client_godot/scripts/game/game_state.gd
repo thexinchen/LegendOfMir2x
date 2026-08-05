@@ -203,6 +203,34 @@ func set_player_online(online_data: Dictionary) -> void:
 	attached_magic_effects.clear()
 	strike_grids.clear()
 	ascend_strings.clear()
+	player_gold = 0
+	belt.resize(6)
+	belt.fill(null)
+	wear.clear()
+	player_desp.clear()
+	grabbed_item.clear()
+	secured_items.clear()
+	chat_friends.clear()
+	chat_peers.clear()
+	chat_conversations.clear()
+	chat_messages.clear()
+	learned_magic.clear()
+	magic_keys.clear()
+	magic_cast_times.clear()
+	magic_key_hud_visible = true
+	runtime_config.clear()
+	team_leader = 0
+	team_members.clear()
+	team_candidates.clear()
+	quests.clear()
+	npc_dialog.clear()
+	npc_sell.clear()
+	npc_sell_detail.clear()
+	pending_input.clear()
+	inventory_operation.clear()
+	inventory_operation_cost.clear()
+	ac_magic = false
+	dc_magic = false
 	player_uid = online_data.get("uid", 0)
 	player_name = online_data.get("name", "")
 	player_name_color = 0xFFFFFFFF
