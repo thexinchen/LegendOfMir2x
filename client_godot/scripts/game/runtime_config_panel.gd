@@ -470,8 +470,9 @@ func _set_resolution(index: int) -> void:
 func _set_ime(index: int) -> void:
 	if _updating:
 		return
-	_set_local_archive(7, _int_archive(index))
-	NetworkClient.send_runtime_int(7, index)
+	var protocol_value := clampi(index, 0, 2) + 1
+	_set_local_archive(7, _int_archive(protocol_value))
+	NetworkClient.send_runtime_int(7, protocol_value)
 
 
 func _set_preview_font(index: int) -> void:
@@ -511,7 +512,7 @@ func _refresh_controls() -> void:
 		var control: Control = _controls[key]
 		if control is OptionButton:
 			if key == 7:
-				(control as OptionButton).select(clampi(_config_int(7, 0), 0, 2))
+				(control as OptionButton).select(clampi(_config_int(7, 1), 1, 3) - 1)
 			elif key == 47:
 				(control as OptionButton).select(_window_size_index(_config_pair(47, Vector2i(800, 600))))
 		elif control is HSlider:

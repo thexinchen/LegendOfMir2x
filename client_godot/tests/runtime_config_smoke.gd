@@ -9,7 +9,7 @@ func _ready() -> void:
 		3: _bool_archive(true),
 		4: _float_archive(0.75),
 		6: _bool_archive(true),
-		7: _int_archive(2),
+		7: _int_archive(1),
 		9: _bool_archive(false),
 		24: _bool_archive(false),
 		38: _bool_archive(false),
@@ -39,8 +39,12 @@ func _ready() -> void:
 	if absf(panel.get_node("SystemPage/BGMVolume").value - 25.0) > 0.01 or absf(panel.get_node("SystemPage/SEFFVolume").value - 75.0) > 0.01:
 		_fail("incoming audio volume was not restored")
 		return
-	if not panel.get_node("SystemPage/ShowFPS").button_pressed or panel.get_node("SystemPage/IME").selected != 2:
+	if not panel.get_node("SystemPage/ShowFPS").button_pressed or panel.get_node("SystemPage/IME").selected != 0:
 		_fail("incoming FPS or IME state was not restored: fps=%s ime=%s raw=%s" % [panel.get_node("SystemPage/ShowFPS").button_pressed, panel.get_node("SystemPage/IME").selected, GameState.runtime_config])
+		return
+	panel.call("_set_ime", 2)
+	if panel.call("_config_int", 7, 0) != 3:
+		_fail("IME UI index was not encoded as the protocol enum: raw=%s" % panel.call("_config_int", 7, 0))
 		return
 	panel.call("_select_system_tab", 1)
 	if panel.get_node_or_null("SystemPage/EnglishPreview") == null or panel.get_node("SystemPage/PreviewSize").value != 12:
