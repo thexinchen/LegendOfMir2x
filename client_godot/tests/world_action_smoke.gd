@@ -335,12 +335,25 @@ func _test_panel_escape_precedence(main: Control) -> bool:
 	var inventory := main.get_node("InventoryPanel") as Control
 	var player_state := main.get_node("PlayerStatePanel") as Control
 	var skill := main.get_node("SkillPanel") as Control
-	inventory.show()
-	player_state.show()
-	skill.show()
+	var command := main.get_node("ControlPanel").get_node("%Command") as LineEdit
+	var purchase := main.call("_ensure_extra_panel", "res://scenes/game/panels/purchase.tscn") as Control
 	var escape := InputEventKey.new()
 	escape.keycode = KEY_ESCAPE
 	escape.pressed = true
+	inventory.show()
+	purchase.show()
+	command.grab_focus()
+	await get_tree().process_frame
+	Input.parse_input_event(escape)
+	await get_tree().process_frame
+	if command.has_focus() or not purchase.visible or not inventory.visible:
+		_fail("focused command did not consume Escape before purchase/panels like the C++ IME board: focus=%s purchase=%s inventory=%s" % [command.has_focus(), purchase.visible, inventory.visible])
+		return false
+	purchase.hide()
+	inventory.hide()
+	inventory.show()
+	player_state.show()
+	skill.show()
 	Input.parse_input_event(escape)
 	await get_tree().process_frame
 	if inventory.visible or not player_state.visible or not skill.visible:
@@ -365,7 +378,6 @@ func _test_panel_escape_precedence(main: Control) -> bool:
 	if runtime.visible or inventory.visible:
 		_fail("runtime Escape did not close runtime and continue to inventory: runtime=%s inventory=%s" % [runtime.visible, inventory.visible])
 		return false
-	var purchase := main.call("_ensure_extra_panel", "res://scenes/game/panels/purchase.tscn") as Control
 	inventory.show()
 	purchase.show()
 	main.call("_center_hero")

@@ -92,6 +92,7 @@ func _ready() -> void:
 	chat_scroll_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chat_log.gui_input.connect(_on_chat_input)
 	chat_slider_hit_area.gui_input.connect(_on_chat_slider_input)
+	command.gui_input.connect(_on_command_gui_input)
 	command.text_changed.connect(_on_command_text_changed)
 	_refresh_static()
 	_update_chat_display()
@@ -437,6 +438,12 @@ func _on_exchange_pressed() -> void:
 func focus_command() -> void:
 	command.grab_focus()
 	command.caret_column = command.text.length()
+
+
+func _on_command_gui_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		command.release_focus()
+		accept_event()
 
 
 func _on_command_text_changed(value: String) -> void:
