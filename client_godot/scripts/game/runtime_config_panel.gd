@@ -87,9 +87,19 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if event.keycode == KEY_ESCAPE:
 		super._unhandled_key_input(event)
-	else:
-		# ImRuntimeConfigBoard consumes every non-Escape key while shown.
-		get_viewport().set_input_as_handled()
+		return
+	# ImMainUI::processHUDEvent() runs before ImRuntimeConfigBoard. Preserve the
+	# two HUD key routes it consumes before this board sees the event.
+	if event.keycode in [KEY_ENTER, KEY_KP_ENTER]:
+		return
+	if not event.shift_pressed and event.keycode >= KEY_1 and event.keycode <= KEY_6:
+		var main := get_parent()
+		var quick_bar: Control = null
+		if main != null:
+			quick_bar = main.get_node_or_null("%QuickBar") as Control
+		if quick_bar != null and quick_bar.visible:
+			return
+	get_viewport().set_input_as_handled()
 
 
 func _ready() -> void:

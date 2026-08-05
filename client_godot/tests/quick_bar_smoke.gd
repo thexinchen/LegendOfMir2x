@@ -89,6 +89,26 @@ func _ready() -> void:
 		_fail("number-key consume route mismatch: %s" % [key_actions])
 		return
 	key_actions.clear()
+	var runtime := main.call("_ensure_extra_panel", "res://scenes/game/panels/runtime_config.tscn") as Control
+	runtime.show()
+	Input.parse_input_event(key_event)
+	await get_tree().process_frame
+	if key_actions != [[QuickBarScript.ACTION_CONSUME, 0]]:
+		_fail("runtime config swallowed the HUD-first quick-slot key: %s" % [key_actions])
+		return
+	var command := main.get_node("ControlPanel").get_node("%Command") as LineEdit
+	command.release_focus()
+	var enter_event := InputEventKey.new()
+	enter_event.keycode = KEY_ENTER
+	enter_event.pressed = true
+	Input.parse_input_event(enter_event)
+	await get_tree().process_frame
+	if not command.has_focus():
+		_fail("runtime config swallowed the HUD-first command focus key")
+		return
+	command.release_focus()
+	runtime.hide()
+	key_actions.clear()
 	GameState.player_action_type = 13
 	main.call("_unhandled_input", key_event)
 	if key_actions != [[QuickBarScript.ACTION_CONSUME, 0]]:
