@@ -3879,6 +3879,32 @@ func _test_path_decomposition() -> bool:
 	if diagonal_path != [Vector2i(2, 2), Vector2i(4, 4)]:
 		_fail("off-horse pathfinder did not prefer diagonal two-grid run hops: %s" % [diagonal_path])
 		return false
+	var sloped_targets: Array[Vector2i] = [
+		Vector2i(5, 3), Vector2i(3, 5), Vector2i(-3, 5), Vector2i(-5, 3),
+		Vector2i(-5, -3), Vector2i(-3, -5), Vector2i(3, -5), Vector2i(5, -3),
+	]
+	for sloped_target in sloped_targets:
+		var min_x := mini(0, sloped_target.x)
+		var max_x := maxi(0, sloped_target.x)
+		var min_y := mini(0, sloped_target.y)
+		var max_y := maxi(0, sloped_target.y)
+		var sloped_goals: Array[Vector2i] = [sloped_target]
+		var sloped_path: Array[Vector2i] = pathfinder.find_path(Vector2i.ZERO, sloped_goals, func(x: int, y: int): return x >= min_x and x <= max_x and y >= min_y and y <= max_y, {}, 50000, 2)
+		var sloped_previous := Vector2i.ZERO
+		var sloped_direction := Vector2i.ZERO
+		var sloped_turns := 0
+		for point in sloped_path:
+			if point.x < min_x or point.x > max_x or point.y < min_y or point.y > max_y:
+				_fail("open sloped path overshot an axis and folded back: target=%s path=%s" % [sloped_target, sloped_path])
+				return false
+			var next_direction := Vector2i(signi(point.x - sloped_previous.x), signi(point.y - sloped_previous.y))
+			if sloped_direction != Vector2i.ZERO and next_direction != sloped_direction:
+				sloped_turns += 1
+			sloped_direction = next_direction
+			sloped_previous = point
+		if sloped_path.is_empty() or sloped_path.back() != sloped_target or sloped_turns > 1:
+			_fail("open sloped path did not retain the C++ turn-smoothed route: target=%s path=%s turns=%d" % [sloped_target, sloped_path, sloped_turns])
+			return false
 	var short_goals: Array[Vector2i] = [Vector2i(2, 0)]
 	var blocked_path: Array[Vector2i] = pathfinder.find_path(Vector2i(0, 0), short_goals, _test_blocked_middle_walkable, {}, 50000, 2)
 	if not blocked_path.is_empty():
