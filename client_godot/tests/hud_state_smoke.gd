@@ -57,6 +57,8 @@ func _ready() -> void:
 	if not is_equal_approx(float(panel.get_node("%Health").value), 75.0) or not is_equal_approx(float(panel.get_node("%Mana").value), 50.0):
 		_fail("player health or mana gauge ratio mismatch")
 		return
+	var previous_chat_log: Array = GameState.chat_log.duplicate(true)
+	var previous_inventory: Array = GameState.inventory.duplicate(true)
 	GameState.player_health_initialized = true
 	GameState.ascend_strings.clear()
 	GameState.set_player_online({
@@ -70,6 +72,15 @@ func _ready() -> void:
 		"direction": 2,
 	})
 	panel.call("_process", 0.0)
+	if not GameState.chat_log.is_empty() or GameState.player_exp != 0 or GameState.player_level != 0 or not GameState.inventory.is_empty():
+		_fail("new online session retained previous HUD state: chat=%d exp=%d level=%d inventory=%d" % [GameState.chat_log.size(), GameState.player_exp, GameState.player_level, GameState.inventory.size()])
+		return
+	if not panel.get_node("%ChatLog").get_parsed_text().is_empty() \
+			or not is_zero_approx(float(panel.get_node("%Experience").value)) \
+			or not is_zero_approx(float(panel.get_node("%Load").value)) \
+			or panel.get_node("%Level").text != "0":
+		_fail("new online session HUD did not use empty C++ ProcessRun defaults")
+		return
 	if GameState.player_health_initialized or GameState.player_hp != 0 or GameState.player_hp_max != 0 \
 			or GameState.player_mp != 0 or GameState.player_mp_max != 0:
 		_fail("new online session retained previous player health: %d/%d %d/%d" % [GameState.player_hp, GameState.player_hp_max, GameState.player_mp, GameState.player_mp_max])
@@ -88,6 +99,9 @@ func _ready() -> void:
 	GameState.player_hp_max = 100
 	GameState.player_mp = 50
 	GameState.player_mp_max = 100
+	GameState.chat_log = previous_chat_log
+	GameState.inventory = previous_inventory
+	GameState.update_exp(1100)
 	GameState.player_hp_max = 0
 	GameState.player_mp_max = 0
 	panel.call("_process", 0.0)

@@ -189,6 +189,10 @@ func set_player_online(online_data: Dictionary) -> void:
 	player_hp_max = 0
 	player_mp = 0
 	player_mp_max = 0
+	player_exp = 0
+	player_level = 0
+	inventory.clear()
+	chat_log.clear()
 	player_uid = online_data.get("uid", 0)
 	player_name = online_data.get("name", "")
 	player_name_color = 0xFFFFFFFF
