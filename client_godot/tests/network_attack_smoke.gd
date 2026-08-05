@@ -3,7 +3,7 @@ extends Node
 const Protocol = preload("res://scripts/network/protocol.gd")
 const CerealReader = preload("res://scripts/network/cereal_reader.gd")
 
-enum Stage { WAIT_TARGET, WAIT_RESULT }
+enum Stage { WAIT_TARGET, WAIT_DISPATCH, WAIT_RESULT, COMPLETE }
 
 var _main: Control
 var _stage := Stage.WAIT_TARGET
@@ -47,9 +47,11 @@ func _process(_delta: float) -> void:
 			click.button_index = MOUSE_BUTTON_LEFT
 			click.position = _target_click
 			click.pressed = true
-			_main.call("_unhandled_input", click)
+			Input.parse_input_event(click)
+			_stage = Stage.WAIT_DISPATCH
+		Stage.WAIT_DISPATCH:
 			if int(_main.get("_attack_focus_uid")) != _target_uid:
-				_fail("real left click did not select monster uid=%d point=%s focus=%s" % [_target_uid, _target_click, _main.get("_attack_focus_uid")], 7)
+				_fail("real left click did not select monster uid=%d point=%s focus=%s health_initialized=%s hp=%d overlay=%s blocked=%s" % [_target_uid, _target_click, _main.get("_attack_focus_uid"), GameState.player_health_initialized, GameState.player_hp, _main.get_node("MapLoadingOverlay").visible, _main.call("_player_input_blocked")], 7)
 				return
 			_stage = Stage.WAIT_RESULT
 		Stage.WAIT_RESULT:
@@ -60,12 +62,26 @@ func _process(_delta: float) -> void:
 			if _result_hp >= _result_max_hp:
 				_fail("authoritative target health did not show damage: uid=%d hp=%d/%d" % [_target_uid, _result_hp, _result_max_hp], 8)
 				return
+			_stage = Stage.COMPLETE
+			if OS.has_environment("MIR2X_NETWORK_ATTACK_WINDOW_SIZE"):
+				var parts := OS.get_environment("MIR2X_NETWORK_ATTACK_WINDOW_SIZE").split("x")
+				if parts.size() != 2:
+					_fail("invalid attack window size", 9)
+					return
+				DisplayServer.window_set_size(Vector2i(int(parts[0]), int(parts[1])))
+				await get_tree().process_frame
+				await RenderingServer.frame_post_draw
+				if _main.size != Vector2(800, 600):
+					_fail("resized window changed logical game size: window=%s main=%s" % [DisplayServer.window_get_size(), _main.size], 9)
+					return
 			if OS.has_environment("MIR2X_NETWORK_ATTACK_SCREENSHOT"):
 				await RenderingServer.frame_post_draw
-				var error := get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_NETWORK_ATTACK_SCREENSHOT"))
+				var image := get_viewport().get_texture().get_image()
+				var error := image.save_png(OS.get_environment("MIR2X_NETWORK_ATTACK_SCREENSHOT"))
 				if error != OK:
 					_fail("failed to save attack screenshot: %s" % error, 9)
 					return
+				print("NETWORK ATTACK WINDOW: window=%s logical=%s image=%s" % [DisplayServer.window_get_size(), _main.size, image.get_size()])
 			print("NETWORK ATTACK PASS: target=%d distance=%d chase=%s local-action=7 authoritative-hitted health=%d/%d misses=%d" % [_target_uid, _initial_distance, _saw_chase_move, _result_hp, _result_max_hp, _miss_count])
 			_finished = true
 			NetworkClient.disconnect_from_server()

@@ -146,15 +146,23 @@ func _ready() -> void:
 	
 	NetworkClient.message_received.connect(_on_server_message)
 	game_state.state_changed.connect(_refresh_grabbed_item_icon)
+	world_renderer.gui_input.connect(_on_world_gui_input)
 	control_panel.connect("minimized_changed", _on_control_panel_minimized_changed)
 	_refresh_grabbed_item_icon()
 	_ensure_extra_panel(MINIMAP_PANEL_PATH)
+	if game_state.player_uid != 0:
+		map_loading_overlay.show()
+		_on_map_load_progress(0, "")
 	
 	if OS.has_environment("MIR2X_GAME_SCREENSHOT"):
 		inventory_panel.show()
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_GAME_SCREENSHOT"))
 		get_tree().quit()
+
+
+func _on_world_gui_input(event: InputEvent) -> void:
+	_unhandled_input(event)
 
 
 func _process(delta: float) -> void:

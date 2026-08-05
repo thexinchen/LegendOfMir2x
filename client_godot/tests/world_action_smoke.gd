@@ -127,14 +127,17 @@ func _ready() -> void:
 		resize_static_positions[panel_name] = (resize_static_panels[panel_name] as Control).position
 	get_tree().root.size = Vector2i(1024, 768)
 	await get_tree().process_frame
+	if main.size != Vector2(800, 600):
+		_fail("scaled window changed the 800x600 logical game viewport: main=%s root=%s" % [main.size, get_tree().root.size])
+		return
 	for panel_name: String in resize_static_panels:
 		var resized_panel := resize_static_panels[panel_name] as Control
 		if resized_panel.position != resize_static_positions[panel_name]:
 			_fail("C++ board moved instead of preserving its clamped position after viewport growth: panel=%s actual=%s expected=%s" % [panel_name, resized_panel.position, resize_static_positions[panel_name]])
 			return
 	var resized_minimap := extra_panel_nodes["res://scenes/game/panels/minimap.tscn"] as Control
-	if resized_minimap.position != Vector2(824, 0) or resized_minimap.size != Vector2(200, 200):
-		_fail("minimap did not follow its C++ per-frame upper-right geometry in the world panel matrix: position=%s size=%s" % [resized_minimap.position, resized_minimap.size])
+	if resized_minimap.position != Vector2(600, 0) or resized_minimap.size != Vector2(200, 200):
+		_fail("scaled window changed the minimap's 800x600 logical geometry: position=%s size=%s" % [resized_minimap.position, resized_minimap.size])
 		return
 	get_tree().root.size = Vector2i(800, 600)
 	await get_tree().process_frame

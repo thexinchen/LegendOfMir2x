@@ -35,8 +35,8 @@ func _ready() -> void:
 		return
 	get_tree().root.size = Vector2i(1024, 768)
 	await get_tree().process_frame
-	if panel.size != Vector2(200, 200) or panel.position != Vector2(824, 0):
-		_fail("compact minimap did not stay on the original upper-right anchor after resize: position=%s size=%s" % [panel.position, panel.size])
+	if panel.size != Vector2(200, 200) or panel.position != Vector2(600, 0):
+		_fail("scaled window changed the compact minimap's 800x600 logical anchor: position=%s size=%s" % [panel.position, panel.size])
 		return
 	get_tree().root.size = Vector2i(800, 600)
 	await get_tree().process_frame
@@ -82,8 +82,8 @@ func _ready() -> void:
 		return
 	get_tree().root.size = Vector2i(1024, 768)
 	await get_tree().process_frame
-	var expected_extended_size := Vector2(roundf(1024.0 * 0.8), roundf(768.0 * 0.5))
-	var expected_extended_position := (Vector2(1024, 768) - expected_extended_size) * 0.5
+	var expected_extended_size := Vector2(roundf(800.0 * 0.8), roundf(600.0 * 0.5))
+	var expected_extended_position := (Vector2(800, 600) - expected_extended_size) * 0.5
 	if panel.size != expected_extended_size or panel.position != expected_extended_position:
 		_fail("extended minimap did not follow the original dynamic canvas geometry after resize: position=%s/%s size=%s/%s" % [panel.position, expected_extended_position, panel.size, expected_extended_size])
 		return

@@ -25,12 +25,21 @@ func _ready() -> void:
 	if _map_names[0].is_empty():
 		_fail("map name was unavailable at first visible progress")
 		return
+	GameState.set_player_online({"uid": 1, "name": "loading", "map_uid": 0, "x": 0, "y": 0, "direction": 5})
 	var main: Control = load("res://scenes/game/main.tscn").instantiate()
 	add_child(main)
+	await get_tree().process_frame
 	var overlay := main.get_node("MapLoadingOverlay") as Control
 	var backdrop := overlay.get_node("Backdrop") as ColorRect
 	var panel := overlay.get_node("Panel") as Control
 	var loading_text := overlay.get_node("Panel/Text") as RichTextLabel
+	if not overlay.visible:
+		_fail("world scene exposed before SM_STARTGAMESCENE map loading")
+		return
+	if ProjectSettings.get_setting("display/window/stretch/mode", "disabled") != "canvas_items" \
+			or ProjectSettings.get_setting("display/window/stretch/aspect", "ignore") != "keep":
+		_fail("800x600 logical viewport does not scale with the window")
+		return
 	if panel.size != Vector2(358, 260) or overlay.mouse_filter != Control.MOUSE_FILTER_STOP or backdrop.color != Color.BLACK:
 		_fail("modal geometry/background/input mismatch: panel=%s background=%s filter=%d" % [panel.size, backdrop.color, overlay.mouse_filter])
 		return
