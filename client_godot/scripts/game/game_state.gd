@@ -193,6 +193,16 @@ func set_player_online(online_data: Dictionary) -> void:
 	player_level = 0
 	inventory.clear()
 	chat_log.clear()
+	creatures.clear()
+	ground_items.clear()
+	player_say_messages.clear()
+	buff_list.clear()
+	firewalls.clear()
+	_firewall_variant_serial = 0
+	magic_effects.clear()
+	attached_magic_effects.clear()
+	strike_grids.clear()
+	ascend_strings.clear()
 	player_uid = online_data.get("uid", 0)
 	player_name = online_data.get("name", "")
 	player_name_color = 0xFFFFFFFF

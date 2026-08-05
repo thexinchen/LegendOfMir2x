@@ -59,8 +59,17 @@ func _ready() -> void:
 		return
 	var previous_chat_log: Array = GameState.chat_log.duplicate(true)
 	var previous_inventory: Array = GameState.inventory.duplicate(true)
+	var previous_buff_list: Array = GameState.buff_list.duplicate(true)
 	GameState.player_health_initialized = true
-	GameState.ascend_strings.clear()
+	GameState.creatures = {901: {"uid": 901, "type": 1, "x": 9, "y": 9}}
+	GameState.ground_items = {"9,9": [1]}
+	GameState.player_say_messages = {901: [{"text": "stale", "start_time": 1}]}
+	GameState.buff_list = [1]
+	GameState.firewalls = [{"x": 9, "y": 9, "start_time": 1}]
+	GameState.magic_effects = [{"magicID": 1}]
+	GameState.attached_magic_effects = [{"magicID": 1, "uid": 901}]
+	GameState.strike_grids = {"9,9": 1}
+	GameState.ascend_strings = [{"x": 9, "y": 9, "type": 0, "value": 1, "start_time": 1}]
 	GameState.set_player_online({
 		"uid": 900,
 		"name": "session-reset",
@@ -74,6 +83,13 @@ func _ready() -> void:
 	panel.call("_process", 0.0)
 	if not GameState.chat_log.is_empty() or GameState.player_exp != 0 or GameState.player_level != 0 or not GameState.inventory.is_empty():
 		_fail("new online session retained previous HUD state: chat=%d exp=%d level=%d inventory=%d" % [GameState.chat_log.size(), GameState.player_exp, GameState.player_level, GameState.inventory.size()])
+		return
+	if not GameState.creatures.is_empty() or not GameState.ground_items.is_empty() \
+			or not GameState.player_say_messages.is_empty() or not GameState.buff_list.is_empty() \
+			or not GameState.firewalls.is_empty() or not GameState.magic_effects.is_empty() \
+			or not GameState.attached_magic_effects.is_empty() or not GameState.strike_grids.is_empty() \
+			or not GameState.ascend_strings.is_empty():
+		_fail("new online session retained previous world entities or transient effects")
 		return
 	if not panel.get_node("%ChatLog").get_parsed_text().is_empty() \
 			or not is_zero_approx(float(panel.get_node("%Experience").value)) \
@@ -101,6 +117,7 @@ func _ready() -> void:
 	GameState.player_mp_max = 100
 	GameState.chat_log = previous_chat_log
 	GameState.inventory = previous_inventory
+	GameState.buff_list = previous_buff_list
 	GameState.update_exp(1100)
 	GameState.player_hp_max = 0
 	GameState.player_mp_max = 0
