@@ -62,6 +62,7 @@ const MONSTER_NAME_FONT_SIZE := 15
 const ASCEND_LIFETIME_MS := 3000.0
 const STRIKE_GRID_LIFETIME_MS := 1000
 const STRIKE_GRID_COLOR := Color8(0xFF, 0x00, 0x00, 0x60)
+const MAX_MOTION_DELTA_SECONDS := 1.0 / 30.0
 const FOCUS_COLORS := [
 	Color.WHITE,
 	Color8(0xFF, 0x86, 0x00),
@@ -86,6 +87,61 @@ var _magic_focus_uid := 0
 var _follow_focus_uid := 0
 var _attack_focus_uid := 0
 var _ground_item_star_ratio := 0.0
+var _movement_clocks: Dictionary = {}
+
+
+func limited_motion_delta(delta: float) -> float:
+	return clampf(delta, 0.0, MAX_MOTION_DELTA_SECONDS)
+
+
+func advance_movement_clocks(delta: float) -> float:
+	var elapsed_ms := limited_motion_delta(delta) * 1000.0
+	var active_keys: Dictionary = {}
+	if game_state.player_action_type in [3, 5] and game_state.player_action_started_ms > 0:
+		var player_key := "player"
+		active_keys[player_key] = true
+		_advance_movement_clock(player_key, game_state.player_action_started_ms, game_state.player_action_speed, elapsed_ms)
+	for uid_value in game_state.creatures:
+		var creature: Dictionary = game_state.creatures[uid_value]
+		if creature.get("action_type", 2) not in [3, 5] or creature.get("action_started_ms", 0) <= 0:
+			continue
+		var creature_key := "creature:%d" % int(uid_value)
+		active_keys[creature_key] = true
+		_advance_movement_clock(creature_key, creature.get("action_started_ms", 0), creature.get("action_speed", 100), elapsed_ms)
+	for key in _movement_clocks.keys():
+		if not active_keys.has(key):
+			_movement_clocks.erase(key)
+	return elapsed_ms / 1000.0
+
+
+func reset_movement_clocks() -> void:
+	_movement_clocks.clear()
+
+
+func creature_movement_elapsed_seconds(uid: int, started_ms: int) -> float:
+	return _movement_elapsed_ms("creature:%d" % uid, started_ms) / 1000.0
+
+
+func _advance_movement_clock(key: String, started_ms: int, speed: int, elapsed_ms: float) -> void:
+	var clock: Dictionary = _movement_clocks.get(key, {})
+	if clock.get("started_ms", -1) != started_ms:
+		clock = {"started_ms": started_ms, "elapsed_ms": 0.0}
+	var duration_ms := 600.0 * 100.0 / float(clampi(speed, 20, 500))
+	clock["elapsed_ms"] = minf(float(clock.elapsed_ms) + elapsed_ms, duration_ms)
+	_movement_clocks[key] = clock
+
+
+func _movement_elapsed_ms(key: String, started_ms: int) -> float:
+	var clock: Dictionary = _movement_clocks.get(key, {})
+	if clock.get("started_ms", -1) != started_ms:
+		return 0.0
+	return float(clock.get("elapsed_ms", 0.0))
+
+
+func _visual_movement_started_ms(key: String, started_ms: int, action_type: int) -> int:
+	if action_type not in [3, 5] or started_ms <= 0:
+		return started_ms
+	return Time.get_ticks_msec() - roundi(_movement_elapsed_ms(key, started_ms))
 
 
 func _process(_delta: float) -> void:
@@ -1480,7 +1536,8 @@ func _draw_player(view_x: int, view_y: int) -> void:
 	var py: int = roundi(draw_grid.y * GRID_YP) - view_y
 	var center := Vector2(px + GRID_XP * 0.5, py + GRID_YP * 0.5)
 
-	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, game_state.player_action_started_ms, game_state.player_action_speed, game_state.player_action_magic_id, game_state.player_uid, game_state.player_y, game_state.player_action_step):
+	var visual_started_ms := _visual_movement_started_ms("player", game_state.player_action_started_ms, game_state.player_action_type)
+	if not _draw_hero_sprite(game_state.player_gender, game_state.player_direction, game_state.player_action_type, game_state.player_desp, px, py, visual_started_ms, game_state.player_action_speed, game_state.player_action_magic_id, game_state.player_uid, game_state.player_y, game_state.player_action_step):
 		draw_circle(Vector2(center.x + 2, center.y + 14), 12, Color(0, 0, 0, 0.3))
 		draw_circle(center, 14, Color(0.3, 0.5, 0.9, 1.0))
 	if _should_draw_actor_status(game_state.player_action_type):
@@ -1490,7 +1547,8 @@ func _draw_player(view_x: int, view_y: int) -> void:
 
 
 func player_draw_grid() -> Vector2:
-	return _action_draw_grid(game_state.player_x, game_state.player_y, game_state.player_action_from_x, game_state.player_action_from_y, game_state.player_action_type, game_state.player_action_started_ms, game_state.player_action_speed)
+	var visual_started_ms := _visual_movement_started_ms("player", game_state.player_action_started_ms, game_state.player_action_type)
+	return _action_draw_grid(game_state.player_x, game_state.player_y, game_state.player_action_from_x, game_state.player_action_from_y, game_state.player_action_type, visual_started_ms, game_state.player_action_speed)
 
 
 func _draw_team_leader_marker(uid: int, start_x: int, start_y: int) -> void:
@@ -1515,7 +1573,13 @@ func _team_leader_marker(uid: int, start_x: int, start_y: int) -> Dictionary:
 
 
 func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) -> void:
-	var draw_grid := _action_draw_grid(c.get("x", 0), c.get("y", 0), c.get("action_from_x", c.get("x", 0)), c.get("action_from_y", c.get("y", 0)), c.get("action_type", 2), c.get("action_started_ms", 0), c.get("action_speed", 100))
+	var uid: int = c.get("uid", 0)
+	var visual_started_ms := _visual_movement_started_ms("creature:%d" % uid, c.get("action_started_ms", 0), c.get("action_type", 2))
+	var render_creature := c
+	if visual_started_ms != c.get("action_started_ms", 0):
+		render_creature = c.duplicate(false)
+		render_creature["action_started_ms"] = visual_started_ms
+	var draw_grid := _action_draw_grid(c.get("x", 0), c.get("y", 0), c.get("action_from_x", c.get("x", 0)), c.get("action_from_y", c.get("y", 0)), c.get("action_type", 2), visual_started_ms, c.get("action_speed", 100))
 	var cx: int = roundi(draw_grid.x * GRID_XP) - view_x
 	var cy: int = roundi(draw_grid.y * GRID_YP) - view_y
 	var center := Vector2(cx + GRID_XP * 0.5, cy + GRID_YP * 0.5)
@@ -1526,10 +1590,9 @@ func _draw_creature(c: Dictionary, view_x: int, view_y: int, body_alpha := 1.0) 
 	
 	var c_type: int = c.get("type", 0)
 	var sprite_drawn := false
-	var uid: int = c.get("uid", 0)
 	match c_type:
-		1: sprite_drawn = _draw_monster_sprite(c, cx, cy, body_alpha)
-		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, c.get("action_started_ms", 0), c.get("action_speed", 100), c.get("action_magic_id", 0), uid, c.get("y", 0), c.get("action_step", 0))
+		1: sprite_drawn = _draw_monster_sprite(render_creature, cx, cy, body_alpha)
+		2: sprite_drawn = _draw_hero_sprite(c.get("gender", 0), c.get("direction", 5), c.get("action_type", 2), c.get("desp", {}), cx, cy, visual_started_ms, c.get("action_speed", 100), c.get("action_magic_id", 0), uid, c.get("y", 0), c.get("action_step", 0))
 		3: sprite_drawn = _draw_npc_sprite(c, cx, cy)
 	if not sprite_drawn:
 		draw_circle(Vector2(center.x + 2, center.y + 14), 10, Color(0, 0, 0, 0.3 * body_alpha))

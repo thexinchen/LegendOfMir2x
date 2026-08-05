@@ -514,6 +514,14 @@ func _test_camera_centering(main: Control) -> bool:
 		if not distance.is_equal_approx(Vector2(210.0, 140.0)):
 			_fail("one-second camera distance depends on render FPS: %s" % [camera_distances])
 			return false
+	GameState.view_x = 1000.0
+	GameState.view_y = 1000.0
+	GameState.set("_camera_scrolling", true)
+	GameState.scroll_camera_to(Vector2(100, 100), 0.5)
+	var hitch_distance := Vector2(GameState.view_x - 1000.0, GameState.view_y - 1000.0)
+	if not hitch_distance.is_equal_approx(Vector2(7.0, 14.0 / 3.0)):
+		_fail("camera caught up an entire long frame in one draw: %s" % hitch_distance)
+		return false
 	GameState.set("_camera_scrolling", false)
 	GameState.player_x = 371
 	GameState.player_y = 132
@@ -619,6 +627,9 @@ func _test_camera_centering(main: Control) -> bool:
 
 func _test_movement_timeline(main: Control) -> bool:
 	var world_renderer: Node = main.get_node("WorldRenderer")
+	if not world_renderer.has_method("advance_movement_clocks"):
+		_fail("movement interpolation catches up the full elapsed wall-clock time after a long frame")
+		return false
 	var started_ms := 1000
 	var samples: Array[float] = []
 	for now_ms in [1000, 1100, 1200, 1300, 1400, 1500, 1600]:
@@ -644,6 +655,43 @@ func _test_movement_timeline(main: Control) -> bool:
 		"speed": GameState.player_action_speed,
 		"started_ms": GameState.player_action_started_ms,
 	}
+	GameState.player_action_from_x = 10
+	GameState.player_action_from_y = 10
+	GameState.player_x = 11
+	GameState.player_y = 10
+	GameState.player_action_type = 3
+	GameState.player_action_speed = 100
+	GameState.player_action_started_ms = Time.get_ticks_msec()
+	var hitch_monster_uid: int = (4 << 59) | (1 << 35) | 986
+	GameState.update_creature(hitch_monster_uid, {
+		"uid": hitch_monster_uid, "type": 1, "monster_id": 1,
+		"x": 21, "y": 20, "action_from_x": 20, "action_from_y": 20,
+		"direction": 3, "action_type": 3, "action_speed": 100,
+		"action_started_ms": GameState.player_action_started_ms,
+	})
+	world_renderer.call("reset_movement_clocks")
+	world_renderer.call("advance_movement_clocks", 1.0 / 60.0)
+	world_renderer.call("advance_movement_clocks", 0.5)
+	var post_hitch_grid: Vector2 = world_renderer.call("player_draw_grid")
+	if post_hitch_grid.x < 10.07 or post_hitch_grid.x > 10.09:
+		_fail("movement caught up an entire 500ms hitch: %s" % post_hitch_grid)
+		return false
+	var monster_post_hitch: float = world_renderer.call("creature_movement_elapsed_seconds", hitch_monster_uid, GameState.player_action_started_ms)
+	if monster_post_hitch < 0.049 or monster_post_hitch > 0.051:
+		_fail("monster movement caught up an entire 500ms hitch: %f" % monster_post_hitch)
+		return false
+	for frame_index in range(33):
+		world_renderer.call("advance_movement_clocks", 1.0 / 60.0)
+	var completed_grid: Vector2 = world_renderer.call("player_draw_grid")
+	if not completed_grid.is_equal_approx(Vector2(11, 10)):
+		_fail("limited movement clock changed the normal total action duration: %s" % completed_grid)
+		return false
+	var monster_completed: float = world_renderer.call("creature_movement_elapsed_seconds", hitch_monster_uid, GameState.player_action_started_ms)
+	if absf(monster_completed - 0.6) > 0.001:
+		_fail("limited monster clock changed the normal total action duration: %f" % monster_completed)
+		return false
+	GameState.remove_creature(hitch_monster_uid)
+	world_renderer.call("reset_movement_clocks")
 	GameState.player_uid = 101
 	GameState.player_map_uid = 202
 	GameState.player_action_from_x = 10

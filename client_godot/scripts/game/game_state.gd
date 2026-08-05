@@ -118,6 +118,7 @@ const HUD_SHIFT_HEIGHT := 131
 const CAMERA_SCROLL_X_SPEED := 3.0 * 70.0
 const CAMERA_SCROLL_Y_SPEED := 2.0 * 70.0
 const CAMERA_REFERENCE_DELTA := 1.0 / 70.0
+const CAMERA_MAX_DELTA := 1.0 / 30.0
 
 
 func _ready() -> void:
@@ -812,7 +813,7 @@ func scroll_camera_to(target_grid: Vector2, delta_seconds: float = CAMERA_REFERE
 	var visible_height := SCREEN_H if hud_minimized else SCREEN_H - HUD_SHIFT_HEIGHT
 	if _camera_scrolling or abs(dx) > SCREEN_W / 6.0 or abs(dy) > visible_height / 6.0:
 		_camera_scrolling = true
-		var elapsed := maxf(delta_seconds, 0.0)
+		var elapsed := clampf(delta_seconds, 0.0, CAMERA_MAX_DELTA)
 		if not is_zero_approx(dx):
 			view_x += sign(dx) * min(abs(dx), CAMERA_SCROLL_X_SPEED * elapsed)
 		if not is_zero_approx(dy):

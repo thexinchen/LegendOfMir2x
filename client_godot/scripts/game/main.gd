@@ -166,11 +166,12 @@ func _on_world_gui_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
-	_process_player_action(delta)
-	_process_pickup_action(delta)
-	_process_movement(delta)
+	var motion_delta: float = world_renderer.advance_movement_clocks(delta)
+	_process_player_action(motion_delta)
+	_process_pickup_action(motion_delta)
+	_process_movement(motion_delta)
 	# Update camera
-	game_state.scroll_camera_to(world_renderer.player_draw_grid(), delta)
+	game_state.scroll_camera_to(world_renderer.player_draw_grid(), motion_delta)
 	
 	# Update location label
 	var map_name: String = game_state.player_map_name
@@ -1971,7 +1972,19 @@ func _advance_creature_forced_action(uid: int) -> void:
 
 
 func _schedule_creature_idle(uid: int, action_type: int, started_ms: int, delay: float) -> void:
-	get_tree().create_timer(delay).timeout.connect(func() -> void:
+	_schedule_creature_idle_check(uid, action_type, started_ms, delay, delay)
+
+
+func _schedule_creature_idle_check(uid: int, action_type: int, started_ms: int, duration: float, wait_time: float) -> void:
+	get_tree().create_timer(wait_time).timeout.connect(func() -> void:
+		var creature: Dictionary = game_state.get_creature(uid)
+		if creature.is_empty() or creature.get("action_type", 0) != action_type or creature.get("action_started_ms", -1) != started_ms:
+			return
+		if action_type in [3, 5]:
+			var remaining: float = duration - float(world_renderer.creature_movement_elapsed_seconds(uid, started_ms))
+			if remaining > 0.001:
+				_schedule_creature_idle_check(uid, action_type, started_ms, duration, remaining)
+				return
 		_finish_creature_action(uid, action_type, started_ms)
 	)
 
