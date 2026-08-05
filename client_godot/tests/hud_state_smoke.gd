@@ -57,6 +57,37 @@ func _ready() -> void:
 	if not is_equal_approx(float(panel.get_node("%Health").value), 75.0) or not is_equal_approx(float(panel.get_node("%Mana").value), 50.0):
 		_fail("player health or mana gauge ratio mismatch")
 		return
+	GameState.player_health_initialized = true
+	GameState.ascend_strings.clear()
+	GameState.set_player_online({
+		"uid": 900,
+		"name": "session-reset",
+		"gender": 1,
+		"job": 1,
+		"map_uid": 24 << 35,
+		"x": 10,
+		"y": 11,
+		"direction": 2,
+	})
+	panel.call("_process", 0.0)
+	if GameState.player_health_initialized or GameState.player_hp != 0 or GameState.player_hp_max != 0 \
+			or GameState.player_mp != 0 or GameState.player_mp_max != 0:
+		_fail("new online session retained previous player health: %d/%d %d/%d" % [GameState.player_hp, GameState.player_hp_max, GameState.player_mp, GameState.player_mp_max])
+		return
+	if not is_equal_approx(float(panel.get_node("%Health").value), 100.0) or not is_equal_approx(float(panel.get_node("%Mana").value), 100.0):
+		_fail("new online session did not use original full gauges before SM_HEALTH")
+		return
+	GameState.update_entity_health({"uid": 900, "hp": 60, "maxHP": 100, "mp": 40, "maxMP": 80})
+	panel.call("_process", 0.0)
+	if not GameState.player_health_initialized or not GameState.ascend_strings.is_empty() \
+			or not is_equal_approx(float(panel.get_node("%Health").value), 60.0) \
+			or not is_equal_approx(float(panel.get_node("%Mana").value), 50.0):
+		_fail("first health snapshot after online reset was not silent or authoritative")
+		return
+	GameState.player_hp = 75
+	GameState.player_hp_max = 100
+	GameState.player_mp = 50
+	GameState.player_mp_max = 100
 	GameState.player_hp_max = 0
 	GameState.player_mp_max = 0
 	panel.call("_process", 0.0)
