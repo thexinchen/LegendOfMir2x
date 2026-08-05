@@ -721,6 +721,14 @@ func _send_move_action(aim_x: int, aim_y: int) -> void:
 	game_state.player_y = aim_y
 	_player_action_timer = -1.0
 	_set_player_action(3, action.speed, 0, _grid_distance(Vector2i(action.x, action.y), Vector2i(action.aimX, action.aimY)))
+	_play_action_seff(game_state.player_uid, action, {
+		"uid": game_state.player_uid,
+		"type": 2,
+		"gender": game_state.player_gender,
+		"desp": game_state.player_desp,
+		"action_started_ms": game_state.player_action_started_ms,
+		"action_step": game_state.player_action_step,
+	})
 
 
 func _grid_distance(from: Vector2i, to: Vector2i) -> int:
@@ -1281,14 +1289,6 @@ func _handle_action_data(data: Dictionary, correction_applied := false) -> void:
 	# The server broadcasts the accepted local move, and transports may repeat an
 	# actor action. Restarting the same timeline visibly rewinds it before catch-up.
 	if not correction_applied and _matches_active_move(uid, action, creature):
-		if uid == game_state.player_uid:
-			_play_action_seff(uid, action, {
-				"uid": uid,
-				"type": 2,
-				"gender": game_state.player_gender,
-				"desp": game_state.player_desp,
-				"action_started_ms": game_state.player_action_started_ms,
-			})
 		return
 	var previous_creature := creature.duplicate(true)
 	var is_new_creature := creature.is_empty()

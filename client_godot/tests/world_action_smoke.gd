@@ -1117,6 +1117,33 @@ func _test_action_seff(main: Control, resources: RefCounted) -> bool:
 	GameState.player_uid = (5 << 59) | 1
 	GameState.player_x = 10
 	GameState.player_y = 10
+	var world_renderer: Node = main.get_node("WorldRenderer")
+	if int(world_renderer.get("map_width")) <= 0 and not world_renderer.call("load_map", 24):
+		_fail("local movement SEFF fixture could not load map 24")
+		return false
+	var walk_target := Vector2i(-1, -1)
+	for target_y in range(int(world_renderer.get("map_height"))):
+		for target_x in range(1, int(world_renderer.get("map_width"))):
+			if world_renderer.call("can_walk", target_x, target_y):
+				walk_target = Vector2i(target_x, target_y)
+				break
+		if walk_target.x >= 0:
+			break
+	if walk_target.x < 0:
+		_fail("local movement SEFF fixture could not find a walkable target")
+		return false
+	GameState.player_x = walk_target.x - 1
+	GameState.player_y = walk_target.y
+	AudioService.last_seff_id = AudioService.INVALID_SEFF_ID
+	main.call("_send_move_action", walk_target.x, walk_target.y)
+	main.set("_move_step_timer", 0.6)
+	await get_tree().create_timer(0.15).timeout
+	if AudioService.last_seff_id != 0x01000001:
+		_fail("real local movement entry did not start the C++ frame-1 step sound")
+		return false
+	main.call("_set_player_action", 2)
+	GameState.player_x = 10
+	GameState.player_y = 10
 	var weapon_id := 0
 	var weapon_sound := 7
 	for item_id_value in resources.item_attributes:
@@ -3806,6 +3833,11 @@ func _test_path_decomposition() -> bool:
 	if open_path != [Vector2i(2, 0), Vector2i(4, 0)]:
 		_fail("off-horse pathfinder did not prefer the original two-grid run hops: %s" % [open_path])
 		return false
+	var odd_goals: Array[Vector2i] = [Vector2i(5, 0)]
+	var odd_path: Array[Vector2i] = pathfinder.find_path(Vector2i(0, 0), odd_goals, _test_open_odd_walkable, {}, 50000, 2)
+	if odd_path != [Vector2i(2, 0), Vector2i(4, 0), Vector2i(5, 0)]:
+		_fail("odd straight path inserted a slow walk between run hops: %s" % [odd_path])
+		return false
 	var diagonal_goals: Array[Vector2i] = [Vector2i(4, 4)]
 	var diagonal_path: Array[Vector2i] = pathfinder.find_path(Vector2i(0, 0), diagonal_goals, _test_open_diagonal_walkable, {}, 50000, 2)
 	if diagonal_path != [Vector2i(2, 2), Vector2i(4, 4)]:
@@ -3843,6 +3875,10 @@ func _test_path_decomposition() -> bool:
 
 func _test_open_walkable(x: int, y: int) -> bool:
 	return y == 0 and x >= 0 and x <= 4
+
+
+func _test_open_odd_walkable(x: int, y: int) -> bool:
+	return y == 0 and x >= 0 and x <= 5
 
 
 func _test_open_diagonal_walkable(x: int, y: int) -> bool:
