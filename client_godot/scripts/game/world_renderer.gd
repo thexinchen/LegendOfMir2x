@@ -2139,11 +2139,12 @@ func _motion_step(started_ms: int, speed: int) -> int:
 	return floori(float(elapsed) / frame_delay)
 
 
-func _action_draw_grid(end_x: int, end_y: int, from_x: int, from_y: int, action_type: int, started_ms: int, speed: int) -> Vector2:
+func _action_draw_grid(end_x: int, end_y: int, from_x: int, from_y: int, action_type: int, started_ms: int, speed: int, now_ms := -1) -> Vector2:
 	if action_type not in [3, 5] or started_ms <= 0:
 		return Vector2(end_x, end_y)
 	var duration_ms := 600.0 * 100.0 / float(clampi(speed, 20, 500))
-	var ratio := clampf(float(Time.get_ticks_msec() - started_ms) / duration_ms, 0.0, 1.0)
+	var sample_now: int = Time.get_ticks_msec() if now_ms < 0 else now_ms
+	var ratio := clampf(float(sample_now - started_ms) / duration_ms, 0.0, 1.0)
 	return Vector2(from_x, from_y).lerp(Vector2(end_x, end_y), ratio)
 
 

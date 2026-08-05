@@ -93,9 +93,9 @@ var _player_post_forced_action: Dictionary = {}
 var _team_flag_active := false
 var _summon_spawn_blockers: Dictionary = {}
 
-# C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame).
-# Keep a small network margin before sending the next one-hop action.
-const MOVE_STEP_SECONDS := 0.75
+# C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame). Dispatch the
+# next one-hop action at the same boundary so a path has no artificial idle gap.
+const MOVE_STEP_SECONDS := 0.60
 const FORCED_MOVE_SPEED := 500
 const PING_INTERVAL_MS := 10_000
 const U32_MASK := 0xFFFFFFFF
@@ -1234,6 +1234,31 @@ func _handle_action(payload: PackedByteArray) -> void:
 	_handle_action_data(Protocol.decode_sm_action(payload))
 
 
+func _matches_active_move(uid: int, action: Dictionary, creature: Dictionary) -> bool:
+	var action_type: int = action.get("type", 0)
+	if action_type not in [3, 5]:
+		return false
+	var from_x: int = action.get("x", 0)
+	var from_y: int = action.get("y", 0)
+	var end_x: int = action.get("aimX", from_x)
+	var end_y: int = action.get("aimY", from_y)
+	var speed: int = action.get("speed", 100)
+	if uid == game_state.player_uid:
+		return game_state.player_action_type == action_type \
+				and game_state.player_action_from_x == from_x \
+				and game_state.player_action_from_y == from_y \
+				and game_state.player_x == end_x \
+				and game_state.player_y == end_y \
+				and game_state.player_action_speed == speed
+	return not creature.is_empty() \
+			and creature.get("action_type", 0) == action_type \
+			and creature.get("action_from_x", creature.get("x", 0)) == from_x \
+			and creature.get("action_from_y", creature.get("y", 0)) == from_y \
+			and creature.get("x", 0) == end_x \
+			and creature.get("y", 0) == end_y \
+			and creature.get("action_speed", 100) == speed
+
+
 func _handle_action_data(data: Dictionary, correction_applied := false) -> void:
 	var uid: int = data.get("uid", 0)
 	var action: Dictionary = data.get("action", {})
@@ -1252,6 +1277,18 @@ func _handle_action_data(data: Dictionary, correction_applied := false) -> void:
 	if action_type == 9 and _resources.magic_cast_motion(action.get("magicID", 0)) == 7:
 		direction = 5
 	var creature: Dictionary = game_state.get_creature(uid) if uid != game_state.player_uid else {}
+	# The server broadcasts the accepted local move, and transports may repeat an
+	# actor action. Restarting the same timeline visibly rewinds it before catch-up.
+	if not correction_applied and _matches_active_move(uid, action, creature):
+		if uid == game_state.player_uid:
+			_play_action_seff(uid, action, {
+				"uid": uid,
+				"type": 2,
+				"gender": game_state.player_gender,
+				"desp": game_state.player_desp,
+				"action_started_ms": game_state.player_action_started_ms,
+			})
+		return
 	var previous_creature := creature.duplicate(true)
 	var is_new_creature := creature.is_empty()
 	if not creature.is_empty() and creature.has("motion_action_queue"):

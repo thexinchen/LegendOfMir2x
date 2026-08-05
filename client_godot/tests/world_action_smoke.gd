@@ -251,6 +251,8 @@ func _ready() -> void:
 		return
 	if not _test_camera_centering(main):
 		return
+	if not _test_movement_timeline(main):
+		return
 	if not _test_missing_minimap_feedback(main):
 		return
 	if not _test_fps_overlay(main):
@@ -591,6 +593,84 @@ func _test_camera_centering(main: Control) -> bool:
 	GameState.player_action_type = 2
 	GameState.player_action_started_ms = 0
 	GameState.center_camera_on_player()
+	return true
+
+
+func _test_movement_timeline(main: Control) -> bool:
+	var world_renderer: Node = main.get_node("WorldRenderer")
+	var started_ms := 1000
+	var samples: Array[float] = []
+	for now_ms in [1000, 1100, 1200, 1300, 1400, 1500, 1600]:
+		samples.append(world_renderer.call("_action_draw_grid", 11, 10, 10, 10, 3, started_ms, 100, now_ms).x)
+	for index in range(samples.size()):
+		var expected := 10.0 + float(index) / 6.0
+		if absf(samples[index] - expected) > 0.001:
+			_fail("movement interpolation is not uniform: samples=%s index=%d expected=%f" % [samples, index, expected])
+			return false
+	var constants: Dictionary = main.get_script().get_script_constant_map()
+	if absf(float(constants.get("MOVE_STEP_SECONDS", 0.0)) - 0.6) > 0.001:
+		_fail("right-click path cadence does not match the six-frame movement duration: %s" % constants.get("MOVE_STEP_SECONDS", null))
+		return false
+
+	var saved_player := {
+		"uid": GameState.player_uid,
+		"map_uid": GameState.player_map_uid,
+		"x": GameState.player_x,
+		"y": GameState.player_y,
+		"from_x": GameState.player_action_from_x,
+		"from_y": GameState.player_action_from_y,
+		"type": GameState.player_action_type,
+		"speed": GameState.player_action_speed,
+		"started_ms": GameState.player_action_started_ms,
+	}
+	GameState.player_uid = 101
+	GameState.player_map_uid = 202
+	GameState.player_action_from_x = 10
+	GameState.player_action_from_y = 10
+	GameState.player_x = 11
+	GameState.player_y = 10
+	GameState.player_action_type = 3
+	GameState.player_action_speed = 100
+	GameState.player_action_started_ms = Time.get_ticks_msec() - 200
+	var predicted_started_ms: int = GameState.player_action_started_ms
+	main.call("_handle_action_data", {
+		"uid": 101,
+		"mapUID": 202,
+		"action": {"type": 3, "speed": 100, "x": 10, "y": 10, "aimX": 11, "aimY": 10},
+	})
+	if GameState.player_action_started_ms != predicted_started_ms:
+		_fail("authoritative echo restarted the predicted player movement timeline")
+		return false
+
+	var monster_uid: int = (4 << 59) | (1 << 35) | 987
+	GameState.update_creature(monster_uid, {
+		"uid": monster_uid, "type": 1, "monster_id": 1,
+		"x": 21, "y": 20, "action_from_x": 20, "action_from_y": 20,
+		"direction": 3, "action_type": 3, "action_speed": 100,
+		"action_started_ms": Time.get_ticks_msec() - 200,
+	})
+	var monster_before: Dictionary = GameState.get_creature(monster_uid).duplicate(true)
+	main.call("_handle_action_data", {
+		"uid": monster_uid,
+		"mapUID": 202,
+		"action": {"type": 3, "speed": 100, "direction": 3, "x": 20, "y": 20, "aimX": 21, "aimY": 20},
+	})
+	var monster_after: Dictionary = GameState.get_creature(monster_uid)
+	if monster_after.get("action_started_ms", 0) != monster_before.action_started_ms \
+			or monster_after.get("action_from_x", 0) != 20 or monster_after.get("x", 0) != 21 \
+			or monster_after.has("motion_action_queue"):
+		_fail("duplicate monster movement rewound or restarted its active timeline: before=%s after=%s" % [monster_before, monster_after])
+		return false
+	GameState.remove_creature(monster_uid)
+	GameState.player_uid = saved_player.uid
+	GameState.player_map_uid = saved_player.map_uid
+	GameState.player_x = saved_player.x
+	GameState.player_y = saved_player.y
+	GameState.player_action_from_x = saved_player.from_x
+	GameState.player_action_from_y = saved_player.from_y
+	GameState.player_action_type = saved_player.type
+	GameState.player_action_speed = saved_player.speed
+	GameState.player_action_started_ms = saved_player.started_ms
 	return true
 
 
