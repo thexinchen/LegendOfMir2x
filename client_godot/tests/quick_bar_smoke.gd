@@ -148,6 +148,17 @@ func _ready() -> void:
 		_fail("skill panel did not retain the HUD-unclaimed numeric binding: actions=%s keys=%s" % [key_actions, GameState.magic_keys])
 		return
 	GameState.magic_keys = {}
+	var shifted_seven_event := InputEventKey.new()
+	shifted_seven_event.keycode = KEY_7
+	shifted_seven_event.unicode = 38
+	shifted_seven_event.shift_pressed = true
+	shifted_seven_event.pressed = true
+	Input.parse_input_event(shifted_seven_event)
+	await get_tree().process_frame
+	if not key_actions.is_empty() or GameState.magic_keys.get(active_magic_id, 0) != 55:
+		_fail("Shift changed the original getKeyChar(false) skill binding: actions=%s keys=%s" % [key_actions, GameState.magic_keys])
+		return
+	GameState.magic_keys = {}
 	quick_bar.hide()
 	Input.parse_input_event(key_event)
 	await get_tree().process_frame

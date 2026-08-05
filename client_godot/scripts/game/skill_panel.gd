@@ -212,7 +212,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			quick_bar = main.get_node_or_null("%QuickBar") as Control
 		if quick_bar != null and quick_bar.visible:
 			return
-	var key: int = event.unicode
+	# ImSkillBoard uses GLDeviceHelper::getKeyChar(event, false): physical
+	# 0-9/A-Z keys keep their unshifted character when assigning shortcuts.
+	var keycode := int(event.keycode)
+	var key: int = keycode if (keycode >= KEY_0 and keycode <= KEY_9) or (keycode >= KEY_A and keycode <= KEY_Z) else int(event.unicode)
 	if key >= 65 and key <= 90:
 		key += 32
 	if not ((key >= 48 and key <= 57) or (key >= 97 and key <= 122)):
