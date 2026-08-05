@@ -205,7 +205,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	# ImMainUI::processHUDEvent() claims visible quick-bar slots before the skill
 	# board can bind a hovered magic to the same numeric key.
-	if not event.shift_pressed and event.keycode >= KEY_1 and event.keycode <= KEY_6:
+	if event.keycode >= KEY_1 and event.keycode <= KEY_6:
 		var main := get_parent()
 		var quick_bar: Control = null
 		if main != null:

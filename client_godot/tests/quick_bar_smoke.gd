@@ -97,6 +97,17 @@ func _ready() -> void:
 	if key_actions != [[QuickBarScript.ACTION_CONSUME, 0]]:
 		_fail("runtime config swallowed the HUD-first quick-slot key: %s" % [key_actions])
 		return
+	key_actions.clear()
+	var shifted_key_event := InputEventKey.new()
+	shifted_key_event.keycode = KEY_1
+	shifted_key_event.unicode = 33
+	shifted_key_event.shift_pressed = true
+	shifted_key_event.pressed = true
+	Input.parse_input_event(shifted_key_event)
+	await get_tree().process_frame
+	if key_actions != [[QuickBarScript.ACTION_CONSUME, 0]]:
+		_fail("Shift changed the original getKeyChar(false) quick-slot route: %s" % [key_actions])
+		return
 	var command := main.get_node("ControlPanel").get_node("%Command") as LineEdit
 	command.release_focus()
 	var enter_event := InputEventKey.new()

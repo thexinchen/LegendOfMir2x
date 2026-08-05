@@ -214,7 +214,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not event.is_pressed() or event.is_echo():
 		return
-	if event is InputEventKey and quick_bar.visible and not event.shift_pressed:
+	if event is InputEventKey and quick_bar.visible:
 		var quick_slot: int = event.keycode - KEY_1
 		if quick_slot >= 0 and quick_slot < 6:
 			quick_bar.call("activate_slot", quick_slot, MOUSE_BUTTON_RIGHT)
@@ -414,9 +414,12 @@ func _cancel_movement() -> void:
 
 
 func _try_magic_key(event: InputEventKey) -> bool:
-	var key := int(event.unicode)
+	# GLDeviceHelper::getKeyChar(event, false) uses the physical 0-9/A-Z key
+	# and intentionally ignores Shift when resolving configured magic keys.
+	var keycode := int(event.keycode)
+	var key := keycode if (keycode >= KEY_0 and keycode <= KEY_9) or (keycode >= KEY_A and keycode <= KEY_Z) else int(event.unicode)
 	if key == 0:
-		key = int(event.keycode)
+		key = keycode
 	if key >= 65 and key <= 90:
 		key += 32
 	var magic_id := 0

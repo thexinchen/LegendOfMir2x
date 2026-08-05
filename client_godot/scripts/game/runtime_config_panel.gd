@@ -92,7 +92,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	# two HUD key routes it consumes before this board sees the event.
 	if event.keycode in [KEY_ENTER, KEY_KP_ENTER]:
 		return
-	if not event.shift_pressed and event.keycode >= KEY_1 and event.keycode <= KEY_6:
+	if event.keycode >= KEY_1 and event.keycode <= KEY_6:
 		var main := get_parent()
 		var quick_bar: Control = null
 		if main != null:

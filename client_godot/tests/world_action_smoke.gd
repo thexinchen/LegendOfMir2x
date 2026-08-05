@@ -1301,7 +1301,7 @@ func _test_magic_panel_hotkey_precedence(main: Control, resources: RefCounted) -
 	var quick_bar := main.get_node("%QuickBar") as Control
 	quick_bar.show()
 	GameState.learned_magic = [{"magicID": firewall_id, "exp": 0}]
-	GameState.magic_keys = {firewall_id: 33}
+	GameState.magic_keys = {firewall_id: 49}
 	GameState.magic_cast_times.erase(firewall_id)
 	var shifted_digit := InputEventKey.new()
 	shifted_digit.keycode = KEY_1
@@ -1310,10 +1310,14 @@ func _test_magic_panel_hotkey_precedence(main: Control, resources: RefCounted) -
 	shifted_digit.pressed = true
 	effect_count = GameState.magic_effects.size()
 	main.call("_unhandled_input", shifted_digit)
-	if GameState.magic_effects.size() != effect_count + 1:
-		_fail("expanded quick bar swallowed the original shifted-digit magic binding")
+	if GameState.magic_effects.size() != effect_count:
+		_fail("shifted digit bypassed the original HUD-first quick-bar route")
 		return false
 	quick_bar.hide()
+	main.call("_unhandled_input", shifted_digit)
+	if GameState.magic_effects.size() != effect_count + 1:
+		_fail("hidden quick bar did not restore the original getKeyChar(false) shifted-digit magic route")
+		return false
 	GameState.learned_magic = previous_learned
 	GameState.magic_keys = previous_keys
 	GameState.magic_cast_times = previous_cast_times
