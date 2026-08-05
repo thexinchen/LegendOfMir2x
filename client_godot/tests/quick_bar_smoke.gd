@@ -83,6 +83,7 @@ func _ready() -> void:
 	quick_bar.slot_action_requested.connect(func(action: int, slot: int): key_actions.append([action, slot]))
 	var key_event := InputEventKey.new()
 	key_event.keycode = KEY_1
+	key_event.unicode = 49
 	key_event.pressed = true
 	main.call("_unhandled_input", key_event)
 	if key_actions.is_empty() or key_actions.back() != [QuickBarScript.ACTION_CONSUME, 0]:
@@ -109,6 +110,43 @@ func _ready() -> void:
 	command.release_focus()
 	runtime.hide()
 	key_actions.clear()
+	var active_magic_id := _find_active_magic(resources)
+	if active_magic_id == 0:
+		_fail("active magic shortcut fixture unavailable")
+		return
+	GameState.learned_magic = [{"magicID": active_magic_id, "exp": 0}]
+	GameState.magic_keys = {}
+	GameState.state_changed.emit()
+	await get_tree().process_frame
+	var skill_panel := main.get_node("SkillPanel") as Control
+	skill_panel.show()
+	skill_panel.call("_show_magic", active_magic_id)
+	Input.parse_input_event(key_event)
+	await get_tree().process_frame
+	if key_actions != [[QuickBarScript.ACTION_CONSUME, 0]] or GameState.magic_keys.has(active_magic_id):
+		_fail("skill panel overrode the HUD-first 1-6 quick-slot key: actions=%s keys=%s" % [key_actions, GameState.magic_keys])
+		return
+	key_actions.clear()
+	var seven_event := InputEventKey.new()
+	seven_event.keycode = KEY_7
+	seven_event.unicode = 55
+	seven_event.pressed = true
+	Input.parse_input_event(seven_event)
+	await get_tree().process_frame
+	if not key_actions.is_empty() or GameState.magic_keys.get(active_magic_id, 0) != 55:
+		_fail("skill panel did not retain the HUD-unclaimed numeric binding: actions=%s keys=%s" % [key_actions, GameState.magic_keys])
+		return
+	GameState.magic_keys = {}
+	quick_bar.hide()
+	Input.parse_input_event(key_event)
+	await get_tree().process_frame
+	if not key_actions.is_empty() or GameState.magic_keys.get(active_magic_id, 0) != 49:
+		_fail("hidden quick bar still blocked the original skill key binding: actions=%s keys=%s" % [key_actions, GameState.magic_keys])
+		return
+	quick_bar.show()
+	skill_panel.call("_hide_magic", active_magic_id)
+	skill_panel.hide()
+	GameState.magic_keys = {}
 	GameState.player_action_type = 13
 	main.call("_unhandled_input", key_event)
 	if key_actions != [[QuickBarScript.ACTION_CONSUME, 0]]:
@@ -197,6 +235,15 @@ func _find_non_belt(resources: RefCounted) -> int:
 	for item_id in resources.item_types:
 		if resources.item_type(item_id) not in ["恢复药水", "传送卷轴"] and not resources.item_icon(item_id).is_empty():
 			return item_id
+	return 0
+
+
+func _find_active_magic(resources: RefCounted) -> int:
+	for magic_value in resources.skill_meta.keys():
+		var magic_id := int(magic_value)
+		var layout: PackedInt32Array = resources.skill_layout(magic_id)
+		if layout.size() >= 5 and (layout[4] & 1) == 0:
+			return magic_id
 	return 0
 
 
