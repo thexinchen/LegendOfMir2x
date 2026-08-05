@@ -142,13 +142,13 @@ func _ready() -> void:
 		_fail("minimap did not restore its C++ upper-right geometry with the viewport: position=%s size=%s" % [resized_minimap.position, resized_minimap.size])
 		return
 	var expected_direct_layers := {
-		"SkillPanel": 4,
+		"SkillPanel": 9,
 		"SkillBuffHUD": 5,
 		"ControlPanel": 6,
 		"Location": 7,
 		"QuickBar": 7,
-		"InventoryPanel": 16,
-		"PlayerStatePanel": 17,
+		"InventoryPanel": 18,
+		"PlayerStatePanel": 19,
 	}
 	for node_path: String in expected_direct_layers:
 		var direct_panel := main.get_node(node_path) as Control
@@ -170,16 +170,16 @@ func _ready() -> void:
 	var expected_extra_layers := {
 		"res://scenes/game/panels/minimap.tscn": 1,
 		"res://scenes/game/panels/npc_chat.tscn": 2,
-		"res://scenes/game/panels/friend_chat.tscn": 3,
-		"res://scenes/game/panels/auction.tscn": 8,
-		"res://scenes/game/panels/horse.tscn": 9,
-		"res://scenes/game/panels/guild.tscn": 10,
-		"res://scenes/game/panels/input_string.tscn": 11,
-		"res://scenes/game/panels/runtime_config.tscn": 12,
-		"res://scenes/game/panels/quest.tscn": 13,
-		"res://scenes/game/panels/team.tscn": 14,
-		"res://scenes/game/panels/secured_items.tscn": 15,
-		"res://scenes/game/panels/purchase.tscn": 18,
+		"res://scenes/game/panels/friend_chat.tscn": 8,
+		"res://scenes/game/panels/auction.tscn": 10,
+		"res://scenes/game/panels/horse.tscn": 11,
+		"res://scenes/game/panels/guild.tscn": 12,
+		"res://scenes/game/panels/input_string.tscn": 13,
+		"res://scenes/game/panels/runtime_config.tscn": 14,
+		"res://scenes/game/panels/quest.tscn": 15,
+		"res://scenes/game/panels/team.tscn": 16,
+		"res://scenes/game/panels/secured_items.tscn": 17,
+		"res://scenes/game/panels/purchase.tscn": 20,
 	}
 	var layered_extra_panels: Dictionary = main.get("_extra_panel_nodes")
 	for scene_path: String in expected_extra_layers:

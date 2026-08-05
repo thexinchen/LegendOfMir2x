@@ -26,16 +26,16 @@ const SYS_QSTFSM := "_RSVD_NAME_QST_FSM_4194347313"
 const EXTRA_PANEL_DRAW_LAYERS := {
 	MINIMAP_PANEL_PATH: 1,
 	NPC_CHAT_PANEL_PATH: 2,
-	FRIEND_CHAT_PANEL_PATH: 3,
-	AUCTION_PANEL_PATH: 8,
-	HORSE_PANEL_PATH: 9,
-	GUILD_PANEL_PATH: 10,
-	INPUT_STRING_PANEL_PATH: 11,
-	RUNTIME_CONFIG_PANEL_PATH: 12,
-	QUEST_PANEL_PATH: 13,
-	TEAM_PANEL_PATH: 14,
-	SECURED_ITEMS_PANEL_PATH: 15,
-	PURCHASE_PANEL_PATH: 18,
+	FRIEND_CHAT_PANEL_PATH: 8,
+	AUCTION_PANEL_PATH: 10,
+	HORSE_PANEL_PATH: 11,
+	GUILD_PANEL_PATH: 12,
+	INPUT_STRING_PANEL_PATH: 13,
+	RUNTIME_CONFIG_PANEL_PATH: 14,
+	QUEST_PANEL_PATH: 15,
+	TEAM_PANEL_PATH: 16,
+	SECURED_ITEMS_PANEL_PATH: 17,
+	PURCHASE_PANEL_PATH: 20,
 }
 
 @onready var world_renderer: Control = $WorldRenderer
@@ -132,13 +132,13 @@ func _ready() -> void:
 	skill_panel.hide()
 	quick_bar.hide()
 	team_flag_cursor.hide()
-	skill_panel.z_index = 4
+	skill_panel.z_index = 9
 	skill_buff_hud.z_index = 5
 	control_panel.z_index = 6
 	location_label.z_index = 7
 	quick_bar.z_index = 7
-	inventory_panel.z_index = 16
-	player_state_panel.z_index = 17
+	inventory_panel.z_index = 18
+	player_state_panel.z_index = 19
 	
 	# C++ location format: "mapName: x y", font 10 size 15, white, 23 px above the window bottom.
 	location_label.add_theme_font_size_override("font_size", 15)
