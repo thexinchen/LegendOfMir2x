@@ -390,7 +390,9 @@ func _handle_mouse_click(event: InputEventMouseButton) -> void:
 
 
 func _start_move_to(destination: Vector2i) -> void:
+	var active_move_remaining := _move_step_timer if game_state.player_action_type in [3, 5] else 0.0
 	_cancel_movement()
+	_move_step_timer = maxf(0.0, active_move_remaining)
 	_move_path = _find_path([destination])
 
 

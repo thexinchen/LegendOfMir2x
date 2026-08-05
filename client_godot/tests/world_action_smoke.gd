@@ -655,6 +655,42 @@ func _test_movement_timeline(main: Control) -> bool:
 		"speed": GameState.player_action_speed,
 		"started_ms": GameState.player_action_started_ms,
 	}
+	if int(world_renderer.get("map_width")) <= 0 and not world_renderer.call("load_map", 24):
+		_fail("active movement replan fixture could not load map 24")
+		return false
+	var replan_start := Vector2i(-1, -1)
+	for y in range(int(world_renderer.get("map_height"))):
+		for x in range(int(world_renderer.get("map_width")) - 4):
+			var clear_line := true
+			for offset in range(5):
+				if not world_renderer.call("can_walk", x + offset, y):
+					clear_line = false
+					break
+			if clear_line:
+				replan_start = Vector2i(x, y)
+				break
+		if replan_start.x >= 0:
+			break
+	if replan_start.x < 0:
+		_fail("active movement replan fixture could not find five clear grids")
+		return false
+	GameState.player_action_from_x = replan_start.x
+	GameState.player_action_from_y = replan_start.y
+	GameState.player_x = replan_start.x + 2
+	GameState.player_y = replan_start.y
+	GameState.player_action_type = 3
+	GameState.player_action_speed = 100
+	GameState.player_action_step = 2
+	GameState.player_action_started_ms = Time.get_ticks_msec() - 200
+	main.set("_move_step_timer", 0.4)
+	main.call("_start_move_to", Vector2i(replan_start.x + 4, replan_start.y))
+	if absf(float(main.get("_move_step_timer")) - 0.4) > 0.001:
+		_fail("right-click replan interrupted the active C++ six-frame movement: %f" % float(main.get("_move_step_timer")))
+		return false
+	if (main.get("_move_path") as Array).is_empty():
+		_fail("right-click replan did not retain a path after the active movement")
+		return false
+	main.call("_cancel_movement")
 	GameState.player_action_from_x = 10
 	GameState.player_action_from_y = 10
 	GameState.player_x = 11
