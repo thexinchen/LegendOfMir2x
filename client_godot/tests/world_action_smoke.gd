@@ -494,6 +494,27 @@ func _test_monster_attack_magic_queue(main: Control, resources: RefCounted, phys
 
 
 func _test_camera_centering(main: Control) -> bool:
+	var scroll_camera_arg_count := 0
+	for method_info in GameState.get_method_list():
+		if String(method_info.get("name", "")) == "scroll_camera_to":
+			scroll_camera_arg_count = (method_info.get("args", []) as Array).size()
+			break
+	if scroll_camera_arg_count < 2:
+		_fail("camera scrolling is tied to render-frame count instead of elapsed time")
+		return false
+	var camera_distances: Array[Vector2] = []
+	for fps in [30, 60, 120]:
+		GameState.view_x = 1000.0
+		GameState.view_y = 1000.0
+		GameState.set("_camera_scrolling", true)
+		for frame_index in range(fps):
+			GameState.scroll_camera_to(Vector2(100, 100), 1.0 / float(fps))
+		camera_distances.append(Vector2(GameState.view_x - 1000.0, GameState.view_y - 1000.0))
+	for distance in camera_distances:
+		if not distance.is_equal_approx(Vector2(210.0, 140.0)):
+			_fail("one-second camera distance depends on render FPS: %s" % [camera_distances])
+			return false
+	GameState.set("_camera_scrolling", false)
 	GameState.player_x = 371
 	GameState.player_y = 132
 	GameState.hud_minimized = false

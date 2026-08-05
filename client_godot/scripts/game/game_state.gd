@@ -114,6 +114,10 @@ const GRID_YP := 32
 const SCREEN_W := 800
 const SCREEN_H := 600
 const HUD_SHIFT_HEIGHT := 131
+# C++ ProcessRun::scrollMap() advances 3/2 pixels in a 70 Hz update loop.
+const CAMERA_SCROLL_X_SPEED := 3.0 * 70.0
+const CAMERA_SCROLL_Y_SPEED := 2.0 * 70.0
+const CAMERA_REFERENCE_DELTA := 1.0 / 70.0
 
 
 func _ready() -> void:
@@ -798,7 +802,7 @@ func scroll_camera() -> void:
 	scroll_camera_to(Vector2(player_x, player_y))
 
 
-func scroll_camera_to(target_grid: Vector2) -> void:
+func scroll_camera_to(target_grid: Vector2, delta_seconds: float = CAMERA_REFERENCE_DELTA) -> void:
 	# Keep a stable one-sixth-screen dead zone, then continue converging until
 	# the player's visual position is centered and the movement has ended.
 	var target_x := target_grid.x * GRID_XP - SCREEN_W * 0.5
@@ -808,10 +812,11 @@ func scroll_camera_to(target_grid: Vector2) -> void:
 	var visible_height := SCREEN_H if hud_minimized else SCREEN_H - HUD_SHIFT_HEIGHT
 	if _camera_scrolling or abs(dx) > SCREEN_W / 6.0 or abs(dy) > visible_height / 6.0:
 		_camera_scrolling = true
+		var elapsed := maxf(delta_seconds, 0.0)
 		if not is_zero_approx(dx):
-			view_x += sign(dx) * min(abs(dx), 3.0)
+			view_x += sign(dx) * min(abs(dx), CAMERA_SCROLL_X_SPEED * elapsed)
 		if not is_zero_approx(dy):
-			view_y += sign(dy) * min(abs(dy), 2.0)
+			view_y += sign(dy) * min(abs(dy), CAMERA_SCROLL_Y_SPEED * elapsed)
 		view_x = maxf(0.0, view_x)
 		view_y = maxf(0.0, view_y)
 	if is_equal_approx(view_x, target_x) and is_equal_approx(view_y, target_y) and player_action_type not in [3, 5]:
