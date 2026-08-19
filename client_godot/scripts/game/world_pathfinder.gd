@@ -17,6 +17,22 @@ func find_path(start: Vector2i, goals: Array[Vector2i], can_walk: Callable, occu
 	if goal_set.is_empty() or goal_set.has(start):
 		return []
 
+	# Bounding box of all goals. A hop that crosses the goal box on either axis
+	# (i.e. lands on the far side of where every goal sits) is an "overshoot":
+	# the path runs past the target on the shorter axis and then has to come
+	# back, which visually traces a triangle instead of a straight line.
+	# Penalise such hops so the search prefers paths that approach the goal
+	# monotonically on each axis and only turn once they are aligned.
+	var goal_box_min_x := valid_goals[0].x
+	var goal_box_max_x := valid_goals[0].x
+	var goal_box_min_y := valid_goals[0].y
+	var goal_box_max_y := valid_goals[0].y
+	for goal in valid_goals:
+		goal_box_min_x = mini(goal_box_min_x, goal.x)
+		goal_box_max_x = maxi(goal_box_max_x, goal.x)
+		goal_box_min_y = mini(goal_box_min_y, goal.y)
+		goal_box_max_y = maxi(goal_box_max_y, goal.y)
+
 	var open: Array[Dictionary] = []
 	var came_from := {}
 	var start_state := Vector3i(start.x, start.y, -1)
@@ -48,6 +64,7 @@ func find_path(start: Vector2i, goals: Array[Vector2i], can_walk: Callable, occu
 					continue
 				var turn_cost := 0 if current_direction < 0 else _direction_distance(current_direction, direction_index)
 				var hop_cost := 100 + hop_size * 10 + turn_cost
+				hop_cost += _overshoot_penalty(current, next, goal_box_min_x, goal_box_max_x, goal_box_min_y, goal_box_max_y)
 				var next_cost := current_cost + hop_cost
 				var next_state := Vector3i(next.x, next.y, direction_index)
 				if next_cost >= int(best_cost.get(next_state, 0x7FFFFFFF)):
@@ -56,6 +73,32 @@ func find_path(start: Vector2i, goals: Array[Vector2i], can_walk: Callable, occu
 				came_from[next_state] = current_state
 				_push_heap(open, {"point": next, "direction": direction_index, "score": next_cost + _heuristic(next, valid_goals, max_step)})
 	return []
+
+
+# A hop overshoots when it leaves the goal box on an axis it was approaching
+# from one side. Concretely: if current is on one side of the box and next is
+# on the opposite side, the hop jumped straight across the target band and
+# will have to reverse direction to land on a goal — the classic triangle leg.
+func _overshoot_penalty(current: Vector2i, next: Vector2i, box_min_x: int, box_max_x: int, box_min_y: int, box_max_y: int) -> int:
+	# Landing inside the box can never be an overshoot.
+	if next.x >= box_min_x and next.x <= box_max_x and next.y >= box_min_y and next.y <= box_max_y:
+		return 0
+	var penalty := 0
+	# X axis: crossed the box band (current outside-left, next outside-right or vice versa).
+	var cur_left := current.x < box_min_x
+	var cur_right := current.x > box_max_x
+	var nxt_left := next.x < box_min_x
+	var nxt_right := next.x > box_max_x
+	if (cur_left and nxt_right) or (cur_right and nxt_left):
+		penalty += 200
+	# Y axis.
+	var cur_above := current.y < box_min_y
+	var cur_below := current.y > box_max_y
+	var nxt_above := next.y < box_min_y
+	var nxt_below := next.y > box_max_y
+	if (cur_above and nxt_below) or (cur_below and nxt_above):
+		penalty += 200
+	return penalty
 
 
 func _normalize_straight_segments(start: Vector2i, path: Array[Vector2i], max_step: int) -> Array[Vector2i]:
