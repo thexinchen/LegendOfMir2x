@@ -804,6 +804,14 @@ func scroll_camera() -> void:
 
 
 func scroll_camera_to(target_grid: Vector2, delta_seconds: float = CAMERA_REFERENCE_DELTA) -> void:
+	# ProcessRun::update() calls centerMyHero() after advancing the current
+	# motion.  While a hero is walking, that makes the camera follow the
+	# motion-frame pixel offset directly (the hero stays centered), instead of
+	# waiting for the one-sixth-screen dead zone in scrollMap().
+	if player_action_type in [3, 5]:
+		center_camera_on_grid(target_grid)
+		_camera_scrolling = false
+		return
 	# Keep a stable one-sixth-screen dead zone, then continue converging until
 	# the player's visual position is centered and the movement has ended.
 	var target_x := target_grid.x * GRID_XP - SCREEN_W * 0.5

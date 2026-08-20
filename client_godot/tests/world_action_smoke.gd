@@ -605,19 +605,19 @@ func _test_camera_centering(main: Control) -> bool:
 	main.set("_player_action_timer", -1.0)
 	var pre_scroll_view_x := GameState.view_x
 	var scroll_visual_grid: Vector2 = world_renderer.call("player_draw_grid")
-	if scroll_visual_grid.x >= 372.0:
-		_fail("camera visual-position fixture advanced beyond its intended dead-zone position")
-		return false
 	if bool(GameState.get("_camera_scrolling")):
 		_fail("camera scrolling state was not reset before the visual-position check")
 		return false
 	GameState.scroll_camera_to(scroll_visual_grid)
-	if not is_equal_approx(GameState.view_x, pre_scroll_view_x):
-		_fail("visual-position camera target moved while still inside the dead zone")
+	var expected_follow_x := scroll_visual_grid.x * 48.0 - 400.0
+	var expected_follow_y := scroll_visual_grid.y * 32.0 - 234.0
+	if absf(GameState.view_x - expected_follow_x) > 0.01 or absf(GameState.view_y - expected_follow_y) > 0.01:
+		_fail("walking camera did not follow the current visual motion position: before=%s after=%s expected=(%s,%s)" % [pre_scroll_view_x, GameState.view_x, expected_follow_x, expected_follow_y])
 		return false
 	main.call("_process", 0.0)
-	if not is_equal_approx(GameState.view_x, pre_scroll_view_x):
-		_fail("camera scrolled toward the movement destination before the visual player left the dead zone")
+	var process_visual_grid: Vector2 = world_renderer.call("player_draw_grid")
+	if absf(GameState.view_x - (process_visual_grid.x * 48.0 - 400.0)) > 0.01 or absf(GameState.view_y - (process_visual_grid.y * 32.0 - 234.0)) > 0.01:
+		_fail("process camera did not keep following the current visual motion position")
 		return false
 	GameState.player_action_type = 2
 	GameState.player_action_started_ms = 0
