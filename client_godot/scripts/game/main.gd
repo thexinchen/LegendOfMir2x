@@ -92,12 +92,18 @@ var _player_forced_action_queue: Array[Dictionary] = []
 var _player_post_forced_action: Dictionary = {}
 var _team_flag_active := false
 var _summon_spawn_blockers: Dictionary = {}
+var _map_loading_hide_serial := 0
+var _map_loading_progress_samples: Array[Dictionary] = []
+var _capturing_map_loading_progress := false
 
 # C++ walk motion is six frames at SYS_DEFSPEED (100 ms per frame). Dispatch the
 # next one-hop action at the same boundary so a path has no artificial idle gap.
 const MOVE_STEP_SECONDS := 0.60
 const FORCED_MOVE_SPEED := 500
 const PING_INTERVAL_MS := 10_000
+const MAP_LOADING_PROGRESS_STEP_SECONDS := 0.012
+const MAP_LOADING_INITIAL_HOLD_SECONDS := 0.08
+const MAP_LOADING_COMPLETE_HOLD_SECONDS := 0.15
 const U32_MASK := 0xFFFFFFFF
 const BUFF_TYPE_SHIELD := 1
 const BUFF_STATE_OFF := 2
@@ -153,12 +159,18 @@ func _ready() -> void:
 	if game_state.player_uid != 0:
 		map_loading_overlay.show()
 		_on_map_load_progress(0, "")
+	_resume_message_dispatch_after_loading_frame()
 	
 	if OS.has_environment("MIR2X_GAME_SCREENSHOT"):
 		inventory_panel.show()
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_GAME_SCREENSHOT"))
 		get_tree().quit()
+
+
+func _resume_message_dispatch_after_loading_frame() -> void:
+	await RenderingServer.frame_post_draw
+	NetworkClient.resume_message_dispatch()
 
 
 func _on_world_gui_input(event: InputEvent) -> void:
@@ -1605,12 +1617,37 @@ func _remove_summon_spawn_effect(uid: int) -> void:
 func _load_world_map(map_id: int) -> bool:
 	AudioService.stop_seff()
 	map_loading_overlay.show()
+	_map_loading_hide_serial += 1
+	_map_loading_progress_samples.clear()
+	_capturing_map_loading_progress = true
 	var loaded: bool = world_renderer.load_map(map_id, _on_map_load_progress)
-	map_loading_overlay.hide()
+	_capturing_map_loading_progress = false
+	_present_map_loading_progress(_map_loading_hide_serial, _map_loading_progress_samples.duplicate(true))
 	return loaded
 
 
+func _present_map_loading_progress(serial: int, samples: Array[Dictionary]) -> void:
+	if samples.is_empty():
+		samples.append({"progress": 100, "map_name": ""})
+	for sample in samples:
+		if serial != _map_loading_hide_serial:
+			return
+		_set_map_loading_progress(int(sample.progress), str(sample.map_name))
+		var delay := MAP_LOADING_INITIAL_HOLD_SECONDS if int(sample.progress) == 0 else MAP_LOADING_PROGRESS_STEP_SECONDS
+		await get_tree().create_timer(delay).timeout
+	await get_tree().create_timer(MAP_LOADING_COMPLETE_HOLD_SECONDS).timeout
+	if serial == _map_loading_hide_serial:
+		map_loading_overlay.hide()
+
+
 func _on_map_load_progress(progress: int, map_name: String) -> void:
+	if _capturing_map_loading_progress:
+		_map_loading_progress_samples.append({"progress": clampi(progress, 0, 100), "map_name": map_name})
+		return
+	_set_map_loading_progress(progress, map_name)
+
+
+func _set_map_loading_progress(progress: int, map_name: String) -> void:
 	var display_name := map_name.get_slice("_", 0)
 	if display_name.is_empty():
 		display_name = "地图%d" % game_state.player_map_id

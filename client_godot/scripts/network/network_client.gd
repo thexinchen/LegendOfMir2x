@@ -158,6 +158,8 @@ var _receive_buffer := PackedByteArray()
 var _last_status := StreamPeerTCP.STATUS_NONE
 var _next_response_id := 1
 var _response_callbacks: Dictionary = {}
+var _message_dispatch_paused := false
+var _deferred_messages: Array[Dictionary] = []
 
 
 func _process(_delta: float) -> void:
@@ -206,6 +208,26 @@ func disconnect_from_server() -> void:
 	_peer.disconnect_from_host()
 	_receive_buffer.clear()
 	_response_callbacks.clear()
+	_message_dispatch_paused = false
+	_deferred_messages.clear()
+
+
+func pause_message_dispatch() -> void:
+	_message_dispatch_paused = true
+
+
+func resume_message_dispatch() -> void:
+	_message_dispatch_paused = false
+	while not _message_dispatch_paused and not _deferred_messages.is_empty():
+		var message: Dictionary = _deferred_messages.pop_front()
+		message_received.emit(message.head_code, message.payload)
+
+
+func _dispatch_message(head_code: int, payload: PackedByteArray) -> void:
+	if _message_dispatch_paused:
+		_deferred_messages.append({"head_code": head_code, "payload": payload})
+	else:
+		message_received.emit(head_code, payload)
 
 
 func login(account: String, password: String) -> Error:
@@ -775,7 +797,7 @@ func _parse_packets() -> void:
 			if callback.is_valid():
 				callback.call(parsed[2], parsed[3])
 		else:
-			message_received.emit(parsed[2], parsed[3])
+			_dispatch_message(parsed[2], parsed[3])
 		_receive_buffer = _receive_buffer.slice(consumed)
 
 

@@ -2,6 +2,8 @@ extends Node
 
 const PreviewScript = preload("res://scripts/account/account_character_preview.gd")
 
+var _transition_heads: Array[int] = []
+
 
 func _ready() -> void:
 	var select := load("res://scenes/account/select_character.tscn").instantiate() as Control
@@ -16,6 +18,25 @@ func _ready() -> void:
 	if AudioService.current_bgm_id != 0x00040002 or AudioService.current_bgm_path.is_empty():
 		_fail("selection BGM mismatch: %08X %s" % [AudioService.current_bgm_id, AudioService.current_bgm_path])
 		return
+	if not NetworkClient.has_method("pause_message_dispatch") or not NetworkClient.has_method("resume_message_dispatch") or not NetworkClient.has_method("_dispatch_message"):
+		_fail("online scene transition cannot preserve coalesced world messages")
+		return
+	NetworkClient.message_received.connect(_record_transition_message)
+	NetworkClient.pause_message_dispatch()
+	NetworkClient.call("_dispatch_message", NetworkClient.SM_STARTGAMESCENE, PackedByteArray([1]))
+	NetworkClient.call("_dispatch_message", NetworkClient.SM_HEALTH, PackedByteArray([2]))
+	if not _transition_heads.is_empty():
+		_fail("world messages leaked into the character-selection scene")
+		return
+	NetworkClient.resume_message_dispatch()
+	if _transition_heads != [NetworkClient.SM_STARTGAMESCENE, NetworkClient.SM_HEALTH]:
+		_fail("deferred world messages were not replayed once in wire order: %s" % [_transition_heads])
+		return
+	NetworkClient.resume_message_dispatch()
+	if _transition_heads.size() != 2:
+		_fail("resuming message dispatch replayed transition messages twice")
+		return
+	NetworkClient.message_received.disconnect(_record_transition_message)
 
 	select.call("_on_server_message", NetworkClient.SM_QUERYCHARERROR, PackedByteArray([2]))
 	if not select.get("_query_complete") or select.get("has_character") or select.get_node("InfoPanel").visible or select.get_node("StartButton").visible or not select.get_node("CreateButton").visible or select.get_node("DeleteButton").visible:
@@ -166,6 +187,27 @@ func _ready() -> void:
 	await get_tree().process_frame
 	create.queue_free()
 	await get_tree().process_frame
+	var transition_select := load("res://scenes/account/select_character.tscn").instantiate() as Control
+	get_tree().root.add_child(transition_select)
+	await get_tree().process_frame
+	if not transition_select.has_method("_switch_to_game_scene"):
+		_fail("online transition still relies on an empty SceneTree change frame")
+		return
+	get_tree().current_scene = transition_select
+	GameState.set_player_online({"uid": 1, "name": "transition", "map_uid": 0, "x": 0, "y": 0, "direction": 5})
+	NetworkClient.pause_message_dispatch()
+	transition_select.call("_switch_to_game_scene")
+	var mounted_game := get_tree().current_scene as Control
+	if mounted_game == null or mounted_game == transition_select or mounted_game.get_node_or_null("MapLoadingOverlay") == null or not mounted_game.get_node("MapLoadingOverlay").visible:
+		_fail("game loading scene was not mounted with its progress overlay in the same frame")
+		return
+	if not NetworkClient.get("_message_dispatch_paused"):
+		_fail("queued map messages resumed before the loading page rendered its first frame")
+		return
+	NetworkClient.resume_message_dispatch()
+	get_tree().current_scene = self
+	mounted_game.queue_free()
+	await get_tree().process_frame
 	print("ACCOUNT FLOW PASS: account states, original BGM, decoded layered previews, motion cycles, creation SEFF and clean audio shutdown")
 	get_tree().quit()
 
@@ -198,6 +240,10 @@ func _character_payload(name: String, gender: int, job: int, experience: int) ->
 	payload[69] = job
 	payload.encode_u32(70, experience)
 	return payload
+
+
+func _record_transition_message(head_code: int, _payload: PackedByteArray) -> void:
+	_transition_heads.append(head_code)
 
 
 func _fail(message: String) -> void:

@@ -4,6 +4,7 @@ const Protocol = preload("res://scripts/network/protocol.gd")
 const ActorResourceScript = preload("res://scripts/game/actor_resource.gd")
 const PreviewScript = preload("res://scripts/account/account_character_preview.gd")
 const AutoLogin = preload("res://scripts/account/auto_login.gd")
+const GameScene = preload("res://scenes/game/main.tscn")
 
 const JOB_WARRIOR := 1
 const JOB_TAOIST := 2
@@ -146,7 +147,18 @@ func _on_server_message(head_code: int, payload: PackedByteArray) -> void:
 				"y": action.get("y", 0),
 				"direction": action.get("direction", 0),
 			})
-			get_tree().change_scene_to_file("res://scenes/game/main.tscn")
+			NetworkClient.pause_message_dispatch()
+			_switch_to_game_scene()
+
+
+func _switch_to_game_scene() -> void:
+	var tree := get_tree()
+	var previous_scene := tree.current_scene
+	var game_scene := GameScene.instantiate()
+	tree.root.add_child(game_scene)
+	tree.current_scene = game_scene
+	if previous_scene != null:
+		previous_scene.queue_free()
 
 
 func _apply_character(payload: PackedByteArray) -> void:

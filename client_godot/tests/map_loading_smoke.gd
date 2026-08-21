@@ -59,6 +59,29 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(OS.get_environment("MIR2X_MAP_LOADING_SCREENSHOT"))
+	if not main.call("_load_world_map", 24):
+		_fail("focused map load failed")
+		return
+	if not overlay.visible or not loading_text.text.contains("%0"):
+		_fail("progress presentation did not start from visible 0%%: visible=%s text=%s" % [overlay.visible, loading_text.text])
+		return
+	var saw_intermediate := false
+	var saw_visible_complete := false
+	for _index in range(120):
+		await get_tree().create_timer(0.02).timeout
+		var presented_text: String = loading_text.text
+		if overlay.visible and not presented_text.contains("%0") and not presented_text.contains("%100"):
+			saw_intermediate = true
+		if overlay.visible and presented_text.contains("%100"):
+			saw_visible_complete = true
+			break
+	if not saw_intermediate or not saw_visible_complete:
+		_fail("progress did not render intermediate and completed states: intermediate=%s complete=%s text=%s" % [saw_intermediate, saw_visible_complete, loading_text.text])
+		return
+	await get_tree().create_timer(0.25).timeout
+	if overlay.visible:
+		_fail("completed map loading overlay did not close after the visible 100%% hold")
+		return
 	print("MAP LOADING PASS: milestones, modal geometry, replacement font and input blocking")
 	get_tree().quit()
 
