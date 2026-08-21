@@ -82,6 +82,8 @@ func play_map_bgm(bgm_id: int) -> bool:
 			var wav := AudioStreamWAV.load_from_file(path)
 			if wav != null:
 				wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+				wav.loop_begin = 0
+				wav.loop_end = maxi(1, roundi(wav.get_length() * float(wav.mix_rate)))
 			stream = wav
 	if stream == null:
 		push_warning("Failed to load BGM resource: %s" % path)

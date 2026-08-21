@@ -14,6 +14,14 @@ func _ready() -> void:
 	if AudioService.current_bgm_id != world.bgm_id or AudioService.current_bgm_path.is_empty():
 		_fail("map BGM state mismatch")
 		return
+	if not AudioService.play_map_bgm(0x00040007):
+		_fail("failed to load login WAV BGM")
+		return
+	var bgm_player := AudioService.get_node("BGMPlayer") as AudioStreamPlayer
+	var login_wav := bgm_player.stream as AudioStreamWAV
+	if login_wav == null or login_wav.loop_end <= login_wav.loop_begin or not bgm_player.playing:
+		_fail("login WAV BGM has an invalid loop range or did not start")
+		return
 	AudioService.set_seff_enabled(true)
 	AudioService.set_seff_volume(0.75)
 	if not AudioService.play_seff_at(0x01000001, 10, 0, 0, 0):

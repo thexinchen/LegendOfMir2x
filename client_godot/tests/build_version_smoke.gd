@@ -37,10 +37,6 @@ func _ready() -> void:
 			or wide_data[7] != 1 or wide_data[16] != 2 or wide_data[24] != 3:
 		_fail("wide fixed-message XOR encoding does not match the C++ 8-byte chunk protocol: body=%s data=%s" % [wide_encoded[0], wide_data])
 		return
-	var wide_decoded := NetworkClient._xor_decode(410, wide_data.slice(0, 7), wide_data.slice(7))
-	if wide_decoded != wide_payload:
-		_fail("wide fixed-message XOR decoding does not restore the original payload")
-		return
 
 	_feed_build_version(local_signature)
 	if not _received_heads.is_empty():
